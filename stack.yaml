@@ -1,0 +1,6 @@
+resolver: lts-11.11
+packages:
+  - .
+extra-deps:
+  - ulid-0.2.0.0
+  - crockford-0.2

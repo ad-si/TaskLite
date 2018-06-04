@@ -1,0 +1,53 @@
+name: tasklite
+version: 0.1.0.0
+github: "ad-si/tasklite"
+license: ISC
+author: Adrian Sieber
+maintainer: mail@adriansieber.com
+copyright: Adrian Sieber
+
+extra-source-files:
+  - README.md
+  - ChangeLog.md
+
+synopsis: CLI task / todo list manager with SQLite backend
+category: Cli
+
+description: |
+  Please see the README on GitHub
+  at <https://github.com/ad-si/tasklite#readme>
+
+dependencies:
+  - base >= 4.7 && < 5
+  - beam-core
+  - beam-migrate
+  - beam-sqlite
+  - protolude
+  - sqlite-simple
+  - text
+  - ulid
+
+library:
+  source-dirs: source
+
+executables:
+  tasklite-exe:
+    main: Main.hs
+    source-dirs: app
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - tasklite
+
+tests:
+  tasklite-test:
+    main: Spec.hs
+    source-dirs: test
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - tasklite
