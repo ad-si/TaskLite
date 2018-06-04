@@ -1,79 +1,80 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 
 module Main where
 
 import Protolude
 
-import Lib
-import Database.Beam
-import Database.Beam.Sqlite
-
-import Database.SQLite.Simple
-
+-- import Lib
 import qualified Data.Text as T
 import Data.ULID
-
-data TaskState
-  = Open
-  | Waiting
-  | Done
-  | Obsolete
-  deriving (Eq, Show)
+import Database.Beam
+import Database.Beam.Sqlite
+import Database.SQLite.Simple
+import Options.Applicative
 
 
-newtype Ulid = Ulid Text
-
-data TaskT f = Task
-  { _taskId :: Columnar f Text -- Ulid
-  , _taskBody :: Columnar f Text
-  , _taskState :: Columnar f Text -- TaskState
-  , _taskDueDate :: Columnar f Text
-  , _taskEndDate :: Columnar f Text
-  } deriving Generic
-
-type Task = TaskT Identity
-type TaskId = PrimaryKey TaskT Identity
-
-deriving instance Show Task
-deriving instance Eq Task
-
-instance Beamable TaskT
-
-instance Table TaskT where
-  data PrimaryKey TaskT f = TaskId (Columnar f Text) deriving Generic
-  primaryKey = TaskId . _taskId
-instance Beamable (PrimaryKey TaskT)
+toParserInfo :: Parser a -> Text -> ParserInfo a
+toParserInfo parser description =
+  info (helper <*> parser) (fullDesc <> progDesc (T.unpack description))
 
 
-data TaskLiteDb f = TaskLiteDb
-  { _taskTasks :: f (TableEntity TaskT)
-  } deriving Generic
+data Command
+  = Add Text
+  | Done Text
+  | Count
+  deriving (Show, Eq)
 
--- instance Database be TaskLiteDb
 
-taskLiteDb :: DatabaseSettings be TaskLiteDb
-taskLiteDb = defaultDbSettings
+addParser :: Parser Command
+addParser = Add <$>
+  strArgument (metavar "BODY" <> help "Body of the task")
+
+addParserInfo :: ParserInfo Command
+addParserInfo =
+  toParserInfo addParser "Add a new task"
+
+
+doneParser :: Parser Command
+doneParser = Done <$>
+  strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)")
+
+doneParserInfo :: ParserInfo Command
+doneParserInfo =
+  toParserInfo doneParser "Mark a task as done"
+
+
+countParser :: Parser Command
+countParser = pure Count
+
+countParserInfo :: ParserInfo Command
+countParserInfo =
+  toParserInfo countParser "Output number of open tasks"
+
+
+commandParser :: Parser Command
+commandParser =
+  hsubparser
+    (  commandGroup "Basic Commands:"
+    <> command "add" addParserInfo
+    <> command "done" doneParserInfo
+    )
+  <|> hsubparser
+    (  commandGroup "Advanced Commands:"
+    <> command "count" countParserInfo
+    )
+
+commandParserInfo :: ParserInfo Command
+commandParserInfo = info
+  (commandParser <**> helper)
+  fullDesc
 
 
 main :: IO ()
 main = do
-  connection <- open "tasklite.db"
-  ulid1 <- getULID
-  ulid2 <- getULID
-
-  runBeamSqliteDebug putStrLn connection $ runInsert $
-    insert (_taskTasks taskLiteDb) $
-    insertValues
-      [ Task (show ulid1) "Buy milk" (show Open) "2018-07-04 08:02:54" ""
-      , Task (show ulid2) "Prepare a milkshake" (show Open) "2018-07-15 21:02:54" ""
-      ]
+  command <- execParser commandParserInfo
+  case command of
+    Add body -> putStrLn $ "Add task \"" <> body <> "\""
+    Done id -> putStrLn $ "Close task with id \"" <> id <> "\""
+    Count -> putStrLn ("100" :: [Char])
