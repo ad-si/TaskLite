@@ -6,7 +6,7 @@ module Main where
 
 import Protolude
 
--- import Lib
+import Lib
 import qualified Data.Text as T
 import Data.ULID
 import Database.Beam
@@ -21,14 +21,15 @@ toParserInfo parser description =
 
 
 data Command
-  = Add Text
-  | Done Text
-  | Count
+  = List TaskState
+  | AddTask Text
+  | SetDone Text
+  | Count TaskState
   deriving (Show, Eq)
 
 
 addParser :: Parser Command
-addParser = Add <$>
+addParser = AddTask <$>
   strArgument (metavar "BODY" <> help "Body of the task")
 
 addParserInfo :: ParserInfo Command
@@ -37,7 +38,7 @@ addParserInfo =
 
 
 doneParser :: Parser Command
-doneParser = Done <$>
+doneParser = SetDone <$>
   strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)")
 
 doneParserInfo :: ParserInfo Command
@@ -46,7 +47,7 @@ doneParserInfo =
 
 
 countParser :: Parser Command
-countParser = pure Count
+countParser = pure (Count Open)
 
 countParserInfo :: ParserInfo Command
 countParserInfo =
@@ -55,7 +56,9 @@ countParserInfo =
 
 commandParser :: Parser Command
 commandParser =
-  hsubparser
+  pure (List Open)
+  <|>
+  ( hsubparser
     (  commandGroup "Basic Commands:"
     <> command "add" addParserInfo
     <> command "done" doneParserInfo
@@ -64,6 +67,7 @@ commandParser =
     (  commandGroup "Advanced Commands:"
     <> command "count" countParserInfo
     )
+  )
 
 commandParserInfo :: ParserInfo Command
 commandParserInfo = info
@@ -75,6 +79,13 @@ main :: IO ()
 main = do
   command <- execParser commandParserInfo
   case command of
-    Add body -> putStrLn $ "Add task \"" <> body <> "\""
-    Done id -> putStrLn $ "Close task with id \"" <> id <> "\""
-    Count -> putStrLn ("100" :: [Char])
+    List state -> case state of
+      Open -> putStrLn ("List all open tasks" :: [Char])
+      Waiting -> putStrLn ("List all waiting tasks" :: [Char])
+      Done -> putStrLn ("List all done tasks" :: [Char])
+    AddTask body -> putStrLn $ "Add task \"" <> body <> "\""
+    SetDone id -> putStrLn $ "Close task with id \"" <> id <> "\""
+    Count state -> case state of
+      Open -> putStrLn ("100" :: [Char])
+      Waiting -> putStrLn ("20" :: [Char])
+      Done -> putStrLn ("10" :: [Char])
