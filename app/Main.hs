@@ -83,7 +83,7 @@ main = do
       Open -> putStrLn ("List all open tasks" :: [Char])
       Waiting -> putStrLn ("List all waiting tasks" :: [Char])
       Done -> putStrLn ("List all done tasks" :: [Char])
-    AddTask body -> putStrLn $ "Add task \"" <> body <> "\""
+    AddTask body -> addTask body
     SetDone id -> putStrLn $ "Close task with id \"" <> id <> "\""
     Count state -> case state of
       Open -> putStrLn ("100" :: [Char])

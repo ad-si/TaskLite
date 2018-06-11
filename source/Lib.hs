@@ -20,6 +20,8 @@ import Database.Beam
 import Database.Beam.Sqlite
 import Database.SQLite.Simple
 
+import System.Directory
+
 
 data TaskState
   = Open
@@ -62,15 +64,43 @@ data TaskLiteDb f = TaskLiteDb
 taskLiteDb :: DatabaseSettings be TaskLiteDb
 taskLiteDb = defaultDbSettings
 
-runCommand :: IO ()
-runCommand = do
-  connection <- open "tasklite.db"
-  ulid1 <- getULID
-  ulid2 <- getULID
+
+mainDir :: FilePath -> FilePath
+mainDir = (<> "/tasklite")
+
+
+setupConnection :: IO Connection
+setupConnection = do
+  homeDir <- getHomeDirectory
+  createDirectoryIfMissing True $ mainDir homeDir
+
+  connection <- open $ (mainDir homeDir) <> "/main.db"
+
+  -- TODO: Replace with beam-migrate based table creation
+  execute_ connection "\
+    \create table if not exists 'tasks' (\
+      \id varchar not null, \
+      \body varchar not null, \
+      \state varchar not null, \
+      \due_date varchar not null, \
+      \end_date varchar not null, \
+      \primary key( id )\
+    \)"
+
+  return connection
+
+
+addTask :: Text -> IO ()
+addTask body = do
+  connection <- setupConnection
+  ulid <- getULID
 
   runBeamSqliteDebug putStrLn connection $ runInsert $
     insert (_taskTasks taskLiteDb) $
     insertValues
-      [ Task (show ulid1) "Buy milk" (show Open) "2018-07-04 08:02:54" ""
-      , Task (show ulid2) "Prepare a milkshake" (show Open) "2018-07-15 21:02:54" ""
-      ]
+      [ Task (show ulid) body (show Open) "" "" ]
+
+  putStrLn $ "Added task \"" <> body <> "\""
+
+
+

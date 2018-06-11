@@ -22,6 +22,7 @@ dependencies:
   - beam-core
   - beam-migrate
   - beam-sqlite
+  - directory
   - optparse-applicative
   - protolude
   - sqlite-simple
