@@ -2,11 +2,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 
@@ -14,7 +15,8 @@ module Lib where
 
 import Protolude
 
-import qualified Data.Text as T
+import Control.Category ((>>>))
+import Data.Text
 import Data.ULID
 import Database.Beam
 import Database.Beam.Sqlite
@@ -59,7 +61,7 @@ data TaskLiteDb f = TaskLiteDb
   { _taskTasks :: f (TableEntity TaskT)
   } deriving Generic
 
--- instance Database be TaskLiteDb
+instance Database be TaskLiteDb
 
 taskLiteDb :: DatabaseSettings be TaskLiteDb
 taskLiteDb = defaultDbSettings
@@ -69,12 +71,16 @@ mainDir :: FilePath -> FilePath
 mainDir = (<> "/tasklite")
 
 
+dbName :: FilePath
+dbName = "main.db"
+
+
 setupConnection :: IO Connection
 setupConnection = do
   homeDir <- getHomeDirectory
   createDirectoryIfMissing True $ mainDir homeDir
 
-  connection <- open $ (mainDir homeDir) <> "/main.db"
+  connection <- open $ (mainDir homeDir) <> "/" <> dbName
 
   -- TODO: Replace with beam-migrate based table creation
   execute_ connection "\
@@ -93,14 +99,30 @@ setupConnection = do
 addTask :: Text -> IO ()
 addTask body = do
   connection <- setupConnection
-  ulid <- getULID
+  ulidUpper <- getULID
+  let ulid = ulidUpper & show & toLower
 
   runBeamSqliteDebug putStrLn connection $ runInsert $
     insert (_taskTasks taskLiteDb) $
     insertValues
-      [ Task (show ulid) body (show Open) "" "" ]
+      [ Task ulid body (show Open) "" "" ]
 
   putStrLn $ "Added task \"" <> body <> "\""
 
 
+listOpenTasks :: IO ()
+listOpenTasks = do
+  homeDir <- getHomeDirectory
+  connection <- open $ (mainDir homeDir) <> "/" <> dbName
+
+  let
+    tasksByCreationUtc =
+      orderBy_
+      (\task -> asc_ (_taskId task))
+      (all_ (_taskTasks taskLiteDb))
+
+  runBeamSqliteDebug putStrLn connection $ do
+    tasks <- runSelectReturningList $ select tasksByCreationUtc
+    forM_ tasks $
+      (\task -> takeEnd 4 (_taskId task) <> " " <> _taskBody task) >>> putStrLn
 

@@ -80,7 +80,7 @@ main = do
   command <- execParser commandParserInfo
   case command of
     List state -> case state of
-      Open -> putStrLn ("List all open tasks" :: [Char])
+      Open -> listOpenTasks
       Waiting -> putStrLn ("List all waiting tasks" :: [Char])
       Done -> putStrLn ("List all done tasks" :: [Char])
     AddTask body -> addTask body
