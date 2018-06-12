@@ -22,7 +22,9 @@ dependencies:
   - beam-core
   - beam-migrate
   - beam-sqlite
+  - crockford
   - directory
+  - hourglass
   - optparse-applicative
   - protolude
   - sqlite-simple

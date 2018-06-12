@@ -16,12 +16,13 @@ module Lib where
 import Protolude
 
 import Control.Category ((>>>))
-import Data.Text
+import Data.Hourglass
+import Codec.Crockford as Crock
+import Data.Text as T
 import Data.ULID
 import Database.Beam
 import Database.Beam.Sqlite
 import Database.SQLite.Simple
-
 import System.Directory
 
 
@@ -110,6 +111,18 @@ addTask body = do
   putStrLn $ "Added task \"" <> body <> "\""
 
 
+ulidToDateTime :: Text -> Maybe DateTime
+ulidToDateTime =
+  (fmap $
+    timeGetDateTimeOfDay
+    . Elapsed
+    . (`div` 1000)
+  )
+  . Crock.decode
+  . unpack
+  . T.take 10
+
+
 listOpenTasks :: IO ()
 listOpenTasks = do
   homeDir <- getHomeDirectory
@@ -121,8 +134,28 @@ listOpenTasks = do
       (\task -> asc_ (_taskId task))
       (all_ (_taskTasks taskLiteDb))
 
-  runBeamSqliteDebug putStrLn connection $ do
+  putStrLn (
+    "Id   " <>
+    "UTC Date   " <>
+    "Body" :: [Char])
+
+  runBeamSqlite connection $ do
     tasks <- runSelectReturningList $ select tasksByCreationUtc
-    forM_ tasks $
-      (\task -> takeEnd 4 (_taskId task) <> " " <> _taskBody task) >>> putStrLn
+    forM_ tasks $ \task ->
+      let
+        id = takeEnd 4 $ _taskId task
+        date = fmap
+          (pack . timePrint ISO8601_Date)
+          (ulidToDateTime $ _taskId task)
+        body = _taskBody task
+        taskLine = fmap (\date ->
+          id <> " " <>
+          date <> " " <>
+          body  <> " ")
+          date
+      in
+        putStrLn $ fromMaybe
+          ("Id \"" <> _taskId task <> "\" is an invalid ulid \
+            \and could not be converted to a datetime")
+          taskLine
 
