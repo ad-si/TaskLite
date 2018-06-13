@@ -15,7 +15,6 @@ module Lib where
 
 import Protolude
 
-import Control.Category ((>>>))
 import Data.Hourglass
 import Codec.Crockford as Crock
 import Data.Text as T
@@ -24,6 +23,25 @@ import Database.Beam
 import Database.Beam.Sqlite
 import Database.SQLite.Simple
 import System.Directory
+import Data.Text.Prettyprint.Doc hiding ((<>))
+import Data.Text.Prettyprint.Doc.Render.Terminal
+
+
+data Config = Config
+  { idWidth :: Int
+  , idStyle :: AnsiStyle
+  , dateStyle :: AnsiStyle
+  , bodyStyle :: AnsiStyle
+  }
+
+
+conf :: Config
+conf = Config
+  { idWidth = 4
+  , idStyle = color Green
+  , dateStyle = color Yellow
+  , bodyStyle = color White
+  }
 
 
 data TaskState
@@ -123,6 +141,28 @@ ulidToDateTime =
   . T.take 10
 
 
+formatTaskLine :: TaskT Identity -> Doc AnsiStyle
+formatTaskLine task =
+  let
+    id = pretty $ T.takeEnd (idWidth conf) $ _taskId task
+    date = fmap
+      (pack . timePrint ISO8601_Date)
+      (ulidToDateTime $ _taskId task)
+    body = _taskBody task
+    taskLine = fmap
+      (\taskDate
+        -> annotate (idStyle conf) id
+        <+> annotate (dateStyle conf) (pretty taskDate)
+        <+> annotate (bodyStyle conf) (pretty body)
+        )
+      date
+  in
+    fromMaybe
+      ("Id" <+> (dquotes $ pretty $ _taskId task) <+>
+        "is an invalid ulid and could not be converted to a datetime")
+      taskLine
+
+
 listOpenTasks :: IO ()
 listOpenTasks = do
   homeDir <- getHomeDirectory
@@ -133,29 +173,16 @@ listOpenTasks = do
       orderBy_
       (\task -> asc_ (_taskId task))
       (all_ (_taskTasks taskLiteDb))
-
-  putStrLn (
-    "Id   " <>
-    "UTC Date   " <>
-    "Body" :: [Char])
+    dateWidth = 10
+    bodyWidth = 10
+    strong = bold <> underlined
+    docHeader =
+      (annotate (idStyle conf <> strong) $ fill (idWidth conf) "Id") <+>
+      (annotate (dateStyle conf <> strong) $ fill dateWidth "UTC-Date") <+>
+      (annotate (bodyStyle conf <> strong) $ fill bodyWidth "Body") <+>
+      line
 
   runBeamSqlite connection $ do
     tasks <- runSelectReturningList $ select tasksByCreationUtc
-    forM_ tasks $ \task ->
-      let
-        id = takeEnd 4 $ _taskId task
-        date = fmap
-          (pack . timePrint ISO8601_Date)
-          (ulidToDateTime $ _taskId task)
-        body = _taskBody task
-        taskLine = fmap (\date ->
-          id <> " " <>
-          date <> " " <>
-          body  <> " ")
-          date
-      in
-        putStrLn $ fromMaybe
-          ("Id \"" <> _taskId task <> "\" is an invalid ulid \
-            \and could not be converted to a datetime")
-          taskLine
+    liftIO $ putDoc (docHeader <> (vsep $ fmap formatTaskLine tasks) <> line)
 

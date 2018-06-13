@@ -26,6 +26,8 @@ dependencies:
   - directory
   - hourglass
   - optparse-applicative
+  - prettyprinter
+  - prettyprinter-ansi-terminal
   - protolude
   - sqlite-simple
   - text

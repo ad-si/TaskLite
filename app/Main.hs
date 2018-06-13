@@ -8,10 +8,6 @@ import Protolude
 
 import Lib
 import qualified Data.Text as T
-import Data.ULID
-import Database.Beam
-import Database.Beam.Sqlite
-import Database.SQLite.Simple
 import Options.Applicative
 
 
@@ -77,15 +73,17 @@ commandParserInfo = info
 
 main :: IO ()
 main = do
-  command <- execParser commandParserInfo
-  case command of
-    List state -> case state of
+  cliCommand <- execParser commandParserInfo
+  case cliCommand of
+    List taskState -> case taskState of
       Open -> listOpenTasks
       Waiting -> putStrLn ("List all waiting tasks" :: [Char])
       Done -> putStrLn ("List all done tasks" :: [Char])
+      Obsolete -> putStrLn ("List all obsolete tasks" :: [Char])
     AddTask body -> addTask body
     SetDone id -> putStrLn $ "Close task with id \"" <> id <> "\""
-    Count state -> case state of
+    Count taskState -> case taskState of
       Open -> putStrLn ("100" :: [Char])
       Waiting -> putStrLn ("20" :: [Char])
       Done -> putStrLn ("10" :: [Char])
+      Obsolete -> putStrLn ("14" :: [Char])
