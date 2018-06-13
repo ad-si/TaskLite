@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -127,6 +128,40 @@ addTask body = do
       [ Task ulid body (show Open) "" "" ]
 
   putStrLn $ "Added task \"" <> body <> "\""
+
+
+newtype NumRows = NumRows Integer
+  deriving (Eq, Ord, Read, Show)
+
+instance FromRow NumRows where
+  fromRow = NumRows <$> field
+
+
+closeTask :: Text -> IO ()
+closeTask idSubstr = do
+  homeDir <- getHomeDirectory
+  connection <- open $ (mainDir homeDir) <> "/" <> dbName
+
+  [NumRows numOfRows] <- query connection
+    "select count(*) from `tasks` where `id` like ?"
+    ["%"  <> idSubstr :: Text] :: IO [NumRows]
+
+  if
+    | numOfRows > 1 ->
+        putText $ "Id slice \"" <> idSubstr <> "\" is not unique. \
+          \Please use a longer slice!"
+    | numOfRows == 0 ->
+        putText $ "Task \"…" <> idSubstr <> "\" does not exist"
+    | otherwise -> do
+        execute connection
+          "update `tasks` set `state` = ? where `id` like ? and `state` != ?"
+          ((show Done) :: Text, "%" <> idSubstr, (show Done) :: Text)
+
+        numOfChanges <- changes connection
+
+        if numOfChanges == 0
+        then putText $ "Task \"…" <> idSubstr <> "\" is already done"
+        else putText $ "Closed task \"…" <> idSubstr <> "\""
 
 
 ulidToDateTime :: Text -> Maybe DateTime

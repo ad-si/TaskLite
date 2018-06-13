@@ -81,7 +81,7 @@ main = do
       Done -> putStrLn ("List all done tasks" :: [Char])
       Obsolete -> putStrLn ("List all obsolete tasks" :: [Char])
     AddTask body -> addTask body
-    SetDone id -> putStrLn $ "Close task with id \"" <> id <> "\""
+    SetDone idSubstr -> closeTask idSubstr
     Count taskState -> case taskState of
       Open -> putStrLn ("100" :: [Char])
       Waiting -> putStrLn ("20" :: [Char])
