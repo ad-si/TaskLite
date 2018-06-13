@@ -35,13 +35,15 @@ library:
   source-dirs: source
 
 executables:
-  tasklite-exe:
+  tasklite:
     main: Main.hs
     source-dirs: app
     ghc-options:
-      - -threaded
-      - -rtsopts
-      - -with-rtsopts=-N
+      - -Wall
+      - -Wcompat
+      - -Wincomplete-record-updates
+      - -Wincomplete-uni-patterns
+      - -Wredundant-constraints
     dependencies:
       - tasklite
 
@@ -50,8 +52,10 @@ tests:
     main: Spec.hs
     source-dirs: test
     ghc-options:
-      - -threaded
-      - -rtsopts
-      - -with-rtsopts=-N
+      - -Wall
+      - -Wcompat
+      - -Wincomplete-record-updates
+      - -Wincomplete-uni-patterns
+      - -Wredundant-constraints
     dependencies:
       - tasklite
