@@ -141,10 +141,10 @@ ulidToDateTime =
   . T.take 10
 
 
-formatTaskLine :: TaskT Identity -> Doc AnsiStyle
-formatTaskLine task =
+formatTaskLine :: Int -> TaskT Identity -> Doc AnsiStyle
+formatTaskLine taskIdWidth task =
   let
-    id = pretty $ T.takeEnd (idWidth conf) $ _taskId task
+    id = pretty $ T.takeEnd taskIdWidth $ _taskId task
     date = fmap
       (pack . timePrint ISO8601_Date)
       (ulidToDateTime $ _taskId task)
@@ -163,6 +163,16 @@ formatTaskLine task =
       taskLine
 
 
+getIdLength :: Float -> Int
+getIdLength numOfItems =
+  let
+    targetCollisionChance = 0.01  -- Targeted likelihood of id collisions
+    sizeOfAlphabet = 32  -- Crockford's base 32 alphabet
+  in
+    ceiling $
+      log (numOfItems / targetCollisionChance) / log sizeOfAlphabet
+
+
 listOpenTasks :: IO ()
 listOpenTasks = do
   homeDir <- getHomeDirectory
@@ -176,13 +186,21 @@ listOpenTasks = do
     dateWidth = 10
     bodyWidth = 10
     strong = bold <> underlined
-    docHeader =
-      (annotate (idStyle conf <> strong) $ fill (idWidth conf) "Id") <+>
-      (annotate (dateStyle conf <> strong) $ fill dateWidth "UTC-Date") <+>
-      (annotate (bodyStyle conf <> strong) $ fill bodyWidth "Body") <+>
-      line
+
 
   runBeamSqlite connection $ do
     tasks <- runSelectReturningList $ select tasksByCreationUtc
-    liftIO $ putDoc (docHeader <> (vsep $ fmap formatTaskLine tasks) <> line)
+
+    let
+      taskIdWidth = getIdLength $ fromIntegral $ Protolude.length tasks
+      docHeader =
+        (annotate (idStyle conf <> strong) $ fill taskIdWidth "Id") <+>
+        (annotate (dateStyle conf <> strong) $ fill dateWidth "UTC-Date") <+>
+        (annotate (bodyStyle conf <> strong) $ fill bodyWidth "Body") <+>
+        line
+
+    liftIO $ putDoc $
+      docHeader <>
+      (vsep $ fmap (formatTaskLine taskIdWidth) tasks) <>
+      line
 
