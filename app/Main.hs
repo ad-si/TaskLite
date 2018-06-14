@@ -9,17 +9,19 @@ import Protolude
 import Lib
 import qualified Data.Text as T
 import Options.Applicative
-
+import Utils
 
 toParserInfo :: Parser a -> Text -> ParserInfo a
 toParserInfo parser description =
   info (helper <*> parser) (fullDesc <> progDesc (T.unpack description))
 
+type IdText = Text
 
 data Command
-  = List TaskState
-  | AddTask Text
-  | SetDone Text
+  = ListAllTasks
+  | ListWithState TaskState
+  | AddTask IdText
+  | SetDone IdText
   | Count TaskState
   deriving (Show, Eq)
 
@@ -52,7 +54,7 @@ countParserInfo =
 
 commandParser :: Parser Command
 commandParser =
-  pure (List Open)
+  pure (ListWithState Open)
   <|>
   ( hsubparser
     (  commandGroup "Basic Commands:"
@@ -61,6 +63,7 @@ commandParser =
     )
   <|> hsubparser
     (  commandGroup "Advanced Commands:"
+    <> command "all" (toParserInfo (pure ListAllTasks :: Parser Command) "List all tasks")
     <> command "count" countParserInfo
     )
   )
@@ -75,8 +78,9 @@ main :: IO ()
 main = do
   cliCommand <- execParser commandParserInfo
   case cliCommand of
-    List taskState -> case taskState of
-      Open -> listOpenTasks
+    ListAllTasks -> listTasks (NoFilter :: Filter TaskState)
+    ListWithState taskState -> case taskState of
+      Open -> listTasks $ Only Open
       Waiting -> putStrLn ("List all waiting tasks" :: [Char])
       Done -> putStrLn ("List all done tasks" :: [Char])
       Obsolete -> putStrLn ("List all obsolete tasks" :: [Char])

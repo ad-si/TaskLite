@@ -24,8 +24,10 @@ import Database.Beam
 import Database.Beam.Sqlite
 import Database.SQLite.Simple
 import System.Directory
+import Time.System
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
+import Utils
 
 
 data Config = Config
@@ -33,6 +35,7 @@ data Config = Config
   , idStyle :: AnsiStyle
   , dateStyle :: AnsiStyle
   , bodyStyle :: AnsiStyle
+  , closeStyle :: AnsiStyle
   }
 
 
@@ -42,6 +45,7 @@ conf = Config
   , idStyle = color Green
   , dateStyle = color Yellow
   , bodyStyle = color White
+  , closeStyle = color Red
   }
 
 
@@ -59,8 +63,8 @@ data TaskT f = Task
   { _taskId :: Columnar f Text -- Ulid
   , _taskBody :: Columnar f Text
   , _taskState :: Columnar f Text -- TaskState
-  , _taskDueDate :: Columnar f Text
-  , _taskEndDate :: Columnar f Text
+  , _taskDueUtc :: Columnar f Text
+  , _taskCloseUtc :: Columnar f Text
   } deriving Generic
 
 type Task = TaskT Identity
@@ -108,8 +112,8 @@ createTable connection tableName = do
         \`body` text not null, \
         \`state` text check(`state` in (" <> stateOptions <>
           ")) not null default '" <> (Query $ show stateDefault) <> "', \
-        \`due_date` text not null, \
-        \`end_date` text not null, \
+        \`due_utc` text not null, \
+        \`close_utc` text not null, \
         \primary key(`id`)\
       \)"
 
@@ -128,11 +132,8 @@ setupConnection :: IO Connection
 setupConnection = do
   homeDir <- getHomeDirectory
   createDirectoryIfMissing True $ mainDir homeDir
-
   connection <- open $ (mainDir homeDir) <> "/" <> dbName
-
   createTable connection "tasks"
-
   return connection
 
 
@@ -174,9 +175,17 @@ closeTask idSubstr = do
     | numOfRows == 0 ->
         putText $ "Task \"…" <> idSubstr <> "\" does not exist"
     | otherwise -> do
+        now <- fmap (timePrint ISO8601_DateAndTime) timeCurrent
         execute connection
-          "update `tasks` set `state` = ? where `id` like ? and `state` != ?"
-          ((show Done) :: Text, "%" <> idSubstr, (show Done) :: Text)
+          "update `tasks` set \
+            \`state` = ? ,\
+            \`close_utc` = ? \
+          \where `id` like ? and `state` != ?"
+          ( (show Done) :: Text
+          , now
+          , "%" <> idSubstr
+          , (show Done) :: Text
+          )
 
         numOfChanges <- changes connection
 
@@ -208,8 +217,9 @@ formatTaskLine taskIdWidth task =
     taskLine = fmap
       (\taskDate
         -> annotate (idStyle conf) id
-        <+> annotate (dateStyle conf) (pretty taskDate)
-        <+> annotate (bodyStyle conf) (pretty body)
+        <++> annotate (dateStyle conf) (pretty taskDate)
+        <++> annotate (bodyStyle conf) (pretty body)
+        <++> annotate (closeStyle conf) (pretty $ _taskCloseUtc task)
         )
       date
   in
@@ -229,32 +239,36 @@ getIdLength numOfItems =
       log (numOfItems / targetCollisionChance) / log sizeOfAlphabet
 
 
-listOpenTasks :: IO ()
-listOpenTasks = do
+listTasks :: Filter TaskState -> IO ()
+listTasks taskState = do
   connection <- setupConnection
 
   let
-    tasksByCreationUtc =
-      orderBy_
-      (\task -> asc_ (_taskId task))
-      (all_ (_taskTasks taskLiteDb))
     dateWidth = 10
     bodyWidth = 10
     strong = bold <> underlined
 
   runBeamSqlite connection $ do
-    tasks <- runSelectReturningList $ select tasksByCreationUtc
+    tasks <- runSelectReturningList $ select $ do
+      task <- orderBy_
+        (\task -> asc_ (_taskId task))
+        (all_ (_taskTasks taskLiteDb))
+      case taskState of
+        NoFilter -> return ()
+        Utils.Only tState -> guard_ $ _taskState task ==. val_ (show tState)
+      pure task
+
 
     if P.length tasks == 0
     then liftIO $ die "The table \"tasks\" is empty"
     else do
       let
         taskIdWidth = getIdLength $ fromIntegral $ P.length tasks
-        docHeader =
-          (annotate (idStyle conf <> strong) $ fill taskIdWidth "Id") <+>
-          (annotate (dateStyle conf <> strong) $ fill dateWidth "Opened UTC") <+>
-          (annotate (bodyStyle conf <> strong) $ fill bodyWidth "Body") <+>
-          line
+        docHeader = (annotate (idStyle conf <> strong) $ fill taskIdWidth "Id")
+          <++> (annotate (dateStyle conf <> strong) $
+            fill dateWidth "Opened UTC")
+          <++> (annotate (bodyStyle conf <> strong) $ fill bodyWidth "Body")
+          <++> line
 
       liftIO $ putDoc $
         docHeader <>
