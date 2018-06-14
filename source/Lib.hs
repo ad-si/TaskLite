@@ -14,7 +14,7 @@
 
 module Lib where
 
-import Protolude
+import Protolude as P
 
 import Data.Hourglass
 import Codec.Crockford as Crock
@@ -50,7 +50,7 @@ data TaskState
   | Waiting
   | Done
   | Obsolete
-  deriving (Eq, Show)
+  deriving (Eq, Enum, Show)
 
 
 newtype Ulid = Ulid Text
@@ -95,6 +95,35 @@ dbName :: FilePath
 dbName = "main.db"
 
 
+createTable :: Connection -> Text -> IO ()
+createTable connection tableName = do
+  let
+    stateDefault = (toEnum 0) :: TaskState
+    stateOptions = Query $ T.intercalate "," $
+      fmap (("'" <>) . (<> "'") . show) [stateDefault ..]
+    -- TODO: Replace with beam-migrate based table creation
+    createTableQuery = "\
+      \create table `" <> Query tableName <> "` (\
+        \`id` text not null, \
+        \`body` text not null, \
+        \`state` text check(`state` in (" <> stateOptions <>
+          ")) not null default '" <> (Query $ show stateDefault) <> "', \
+        \`due_date` text not null, \
+        \`end_date` text not null, \
+        \primary key(`id`)\
+      \)"
+
+  result <- try $ execute_ connection createTableQuery
+
+  case result :: Either SQLError () of
+    Left error ->
+      if isSuffixOf "already exists" (sqlErrorDetails error)
+      then return ()
+      else print error
+    Right _ ->
+      putStrLn $ "Create table \"" <> tableName <> "\""
+
+
 setupConnection :: IO Connection
 setupConnection = do
   homeDir <- getHomeDirectory
@@ -102,18 +131,10 @@ setupConnection = do
 
   connection <- open $ (mainDir homeDir) <> "/" <> dbName
 
-  -- TODO: Replace with beam-migrate based table creation
-  execute_ connection "\
-    \create table if not exists 'tasks' (\
-      \id varchar not null, \
-      \body varchar not null, \
-      \state varchar not null, \
-      \due_date varchar not null, \
-      \end_date varchar not null, \
-      \primary key( id )\
-    \)"
+  createTable connection "tasks"
 
   return connection
+
 
 
 addTask :: Text -> IO ()
@@ -210,8 +231,7 @@ getIdLength numOfItems =
 
 listOpenTasks :: IO ()
 listOpenTasks = do
-  homeDir <- getHomeDirectory
-  connection <- open $ (mainDir homeDir) <> "/" <> dbName
+  connection <- setupConnection
 
   let
     tasksByCreationUtc =
@@ -222,20 +242,22 @@ listOpenTasks = do
     bodyWidth = 10
     strong = bold <> underlined
 
-
   runBeamSqlite connection $ do
     tasks <- runSelectReturningList $ select tasksByCreationUtc
 
-    let
-      taskIdWidth = getIdLength $ fromIntegral $ Protolude.length tasks
-      docHeader =
-        (annotate (idStyle conf <> strong) $ fill taskIdWidth "Id") <+>
-        (annotate (dateStyle conf <> strong) $ fill dateWidth "UTC-Date") <+>
-        (annotate (bodyStyle conf <> strong) $ fill bodyWidth "Body") <+>
-        line
+    if P.length tasks == 0
+    then liftIO $ die "The table \"tasks\" is empty"
+    else do
+      let
+        taskIdWidth = getIdLength $ fromIntegral $ P.length tasks
+        docHeader =
+          (annotate (idStyle conf <> strong) $ fill taskIdWidth "Id") <+>
+          (annotate (dateStyle conf <> strong) $ fill dateWidth "Opened UTC") <+>
+          (annotate (bodyStyle conf <> strong) $ fill bodyWidth "Body") <+>
+          line
 
-    liftIO $ putDoc $
-      docHeader <>
-      (vsep $ fmap (formatTaskLine taskIdWidth) tasks) <>
-      line
+      liftIO $ putDoc $
+        docHeader <>
+        (vsep $ fmap (formatTaskLine taskIdWidth) tasks) <>
+        line
 
