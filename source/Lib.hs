@@ -127,7 +127,13 @@ createTable connection aTableName = do
       then return ()
       else print error
     Right _ ->
-      putStrLn $ "Create table \"" <> aTableName <> "\""
+      putText $ "🆕 Create table \"" <> aTableName <> "\""
+
+
+getDbPath :: IO FilePath
+getDbPath = do
+  homeDir <- getHomeDirectory
+  pure $ (mainDir homeDir) <> "/" <> dbName
 
 
 setupConnection :: IO Connection
@@ -157,12 +163,12 @@ addTask body = do
   ulidUpper <- getULID
   let ulid = ulidUpper & show & toLower
 
-  runBeamSqliteDebug putStrLn connection $ runInsert $
+  runBeamSqlite connection $ runInsert $
     insert (_taskTasks taskLiteDb) $
     insertValues
       [ Task ulid body (show Open) "" "" ]
 
-  putStrLn $ "Added task \"" <> body <> "\""
+  putText $ "🆕 Added task \"" <> body <> "\""
 
 
 newtype NumRows = NumRows Integer
@@ -172,41 +178,65 @@ instance FromRow NumRows where
   fromRow = NumRows <$> field
 
 
-closeTask :: Text -> IO ()
-closeTask idSubstr = do
-  homeDir <- getHomeDirectory
-  connection <- open $ (mainDir homeDir) <> "/" <> dbName
-
+execIfIdExists :: Connection -> Text -> (IO () -> IO ())
+execIfIdExists connection idSubstr callback = do
   [NumRows numOfRows] <- query connection
     (Query $ "select count(*) from " <> tableName conf <> " where `id` like ?")
     ["%"  <> idSubstr :: Text]
 
   if
     | numOfRows > 1 ->
-        putText $ "Id slice \"" <> idSubstr <> "\" is not unique. \
+        putText $ "⚠️ Id slice \"" <> idSubstr <> "\" is not unique. \
           \Please use a longer slice!"
     | numOfRows == 0 ->
-        putText $ "Task \"…" <> idSubstr <> "\" does not exist"
-    | otherwise -> do
-        now <- fmap (timePrint ISO8601_DateAndTime) timeCurrent
-        execute connection
-          (Query $
-            "update `" <> tableName conf <> "` \
-            \set \
-              \`state` = ? ,\
-              \`close_utc` = ? \
-            \where `id` like ? and `state` != ?")
-          ( (show Done) :: Text
-          , now
-          , "%" <> idSubstr
-          , (show Done) :: Text
-          )
+        putText $ "⚠️ Task \"…" <> idSubstr <> "\" does not exist"
+    | otherwise -> callback
 
-        numOfChanges <- changes connection
 
-        if numOfChanges == 0
-        then putText $ "Task \"…" <> idSubstr <> "\" is already done"
-        else putText $ "Closed task \"…" <> idSubstr <> "\""
+setStateAndClose :: Connection -> Text -> TaskState -> IO ()
+setStateAndClose connection idSubstr theTaskState = do
+  now <- fmap (timePrint ISO8601_DateAndTime) timeCurrent
+  execute connection
+    (Query $
+      "update `" <> tableName conf <> "` \
+      \set \
+        \`state` = ? ,\
+        \`close_utc` = ? \
+      \where `id` like ? and `state` != ?")
+    ( (show theTaskState) :: Text
+    , now
+    , "%" <> idSubstr
+    , (show theTaskState) :: Text
+    )
+
+
+doTask :: Text -> IO ()
+doTask idSubstr = do
+  dbPath <- getDbPath
+  withConnection dbPath $ \connection -> do
+    execIfIdExists connection idSubstr $ do
+      setStateAndClose connection idSubstr Done
+
+      numOfChanges <- changes connection
+
+      if numOfChanges == 0
+      then putText $ "⚠️ Task \"…" <> idSubstr <> "\" is already done"
+      else putText $ "✅ Finished task \"…" <> idSubstr <> "\""
+
+
+endTask :: Text -> IO ()
+endTask idSubstr = do
+  dbPath <- getDbPath
+  withConnection dbPath $ \connection -> do
+    execIfIdExists connection idSubstr $ do
+      setStateAndClose connection idSubstr Obsolete
+
+      numOfChanges <- changes connection
+
+      if numOfChanges == 0
+      then putText $ "⚠️ Task \"…" <> idSubstr <>
+        "\" is already marked as obsolete"
+      else putText $ "⏹ Marked task \"…" <> idSubstr <> "\" as obsolete"
 
 
 ulidToDateTime :: Text -> Maybe DateTime
@@ -265,7 +295,7 @@ countTasks taskStateFilter = do
           <> "` where `state` == ?")
         [(show taskState) :: Text]
 
-    putStrLn $ ((show taskCount) :: Text)
+    putText (show taskCount)
 
 
 listTasks :: Filter TaskState -> IO ()

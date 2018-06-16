@@ -20,7 +20,8 @@ type IdText = Text
 data Command
   = List (Filter TaskState)
   | AddTask IdText
-  | SetDone IdText
+  | DoTask IdText
+  | EndTask IdText
   | Count (Filter TaskState)
   deriving (Show, Eq)
 
@@ -35,7 +36,7 @@ addParserInfo =
 
 
 doneParser :: Parser Command
-doneParser = SetDone <$>
+doneParser = DoTask <$>
   strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)")
 
 doneParserInfo :: ParserInfo Command
@@ -59,6 +60,9 @@ commandParser =
     (  commandGroup "Basic Commands:"
     <> command "add" addParserInfo
     <> command "do" doneParserInfo
+    <> command "end" (toParserInfo (DoTask <$>
+        strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)"))
+        "Mark a task as obsolete")
     )
   <|> hsubparser
     (  commandGroup "List Commands:"
@@ -89,5 +93,6 @@ main = do
   case cliCommand of
     List taskFilter -> listTasks taskFilter
     AddTask body -> addTask body
-    SetDone idSubstr -> closeTask idSubstr
+    DoTask idSubstr -> doTask idSubstr
+    EndTask idSubstr -> endTask idSubstr
     Count taskFilter -> countTasks taskFilter
