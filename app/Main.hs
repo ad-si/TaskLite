@@ -18,11 +18,10 @@ toParserInfo parser description =
 type IdText = Text
 
 data Command
-  = ListAllTasks
-  | ListWithState TaskState
+  = List (Filter TaskState)
   | AddTask IdText
   | SetDone IdText
-  | Count TaskState
+  | Count (Filter TaskState)
   deriving (Show, Eq)
 
 
@@ -45,7 +44,7 @@ doneParserInfo =
 
 
 countParser :: Parser Command
-countParser = pure (Count Open)
+countParser = pure $ Count NoFilter
 
 countParserInfo :: ParserInfo Command
 countParserInfo =
@@ -54,16 +53,26 @@ countParserInfo =
 
 commandParser :: Parser Command
 commandParser =
-  pure (ListWithState Open)
+  pure (List $ Only Open)
   <|>
   ( hsubparser
     (  commandGroup "Basic Commands:"
     <> command "add" addParserInfo
-    <> command "done" doneParserInfo
+    <> command "do" doneParserInfo
+    )
+  <|> hsubparser
+    (  commandGroup "List Commands:"
+    <> command "all" (toParserInfo (pure $ List NoFilter)
+        "List all tasks")
+    <> command "done" (toParserInfo (pure $ List $ Only Done)
+        "List all done tasks")
+    <> command "waiting" (toParserInfo (pure $ List $ Only Waiting)
+        "List all waiting tasks")
+    <> command "obsolete" (toParserInfo (pure $ List $ Only Obsolete)
+        "List all obsolete tasks")
     )
   <|> hsubparser
     (  commandGroup "Advanced Commands:"
-    <> command "all" (toParserInfo (pure ListAllTasks :: Parser Command) "List all tasks")
     <> command "count" countParserInfo
     )
   )
@@ -78,16 +87,7 @@ main :: IO ()
 main = do
   cliCommand <- execParser commandParserInfo
   case cliCommand of
-    ListAllTasks -> listTasks (NoFilter :: Filter TaskState)
-    ListWithState taskState -> case taskState of
-      Open -> listTasks $ Only Open
-      Waiting -> putStrLn ("List all waiting tasks" :: [Char])
-      Done -> putStrLn ("List all done tasks" :: [Char])
-      Obsolete -> putStrLn ("List all obsolete tasks" :: [Char])
+    List taskFilter -> listTasks taskFilter
     AddTask body -> addTask body
     SetDone idSubstr -> closeTask idSubstr
-    Count taskState -> case taskState of
-      Open -> putStrLn ("100" :: [Char])
-      Waiting -> putStrLn ("20" :: [Char])
-      Done -> putStrLn ("10" :: [Char])
-      Obsolete -> putStrLn ("14" :: [Char])
+    Count taskFilter -> countTasks taskFilter

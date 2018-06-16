@@ -31,7 +31,8 @@ import Utils
 
 
 data Config = Config
-  { idWidth :: Int
+  { tableName :: Text
+  , idWidth :: Int
   , idStyle :: AnsiStyle
   , dateStyle :: AnsiStyle
   , bodyStyle :: AnsiStyle
@@ -41,7 +42,8 @@ data Config = Config
 
 conf :: Config
 conf = Config
-  { idWidth = 4
+  { tableName = "tasks"
+  , idWidth = 4
   , idStyle = color Green
   , dateStyle = color Yellow
   , bodyStyle = color White
@@ -100,14 +102,14 @@ dbName = "main.db"
 
 
 createTable :: Connection -> Text -> IO ()
-createTable connection tableName = do
+createTable connection aTableName = do
   let
     stateDefault = (toEnum 0) :: TaskState
     stateOptions = Query $ T.intercalate "," $
       fmap (("'" <>) . (<> "'") . show) [stateDefault ..]
     -- TODO: Replace with beam-migrate based table creation
     createTableQuery = "\
-      \create table `" <> Query tableName <> "` (\
+      \create table `" <> Query aTableName <> "` (\
         \`id` text not null, \
         \`body` text not null, \
         \`state` text check(`state` in (" <> stateOptions <>
@@ -125,7 +127,7 @@ createTable connection tableName = do
       then return ()
       else print error
     Right _ ->
-      putStrLn $ "Create table \"" <> tableName <> "\""
+      putStrLn $ "Create table \"" <> aTableName <> "\""
 
 
 setupConnection :: IO Connection
@@ -133,9 +135,20 @@ setupConnection = do
   homeDir <- getHomeDirectory
   createDirectoryIfMissing True $ mainDir homeDir
   connection <- open $ (mainDir homeDir) <> "/" <> dbName
-  createTable connection "tasks"
+  createTable connection (tableName conf)
   return connection
 
+
+execWithConn :: (Connection -> IO a) -> IO a
+execWithConn func = do
+  homeDir <- getHomeDirectory
+  createDirectoryIfMissing True $ mainDir homeDir
+  withConnection
+    ((mainDir homeDir) <> "/" <> dbName)
+    (\connection -> do
+        createTable connection (tableName conf)
+        func connection
+    )
 
 
 addTask :: Text -> IO ()
@@ -165,8 +178,8 @@ closeTask idSubstr = do
   connection <- open $ (mainDir homeDir) <> "/" <> dbName
 
   [NumRows numOfRows] <- query connection
-    "select count(*) from `tasks` where `id` like ?"
-    ["%"  <> idSubstr :: Text] :: IO [NumRows]
+    (Query $ "select count(*) from " <> tableName conf <> " where `id` like ?")
+    ["%"  <> idSubstr :: Text]
 
   if
     | numOfRows > 1 ->
@@ -177,10 +190,12 @@ closeTask idSubstr = do
     | otherwise -> do
         now <- fmap (timePrint ISO8601_DateAndTime) timeCurrent
         execute connection
-          "update `tasks` set \
-            \`state` = ? ,\
-            \`close_utc` = ? \
-          \where `id` like ? and `state` != ?"
+          (Query $
+            "update `" <> tableName conf <> "` \
+            \set \
+              \`state` = ? ,\
+              \`close_utc` = ? \
+            \where `id` like ? and `state` != ?")
           ( (show Done) :: Text
           , now
           , "%" <> idSubstr
@@ -239,6 +254,20 @@ getIdLength numOfItems =
       log (numOfItems / targetCollisionChance) / log sizeOfAlphabet
 
 
+countTasks :: Filter TaskState -> IO ()
+countTasks taskStateFilter = do
+  execWithConn $ \connection -> do
+    [NumRows taskCount] <- case taskStateFilter of
+      NoFilter -> query_ connection $ Query $
+        "select count(*) from `" <> tableName conf <> "`"
+      Utils.Only taskState -> query connection
+        (Query $ "select count(*) from `" <> tableName conf
+          <> "` where `state` == ?")
+        [(show taskState) :: Text]
+
+    putStrLn $ ((show taskCount) :: Text)
+
+
 listTasks :: Filter TaskState -> IO ()
 listTasks taskState = do
   connection <- setupConnection
@@ -260,7 +289,7 @@ listTasks taskState = do
 
 
     if P.length tasks == 0
-    then liftIO $ die "The table \"tasks\" is empty"
+    then liftIO $ die "No tasks available"
     else do
       let
         taskIdWidth = getIdLength $ fromIntegral $ P.length tasks
