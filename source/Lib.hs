@@ -18,11 +18,15 @@ import Protolude as P
 
 import Data.Hourglass
 import Codec.Crockford as Crock
+import Data.Csv as Csv
 import Data.Text as T
 import Data.ULID
 import Database.Beam
 import Database.Beam.Sqlite
-import Database.SQLite.Simple
+import Database.SQLite.Simple as Sql
+import Database.SQLite.Simple.FromField as Sql.FromField
+import Database.SQLite.Simple.Internal hiding (result)
+import Database.SQLite.Simple.Ok
 import System.Directory
 import Time.System
 import Data.Text.Prettyprint.Doc hiding ((<>))
@@ -56,7 +60,16 @@ data TaskState
   | Waiting
   | Done
   | Obsolete
-  deriving (Eq, Enum, Show)
+  deriving (Eq, Enum, Ord, Read, Show)
+
+instance Sql.FromField.FromField TaskState where
+  fromField f@(Field (SQLText txt) _) = case txt of
+    "Open" -> Ok Open
+    "Waiting" -> Ok Waiting
+    "Done" -> Ok Done
+    "Obsolete" -> Ok Obsolete
+    _ -> returnError ConversionFailed f "expecting a valid TaskState"
+  fromField f = returnError ConversionFailed f "expecting SQLText column type"
 
 
 newtype Ulid = Ulid Text
@@ -74,6 +87,15 @@ type TaskId = PrimaryKey TaskT Identity
 
 deriving instance Show Task
 deriving instance Eq Task
+
+-- For conversion from SQLite with SQLite.Simple
+instance FromRow Task where
+  fromRow = Task <$> field <*> field <*> field <*> field <*> field
+
+-- For conversion to CSV
+instance ToRecord Task
+instance ToNamedRecord Task
+instance DefaultOrdered Task
 
 instance Beamable TaskT
 
@@ -333,4 +355,12 @@ listTasks taskState = do
         docHeader <>
         (vsep $ fmap (formatTaskLine taskIdWidth) tasks) <>
         line
+
+
+dumpCsv :: IO ()
+dumpCsv = do
+  execWithConn $ \connection -> do
+    rows <- (query_ connection "select * from tasks") :: IO [Task]
+
+    putStrLn $ Csv.encodeDefaultOrderedByName rows
 

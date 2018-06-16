@@ -23,6 +23,7 @@ data Command
   | DoTask IdText
   | EndTask IdText
   | Count (Filter TaskState)
+  | Csv
   deriving (Show, Eq)
 
 
@@ -76,6 +77,11 @@ commandParser =
         "List all obsolete tasks")
     )
   <|> hsubparser
+    (  commandGroup "Export Commands:"
+    <> command "csv" (toParserInfo (pure Csv)
+        "Export tasks in CSV format")
+    )
+  <|> hsubparser
     (  commandGroup "Advanced Commands:"
     <> command "count" countParserInfo
     )
@@ -92,6 +98,7 @@ main = do
   cliCommand <- execParser commandParserInfo
   case cliCommand of
     List taskFilter -> listTasks taskFilter
+    Csv -> dumpCsv
     AddTask body -> addTask body
     DoTask idSubstr -> doTask idSubstr
     EndTask idSubstr -> endTask idSubstr
