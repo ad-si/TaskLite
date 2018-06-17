@@ -16,6 +16,7 @@ module Lib where
 
 import Protolude as P
 
+import Data.Aeson as Aeson
 import Data.Hourglass
 import Codec.Crockford as Crock
 import Data.Csv as Csv
@@ -96,6 +97,9 @@ instance FromRow Task where
 instance ToRecord Task
 instance ToNamedRecord Task
 instance DefaultOrdered Task
+
+-- For conversion to JSON
+instance ToJSON Task
 
 instance Beamable TaskT
 
@@ -364,3 +368,10 @@ dumpCsv = do
 
     putStrLn $ Csv.encodeDefaultOrderedByName rows
 
+
+dumpNdjson :: IO ()
+dumpNdjson = do
+  execWithConn $ \connection -> do
+    rows <- (query_ connection "select * from tasks") :: IO [Task]
+
+    forM_ rows $ putStrLn . Aeson.encode

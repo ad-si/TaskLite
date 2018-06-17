@@ -18,6 +18,7 @@ description: |
   at <https://github.com/ad-si/tasklite#readme>
 
 dependencies:
+  - aeson
   - base >= 4.7 && < 5
   - beam-core
   - beam-migrate

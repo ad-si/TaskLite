@@ -24,6 +24,7 @@ data Command
   | EndTask IdText
   | Count (Filter TaskState)
   | Csv
+  | Ndjson
   deriving (Show, Eq)
 
 
@@ -80,6 +81,8 @@ commandParser =
     (  commandGroup "Export Commands:"
     <> command "csv" (toParserInfo (pure Csv)
         "Export tasks in CSV format")
+    <> command "ndjson" (toParserInfo (pure Ndjson)
+        "Export tasks in NDJSON format")
     )
   <|> hsubparser
     (  commandGroup "Advanced Commands:"
@@ -99,6 +102,7 @@ main = do
   case cliCommand of
     List taskFilter -> listTasks taskFilter
     Csv -> dumpCsv
+    Ndjson -> dumpNdjson
     AddTask body -> addTask body
     DoTask idSubstr -> doTask idSubstr
     EndTask idSubstr -> endTask idSubstr
