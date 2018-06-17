@@ -26,6 +26,7 @@ data Command
   | Count (Filter TaskState)
   | Csv
   | Ndjson
+  | Help
   deriving (Show, Eq)
 
 
@@ -59,7 +60,7 @@ commandParser :: Parser Command
 commandParser =
   pure (List $ Only Open)
   <|>
-  ( hsubparser
+  ( subparser
     (  commandGroup "Basic Commands:"
     <> command "add" addParserInfo
     <> command "do" doneParserInfo
@@ -70,7 +71,7 @@ commandParser =
         strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)"))
         "Delete a task from the database (Attention: Irreversible)")
     )
-  <|> hsubparser
+  <|> subparser
     (  commandGroup "List Commands:"
     <> command "all" (toParserInfo (pure $ List NoFilter)
         "List all tasks")
@@ -81,16 +82,17 @@ commandParser =
     <> command "obsolete" (toParserInfo (pure $ List $ Only Obsolete)
         "List all obsolete tasks")
     )
-  <|> hsubparser
+  <|> subparser
     (  commandGroup "Export Commands:"
     <> command "csv" (toParserInfo (pure Csv)
         "Export tasks in CSV format")
     <> command "ndjson" (toParserInfo (pure Ndjson)
         "Export tasks in NDJSON format")
     )
-  <|> hsubparser
+  <|> subparser
     (  commandGroup "Advanced Commands:"
     <> command "count" countParserInfo
+    <> command "help" (toParserInfo (pure $ Help) "Display current help page")
     )
   )
 
@@ -112,3 +114,5 @@ main = do
     EndTask idSubstr -> endTask idSubstr
     DeleteTask idSubstr -> deleteTask idSubstr
     Count taskFilter -> countTasks taskFilter
+    Help -> handleParseResult . Failure $
+      parserFailure defaultPrefs commandParserInfo ShowHelpText mempty
