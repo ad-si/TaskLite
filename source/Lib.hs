@@ -265,6 +265,22 @@ endTask idSubstr = do
       else putText $ "⏹ Marked task \"…" <> idSubstr <> "\" as obsolete"
 
 
+deleteTask :: Text -> IO ()
+deleteTask idSubstr = do
+  dbPath <- getDbPath
+  withConnection dbPath $ \connection -> do
+    execIfIdExists connection idSubstr $ do
+      execute connection
+        (Query $ "delete from `" <> tableName conf <> "` where `id` like ?")
+        ["%" <> idSubstr]
+
+      numOfChanges <- changes connection
+
+      putText $ if numOfChanges == 0
+        then "⚠️ An error occured while deleting task \"…" <> idSubstr <> "\""
+        else "❌ Deleted task \"…" <> idSubstr <> "\""
+
+
 ulidToDateTime :: Text -> Maybe DateTime
 ulidToDateTime =
   (fmap $

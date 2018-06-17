@@ -22,6 +22,7 @@ data Command
   | AddTask IdText
   | DoTask IdText
   | EndTask IdText
+  | DeleteTask IdText
   | Count (Filter TaskState)
   | Csv
   | Ndjson
@@ -65,6 +66,9 @@ commandParser =
     <> command "end" (toParserInfo (DoTask <$>
         strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)"))
         "Mark a task as obsolete")
+    <> command "delete" (toParserInfo (DeleteTask <$>
+        strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)"))
+        "Delete a task from the database (Attention: Irreversible)")
     )
   <|> hsubparser
     (  commandGroup "List Commands:"
@@ -106,4 +110,5 @@ main = do
     AddTask body -> addTask body
     DoTask idSubstr -> doTask idSubstr
     EndTask idSubstr -> endTask idSubstr
+    DeleteTask idSubstr -> deleteTask idSubstr
     Count taskFilter -> countTasks taskFilter
