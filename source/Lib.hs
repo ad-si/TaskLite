@@ -24,8 +24,10 @@ import Data.Text as T
 import Data.ULID
 import Database.Beam
 import Database.Beam.Sqlite
+import Database.Beam.Schema.Tables
 import Database.SQLite.Simple as Sql
 import Database.SQLite.Simple.FromField as Sql.FromField
+import Database.SQLite.Simple.ToField as Sql.ToField
 import Database.SQLite.Simple.Internal hiding (result)
 import Database.SQLite.Simple.Ok
 import System.Directory
@@ -72,6 +74,9 @@ instance Sql.FromField.FromField TaskState where
     _ -> returnError ConversionFailed f "expecting a valid TaskState"
   fromField f = returnError ConversionFailed f "expecting SQLText column type"
 
+instance Sql.ToField.ToField TaskState where
+  toField state = SQLText $ show state
+
 
 newtype Ulid = Ulid Text
 
@@ -83,15 +88,26 @@ data TaskT f = Task
   , _taskCloseUtc :: Columnar f Text
   } deriving Generic
 
+
+-- Beam related instances
 type Task = TaskT Identity
 type TaskId = PrimaryKey TaskT Identity
 
 deriving instance Show Task
 deriving instance Eq Task
 
+instance Beamable TaskT
+
+instance Table TaskT where
+  data PrimaryKey TaskT f = TaskId (Columnar f Text) deriving Generic
+  primaryKey = TaskId . _taskId
+instance Beamable (PrimaryKey TaskT)
+
 -- For conversion from SQLite with SQLite.Simple
 instance FromRow Task where
-  fromRow = Task <$> field <*> field <*> field <*> field <*> field
+  fromRow = Task
+    <$> field <*> field <*> field
+    <*> field <*> field
 
 -- For conversion to CSV
 instance ToRecord Task
@@ -101,19 +117,60 @@ instance DefaultOrdered Task
 -- For conversion to JSON
 instance ToJSON Task
 
-instance Beamable TaskT
 
-instance Table TaskT where
-  data PrimaryKey TaskT f = TaskId (Columnar f Text) deriving Generic
-  primaryKey = TaskId . _taskId
-instance Beamable (PrimaryKey TaskT)
+data FullTask = FullTask
+  { _ftId :: Text -- Ulid
+  , _ftBody :: Text
+  , _ftState :: Text -- TaskState
+  , _ftDueUtc :: Maybe Text
+  , _ftCloseUtc :: Maybe Text
+  , _ftTags :: Maybe Text
+  } deriving Generic
+
+-- For conversion from SQLite with SQLite.Simple
+instance FromRow FullTask where
+  fromRow = FullTask
+    <$> field <*> field <*> field
+    <*> field <*> field <*> field
+
+
+data TaskToTagT f = TaskToTag
+  { _ttId :: Columnar f Text -- Ulid
+  , _ttTaskId :: PrimaryKey TaskT f
+  , _ttTag :: Columnar f Text
+  } deriving Generic
+
+type TaskToTag = TaskToTagT Identity
+type TaskToTagId = PrimaryKey TaskToTagT Identity
+
+-- FIXME: Probably doesn't work because of `PrimaryKey TaskT f`
+-- deriving instance Show TaskToTag
+-- deriving instance Eq TaskToTag
+
+instance Beamable TaskToTagT
+
+instance Table TaskToTagT where
+  data PrimaryKey TaskToTagT f = TaskToTagId (Columnar f Text) deriving Generic
+  primaryKey = TaskToTagId . _ttId
+instance Beamable (PrimaryKey TaskToTagT)
+
+
+-- TODO: Use Beam instead of SQLite.Simple
+data TaskView f = TaskView
+  { _tvTask :: TaskT f
+  , _tvTag :: TaskToTagT f
+  } deriving Generic
+instance Beamable TaskView
 
 
 data TaskLiteDb f = TaskLiteDb
-  { _taskTasks :: f (TableEntity TaskT)
+  { _tldbTasks :: f (TableEntity TaskT)
+  , _tldbTaskToTag :: f (TableEntity TaskToTagT)
+  , _tldbTasksView :: f (ViewEntity TaskView)
   } deriving Generic
 
 instance Database be TaskLiteDb
+
 
 taskLiteDb :: DatabaseSettings be TaskLiteDb
 taskLiteDb = defaultDbSettings
@@ -127,25 +184,9 @@ dbName :: FilePath
 dbName = "main.db"
 
 
-createTable :: Connection -> Text -> IO ()
-createTable connection aTableName = do
-  let
-    stateDefault = (toEnum 0) :: TaskState
-    stateOptions = Query $ T.intercalate "," $
-      fmap (("'" <>) . (<> "'") . show) [stateDefault ..]
-    -- TODO: Replace with beam-migrate based table creation
-    createTableQuery = "\
-      \create table `" <> Query aTableName <> "` (\
-        \`id` text not null, \
-        \`body` text not null, \
-        \`state` text check(`state` in (" <> stateOptions <>
-          ")) not null default '" <> (Query $ show stateDefault) <> "', \
-        \`due_utc` text not null, \
-        \`close_utc` text not null, \
-        \primary key(`id`)\
-      \)"
-
-  result <- try $ execute_ connection createTableQuery
+createTable :: Connection -> Text -> Query -> IO ()
+createTable connection aTableName query = do
+  result <- try $ execute_ connection query
 
   case result :: Either SQLError () of
     Left error ->
@@ -154,6 +195,76 @@ createTable connection aTableName = do
       else print error
     Right _ ->
       putText $ "🆕 Create table \"" <> aTableName <> "\""
+
+
+createTaskTable :: Connection -> IO ()
+createTaskTable connection = do
+  let
+    theTableName = tableName conf
+    stateDefault = (toEnum 0) :: TaskState
+    stateOptions = T.intercalate "," $
+      fmap (("'" <>) . (<> "'") . show) [stateDefault ..]
+    -- TODO: Replace with beam-migrate based table creation
+    createTableQuery = Query $ "\
+      \create table `" <> theTableName <> "` (\
+        \`id` text not null, \
+        \`body` text not null, \
+        \`state` text check(`state` in (" <> stateOptions <>
+          ")) not null default '" <> (show stateDefault) <> "', \
+        \`due_utc` text not null, \
+        \`close_utc` text not null, \
+        \primary key(`id`)\
+      \)"
+
+  createTable
+    connection
+    theTableName
+    createTableQuery
+
+
+createTaskView :: Connection -> IO ()
+createTaskView connection = do
+  let
+    viewName = "tasks_view"
+    createTableQuery = Query $ "\
+      \create view `" <> viewName <> "` as \
+      \select \
+        \tasks.id, \
+        \tasks.body, \
+        \tasks.state, \
+        \tasks.due_utc, \
+        \tasks.close_utc, \
+        \group_concat(task_to_tag.tag, ', ') as tags  \
+      \from `" <> tableName conf <> "` \
+        \left join `task_to_tag` on tasks.id = task_to_tag.taskId \
+      \group by tasks.id \
+      \"
+
+  createTable
+    connection
+    viewName
+    createTableQuery
+
+
+
+createTagsTable :: Connection -> IO ()
+createTagsTable connection = do
+  -- TODO: Replace with beam-migrate based table creation
+  let
+    theTableName = "task_to_tag"
+    createTableQuery = Query $ "\
+      \create table `" <> theTableName <> "` ( \
+        \`id` text not null, \
+        \`taskId` text not null, \
+        \`tag` text not null, \
+        \primary key(`id`), \
+        \foreign key(taskId) references " <> tableName conf <> "(id) \
+      \)"
+
+  createTable
+    connection
+    theTableName
+    createTableQuery
 
 
 getDbPath :: IO FilePath
@@ -167,7 +278,11 @@ setupConnection = do
   homeDir <- getHomeDirectory
   createDirectoryIfMissing True $ mainDir homeDir
   connection <- open $ (mainDir homeDir) <> "/" <> dbName
-  createTable connection (tableName conf)
+
+  createTaskTable connection
+  createTagsTable connection
+  createTaskView connection
+
   return connection
 
 
@@ -178,7 +293,7 @@ execWithConn func = do
   withConnection
     ((mainDir homeDir) <> "/" <> dbName)
     (\connection -> do
-        createTable connection (tableName conf)
+        createTaskTable connection
         func connection
     )
 
@@ -190,7 +305,7 @@ addTask body = do
   let ulid = ulidUpper & show & toLower
 
   runBeamSqlite connection $ runInsert $
-    insert (_taskTasks taskLiteDb) $
+    insert (_tldbTasks taskLiteDb) $
     insertValues
       [ Task ulid body (show Open) "" "" ]
 
@@ -293,25 +408,25 @@ ulidToDateTime =
   . T.take 10
 
 
-formatTaskLine :: Int -> TaskT Identity -> Doc AnsiStyle
+formatTaskLine :: Int -> FullTask -> Doc AnsiStyle
 formatTaskLine taskIdWidth task =
   let
-    id = pretty $ T.takeEnd taskIdWidth $ _taskId task
+    id = pretty $ T.takeEnd taskIdWidth $ _ftId task
     date = fmap
       (pack . timePrint ISO8601_Date)
-      (ulidToDateTime $ _taskId task)
-    body = _taskBody task
+      (ulidToDateTime $ _ftId task)
+    body = _ftBody task
     taskLine = fmap
       (\taskDate
         -> annotate (idStyle conf) id
         <++> annotate (dateStyle conf) (pretty taskDate)
         <++> annotate (bodyStyle conf) (pretty body)
-        <++> annotate (closeStyle conf) (pretty $ _taskCloseUtc task)
+        <++> annotate (closeStyle conf) (pretty $ _ftCloseUtc task)
         )
       date
   in
     fromMaybe
-      ("Id" <+> (dquotes $ pretty $ _taskId task) <+>
+      ("Id" <+> (dquotes $ pretty $ _ftId task) <+>
         "is an invalid ulid and could not be converted to a datetime")
       taskLine
 
@@ -349,32 +464,29 @@ listTasks taskState = do
     bodyWidth = 10
     strong = bold <> underlined
 
-  runBeamSqlite connection $ do
-    tasks <- runSelectReturningList $ select $ do
-      task <- orderBy_
-        (\task -> asc_ (_taskId task))
-        (all_ (_taskTasks taskLiteDb))
-      case taskState of
-        NoFilter -> return ()
-        Utils.Only tState -> guard_ $ _taskState task ==. val_ (show tState)
-      pure task
+  rows <- case taskState of
+    NoFilter ->
+      query_ connection ("select * from `tasks_view`") :: IO [FullTask]
+    Utils.Only tState ->
+      (query connection
+        ("select * from `tasks_view` where `state` == ?")
+        [tState]):: IO [FullTask]
 
+  if P.length rows == 0
+  then liftIO $ die "No tasks available"
+  else do
+    let
+      taskIdWidth = getIdLength $ fromIntegral $ P.length rows
+      docHeader = (annotate (idStyle conf <> strong) $ fill taskIdWidth "Id")
+        <++> (annotate (dateStyle conf <> strong) $
+          fill dateWidth "Opened UTC")
+        <++> (annotate (bodyStyle conf <> strong) $ fill bodyWidth "Body")
+        <++> line
 
-    if P.length tasks == 0
-    then liftIO $ die "No tasks available"
-    else do
-      let
-        taskIdWidth = getIdLength $ fromIntegral $ P.length tasks
-        docHeader = (annotate (idStyle conf <> strong) $ fill taskIdWidth "Id")
-          <++> (annotate (dateStyle conf <> strong) $
-            fill dateWidth "Opened UTC")
-          <++> (annotate (bodyStyle conf <> strong) $ fill bodyWidth "Body")
-          <++> line
-
-      liftIO $ putDoc $
-        docHeader <>
-        (vsep $ fmap (formatTaskLine taskIdWidth) tasks) <>
-        line
+    liftIO $ putDoc $
+      docHeader <>
+      (vsep $ fmap (formatTaskLine taskIdWidth) rows) <>
+      line
 
 
 dumpCsv :: IO ()
