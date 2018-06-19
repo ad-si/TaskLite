@@ -34,7 +34,9 @@ import System.Directory
 import Time.System
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
+import Unsafe (unsafeHead)
 import Utils
+import SqlUtils
 
 
 data Config = Config
@@ -77,7 +79,7 @@ instance Sql.FromField.FromField TaskState where
   fromField f = returnError ConversionFailed f "expecting SQLText column type"
 
 instance Sql.ToField.ToField TaskState where
-  toField state = SQLText $ show state
+  toField = SQLText . show
 
 
 newtype Ulid = Ulid Text
@@ -128,7 +130,7 @@ instance FromRow FullTask where
     <*> field <*> field <*> field
 
 instance Sql.FromField.FromField [Text] where
-  fromField f@(Field (SQLText txt) _) = Ok $ split (== ',') txt
+  fromField (Field (SQLText txt) _) = Ok $ split (== ',') txt
   fromField f = returnError ConversionFailed f "expecting SQLText column type"
 
 
@@ -199,19 +201,6 @@ dbName :: FilePath
 dbName = "main.db"
 
 
-createTable :: Connection -> Text -> Query -> IO ()
-createTable connection aTableName query = do
-  result <- try $ execute_ connection query
-
-  case result :: Either SQLError () of
-    Left error ->
-      if isSuffixOf "already exists" (sqlErrorDetails error)
-      then return ()
-      else print error
-    Right _ ->
-      putText $ "🆕 Create table \"" <> aTableName <> "\""
-
-
 createTaskTable :: Connection -> IO ()
 createTaskTable connection = do
   let
@@ -220,18 +209,16 @@ createTaskTable connection = do
     stateOptions = T.intercalate "," $
       fmap (("'" <>) . (<> "'") . show) [stateDefault ..]
     -- TODO: Replace with beam-migrate based table creation
-    createTableQuery = Query $ "\
-      \create table `" <> theTableName <> "` (\
-        \`id` text not null, \
-        \`body` text not null, \
-        \`state` text check(`state` in (" <> stateOptions <>
-          ")) not null default '" <> (show stateDefault) <> "', \
-        \`due_utc` text not null, \
-        \`close_utc` text not null, \
-        \primary key(`id`)\
-      \)"
+    createTableQuery = getTableSql theTableName (
+      "`id` text not null primary key" :
+      "`body` text not null" :
+      ("`state` text check(`state` in (" <> stateOptions
+        <> ")) not null default '" <> show stateDefault <> "'") :
+      "`due_utc` text not null" :
+      "`close_utc` text not null" :
+      [])
 
-  createTable
+  createTableWithQuery
     connection
     theTableName
     createTableQuery
@@ -241,42 +228,40 @@ createTaskView :: Connection -> IO ()
 createTaskView connection = do
   let
     viewName = "tasks_view"
-    createTableQuery = Query $ "\
-      \create view `" <> viewName <> "` as \
-      \select \
-        \tasks.id as id, \
-        \tasks.body as body, \
-        \tasks.state as state, \
-        \tasks.due_utc as due_utc, \
-        \tasks.close_utc as close_utc, \
-        \group_concat(task_to_tag.tag, ',') as tags \
-      \from `" <> tableName conf <> "` \
-        \left join `task_to_tag` on tasks.id = task_to_tag.task_id \
-      \group by tasks.id \
-      \"
+    selectQuery = getSelectSql
+      (
+        "`tasks`.`id` as `id`" :
+        "`tasks`.`body` as `body`" :
+        "`tasks`.`state` as `state`" :
+        "`tasks`.`due_utc` as `due_utc`" :
+        "`tasks`.`close_utc` as `close_utc`" :
+        "group_concat(`task_to_tag`.`tag`, ',') as `tags`" :
+        []
+      )
+      ("`" <> tableName conf <> "` \
+        \left join `task_to_tag` on `tasks`.`id` = `task_to_tag`.`task_id`")
+      "`tasks`.`id`"
+    createTableQuery = getViewSql viewName selectQuery
 
-  createTable
+  createTableWithQuery
     connection
     viewName
     createTableQuery
 
 
-
 createTagsTable :: Connection -> IO ()
 createTagsTable connection = do
-  -- TODO: Replace with beam-migrate based table creation
   let
     theTableName = "task_to_tag"
-    createTableQuery = Query $ "\
-      \create table `" <> theTableName <> "` ( \
-        \`id` text not null, \
-        \`task_id` text not null, \
-        \`tag` text not null, \
-        \primary key(`id`), \
-        \foreign key(task_id) references " <> tableName conf <> "(id) \
-      \)"
+    createTableQuery = getTableSql theTableName (
+      "`id` text not null primary key" :
+      "`task_id` text not null" :
+      "`tag` text not null" :
+      "foreign key(`task_id`) references `" <> tableName conf <> "`(`id`)" :
+      "constraint `no_duplicate_tags` unique (`task_id`, `tag`) " :
+      [])
 
-  createTable
+  createTableWithQuery
     connection
     theTableName
     createTableQuery
@@ -345,23 +330,27 @@ instance FromRow NumRows where
   fromRow = NumRows <$> field
 
 
-execIfIdExists :: Connection -> Text -> (IO () -> IO ())
-execIfIdExists connection idSubstr callback = do
-  [NumRows numOfRows] <- query connection
-    (Query $ "select count(*) from " <> tableName conf <> " where `id` like ?")
-    ["%"  <> idSubstr :: Text]
+execWithId :: Connection -> Text -> (TaskId -> IO ()) -> IO ()
+execWithId connection idSubstr callback = do
+  rows <- (query connection
+      (Query $ "select * from " <> tableName conf <> " where `id` like ?")
+      ["%"  <> idSubstr :: Text]
+    ) :: IO [Task]
+
+  let numOfRows = P.length rows
 
   if
+    | numOfRows == 0 ->
+        putText $ "⚠️  Task \"…" <> idSubstr <> "\" does not exist"
+    | numOfRows == 1 ->
+        callback $ primaryKey $ unsafeHead rows
     | numOfRows > 1 ->
         putText $ "⚠️  Id slice \"" <> idSubstr <> "\" is not unique. \
           \Please use a longer slice!"
-    | numOfRows == 0 ->
-        putText $ "⚠️  Task \"…" <> idSubstr <> "\" does not exist"
-    | otherwise -> callback
 
 
-setStateAndClose :: Connection -> Text -> TaskState -> IO ()
-setStateAndClose connection idSubstr theTaskState = do
+setStateAndClose :: Connection -> TaskId -> TaskState -> IO ()
+setStateAndClose connection (TaskId idText) theTaskState = do
   now <- fmap (timePrint ISO8601_DateAndTime) timeCurrent
   execute connection
     (Query $
@@ -369,10 +358,10 @@ setStateAndClose connection idSubstr theTaskState = do
       \set \
         \`state` = ? ,\
         \`close_utc` = ? \
-      \where `id` like ? and `state` != ?")
+      \where `id` == ? and `state` != ?")
     ( (show theTaskState) :: Text
     , now
-    , "%" <> idSubstr
+    , idText
     , (show theTaskState) :: Text
     )
 
@@ -381,45 +370,59 @@ doTask :: Text -> IO ()
 doTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    execIfIdExists connection idSubstr $ do
-      setStateAndClose connection idSubstr Done
+    execWithId connection idSubstr $ \taskId@(TaskId idText) -> do
+      setStateAndClose connection taskId Done
 
       numOfChanges <- changes connection
 
       if numOfChanges == 0
-      then putText $ "⚠️  Task \"…" <> idSubstr <> "\" is already done"
-      else putText $ "✅ Finished task \"…" <> idSubstr <> "\""
+      then putText $ "⚠️  Task \"…" <> idText <> "\" is already done"
+      else putText $ "✅ Finished task \"…" <> idText <> "\""
 
 
 endTask :: Text -> IO ()
 endTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    execIfIdExists connection idSubstr $ do
-      setStateAndClose connection idSubstr Obsolete
+    execWithId connection idSubstr $ \taskId@(TaskId idText) -> do
+      setStateAndClose connection taskId Obsolete
 
       numOfChanges <- changes connection
 
       if numOfChanges == 0
-      then putText $ "⚠️  Task \"…" <> idSubstr <>
+      then putText $ "⚠️  Task \"…" <> idText <>
         "\" is already marked as obsolete"
-      else putText $ "⏹  Marked task \"…" <> idSubstr <> "\" as obsolete"
+      else putText $ "⏹  Marked task \"…" <> idText <> "\" as obsolete"
 
 
 deleteTask :: Text -> IO ()
 deleteTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    execIfIdExists connection idSubstr $ do
+    execWithId connection idSubstr $ \(TaskId idText) -> do
       execute connection
-        (Query $ "delete from `" <> tableName conf <> "` where `id` like ?")
-        ["%" <> idSubstr]
+        (Query $ "delete from `" <> tableName conf <> "` where `id` == ?")
+        [idText :: Text]
 
       numOfChanges <- changes connection
 
       putText $ if numOfChanges == 0
-        then "⚠️ An error occured while deleting task \"…" <> idSubstr <> "\""
-        else "❌ Deleted task \"…" <> idSubstr <> "\""
+        then "⚠️ An error occured while deleting task \"…" <> idText <> "\""
+        else "❌ Deleted task \"…" <> idText <> "\""
+
+
+addTag :: Text -> Text -> IO ()
+addTag idSubstr tag = do
+  dbPath <- getDbPath
+  withConnection dbPath $ \connection -> do
+    execWithId connection idSubstr $ \taskId -> do
+      ulid <- fmap (toLower . show) getULID
+
+      let taskToTag = TaskToTag ulid taskId tag
+
+      runBeamSqlite connection $ runInsert $
+        insert (_tldbTaskToTag taskLiteDb) $
+        insertValues [taskToTag]
 
 
 ulidToDateTime :: Text -> Maybe DateTime

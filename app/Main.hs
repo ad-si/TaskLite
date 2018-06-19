@@ -16,6 +16,7 @@ toParserInfo parser description =
   info (helper <*> parser) (fullDesc <> progDesc (T.unpack description))
 
 type IdText = Text
+type TagText = Text
 
 data Command
   = List (Filter TaskState)
@@ -23,9 +24,12 @@ data Command
   | DoTask IdText
   | EndTask IdText
   | DeleteTask IdText
+  | AddTag IdText TagText
   | Count (Filter TaskState)
   | Csv
   | Ndjson
+  -- TODO: Add demo mode
+  -- | Demo
   | Help
   deriving (Show, Eq)
 
@@ -56,6 +60,10 @@ commandParser =
     <> command "delete" (toParserInfo (DeleteTask <$>
         strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)"))
         "Delete a task from the database (Attention: Irreversible)")
+    <> command "tag" (toParserInfo (AddTag
+      <$> strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)")
+      <*> strArgument (metavar "TAG" <> help "The tag"))
+      "Add a tag to a task")
     )
   <|> subparser
     (  commandGroup "List Commands:"
@@ -77,7 +85,7 @@ commandParser =
     )
   <|> subparser
     (  commandGroup "Advanced Commands:"
-    <> command "count" (toParserInfo countParser "Output number of open tasks")
+    <> command "count" (toParserInfo countParser "Output total number of tasks")
     <> command "help" (toParserInfo (pure $ Help) "Display current help page")
     )
   )
@@ -99,6 +107,7 @@ main = do
     DoTask idSubstr -> doTask idSubstr
     EndTask idSubstr -> endTask idSubstr
     DeleteTask idSubstr -> deleteTask idSubstr
+    AddTag idSubstr tagText  -> addTag idSubstr tagText
     Count taskFilter -> countTasks taskFilter
     Help -> handleParseResult . Failure $
       parserFailure defaultPrefs commandParserInfo ShowHelpText mempty
