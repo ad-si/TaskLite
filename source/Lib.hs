@@ -44,6 +44,7 @@ data Config = Config
   , dateStyle :: AnsiStyle
   , bodyStyle :: AnsiStyle
   , closeStyle :: AnsiStyle
+  , tagStyle :: AnsiStyle
   }
 
 
@@ -55,6 +56,7 @@ conf = Config
   , dateStyle = color Yellow
   , bodyStyle = color White
   , closeStyle = color Red
+  , tagStyle = color Cyan
   }
 
 
@@ -109,14 +111,6 @@ instance FromRow Task where
     <$> field <*> field <*> field
     <*> field <*> field
 
--- For conversion to CSV
-instance ToRecord Task
-instance ToNamedRecord Task
-instance DefaultOrdered Task
-
--- For conversion to JSON
-instance ToJSON Task
-
 
 data FullTask = FullTask
   { _ftId :: Text -- Ulid
@@ -124,7 +118,7 @@ data FullTask = FullTask
   , _ftState :: Text -- TaskState
   , _ftDueUtc :: Maybe Text
   , _ftCloseUtc :: Maybe Text
-  , _ftTags :: Maybe Text
+  , _ftTags :: Maybe [Text]
   } deriving Generic
 
 -- For conversion from SQLite with SQLite.Simple
@@ -132,6 +126,22 @@ instance FromRow FullTask where
   fromRow = FullTask
     <$> field <*> field <*> field
     <*> field <*> field <*> field
+
+instance Sql.FromField.FromField [Text] where
+  fromField f@(Field (SQLText txt) _) = Ok $ split (== ',') txt
+  fromField f = returnError ConversionFailed f "expecting SQLText column type"
+
+
+instance Csv.ToField [Text] where
+  toField = encodeUtf8 . (T.intercalate ",")
+
+-- For conversion to CSV
+instance ToRecord FullTask
+instance ToNamedRecord FullTask
+instance DefaultOrdered FullTask
+
+-- For conversion to JSON
+instance ToJSON FullTask
 
 
 data TaskToTagT f = TaskToTag
@@ -173,7 +183,12 @@ instance Database be TaskLiteDb
 
 
 taskLiteDb :: DatabaseSettings be TaskLiteDb
-taskLiteDb = defaultDbSettings
+taskLiteDb = defaultDbSettings `withDbModification`
+  dbModification
+    { _tldbTaskToTag = modifyTable identity $
+        tableModification
+          { _ttTaskId = TaskId (fieldNamed "task_id") }
+    }
 
 
 mainDir :: FilePath -> FilePath
@@ -229,14 +244,14 @@ createTaskView connection = do
     createTableQuery = Query $ "\
       \create view `" <> viewName <> "` as \
       \select \
-        \tasks.id, \
-        \tasks.body, \
-        \tasks.state, \
-        \tasks.due_utc, \
-        \tasks.close_utc, \
-        \group_concat(task_to_tag.tag, ', ') as tags  \
+        \tasks.id as id, \
+        \tasks.body as body, \
+        \tasks.state as state, \
+        \tasks.due_utc as due_utc, \
+        \tasks.close_utc as close_utc, \
+        \group_concat(task_to_tag.tag, ',') as tags \
       \from `" <> tableName conf <> "` \
-        \left join `task_to_tag` on tasks.id = task_to_tag.taskId \
+        \left join `task_to_tag` on tasks.id = task_to_tag.task_id \
       \group by tasks.id \
       \"
 
@@ -255,10 +270,10 @@ createTagsTable connection = do
     createTableQuery = Query $ "\
       \create table `" <> theTableName <> "` ( \
         \`id` text not null, \
-        \`taskId` text not null, \
+        \`task_id` text not null, \
         \`tag` text not null, \
         \primary key(`id`), \
-        \foreign key(taskId) references " <> tableName conf <> "(id) \
+        \foreign key(task_id) references " <> tableName conf <> "(id) \
       \)"
 
   createTable
@@ -299,15 +314,26 @@ execWithConn func = do
 
 
 addTask :: Text -> IO ()
-addTask body = do
+addTask bodyAndTags = do
   connection <- setupConnection
-  ulidUpper <- getULID
-  let ulid = ulidUpper & show & toLower
+  ulid <- fmap (toLower . show) getULID
+  let
+    fragments = splitOn " +" bodyAndTags
+    body = fromMaybe "" $ headMay fragments
+    tags = fromMaybe [] $ tailMay fragments
+    task = Task ulid body (show Open) "" ""
 
   runBeamSqlite connection $ runInsert $
     insert (_tldbTasks taskLiteDb) $
-    insertValues
-      [ Task ulid body (show Open) "" "" ]
+    insertValues [task]
+
+  taskToTags <- forM tags (\tag -> do
+    tagUlid <- fmap (toLower . show) getULID
+    pure $ TaskToTag tagUlid (primaryKey task) tag)
+
+  runBeamSqlite connection $ runInsert $
+    insert (_tldbTaskToTag taskLiteDb) $
+    insertValues taskToTags
 
   putText $ "🆕 Added task \"" <> body <> "\""
 
@@ -327,10 +353,10 @@ execIfIdExists connection idSubstr callback = do
 
   if
     | numOfRows > 1 ->
-        putText $ "⚠️ Id slice \"" <> idSubstr <> "\" is not unique. \
+        putText $ "⚠️  Id slice \"" <> idSubstr <> "\" is not unique. \
           \Please use a longer slice!"
     | numOfRows == 0 ->
-        putText $ "⚠️ Task \"…" <> idSubstr <> "\" does not exist"
+        putText $ "⚠️  Task \"…" <> idSubstr <> "\" does not exist"
     | otherwise -> callback
 
 
@@ -361,7 +387,7 @@ doTask idSubstr = do
       numOfChanges <- changes connection
 
       if numOfChanges == 0
-      then putText $ "⚠️ Task \"…" <> idSubstr <> "\" is already done"
+      then putText $ "⚠️  Task \"…" <> idSubstr <> "\" is already done"
       else putText $ "✅ Finished task \"…" <> idSubstr <> "\""
 
 
@@ -375,9 +401,9 @@ endTask idSubstr = do
       numOfChanges <- changes connection
 
       if numOfChanges == 0
-      then putText $ "⚠️ Task \"…" <> idSubstr <>
+      then putText $ "⚠️  Task \"…" <> idSubstr <>
         "\" is already marked as obsolete"
-      else putText $ "⏹ Marked task \"…" <> idSubstr <> "\" as obsolete"
+      else putText $ "⏹  Marked task \"…" <> idSubstr <> "\" as obsolete"
 
 
 deleteTask :: Text -> IO ()
@@ -422,6 +448,8 @@ formatTaskLine taskIdWidth task =
         <++> annotate (dateStyle conf) (pretty taskDate)
         <++> annotate (bodyStyle conf) (pretty body)
         <++> annotate (closeStyle conf) (pretty $ _ftCloseUtc task)
+        <++> annotate (tagStyle conf)
+              (pretty $ unwords $ fmap ("+" <>) (fromMaybe [] $ _ftTags task))
         )
       date
   in
@@ -492,7 +520,7 @@ listTasks taskState = do
 dumpCsv :: IO ()
 dumpCsv = do
   execWithConn $ \connection -> do
-    rows <- (query_ connection "select * from tasks") :: IO [Task]
+    rows <- (query_ connection "select * from tasks_view") :: IO [FullTask]
 
     putStrLn $ Csv.encodeDefaultOrderedByName rows
 
@@ -500,6 +528,6 @@ dumpCsv = do
 dumpNdjson :: IO ()
 dumpNdjson = do
   execWithConn $ \connection -> do
-    rows <- (query_ connection "select * from tasks") :: IO [Task]
+    rows <- (query_ connection "select * from tasks_view") :: IO [FullTask]
 
     forM_ rows $ putStrLn . Aeson.encode

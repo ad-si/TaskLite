@@ -34,26 +34,12 @@ addParser :: Parser Command
 addParser = AddTask <$>
   strArgument (metavar "BODY" <> help "Body of the task")
 
-addParserInfo :: ParserInfo Command
-addParserInfo =
-  toParserInfo addParser "Add a new task"
-
-
 doneParser :: Parser Command
 doneParser = DoTask <$>
   strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)")
 
-doneParserInfo :: ParserInfo Command
-doneParserInfo =
-  toParserInfo doneParser "Mark a task as done"
-
-
 countParser :: Parser Command
 countParser = pure $ Count NoFilter
-
-countParserInfo :: ParserInfo Command
-countParserInfo =
-  toParserInfo countParser "Output number of open tasks"
 
 
 commandParser :: Parser Command
@@ -62,9 +48,9 @@ commandParser =
   <|>
   ( subparser
     (  commandGroup "Basic Commands:"
-    <> command "add" addParserInfo
-    <> command "do" doneParserInfo
-    <> command "end" (toParserInfo (DoTask <$>
+    <> command "add" (toParserInfo addParser "Add a new task")
+    <> command "do" (toParserInfo doneParser "Mark a task as done")
+    <> command "end" (toParserInfo (EndTask <$>
         strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)"))
         "Mark a task as obsolete")
     <> command "delete" (toParserInfo (DeleteTask <$>
@@ -91,7 +77,7 @@ commandParser =
     )
   <|> subparser
     (  commandGroup "Advanced Commands:"
-    <> command "count" countParserInfo
+    <> command "count" (toParserInfo countParser "Output number of open tasks")
     <> command "help" (toParserInfo (pure $ Help) "Display current help page")
     )
   )
