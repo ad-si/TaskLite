@@ -45,7 +45,7 @@ data Config = Config
   , idStyle :: AnsiStyle
   , dateStyle :: AnsiStyle
   , bodyStyle :: AnsiStyle
-  , closeStyle :: AnsiStyle
+  , closedStyle :: AnsiStyle
   , tagStyle :: AnsiStyle
   }
 
@@ -57,7 +57,7 @@ conf = Config
   , idStyle = color Green
   , dateStyle = color Yellow
   , bodyStyle = color White
-  , closeStyle = color Red
+  , closedStyle = color Red
   , tagStyle = color Cyan
   }
 
@@ -89,7 +89,8 @@ data TaskT f = Task
   , _taskBody :: Columnar f Text
   , _taskState :: Columnar f Text -- TaskState
   , _taskDueUtc :: Columnar f Text
-  , _taskCloseUtc :: Columnar f Text
+  , _taskClosedUtc :: Columnar f Text
+  , _taskModifiedUtc :: Columnar f Text
   } deriving Generic
 
 
@@ -111,7 +112,7 @@ instance Beamable (PrimaryKey TaskT)
 instance FromRow Task where
   fromRow = Task
     <$> field <*> field <*> field
-    <*> field <*> field
+    <*> field <*> field <*> field
 
 
 data FullTask = FullTask
@@ -119,7 +120,8 @@ data FullTask = FullTask
   , _ftBody :: Text
   , _ftState :: Text -- TaskState
   , _ftDueUtc :: Maybe Text
-  , _ftCloseUtc :: Maybe Text
+  , _ftClosedUtc :: Maybe Text
+  , _ftModifiedUtc :: Text
   , _ftTags :: Maybe [Text]
   } deriving Generic
 
@@ -128,6 +130,7 @@ instance FromRow FullTask where
   fromRow = FullTask
     <$> field <*> field <*> field
     <*> field <*> field <*> field
+    <*> field
 
 instance Sql.FromField.FromField [Text] where
   fromField (Field (SQLText txt) _) = Ok $ split (== ',') txt
@@ -215,7 +218,8 @@ createTaskTable connection = do
       ("`state` text check(`state` in (" <> stateOptions
         <> ")) not null default '" <> show stateDefault <> "'") :
       "`due_utc` text not null" :
-      "`close_utc` text not null" :
+      "`closed_utc` text not null" :
+      "`modified_utc` text not null" :
       [])
 
   createTableWithQuery
@@ -234,7 +238,8 @@ createTaskView connection = do
         "`tasks`.`body` as `body`" :
         "`tasks`.`state` as `state`" :
         "`tasks`.`due_utc` as `due_utc`" :
-        "`tasks`.`close_utc` as `close_utc`" :
+        "`tasks`.`closed_utc` as `closed_utc`" :
+        "`tasks`.`modified_utc`as `modified_utc`" :
         "group_concat(`task_to_tag`.`tag`, ',') as `tags`" :
         []
       )
@@ -302,11 +307,12 @@ addTask :: Text -> IO ()
 addTask bodyAndTags = do
   connection <- setupConnection
   ulid <- fmap (toLower . show) getULID
+  now <- fmap (timePrint ISO8601_DateAndTime) timeCurrent
   let
     fragments = splitOn " +" bodyAndTags
     body = fromMaybe "" $ headMay fragments
     tags = fromMaybe [] $ tailMay fragments
-    task = Task ulid body (show Open) "" ""
+    task = Task ulid body (show Open) "" "" (pack now)
 
   runBeamSqlite connection $ runInsert $
     insert (_tldbTasks taskLiteDb) $
@@ -349,21 +355,17 @@ execWithId connection idSubstr callback = do
           \Please use a longer slice!"
 
 
-setStateAndClose :: Connection -> TaskId -> TaskState -> IO ()
-setStateAndClose connection (TaskId idText) theTaskState = do
-  now <- fmap (timePrint ISO8601_DateAndTime) timeCurrent
-  execute connection
-    (Query $
-      "update `" <> tableName conf <> "` \
-      \set \
-        \`state` = ? ,\
-        \`close_utc` = ? \
-      \where `id` == ? and `state` != ?")
-    ( (show theTaskState) :: Text
-    , now
-    , idText
-    , (show theTaskState) :: Text
-    )
+setStateAndClosed :: Connection -> TaskId -> TaskState -> IO ()
+setStateAndClosed connection taskId theTaskState = do
+  now <- fmap (pack . (timePrint ISO8601_DateAndTime)) timeCurrent
+
+  runBeamSqlite connection $ runUpdate $
+    update (_tldbTasks taskLiteDb)
+      (\task -> [ (_taskState task) <-. val_ (show theTaskState)
+                , (_taskModifiedUtc task) <-. val_ now
+                ])
+      (\task -> primaryKey task ==. val_ taskId &&.
+                (_taskState task) /=. val_ (show theTaskState))
 
 
 doTask :: Text -> IO ()
@@ -371,7 +373,7 @@ doTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
     execWithId connection idSubstr $ \taskId@(TaskId idText) -> do
-      setStateAndClose connection taskId Done
+      setStateAndClosed connection taskId Done
 
       numOfChanges <- changes connection
 
@@ -385,7 +387,7 @@ endTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
     execWithId connection idSubstr $ \taskId@(TaskId idText) -> do
-      setStateAndClose connection taskId Obsolete
+      setStateAndClosed connection taskId Obsolete
 
       numOfChanges <- changes connection
 
@@ -416,6 +418,7 @@ addTag idSubstr tag = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
     execWithId connection idSubstr $ \taskId -> do
+      now <- fmap (pack . (timePrint ISO8601_DateAndTime)) timeCurrent
       ulid <- fmap (toLower . show) getULID
 
       let taskToTag = TaskToTag ulid taskId tag
@@ -423,6 +426,11 @@ addTag idSubstr tag = do
       runBeamSqlite connection $ runInsert $
         insert (_tldbTaskToTag taskLiteDb) $
         insertValues [taskToTag]
+
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task -> [(_taskModifiedUtc task) <-. val_ now])
+          (\task -> primaryKey task ==. val_ taskId)
 
 
 ulidToDateTime :: Text -> Maybe DateTime
@@ -450,7 +458,7 @@ formatTaskLine taskIdWidth task =
         -> annotate (idStyle conf) id
         <++> annotate (dateStyle conf) (pretty taskDate)
         <++> annotate (bodyStyle conf) (pretty body)
-        <++> annotate (closeStyle conf) (pretty $ _ftCloseUtc task)
+        <++> annotate (closedStyle conf) (pretty $ _ftClosedUtc task)
         <++> annotate (tagStyle conf)
               (pretty $ unwords $ fmap ("+" <>) (fromMaybe [] $ _ftTags task))
         )
