@@ -10,21 +10,33 @@ import Data.Text as T
 import Database.SQLite.Simple as Sql
 
 
-getValueSql :: Show a => a -> Text
-getValueSql value =
+newtype SqlQuery = SqlQuery Text
+  deriving Show
+
+
+getValue :: Show a => a -> Text
+getValue value =
   "'" <> show value <> "'"
 
 
-getTableSql :: Text -> [Text] -> Query
-getTableSql tableName columns = Query $ T.unlines (
+getTable :: Text -> [Text] -> Query
+getTable tableName columns = Query $ T.unlines (
   "create table `" <> tableName <> "` (" :
   (T.intercalate ",\n" columns) :
   ");" :
   [])
 
 
-getSelectSql :: [Text] -> Text -> Text -> Query
-getSelectSql selectLines fromStatement groupByColumn = Query $ T.unlines (
+getColumns :: Text -> [Text] -> SqlQuery
+getColumns tableName columns  = SqlQuery $ unlines $ (
+  "select" :
+  "  " <> T.intercalate ",\n  " columns <> "\n" :
+  "from `" <> tableName <> "`;" :
+  [])
+
+
+getSelect :: [Text] -> Text -> Text -> Query
+getSelect selectLines fromStatement groupByColumn = Query $ T.unlines (
   "select" :
   (T.intercalate ",\n" selectLines) :
   "from" :
@@ -33,8 +45,8 @@ getSelectSql selectLines fromStatement groupByColumn = Query $ T.unlines (
   [])
 
 
-getViewSql :: Text -> Query -> Query
-getViewSql viewName selectQuery = Query $ T.unlines (
+getView :: Text -> Query -> Query
+getView viewName selectQuery = Query $ T.unlines (
   "create view `" <> viewName <> "` as" :
   fromQuery selectQuery :
   [])
@@ -53,8 +65,8 @@ createTableWithQuery connection aTableName theQuery = do
       putText $ "🆕 Create table \"" <> aTableName <> "\""
 
 
-getCaseSql :: Maybe Text -> [(Text, Float)] -> Text
-getCaseSql fieldNameMaybe valueMap =
+getCase :: Maybe Text -> [(Text, Float)] -> Text
+getCase fieldNameMaybe valueMap =
   "case "
   <> case fieldNameMaybe of
       Nothing -> ""
@@ -63,3 +75,4 @@ getCaseSql fieldNameMaybe valueMap =
         (\(key, val) -> "when " <> key <> " then " <> show val <> " ")
         valueMap)
   <> " end "
+

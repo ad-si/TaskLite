@@ -39,7 +39,7 @@ import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Unsafe (unsafeHead)
 import Utils
-import SqlUtils
+import qualified SqlUtils as SqlU
 
 
 data Config = Config
@@ -231,7 +231,7 @@ createTaskTable connection = do
   let
     theTableName = tableName conf
     -- TODO: Replace with beam-migrate based table creation
-    createTableQuery = getTableSql theTableName (
+    createTableQuery = SqlU.getTable theTableName (
       "`id` text not null primary key" :
       "`body` text not null" :
       ("`state` text check(`state` in (" <> stateOptions
@@ -242,7 +242,7 @@ createTaskTable connection = do
       "`priority_adjustment` float" :
       [])
 
-  createTableWithQuery
+  SqlU.createTableWithQuery
     connection
     theTableName
     createTableQuery
@@ -252,19 +252,19 @@ createTaskView :: Connection -> IO ()
 createTaskView connection = do
   let
     viewName = "tasks_view"
-    caseStateSql = getCaseSql (Just "state") $ [stateDefault ..]
-      & fmap (\tState -> (getValueSql tState, case tState of
+    caseStateSql = SqlU.getCase (Just "state") $ [stateDefault ..]
+      & fmap (\tState -> (SqlU.getValue tState, case tState of
           Open     ->  0
           Waiting  -> -3
           Done     ->  0
           Obsolete ->  0
         ))
-    caseOverdueSql = getCaseSql Nothing
+    caseOverdueSql = SqlU.getCase Nothing
       [ ("`due_utc` is null", 0)
       , ("`due_utc` >= datetime('now')", 0)
       , ("`due_utc` < datetime('now')", 10)
       ]
-    selectQuery = getSelectSql
+    selectQuery = SqlU.getSelect
       (
         "`tasks`.`id` as `id`" :
         "`tasks`.`body` as `body`" :
@@ -276,16 +276,17 @@ createTaskView connection = do
         "ifnull(`tasks`.`priority_adjustment`, 0.0)"
           <> " + " <> caseStateSql <> "\n"
           <> " + " <> caseOverdueSql <> "\n"
-          <> " + case count(`task_to_tag`.`tag`) when 0 then 0.0 else 2.0 end" <> "\n"
+          <> " + case count(`task_to_tag`.`tag`) \
+              \when 0 then 0.0 else 2.0 end" <> "\n"
           <> " as `priority`" :
         []
       )
       ("`" <> tableName conf <> "` \
         \left join `task_to_tag` on `tasks`.`id` = `task_to_tag`.`task_id`")
       "`tasks`.`id`"
-    createTableQuery = getViewSql viewName selectQuery
+    createTableQuery = SqlU.getView viewName selectQuery
 
-  createTableWithQuery
+  SqlU.createTableWithQuery
     connection
     viewName
     createTableQuery
@@ -295,7 +296,7 @@ createTagsTable :: Connection -> IO ()
 createTagsTable connection = do
   let
     theTableName = "task_to_tag"
-    createTableQuery = getTableSql theTableName (
+    createTableQuery = SqlU.getTable theTableName (
       "`id` text not null primary key" :
       "`task_id` text not null" :
       "`tag` text not null" :
@@ -303,7 +304,7 @@ createTagsTable connection = do
       "constraint `no_duplicate_tags` unique (`task_id`, `tag`) " :
       [])
 
-  createTableWithQuery
+  SqlU.createTableWithQuery
     connection
     theTableName
     createTableQuery
@@ -499,7 +500,8 @@ formatTaskLine taskIdWidth task =
     taskLine = fmap
       (\taskDate
         -> annotate (idStyle conf) id
-        <++> annotate (priorityStyle conf) (leftFill 4 $ pretty $ fromMaybe 0 (_ftPriority task))
+        <++> annotate (priorityStyle conf)
+              (leftFill 4 $ pretty $ fromMaybe 0 (_ftPriority task))
         <++> annotate (dateStyle conf) (pretty taskDate)
         <++> annotate (bodyStyle conf) (pretty body)
         <++> annotate (closedStyle conf) (pretty $ _ftClosedUtc task)
