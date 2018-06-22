@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 
 module Lib where
@@ -23,8 +24,10 @@ import Data.Csv as Csv
 import Data.Text as T
 import Data.ULID
 import Database.Beam
+import Database.Beam.Backend.SQL
 import Database.Beam.Sqlite
 import Database.Beam.Schema.Tables
+import Database.Beam.Sqlite.Syntax (SqliteExpressionSyntax)
 import Database.SQLite.Simple as Sql
 import Database.SQLite.Simple.FromField as Sql.FromField
 import Database.SQLite.Simple.ToField as Sql.ToField
@@ -43,6 +46,7 @@ data Config = Config
   { tableName :: Text
   , idWidth :: Int
   , idStyle :: AnsiStyle
+  , priorityStyle :: AnsiStyle
   , dateStyle :: AnsiStyle
   , bodyStyle :: AnsiStyle
   , closedStyle :: AnsiStyle
@@ -55,6 +59,7 @@ conf = Config
   { tableName = "tasks"
   , idWidth = 4
   , idStyle = color Green
+  , priorityStyle = color Magenta
   , dateStyle = color Yellow
   , bodyStyle = color White
   , closedStyle = color Red
@@ -81,16 +86,29 @@ instance Sql.FromField.FromField TaskState where
 instance Sql.ToField.ToField TaskState where
   toField = SQLText . show
 
+instance HasSqlValueSyntax be [Char] => HasSqlValueSyntax be TaskState where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance HasSqlEqualityCheck SqliteExpressionSyntax TaskState
+
+stateDefault :: TaskState
+stateDefault = (toEnum 0) :: TaskState
+
+stateOptions :: Text
+stateOptions = T.intercalate "," $
+  fmap (("'" <>) . (<> "'") . show) [stateDefault ..]
+
 
 newtype Ulid = Ulid Text
 
 data TaskT f = Task
   { _taskId :: Columnar f Text -- Ulid
   , _taskBody :: Columnar f Text
-  , _taskState :: Columnar f Text -- TaskState
-  , _taskDueUtc :: Columnar f Text
-  , _taskClosedUtc :: Columnar f Text
+  , _taskState :: Columnar f TaskState
+  , _taskDueUtc :: Columnar f (Maybe Text)
+  , _taskClosedUtc :: Columnar f (Maybe Text)
   , _taskModifiedUtc :: Columnar f Text
+  , _taskPriorityAdjustment :: Columnar f (Maybe Float)
   } deriving Generic
 
 
@@ -113,8 +131,10 @@ instance FromRow Task where
   fromRow = Task
     <$> field <*> field <*> field
     <*> field <*> field <*> field
+    <*> field
 
 
+-- | Final user-facing format of tasks
 data FullTask = FullTask
   { _ftId :: Text -- Ulid
   , _ftBody :: Text
@@ -123,14 +143,16 @@ data FullTask = FullTask
   , _ftClosedUtc :: Maybe Text
   , _ftModifiedUtc :: Text
   , _ftTags :: Maybe [Text]
+  , _ftPriority :: Maybe Float
   } deriving Generic
+
 
 -- For conversion from SQLite with SQLite.Simple
 instance FromRow FullTask where
   fromRow = FullTask
     <$> field <*> field <*> field
     <*> field <*> field <*> field
-    <*> field
+    <*> field <*> field
 
 instance Sql.FromField.FromField [Text] where
   fromField (Field (SQLText txt) _) = Ok $ split (== ',') txt
@@ -208,18 +230,16 @@ createTaskTable :: Connection -> IO ()
 createTaskTable connection = do
   let
     theTableName = tableName conf
-    stateDefault = (toEnum 0) :: TaskState
-    stateOptions = T.intercalate "," $
-      fmap (("'" <>) . (<> "'") . show) [stateDefault ..]
     -- TODO: Replace with beam-migrate based table creation
     createTableQuery = getTableSql theTableName (
       "`id` text not null primary key" :
       "`body` text not null" :
       ("`state` text check(`state` in (" <> stateOptions
         <> ")) not null default '" <> show stateDefault <> "'") :
-      "`due_utc` text not null" :
-      "`closed_utc` text not null" :
+      "`due_utc` text" :
+      "`closed_utc` text" :
       "`modified_utc` text not null" :
+      "`priority_adjustment` float" :
       [])
 
   createTableWithQuery
@@ -232,6 +252,18 @@ createTaskView :: Connection -> IO ()
 createTaskView connection = do
   let
     viewName = "tasks_view"
+    caseStateSql = getCaseSql (Just "state") $ [stateDefault ..]
+      & fmap (\tState -> (getValueSql tState, case tState of
+          Open     ->  0
+          Waiting  -> -3
+          Done     ->  0
+          Obsolete ->  0
+        ))
+    caseOverdueSql = getCaseSql Nothing
+      [ ("`due_utc` is null", 0)
+      , ("`due_utc` >= datetime('now')", 0)
+      , ("`due_utc` < datetime('now')", 10)
+      ]
     selectQuery = getSelectSql
       (
         "`tasks`.`id` as `id`" :
@@ -241,6 +273,11 @@ createTaskView connection = do
         "`tasks`.`closed_utc` as `closed_utc`" :
         "`tasks`.`modified_utc`as `modified_utc`" :
         "group_concat(`task_to_tag`.`tag`, ',') as `tags`" :
+        "ifnull(`tasks`.`priority_adjustment`, 0.0)"
+          <> " + " <> caseStateSql <> "\n"
+          <> " + " <> caseOverdueSql <> "\n"
+          <> " + case count(`task_to_tag`.`tag`) when 0 then 0.0 else 2.0 end" <> "\n"
+          <> " as `priority`" :
         []
       )
       ("`" <> tableName conf <> "` \
@@ -312,7 +349,7 @@ addTask bodyAndTags = do
     fragments = splitOn " +" bodyAndTags
     body = fromMaybe "" $ headMay fragments
     tags = fromMaybe [] $ tailMay fragments
-    task = Task ulid body (show Open) "" "" (pack now)
+    task = Task ulid body Open Nothing Nothing (pack now) Nothing
 
   runBeamSqlite connection $ runInsert $
     insert (_tldbTasks taskLiteDb) $
@@ -361,11 +398,11 @@ setStateAndClosed connection taskId theTaskState = do
 
   runBeamSqlite connection $ runUpdate $
     update (_tldbTasks taskLiteDb)
-      (\task -> [ (_taskState task) <-. val_ (show theTaskState)
+      (\task -> [ (_taskState task) <-. val_  theTaskState
                 , (_taskModifiedUtc task) <-. val_ now
                 ])
       (\task -> primaryKey task ==. val_ taskId &&.
-                (_taskState task) /=. val_ (show theTaskState))
+                (_taskState task) /=. val_ theTaskState)
 
 
 doTask :: Text -> IO ()
@@ -445,6 +482,12 @@ ulidToDateTime =
   . T.take 10
 
 
+leftFill :: Int -> Doc ann -> Doc ann
+leftFill width doc =
+  let numSpaces = width - (T.length $ show doc)
+  in (P.fold $ P.replicate numSpaces space) <> doc
+
+
 formatTaskLine :: Int -> FullTask -> Doc AnsiStyle
 formatTaskLine taskIdWidth task =
   let
@@ -456,6 +499,7 @@ formatTaskLine taskIdWidth task =
     taskLine = fmap
       (\taskDate
         -> annotate (idStyle conf) id
+        <++> annotate (priorityStyle conf) (leftFill 4 $ pretty $ fromMaybe 0 (_ftPriority task))
         <++> annotate (dateStyle conf) (pretty taskDate)
         <++> annotate (bodyStyle conf) (pretty body)
         <++> annotate (closedStyle conf) (pretty $ _ftClosedUtc task)
@@ -501,6 +545,7 @@ listTasks taskState = do
   let
     dateWidth = 10
     bodyWidth = 10
+    prioWidth = 4
     strong = bold <> underlined
 
   rows <- case taskState of
@@ -516,9 +561,10 @@ listTasks taskState = do
   else do
     let
       taskIdWidth = getIdLength $ fromIntegral $ P.length rows
-      docHeader = (annotate (idStyle conf <> strong) $ fill taskIdWidth "Id")
-        <++> (annotate (dateStyle conf <> strong) $
-          fill dateWidth "Opened UTC")
+      docHeader =
+             (annotate (idStyle conf <> strong) $ fill taskIdWidth "Id")
+        <++> (annotate (priorityStyle conf <> strong) $ fill prioWidth "Prio")
+        <++> (annotate (dateStyle conf <> strong) $ fill dateWidth "Opened UTC")
         <++> (annotate (bodyStyle conf <> strong) $ fill bodyWidth "Body")
         <++> line
 

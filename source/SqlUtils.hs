@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 
@@ -7,6 +8,11 @@ import Protolude as P
 
 import Data.Text as T
 import Database.SQLite.Simple as Sql
+
+
+getValueSql :: Show a => a -> Text
+getValueSql value =
+  "'" <> show value <> "'"
 
 
 getTableSql :: Text -> [Text] -> Query
@@ -45,3 +51,15 @@ createTableWithQuery connection aTableName theQuery = do
       else P.print errorMessage
     Right _ ->
       putText $ "🆕 Create table \"" <> aTableName <> "\""
+
+
+getCaseSql :: Maybe Text -> [(Text, Float)] -> Text
+getCaseSql fieldNameMaybe valueMap =
+  "case "
+  <> case fieldNameMaybe of
+      Nothing -> ""
+      Just fName -> "`" <> fName <> "`"
+  <> (P.fold $ fmap
+        (\(key, val) -> "when " <> key <> " then " <> show val <> " ")
+        valueMap)
+  <> " end "
