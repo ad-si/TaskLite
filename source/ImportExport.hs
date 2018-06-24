@@ -110,7 +110,7 @@ instance FromJSON FullTask where
       maybeModified = modified <|> modified_at <|> o_modified_utc
         <|> modification_date <|> updated_at
       modified_utc = T.pack $ timePrint ISO8601_DateAndTime $
-        fromMaybe (timeFromElapsed 0 :: DateTime) (parseUtc =<< maybeModified)
+        fromMaybe createdUtcMaybe (parseUtc =<< maybeModified)
 
     o_tags  <- o .:? "tags"
     project <- o .:? "project"
@@ -118,8 +118,27 @@ instance FromJSON FullTask where
       projects = fmap (:[]) project
       tags = o_tags  <> projects
 
-    let due_utc = Just ""
-    let closed_utc = Just ""
+    due       <- o .:? "due"
+    o_due_utc <- o .:? "due_utc"
+    due_on    <- o .:? "due_on"
+    let
+      maybeDue = due <|> o_due_utc <|> due_on
+      due_utc = fmap
+        (T.pack . (timePrint ISO8601_DateAndTime))
+        (parseUtc =<< maybeDue)
+
+    closed       <- o .:? "closed"
+    o_closed_utc <- o .:? "closed_utc"
+    closed_on    <- o .:? "closed_on"
+    end          <- o .:? "end"
+    o_end_utc    <- o .:? "end_utc"
+    end_on       <- o .:? "end_on"
+    let
+      maybeClosed = closed <|> o_closed_utc <|> closed_on
+        <|> end <|> o_end_utc <|> end_on
+      closed_utc = fmap
+        (T.pack . (timePrint ISO8601_DateAndTime))
+        (parseUtc =<< maybeClosed)
 
     let ulid = ""
     let tempTask = FullTask {..}
