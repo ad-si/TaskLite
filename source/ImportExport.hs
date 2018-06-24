@@ -65,25 +65,26 @@ instance FromJSON Task where
     entry        <- o .:? "entry"
     creation     <- o .:? "creation"
     created_at   <- o .:? "created_at"
-
     let createdUtc = fromMaybe "1970-01-01T00:00Z"
           (entry <|> creation <|> created_at) :: Text
 
     o_body       <- o .:? "body"
     description  <- o .:? "description"
-
     let body = fromMaybe "" (o_body <|> description)
 
-    o_state        <- o .:? "state"
+    o_state      <- o .:? "state"
     status       <- o .:? "status"
-
     let state = fromMaybe Open (textToTaskState =<< (o_state <|> status))
+
+    o_priority_adjustment <- o .:? "priority_adjustment"
+    urgency <- o .:? "urgency"
+    priority <- optional (o .: "priority")
+    let priority_adjustment = o_priority_adjustment <|> urgency <|> priority
+
     let due_utc = Just ""
     let closed_utc = Just ""
     let modified_utc = ""
-    let priority_adjustment = Just 0.0
     let ulid = ""
-
     let tempTask = Task {..}
     let showInt = show :: Int -> Text
 
