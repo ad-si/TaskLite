@@ -53,7 +53,8 @@ data TaskState
 instance Sql.FromField.FromField TaskState where
   fromField f@(Field (SQLText txt) _) = case (textToTaskState txt) of
     Just val -> Ok val
-    Nothing -> returnError ConversionFailed f "expecting a valid TaskState"
+    Nothing -> returnError ConversionFailed f $ T.unpack $
+      "expecting a valid TaskState and not \"" <> txt <> "\""
   fromField f = returnError ConversionFailed f "expecting SQLText column type"
 
 instance Sql.ToField.ToField TaskState where
@@ -65,6 +66,13 @@ instance HasSqlValueSyntax be [Char] => HasSqlValueSyntax be TaskState where
 instance HasSqlEqualityCheck SqliteExpressionSyntax TaskState
 
 instance FromJSON TaskState
+instance ToJSON TaskState
+
+instance ToRecord TaskState
+instance ToNamedRecord TaskState
+
+instance Csv.ToField TaskState where
+  toField = show
 
 instance Hashable TaskState
 
@@ -78,14 +86,15 @@ stateOptions = T.intercalate "," $
 textToTaskState :: Text -> Maybe TaskState
 textToTaskState txt =
   let
-    txtLower = T.toLower txt
     func t
       | t `elem` ["open", "pending", "recurring"] = Just Open
       | t == "waiting" = Just Waiting
       | t `elem` ["done", "completed", "finished", "fixed"] = Just Done
       | t `elem` ["obsolete", "deleted"] = Just Obsolete
       | otherwise = Nothing
-  in func txt
+    txtLower = T.toLower txt
+  in
+    func txtLower
 
 
 newtype Ulid = Ulid Text

@@ -46,13 +46,14 @@ import Data.Text.Prettyprint.Doc.Render.Terminal
 import Unsafe (unsafeHead)
 import Utils
 import qualified SqlUtils as SqlU
-import Task
+import FullTask
+import Task (TaskState(..), textToTaskState)
 
 
 importTask :: IO ()
 importTask = do
   content <- BL.getContents
-  let task = Aeson.eitherDecode content :: Either [Char] Task
+  let task = Aeson.eitherDecode content :: Either [Char] FullTask
   print task
 
 
@@ -79,7 +80,7 @@ setDateTime ulid dateTime = ULID
   (random ulid)
 
 
-instance FromJSON Task where
+instance FromJSON FullTask where
   parseJSON = withObject "task" $ \o -> do
     entry        <- o .:? "entry"
     creation     <- o .:? "creation"
@@ -95,40 +96,44 @@ instance FromJSON Task where
     status       <- o .:? "status"
     let state = fromMaybe Open (textToTaskState =<< (o_state <|> status))
 
-    o_priority_adjustment <- o .:? "priority_adjustment"
-    urgency <- o .:? "urgency"
-    priority <- optional (o .: "priority")
-    let priority_adjustment = o_priority_adjustment <|> urgency <|> priority
+    priority_adjustment <- o .:? "priority_adjustment"
+    urgency             <- o .:? "urgency"
+    o_priority          <- optional (o .: "priority")
+    let priority = priority_adjustment <|> urgency <|> o_priority
 
     modified          <- o .:? "modified"
     modified_at       <- o .:? "modified_at"
     o_modified_utc    <- o .:? "modified_utc"
     modification_date <- o .:? "modification_date"
     updated_at        <- o .:? "updated_at"
-
     let
       maybeModified = modified <|> modified_at <|> o_modified_utc
         <|> modification_date <|> updated_at
       modified_utc = T.pack $ timePrint ISO8601_DateAndTime $
         fromMaybe (timeFromElapsed 0 :: DateTime) (parseUtc =<< maybeModified)
 
+    o_tags  <- o .:? "tags"
+    project <- o .:? "project"
+    let
+      projects = fmap (:[]) project
+      tags = o_tags  <> projects
+
     let due_utc = Just ""
     let closed_utc = Just ""
 
     let ulid = ""
-    let tempTask = Task {..}
+    let tempTask = FullTask {..}
 
-    o_ulid         <- o .:? "ulid"
-
+    o_ulid  <- o .:? "ulid"
     let
-      ulidGenerated = (ulidFromInteger . toInteger . hash) tempTask
+      ulidGenerated = (ulidFromInteger . abs . toInteger . hash) tempTask
       ulidCombined = setDateTime ulidGenerated createdUtcMaybe
       ulid = T.toLower $ fromMaybe ""
         (o_ulid <|> Just (show ulidCombined))
 
     -- let showInt = show :: Int -> Text
     -- uuid           <- o .:? "uuid"
-    -- -- Map `show` over `Parser` and `Maybe` to convert possible `Int` to `Text`
+    -- -- Map `show` over `Parser` & `Maybe` to convert possible `Int` to `Text`
     -- id             <- (o .:? "id" <|> ((showInt <$>) <$> (o .:? "id")))
     -- let id = (uuid <|> id)
 

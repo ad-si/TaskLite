@@ -42,6 +42,7 @@ import Unsafe (unsafeHead)
 import Utils
 import qualified SqlUtils as SqlU
 import Task as Task
+import FullTask as FullTask
 
 
 data Config = Config
@@ -70,41 +71,7 @@ conf = Config
 
 
 
--- | Final user-facing format of tasks
-data FullTask = FullTask
-  { _ftId :: Text -- Ulid
-  , _ftBody :: Text
-  , _ftState :: Text -- TaskState
-  , _ftDueUtc :: Maybe Text
-  , _ftClosedUtc :: Maybe Text
-  , _ftModifiedUtc :: Text
-  , _ftTags :: Maybe [Text]
-  , _ftPriority :: Maybe Float
-  } deriving Generic
 
-
--- For conversion from SQLite with SQLite.Simple
-instance FromRow FullTask where
-  fromRow = FullTask
-    <$> field <*> field <*> field
-    <*> field <*> field <*> field
-    <*> field <*> field
-
-instance Sql.FromField.FromField [Text] where
-  fromField (Field (SQLText txt) _) = Ok $ split (== ',') txt
-  fromField f = returnError ConversionFailed f "expecting SQLText column type"
-
-
-instance Csv.ToField [Text] where
-  toField = encodeUtf8 . (T.intercalate ",")
-
--- For conversion to CSV
-instance ToRecord FullTask
-instance ToNamedRecord FullTask
-instance DefaultOrdered FullTask
-
--- For conversion to JSON
-instance ToJSON FullTask
 
 
 data TaskToTagT f = TaskToTag
@@ -422,26 +389,26 @@ ulidToDateTime =
 formatTaskLine :: Int -> FullTask -> Doc AnsiStyle
 formatTaskLine taskUlidWidth task =
   let
-    id = pretty $ T.takeEnd taskUlidWidth $ _ftId task
+    id = pretty $ T.takeEnd taskUlidWidth $ FullTask.ulid task
     date = fmap
       (pack . timePrint ISO8601_Date)
-      (ulidToDateTime $ _ftId task)
-    body = _ftBody task
+      (ulidToDateTime $ FullTask.ulid task)
+    body = FullTask.body task
     taskLine = fmap
       (\taskDate
         -> annotate (idStyle conf) id
         <++> annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
-              $ show $ fromMaybe 0 (_ftPriority task))
+              $ show $ fromMaybe 0 (FullTask.priority task))
         <++> annotate (dateStyle conf) (pretty taskDate)
         <++> annotate (bodyStyle conf) (pretty body)
-        <++> annotate (closedStyle conf) (pretty $ _ftClosedUtc task)
-        <++> annotate (tagStyle conf)
-              (pretty $ unwords $ fmap ("+" <>) (fromMaybe [] $ _ftTags task))
+        <++> annotate (closedStyle conf) (pretty $ FullTask.closed_utc task)
+        <++> annotate (tagStyle conf) (pretty $ unwords $
+              fmap ("+" <>) (fromMaybe [] $ FullTask.tags task))
         )
       date
   in
     fromMaybe
-      ("Id" <+> (dquotes $ pretty $ _ftId task) <+>
+      ("Id" <+> (dquotes $ pretty $ FullTask.ulid task) <+>
         "is an invalid ulid and could not be converted to a datetime")
       taskLine
 
