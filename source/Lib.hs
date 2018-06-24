@@ -22,6 +22,7 @@ import Data.Hourglass
 import Codec.Crockford as Crock
 import Data.Csv as Csv
 import Data.Text as T
+import qualified Data.Text.IO as T
 import Data.ULID
 import Database.Beam
 import Database.Beam.Backend.SQL
@@ -40,6 +41,7 @@ import Data.Text.Prettyprint.Doc.Render.Terminal
 import Unsafe (unsafeHead)
 import Utils
 import qualified SqlUtils as SqlU
+import Task as Task
 
 
 data Config = Config
@@ -66,72 +68,6 @@ conf = Config
   , tagStyle = color Cyan
   }
 
-
-data TaskState
-  = Open
-  | Waiting
-  | Done
-  | Obsolete
-  deriving (Eq, Enum, Ord, Read, Show)
-
-instance Sql.FromField.FromField TaskState where
-  fromField f@(Field (SQLText txt) _) = case txt of
-    "Open" -> Ok Open
-    "Waiting" -> Ok Waiting
-    "Done" -> Ok Done
-    "Obsolete" -> Ok Obsolete
-    _ -> returnError ConversionFailed f "expecting a valid TaskState"
-  fromField f = returnError ConversionFailed f "expecting SQLText column type"
-
-instance Sql.ToField.ToField TaskState where
-  toField = SQLText . show
-
-instance HasSqlValueSyntax be [Char] => HasSqlValueSyntax be TaskState where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance HasSqlEqualityCheck SqliteExpressionSyntax TaskState
-
-stateDefault :: TaskState
-stateDefault = (toEnum 0) :: TaskState
-
-stateOptions :: Text
-stateOptions = T.intercalate "," $
-  fmap (("'" <>) . (<> "'") . show) [stateDefault ..]
-
-
-newtype Ulid = Ulid Text
-
-data TaskT f = Task
-  { _taskId :: Columnar f Text -- Ulid
-  , _taskBody :: Columnar f Text
-  , _taskState :: Columnar f TaskState
-  , _taskDueUtc :: Columnar f (Maybe Text)
-  , _taskClosedUtc :: Columnar f (Maybe Text)
-  , _taskModifiedUtc :: Columnar f Text
-  , _taskPriorityAdjustment :: Columnar f (Maybe Float)
-  } deriving Generic
-
-
--- Beam related instances
-type Task = TaskT Identity
-type TaskId = PrimaryKey TaskT Identity
-
-deriving instance Show Task
-deriving instance Eq Task
-
-instance Beamable TaskT
-
-instance Table TaskT where
-  data PrimaryKey TaskT f = TaskId (Columnar f Text) deriving Generic
-  primaryKey = TaskId . _taskId
-instance Beamable (PrimaryKey TaskT)
-
--- For conversion from SQLite with SQLite.Simple
-instance FromRow Task where
-  fromRow = Task
-    <$> field <*> field <*> field
-    <*> field <*> field <*> field
-    <*> field
 
 
 -- | Final user-facing format of tasks
@@ -172,8 +108,8 @@ instance ToJSON FullTask
 
 
 data TaskToTagT f = TaskToTag
-  { _ttId :: Columnar f Text -- Ulid
-  , _ttTaskId :: PrimaryKey TaskT f
+  { _ttUlid :: Columnar f Text -- Ulid
+  , _ttTaskUlid :: PrimaryKey TaskT f
   , _ttTag :: Columnar f Text
   } deriving Generic
 
@@ -188,7 +124,7 @@ instance Beamable TaskToTagT
 
 instance Table TaskToTagT where
   data PrimaryKey TaskToTagT f = TaskToTagId (Columnar f Text) deriving Generic
-  primaryKey = TaskToTagId . _ttId
+  primaryKey = TaskToTagId . _ttUlid
 instance Beamable (PrimaryKey TaskToTagT)
 
 
@@ -214,7 +150,7 @@ taskLiteDb = defaultDbSettings `withDbModification`
   dbModification
     { _tldbTaskToTag = modifyTable identity $
         tableModification
-          { _ttTaskId = TaskId (fieldNamed "task_id") }
+          { _ttTaskUlid = TaskUlid (fieldNamed "task_ulid") }
     }
 
 
@@ -232,7 +168,7 @@ createTaskTable connection = do
     theTableName = tableName conf
     -- TODO: Replace with beam-migrate based table creation
     createTableQuery = SqlU.getTable theTableName (
-      "`id` text not null primary key" :
+      "`ulid` text not null primary key" :
       "`body` text not null" :
       ("`state` text check(`state` in (" <> stateOptions
         <> ")) not null default '" <> show stateDefault <> "'") :
@@ -266,7 +202,7 @@ createTaskView connection = do
       ]
     selectQuery = SqlU.getSelect
       (
-        "`tasks`.`id` as `id`" :
+        "`tasks`.`ulid` as `ulid`" :
         "`tasks`.`body` as `body`" :
         "`tasks`.`state` as `state`" :
         "`tasks`.`due_utc` as `due_utc`" :
@@ -282,8 +218,8 @@ createTaskView connection = do
         []
       )
       ("`" <> tableName conf <> "` \
-        \left join `task_to_tag` on `tasks`.`id` = `task_to_tag`.`task_id`")
-      "`tasks`.`id`"
+        \left join `task_to_tag` on `tasks`.`ulid` = `task_to_tag`.`task_ulid`")
+      "`tasks`.`ulid`"
     createTableQuery = SqlU.getView viewName selectQuery
 
   SqlU.createTableWithQuery
@@ -297,11 +233,11 @@ createTagsTable connection = do
   let
     theTableName = "task_to_tag"
     createTableQuery = SqlU.getTable theTableName (
-      "`id` text not null primary key" :
-      "`task_id` text not null" :
+      "`ulid` text not null primary key" :
+      "`task_ulid` text not null" :
       "`tag` text not null" :
-      "foreign key(`task_id`) references `" <> tableName conf <> "`(`id`)" :
-      "constraint `no_duplicate_tags` unique (`task_id`, `tag`) " :
+      "foreign key(`task_ulid`) references `" <> tableName conf <> "`(`ulid`)" :
+      "constraint `no_duplicate_tags` unique (`task_ulid`, `tag`) " :
       [])
 
   SqlU.createTableWithQuery
@@ -374,10 +310,10 @@ instance FromRow NumRows where
   fromRow = NumRows <$> field
 
 
-execWithId :: Connection -> Text -> (TaskId -> IO ()) -> IO ()
+execWithId :: Connection -> Text -> (TaskUlid -> IO ()) -> IO ()
 execWithId connection idSubstr callback = do
   rows <- (query connection
-      (Query $ "select * from " <> tableName conf <> " where `id` like ?")
+      (Query $ "select * from " <> tableName conf <> " where `ulid` like ?")
       ["%"  <> idSubstr :: Text]
     ) :: IO [Task]
 
@@ -393,25 +329,25 @@ execWithId connection idSubstr callback = do
           \Please use a longer slice!"
 
 
-setStateAndClosed :: Connection -> TaskId -> TaskState -> IO ()
-setStateAndClosed connection taskId theTaskState = do
+setStateAndClosed :: Connection -> TaskUlid -> TaskState -> IO ()
+setStateAndClosed connection taskUlid theTaskState = do
   now <- fmap (pack . (timePrint ISO8601_DateAndTime)) timeCurrent
 
   runBeamSqlite connection $ runUpdate $
     update (_tldbTasks taskLiteDb)
-      (\task -> [ (_taskState task) <-. val_  theTaskState
-                , (_taskModifiedUtc task) <-. val_ now
+      (\task -> [ (Task.state task) <-. val_  theTaskState
+                , (Task.modified_utc task) <-. val_ now
                 ])
-      (\task -> primaryKey task ==. val_ taskId &&.
-                (_taskState task) /=. val_ theTaskState)
+      (\task -> primaryKey task ==. val_ taskUlid &&.
+                (Task.state task) /=. val_ theTaskState)
 
 
 doTask :: Text -> IO ()
 doTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    execWithId connection idSubstr $ \taskId@(TaskId idText) -> do
-      setStateAndClosed connection taskId Done
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+      setStateAndClosed connection taskUlid Done
 
       numOfChanges <- changes connection
 
@@ -424,8 +360,8 @@ endTask :: Text -> IO ()
 endTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    execWithId connection idSubstr $ \taskId@(TaskId idText) -> do
-      setStateAndClosed connection taskId Obsolete
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+      setStateAndClosed connection taskUlid Obsolete
 
       numOfChanges <- changes connection
 
@@ -439,9 +375,9 @@ deleteTask :: Text -> IO ()
 deleteTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    execWithId connection idSubstr $ \(TaskId idText) -> do
+    execWithId connection idSubstr $ \(TaskUlid idText) -> do
       execute connection
-        (Query $ "delete from `" <> tableName conf <> "` where `id` == ?")
+        (Query $ "delete from `" <> tableName conf <> "` where `ulid` == ?")
         [idText :: Text]
 
       numOfChanges <- changes connection
@@ -455,11 +391,11 @@ addTag :: Text -> Text -> IO ()
 addTag idSubstr tag = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    execWithId connection idSubstr $ \taskId -> do
+    execWithId connection idSubstr $ \taskUlid -> do
       now <- fmap (pack . (timePrint ISO8601_DateAndTime)) timeCurrent
       ulid <- fmap (toLower . show) getULID
 
-      let taskToTag = TaskToTag ulid taskId tag
+      let taskToTag = TaskToTag ulid taskUlid tag
 
       runBeamSqlite connection $ runInsert $
         insert (_tldbTaskToTag taskLiteDb) $
@@ -467,8 +403,8 @@ addTag idSubstr tag = do
 
       runBeamSqlite connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
-          (\task -> [(_taskModifiedUtc task) <-. val_ now])
-          (\task -> primaryKey task ==. val_ taskId)
+          (\task -> [(Task.modified_utc task) <-. val_ now])
+          (\task -> primaryKey task ==. val_ taskUlid)
 
 
 ulidToDateTime :: Text -> Maybe DateTime
@@ -483,16 +419,10 @@ ulidToDateTime =
   . T.take 10
 
 
-leftFill :: Int -> Doc ann -> Doc ann
-leftFill width doc =
-  let numSpaces = width - (T.length $ show doc)
-  in (P.fold $ P.replicate numSpaces space) <> doc
-
-
 formatTaskLine :: Int -> FullTask -> Doc AnsiStyle
-formatTaskLine taskIdWidth task =
+formatTaskLine taskUlidWidth task =
   let
-    id = pretty $ T.takeEnd taskIdWidth $ _ftId task
+    id = pretty $ T.takeEnd taskUlidWidth $ _ftId task
     date = fmap
       (pack . timePrint ISO8601_Date)
       (ulidToDateTime $ _ftId task)
@@ -500,8 +430,8 @@ formatTaskLine taskIdWidth task =
     taskLine = fmap
       (\taskDate
         -> annotate (idStyle conf) id
-        <++> annotate (priorityStyle conf)
-              (leftFill 4 $ pretty $ fromMaybe 0 (_ftPriority task))
+        <++> annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
+              $ show $ fromMaybe 0 (_ftPriority task))
         <++> annotate (dateStyle conf) (pretty taskDate)
         <++> annotate (bodyStyle conf) (pretty body)
         <++> annotate (closedStyle conf) (pretty $ _ftClosedUtc task)
@@ -562,9 +492,9 @@ listTasks taskState = do
   then liftIO $ die "No tasks available"
   else do
     let
-      taskIdWidth = getIdLength $ fromIntegral $ P.length rows
+      taskUlidWidth = getIdLength $ fromIntegral $ P.length rows
       docHeader =
-             (annotate (idStyle conf <> strong) $ fill taskIdWidth "Id")
+             (annotate (idStyle conf <> strong) $ fill taskUlidWidth "Id")
         <++> (annotate (priorityStyle conf <> strong) $ fill prioWidth "Prio")
         <++> (annotate (dateStyle conf <> strong) $ fill dateWidth "Opened UTC")
         <++> (annotate (bodyStyle conf <> strong) $ fill bodyWidth "Body")
@@ -572,21 +502,5 @@ listTasks taskState = do
 
     liftIO $ putDoc $
       docHeader <>
-      (vsep $ fmap (formatTaskLine taskIdWidth) rows) <>
+      (vsep $ fmap (formatTaskLine taskUlidWidth) rows) <>
       line
-
-
-dumpCsv :: IO ()
-dumpCsv = do
-  execWithConn $ \connection -> do
-    rows <- (query_ connection "select * from tasks_view") :: IO [FullTask]
-
-    putStrLn $ Csv.encodeDefaultOrderedByName rows
-
-
-dumpNdjson :: IO ()
-dumpNdjson = do
-  execWithConn $ \connection -> do
-    rows <- (query_ connection "select * from tasks_view") :: IO [FullTask]
-
-    forM_ rows $ putStrLn . Aeson.encode

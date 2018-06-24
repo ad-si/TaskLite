@@ -10,6 +10,9 @@ import Lib
 import qualified Data.Text as T
 import Options.Applicative
 import Utils
+import ImportExport
+import Task (TaskState(..))
+
 
 toParserInfo :: Parser a -> Text -> ParserInfo a
 toParserInfo parser description =
@@ -19,19 +22,56 @@ type IdText = Text
 type TagText = Text
 
 data Command
-  = List (Filter TaskState)
-  | AddTask IdText
+  {- Modify -}
+  = AddTask IdText
+  -- | LogTask IdText
   | DoTask IdText
   | EndTask IdText
   | DeleteTask IdText
   | AddTag IdText TagText
-  | Count (Filter TaskState)
+  -- | Note -- Add a note
+  -- | Denote -- Remove all notes
+  -- | Start -- Add a note that work on task was started
+  -- | Stop -- Add a note that work on task was stopped
+  -- | Clone -- Clone an existing task
+  -- | Edit -- Launch editor with YAML version of task
+  -- | Append -- Append words to a task description
+  -- | Prepend -- Prepend words to a task description
+  -- | Undo -- Revert last change
+  -- | Repeat -- Set repeating interval for a task
+
+  {- I/O -}
+  | Import
   | Csv
   | Ndjson
-  -- TODO: Add demo mode
-  -- | Demo
+  -- | Backup -- Create a local backup of tasks database
+
+  {- List -}
+  | List (Filter TaskState)
+  | Count (Filter TaskState)
+  -- | Views -- List all available views
+  -- | Tags -- List all used tags
+  -- | Active -- Started tasks
+  -- | Blocked -- Tasks that are blocked by other tasks (newest first)
+  -- | Blockers -- Tasks that block other tasks (newest first)
+  -- | Unblocked -- Tasks that are not blocked
+
+
+  {- Misc -}
+  -- | Demo -- Switch to demo mode
+  -- | Version -- Show version
+  -- | License -- Show license
   | Help
+
   deriving (Show, Eq)
+
+
+-- "blocking" "blockers"
+-- "annotate" "note"
+-- "denotate" "denote"
+-- "rm" "delete"
+-- "remove" "delete"
+-- "duplicate" "clone"
 
 
 addParser :: Parser Command
@@ -48,7 +88,7 @@ countParser = pure $ Count NoFilter
 
 commandParser :: Parser Command
 commandParser =
-  pure (List $ Only Open)
+  (pure $ List $ Only Open) -- "List all tasks sorted by priority"
   <|>
   ( subparser
     (  commandGroup "Basic Commands:"
@@ -64,20 +104,42 @@ commandParser =
       <$> strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)")
       <*> strArgument (metavar "TAG" <> help "The tag"))
       "Add a tag to a task")
+    -- <> command "info" (toParserInfo addParser "Show detailed information to a task")
     )
   <|> subparser
     (  commandGroup "List Commands:"
     <> command "all" (toParserInfo (pure $ List NoFilter)
-        "List all tasks")
+        "List all tasks in chronological order")
     <> command "done" (toParserInfo (pure $ List $ Only Done)
         "List all done tasks")
     <> command "waiting" (toParserInfo (pure $ List $ Only Waiting)
         "List all waiting tasks")
     <> command "obsolete" (toParserInfo (pure $ List $ Only Obsolete)
         "List all obsolete tasks")
+    -- <> command "next" "Show tasks with descending priority"
+    -- <> command "newest" "Show all tasks (newest first)"
+    -- <> command "oldest" "Show all tasks (oldest first)"
+    -- <> command "overdue" -- Overdue tasks
+    -- <> command "repeating" -- Open repeating tasks (soonest first)
+    -- <> command "unblocked" -- Tasks that are not blocked (by priority)
+
+  -- <|> subparser
+    -- (  commandGroup "Visualizations:"
+    -- <> command "burndown" -- "Burndown chart by week"
+    -- <> command "calendar" -- "Calendar view of all open tasks"
+    -- <> command "history" -- "History of tasks"
+    -- <> command "stats" -- "Statistics of all tasks"
+    -- <> command "ulids" -- "List all ULIDs"
+    -- <> command "tags" -- "List all tags"
+    -- <> command "progress" -- "List all tags with corresponding progress"
+    -- <> command "filter" -- "Filter tasks by specified tags"
+
+
     )
   <|> subparser
-    (  commandGroup "Export Commands:"
+    (  commandGroup "I/O Commands:"
+    <> command "import" (toParserInfo (pure Import)
+        "Import one JSON task")
     <> command "csv" (toParserInfo (pure Csv)
         "Export tasks in CSV format")
     <> command "ndjson" (toParserInfo (pure Ndjson)
@@ -101,6 +163,7 @@ main = do
   cliCommand <- execParser commandParserInfo
   case cliCommand of
     List taskFilter -> listTasks taskFilter
+    Import -> importTask
     Csv -> dumpCsv
     Ndjson -> dumpNdjson
     AddTask body -> addTask body

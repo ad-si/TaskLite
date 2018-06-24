@@ -23,6 +23,7 @@ dependencies:
   - beam-core
   - beam-migrate
   - beam-sqlite
+  - bytestring
   - cassava
   - crockford
   - directory
