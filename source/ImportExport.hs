@@ -26,6 +26,7 @@ import qualified Data.Csv as Csv
 import qualified Data.Text as T
 import Data.Hourglass
 import Data.ULID
+import Data.ULID.TimeStamp
 import Database.Beam
 import Database.Beam.Backend.SQL
 import Database.Beam.Sqlite
@@ -36,6 +37,7 @@ import Database.SQLite.Simple.FromField as Sql.FromField
 import Database.SQLite.Simple.ToField as Sql.ToField
 import Database.SQLite.Simple.Internal hiding (result)
 import Database.SQLite.Simple.Ok
+import Foreign.C
 import Lib
 import System.Directory
 import Time.System
@@ -60,13 +62,30 @@ showQuoteless =
   in T.dropWhile isQuote . T.dropWhileEnd isQuote . T.pack . show
 
 
+parseUtc :: Text -> Maybe DateTime
+parseUtc utcText =
+  let
+    isoFormat = toFormat ("YYYYMMDDTHMIS" :: [Char])
+    utcString = T.unpack utcText
+  in
+        (timeParse ISO8601_DateAndTime utcString)
+    <|> (timeParse isoFormat utcString)
+
+
+setDateTime :: ULID -> DateTime -> ULID
+setDateTime ulid dateTime = ULID
+  (mkULIDTimeStamp $ realToFrac
+    (timeFromElapsed $ timeGetElapsed dateTime :: CTime))
+  (random ulid)
+
+
 instance FromJSON Task where
   parseJSON = withObject "task" $ \o -> do
     entry        <- o .:? "entry"
     creation     <- o .:? "creation"
     created_at   <- o .:? "created_at"
-    let createdUtc = fromMaybe "1970-01-01T00:00Z"
-          (entry <|> creation <|> created_at) :: Text
+    let createdUtcMaybe = fromMaybe (timeFromElapsed 0 :: DateTime)
+          (parseUtc =<< (entry <|> creation <|> created_at))
 
     o_body       <- o .:? "body"
     description  <- o .:? "description"
@@ -81,23 +100,37 @@ instance FromJSON Task where
     priority <- optional (o .: "priority")
     let priority_adjustment = o_priority_adjustment <|> urgency <|> priority
 
-    let due_utc = Just ""
-    let closed_utc = Just ""
-    let modified_utc = ""
-    let ulid = ""
-    let tempTask = Task {..}
-    let showInt = show :: Int -> Text
-
-    o_ulid         <- o .:? "ulid"
-    uuid           <- o .:? "uuid"
-    -- Map `show` over `Parser` and `Maybe` to convert possible `Int` to `Text`
-    id             <- (o .:? "id" <|> ((showInt <$>) <$> (o .:? "id")))
+    modified          <- o .:? "modified"
+    modified_at       <- o .:? "modified_at"
+    o_modified_utc    <- o .:? "modified_utc"
+    modification_date <- o .:? "modification_date"
+    updated_at        <- o .:? "updated_at"
 
     let
-      ulidGenerated = T.pack $ show
-        $ ulidFromInteger $ toInteger $ hash tempTask
-      ulid = fromMaybe ""
-        (o_ulid <|> uuid <|> id <|> Just ulidGenerated)
+      maybeModified = modified <|> modified_at <|> o_modified_utc
+        <|> modification_date <|> updated_at
+      modified_utc = T.pack $ timePrint ISO8601_DateAndTime $
+        fromMaybe (timeFromElapsed 0 :: DateTime) (parseUtc =<< maybeModified)
+
+    let due_utc = Just ""
+    let closed_utc = Just ""
+
+    let ulid = ""
+    let tempTask = Task {..}
+
+    o_ulid         <- o .:? "ulid"
+
+    let
+      ulidGenerated = (ulidFromInteger . toInteger . hash) tempTask
+      ulidCombined = setDateTime ulidGenerated createdUtcMaybe
+      ulid = T.toLower $ fromMaybe ""
+        (o_ulid <|> Just (show ulidCombined))
+
+    -- let showInt = show :: Int -> Text
+    -- uuid           <- o .:? "uuid"
+    -- -- Map `show` over `Parser` and `Maybe` to convert possible `Int` to `Text`
+    -- id             <- (o .:? "id" <|> ((showInt <$>) <$> (o .:? "id")))
+    -- let id = (uuid <|> id)
 
     pure tempTask{ulid = ulid}
 
