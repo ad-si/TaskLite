@@ -36,6 +36,23 @@ dependencies:
   - text
   - ulid
 
+default-extensions:
+  - DeriveGeneric
+  - FlexibleContexts
+  - FlexibleInstances
+  - GADTs
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - RecordWildCards
+  - StandaloneDeriving
+  - TypeApplications
+  - TypeFamilies
+  - TypeSynonymInstances
+  - UndecidableInstances
+
+
 library:
   source-dirs: source
 
