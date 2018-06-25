@@ -130,6 +130,7 @@ createTaskTable connection = do
       "`closed_utc` text" :
       "`modified_utc` text not null" :
       "`priority_adjustment` float" :
+      "`metadata` text" :
       [])
 
   SqlU.createTableWithQuery
@@ -280,7 +281,16 @@ addTask bodyAndTags = do
     fragments = splitOn " +" bodyAndTags
     body = fromMaybe "" $ headMay fragments
     tags = fromMaybe [] $ tailMay fragments
-    task = Task ulid body Open Nothing Nothing (pack now) Nothing
+    task = Task
+      { ulid = ulid
+      , body = body
+      , state = Open
+      , due_utc = Nothing
+      , closed_utc = Nothing
+      , modified_utc = pack now
+      , priority_adjustment = Nothing
+      , metadata = Nothing
+      }
 
   runBeamSqlite connection $ runInsert $
     insert (_tldbTasks taskLiteDb) $

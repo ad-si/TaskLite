@@ -94,6 +94,7 @@ data TaskT f = Task
   , closed_utc :: Columnar f (Maybe Text)
   , modified_utc :: Columnar f Text
   , priority_adjustment :: Columnar f (Maybe Float)
+  , metadata :: Columnar f (Maybe Text)
   } deriving Generic
 
 
@@ -116,6 +117,6 @@ instance FromRow Task where
   fromRow = Task
     <$> field <*> field <*> field
     <*> field <*> field <*> field
-    <*> field
+    <*> field <*> field
 
 instance Hashable Task

@@ -4,6 +4,7 @@ import Protolude as P
 
 import Codec.Crockford as Crock
 import Data.Aeson as Aeson
+import Data.Aeson.Text as Aeson
 import Data.Aeson.Types
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Csv as Csv
@@ -157,9 +158,10 @@ instance FromJSON ImportTask where
         (Nothing, Just values) -> values <$$> annotationToNote
         _                      -> []
 
-
-    let ulid = ""
-    let tempTask = Task {..}
+    let
+      metadata = Just $ toStrict $ Aeson.encodeToLazyText o
+      ulid = ""
+      tempTask = Task {..}
 
     o_ulid  <- o .:? "ulid"
     let
