@@ -247,8 +247,10 @@ backupDatabase = do
 
   result <- readProcess "sqlite3"
     [ (getMainDir homeDir) <> "/" <> (dbName conf)
-    , ".dump '" <> backupFilePath <> "'"
+    , ".backup '" <> backupFilePath <> "'"
     ]
     []
-  print result
 
+  putStr result
+  putStrLn $ "✅ Backed up database \"" <> (dbName conf)
+    <> "\" to \"" <> backupFilePath <> "\""
