@@ -76,3 +76,13 @@ getCase fieldNameMaybe valueMap =
         valueMap)
   <> " end "
 
+
+createTriggerAfterUpdate :: Text -> Text -> Text -> Text -> Query
+createTriggerAfterUpdate name tableName whenBlock body = Query $ "\
+    \create trigger if not exists `" <> name <> "_after_update`\n\
+    \after update on `" <> tableName <> "`\n\
+    \when " <> whenBlock <> "\n\
+    \begin\n\
+    \  " <> body <> ";\n\
+    \end;\n\
+    \"

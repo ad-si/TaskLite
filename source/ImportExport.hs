@@ -30,21 +30,37 @@ import Data.Text.Prettyprint.Doc.Render.Terminal
 import Unsafe (unsafeHead)
 import Utils
 import qualified SqlUtils as SqlU
-import FullTask
-import Task (TaskState(..), textToTaskState)
+import Task
+import FullTask (FullTask)
+import Note (Note(..))
 
 
-importTask :: IO ()
-importTask = do
-  content <- BL.getContents
-  let task = Aeson.eitherDecode content :: Either [Char] FullTask
-  print task
+data Annotation = Annotation
+  { entry :: Text
+  , description :: Text
+  } deriving Generic
+
+instance Hashable Annotation
+
+instance ToJSON Annotation
+
+instance FromJSON Annotation where
+  parseJSON = withObject "annotation" $ \o -> do
+    entry        <- o .: "entry"
+    description  <- o .: "description"
+    pure Annotation{..}
 
 
-showQuoteless :: Show a => a -> Text
-showQuoteless =
-  let isQuote = (== '"')
-  in T.dropWhile isQuote . T.dropWhileEnd isQuote . T.pack . show
+annotationToNote :: Annotation -> Note
+annotationToNote annot@Annotation {entry = entry, description = description} =
+  let
+    utc = fromMaybe (timeFromElapsed 0 :: DateTime) (parseUtc entry)
+    ulidGenerated = (ulidFromInteger . abs . toInteger . hash) annot
+    ulidCombined = setDateTime ulidGenerated utc
+  in
+    Note { ulid = (T.toLower . show) ulidCombined
+         , body = description
+         }
 
 
 parseUtc :: Text -> Maybe DateTime
@@ -64,12 +80,19 @@ setDateTime ulid dateTime = ULID
   (random ulid)
 
 
-instance FromJSON FullTask where
+data ImportTask = ImportTask
+  { task :: Task
+  , notes :: [Note]
+  , tags :: [Text]
+  } deriving Show
+
+
+instance FromJSON ImportTask where
   parseJSON = withObject "task" $ \o -> do
     entry        <- o .:? "entry"
     creation     <- o .:? "creation"
     created_at   <- o .:? "created_at"
-    let createdUtcMaybe = fromMaybe (timeFromElapsed 0 :: DateTime)
+    let createdUtc = fromMaybe (timeFromElapsed 0 :: DateTime)
           (parseUtc =<< (entry <|> creation <|> created_at))
 
     o_body       <- o .:? "body"
@@ -80,10 +103,10 @@ instance FromJSON FullTask where
     status       <- o .:? "status"
     let state = fromMaybe Open (textToTaskState =<< (o_state <|> status))
 
-    priority_adjustment <- o .:? "priority_adjustment"
+    o_priority_adjustment <- o .:? "priority_adjustment"
     urgency             <- o .:? "urgency"
-    o_priority          <- optional (o .: "priority")
-    let priority = priority_adjustment <|> urgency <|> o_priority
+    priority          <- optional (o .: "priority")
+    let priority_adjustment = o_priority_adjustment <|> urgency <|> priority
 
     modified          <- o .:? "modified"
     modified_at       <- o .:? "modified_at"
@@ -94,13 +117,13 @@ instance FromJSON FullTask where
       maybeModified = modified <|> modified_at <|> o_modified_utc
         <|> modification_date <|> updated_at
       modified_utc = T.pack $ timePrint ISO8601_DateAndTime $
-        fromMaybe createdUtcMaybe (parseUtc =<< maybeModified)
+        fromMaybe createdUtc (parseUtc =<< maybeModified)
 
     o_tags  <- o .:? "tags"
     project <- o .:? "project"
     let
       projects = fmap (:[]) project
-      tags = o_tags  <> projects
+      tags = fromMaybe [] (o_tags  <> projects)
 
     due       <- o .:? "due"
     o_due_utc <- o .:? "due_utc"
@@ -124,13 +147,22 @@ instance FromJSON FullTask where
         (T.pack . (timePrint ISO8601_DateAndTime))
         (parseUtc =<< maybeClosed)
 
+    o_notes     <- o .:? "notes" :: Parser (Maybe [Note])
+    annotations <- o .:? "annotations" :: Parser (Maybe [Annotation])
+    let
+      notes = case (o_notes, annotations) of
+        (Just theNotes , _   ) -> theNotes
+        (Nothing, Just values) -> values <$$> annotationToNote
+        _                      -> []
+
+
     let ulid = ""
-    let tempTask = FullTask {..}
+    let tempTask = Task {..}
 
     o_ulid  <- o .:? "ulid"
     let
       ulidGenerated = (ulidFromInteger . abs . toInteger . hash) tempTask
-      ulidCombined = setDateTime ulidGenerated createdUtcMaybe
+      ulidCombined = setDateTime ulidGenerated createdUtc
       ulid = T.toLower $ fromMaybe ""
         (o_ulid <|> Just (show ulidCombined))
 
@@ -140,7 +172,16 @@ instance FromJSON FullTask where
     -- id             <- (o .:? "id" <|> ((showInt <$>) <$> (o .:? "id")))
     -- let id = (uuid <|> id)
 
-    pure tempTask{ulid = ulid}
+    let finalTask = tempTask {Task.ulid = ulid}
+
+    pure $ ImportTask finalTask notes tags
+
+
+importTask :: IO ()
+importTask = do
+  content <- BL.getContents
+  let task = Aeson.eitherDecode content :: Either [Char] ImportTask
+  print task
 
 
 dumpCsv :: IO ()

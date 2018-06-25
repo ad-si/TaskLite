@@ -27,6 +27,7 @@ import Unsafe (unsafeHead)
 import Utils
 import qualified SqlUtils as SqlU
 import Task as Task
+import Note (Note(..))
 
 
 -- | Final user-facing format of tasks
@@ -38,6 +39,7 @@ data FullTask = FullTask
   , closed_utc :: Maybe Text
   , modified_utc :: Text
   , tags :: Maybe [Text]
+  , notes :: Maybe [Note]
   , priority :: Maybe Float
   } deriving (Generic, Show)
 
@@ -47,10 +49,16 @@ instance FromRow FullTask where
   fromRow = FullTask
     <$> field <*> field <*> field
     <*> field <*> field <*> field
-    <*> field <*> field
+    <*> field <*> field <*> field
 
 instance Sql.FromField.FromField [Text] where
   fromField (Field (SQLText txt) _) = Ok $ split (== ',') txt
+  fromField f = returnError ConversionFailed f "expecting SQLText column type"
+
+instance Sql.FromField.FromField [Note] where
+  fromField (Field (SQLText txt) _) =
+    let notes = split (== ',') txt
+    in Ok $ notes <$$> (\noteTxt -> Note "" noteTxt)
   fromField f = returnError ConversionFailed f "expecting SQLText column type"
 
 

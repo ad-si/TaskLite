@@ -39,6 +39,7 @@ data Config = Config
   , bodyStyle :: AnsiStyle
   , closedStyle :: AnsiStyle
   , tagStyle :: AnsiStyle
+  , utcFormat :: TimeFormatString
   }
 
 
@@ -52,13 +53,11 @@ conf = Config
   , bodyStyle = color White
   , closedStyle = color Red
   , tagStyle = color Cyan
+  , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
   }
 
 
-
-
-
-
+-- | Record for storing entries of the `task_to_tag` table
 data TaskToTagT f = TaskToTag
   { _ttUlid :: Columnar f Text -- Ulid
   , _ttTaskUlid :: PrimaryKey TaskT f
@@ -75,11 +74,13 @@ type TaskToTagId = PrimaryKey TaskToTagT Identity
 instance Beamable TaskToTagT
 
 instance Table TaskToTagT where
-  data PrimaryKey TaskToTagT f = TaskToTagId (Columnar f Text) deriving Generic
+  data PrimaryKey TaskToTagT f = TaskToTagId (Columnar f Text)
+    deriving Generic
   primaryKey = TaskToTagId . _ttUlid
 instance Beamable (PrimaryKey TaskToTagT)
 
 
+-- | Record for storing entries of the `tasks_view` table
 -- TODO: Use Beam instead of SQLite.Simple
 data TaskView f = TaskView
   { _tvTask :: TaskT f
@@ -160,7 +161,9 @@ createTaskView connection = do
         "`tasks`.`due_utc` as `due_utc`" :
         "`tasks`.`closed_utc` as `closed_utc`" :
         "`tasks`.`modified_utc`as `modified_utc`" :
-        "group_concat(`task_to_tag`.`tag`, ',') as `tags`" :
+        "group_concat(distinct `task_to_tag`.`tag`) as `tags`" :
+        "group_concat(distinct `task_to_note`.`note`) as `notes`" :
+        -- "count(`task_to_note`.`task_ulid`) as `notes`" :
         "ifnull(`tasks`.`priority_adjustment`, 0.0)"
           <> " + " <> caseStateSql <> "\n"
           <> " + " <> caseOverdueSql <> "\n"
@@ -169,8 +172,10 @@ createTaskView connection = do
           <> " as `priority`" :
         []
       )
-      ("`" <> tableName conf <> "` \
-        \left join `task_to_tag` on `tasks`.`ulid` = `task_to_tag`.`task_ulid`")
+      ("`" <> tableName conf <> "` \n\
+        \left join task_to_tag on tasks.ulid = task_to_tag.task_ulid \n\
+        \left join task_to_note on tasks.ulid = task_to_tag.task_ulid \n\
+        \")
       "`tasks`.`ulid`"
     createTableQuery = SqlU.getView viewName selectQuery
 
@@ -178,6 +183,24 @@ createTaskView connection = do
     connection
     viewName
     createTableQuery
+
+  -- | Update `modified_utc` whenever a task is updated
+  -- | (and `modified_utc` itselft isn't changed)
+  execute_ connection $ SqlU.createTriggerAfterUpdate "set_modified_utc" "tasks"
+    "`new`.`modified_utc` is `old`.`modified_utc`"
+    "\
+      \update `tasks`\n\
+      \set `modified_utc` = datetime('now')\n\
+      \where `ulid` = `new`.`ulid`\n\
+      \"
+
+  execute_ connection $ SqlU.createTriggerAfterUpdate "set_closed_utc" "tasks"
+    "`new`.`state` is 'Done' or `new`.`state` is 'Obsolete'"
+    "\
+      \update `tasks`\n\
+      \set `closed_utc` = datetime('now')\n\
+      \where `ulid` = `new`.`ulid`\n\
+      \"
 
 
 createTagsTable :: Connection -> IO ()
@@ -190,6 +213,23 @@ createTagsTable connection = do
       "`tag` text not null" :
       "foreign key(`task_ulid`) references `" <> tableName conf <> "`(`ulid`)" :
       "constraint `no_duplicate_tags` unique (`task_ulid`, `tag`) " :
+      [])
+
+  SqlU.createTableWithQuery
+    connection
+    theTableName
+    createTableQuery
+
+
+createNotesTable :: Connection -> IO ()
+createNotesTable connection = do
+  let
+    theTableName = "task_to_note"
+    createTableQuery = SqlU.getTable theTableName (
+      "`ulid` text not null primary key" :
+      "`task_ulid` text not null" :
+      "`note` text not null" :
+      "foreign key(`task_ulid`) references `" <> tableName conf <> "`(`ulid`)" :
       [])
 
   SqlU.createTableWithQuery
@@ -212,6 +252,7 @@ setupConnection = do
 
   createTaskTable connection
   createTagsTable connection
+  createNotesTable connection
   createTaskView connection
 
   return connection
@@ -233,7 +274,7 @@ addTask :: Text -> IO ()
 addTask bodyAndTags = do
   connection <- setupConnection
   ulid <- fmap (toLower . show) getULID
-  now <- fmap (timePrint ISO8601_DateAndTime) timeCurrent
+  now <- fmap (timePrint $ utcFormat conf) timeCurrent
   let
     fragments = splitOn " +" bodyAndTags
     body = fromMaybe "" $ headMay fragments
@@ -283,13 +324,9 @@ execWithId connection idSubstr callback = do
 
 setStateAndClosed :: Connection -> TaskUlid -> TaskState -> IO ()
 setStateAndClosed connection taskUlid theTaskState = do
-  now <- fmap (pack . (timePrint ISO8601_DateAndTime)) timeCurrent
-
   runBeamSqlite connection $ runUpdate $
     update (_tldbTasks taskLiteDb)
-      (\task -> [ (Task.state task) <-. val_  theTaskState
-                , (Task.modified_utc task) <-. val_ now
-                ])
+      (\task -> [ (Task.state task) <-. val_  theTaskState])
       (\task -> primaryKey task ==. val_ taskUlid &&.
                 (Task.state task) /=. val_ theTaskState)
 
@@ -344,7 +381,7 @@ addTag idSubstr tag = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
     execWithId connection idSubstr $ \taskUlid -> do
-      now <- fmap (pack . (timePrint ISO8601_DateAndTime)) timeCurrent
+      now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
       ulid <- fmap (toLower . show) getULID
 
       let taskToTag = TaskToTag ulid taskUlid tag
