@@ -28,6 +28,8 @@ import Utils
 import qualified SqlUtils as SqlU
 import Task as Task
 import FullTask as FullTask
+import Note as Note
+import TaskToNote as TaskToNote
 
 
 data Config = Config
@@ -101,6 +103,7 @@ instance Beamable TaskView
 data TaskLiteDb f = TaskLiteDb
   { _tldbTasks :: f (TableEntity TaskT)
   , _tldbTaskToTag :: f (TableEntity TaskToTagT)
+  , _tldbTaskToNote :: f (TableEntity TaskToNoteT)
   , _tldbTasksView :: f (ViewEntity TaskView)
   } deriving Generic
 
@@ -113,6 +116,9 @@ taskLiteDb = defaultDbSettings `withDbModification`
     { _tldbTaskToTag = modifyTable identity $
         tableModification
           { _ttTaskUlid = TaskUlid (fieldNamed "task_ulid") }
+    , _tldbTaskToNote = modifyTable identity $
+        tableModification
+          { TaskToNote.task_ulid = TaskUlid (fieldNamed "task_ulid") }
     }
 
 
@@ -286,13 +292,23 @@ insertTask connection task = do
 
 insertTags :: Connection -> TaskUlid -> [Text] -> IO ()
 insertTags connection primKey tags = do
-  taskToTags <- forM tags (\tag -> do
+  taskToTags <- forM tags $ \tag -> do
     tagUlid <- fmap (toLower . show) getULID
-    pure $ TaskToTag tagUlid primKey tag)
+    pure $ TaskToTag tagUlid primKey tag
 
   runBeamSqlite connection $ runInsert $
     insert (_tldbTaskToTag taskLiteDb) $
     insertValues taskToTags
+
+
+insertNotes :: Connection -> TaskUlid -> [Note] -> IO ()
+insertNotes connection primKey notes = do
+  taskToNotes <- forM notes $ \note -> do
+    pure $ TaskToNote (Note.ulid note) primKey (Note.body note)
+
+  runBeamSqlite connection $ runInsert $
+    insert (_tldbTaskToNote taskLiteDb) $
+    insertValues taskToNotes
 
 
 addTask :: Text -> IO ()
@@ -385,6 +401,7 @@ endTask idSubstr = do
 
 deleteTask :: Text -> IO ()
 deleteTask idSubstr = do
+  -- TODO: Delete corresponding tags and notes
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
     execWithId connection idSubstr $ \(TaskUlid idText) -> do

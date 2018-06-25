@@ -30,11 +30,11 @@ import Task (TaskT)
 -- import qualified FullTask as FullTask
 
 
--- | Record for storing entries of the `task_to_tag` table
+-- | Record for storing entries of the `task_to_note` table
 data TaskToNoteT f = TaskToNote
   { ulid :: Columnar f Text -- Ulid
-  , taskUlid :: PrimaryKey TaskT f
-  , tag :: Columnar f Text
+  , task_ulid :: PrimaryKey TaskT f
+  , note :: Columnar f Text
   } deriving Generic
 
 type TaskToNote = TaskToNoteT Identity

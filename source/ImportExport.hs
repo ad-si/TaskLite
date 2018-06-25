@@ -197,11 +197,13 @@ importTask = do
       putStr ("Importing … " :: Text)
       let theTask = task importTask
       insertTags connection (primaryKey theTask) (tags importTask)
+      insertNotes connection (primaryKey theTask) (notes importTask)
       insertTask connection theTask
 
 
 dumpCsv :: IO ()
 dumpCsv = do
+  -- TODO: Use Task instead of FullTask to fix broken notes export
   execWithConn $ \connection -> do
     rows <- (query_ connection "select * from tasks_view") :: IO [FullTask]
 
@@ -210,6 +212,7 @@ dumpCsv = do
 
 dumpNdjson :: IO ()
 dumpNdjson = do
+  -- TODO: Use Task instead of FullTask to fix broken notes export
   execWithConn $ \connection -> do
     rows <- (query_ connection "select * from tasks_view") :: IO [FullTask]
 
