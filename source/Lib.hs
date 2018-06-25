@@ -171,7 +171,6 @@ createTaskView connection = do
         "`tasks`.`modified_utc`as `modified_utc`" :
         "group_concat(distinct `task_to_tag`.`tag`) as `tags`" :
         "group_concat(distinct `task_to_note`.`note`) as `notes`" :
-        -- "count(`task_to_note`.`task_ulid`) as `notes`" :
         "ifnull(`tasks`.`priority_adjustment`, 0.0)\n\
         \  + " <> caseStateSql <> "\n\
         \  + " <> caseOverdueSql <> "\n\
@@ -185,7 +184,7 @@ createTaskView connection = do
       )
       ("`" <> tableName conf <> "` \n\
         \left join task_to_tag on tasks.ulid = task_to_tag.task_ulid \n\
-        \left join task_to_note on tasks.ulid = task_to_tag.task_ulid \n\
+        \left join task_to_note on tasks.ulid = task_to_note.task_ulid \n\
         \")
       "`tasks`.`ulid`"
     createTableQuery = SqlU.getView viewName selectQuery
