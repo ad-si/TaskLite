@@ -3,6 +3,8 @@ module Task where
 import Protolude as P
 
 import Data.Aeson as Aeson
+import Data.Aeson.Text as Aeson
+import qualified Data.ByteString.Lazy as BSL
 import Data.Hourglass
 import Codec.Crockford as Crock
 import Data.Csv as Csv
@@ -13,7 +15,7 @@ import Database.Beam
 import Database.Beam.Backend.SQL
 import Database.Beam.Sqlite
 import Database.Beam.Schema.Tables
-import Database.Beam.Sqlite.Syntax (SqliteExpressionSyntax)
+import Database.Beam.Sqlite.Syntax (SqliteExpressionSyntax, SqliteValueSyntax)
 import Database.SQLite.Simple as Sql
 import Database.SQLite.Simple.FromField as Sql.FromField
 import Database.SQLite.Simple.ToField as Sql.ToField
@@ -94,7 +96,7 @@ data TaskT f = Task
   , closed_utc :: Columnar f (Maybe Text)
   , modified_utc :: Columnar f Text
   , priority_adjustment :: Columnar f (Maybe Float)
-  , metadata :: Columnar f (Maybe Text)
+  , metadata :: Columnar f (Maybe Aeson.Value)
   } deriving Generic
 
 
@@ -104,6 +106,10 @@ type TaskUlid = PrimaryKey TaskT Identity
 
 deriving instance Show Task
 deriving instance Eq Task
+
+instance HasSqlValueSyntax SqliteValueSyntax Value where
+  sqlValueSyntax =
+    sqlValueSyntax . toStrict . Aeson.encodeToLazyText
 
 instance Beamable TaskT
 
@@ -120,3 +126,11 @@ instance FromRow Task where
     <*> field <*> field
 
 instance Hashable Task
+
+instance Sql.FromField.FromField Value where
+  fromField field@(Field (SQLText txt) _) =
+    case Aeson.eitherDecode $ BSL.fromStrict $ encodeUtf8 txt of
+      Left error -> returnError ConversionFailed field error
+      Right value -> Ok value
+  fromField f = returnError ConversionFailed f "expecting SQLText column type"
+

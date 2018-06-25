@@ -166,12 +166,15 @@ createTaskView connection = do
         "group_concat(distinct `task_to_tag`.`tag`) as `tags`" :
         "group_concat(distinct `task_to_note`.`note`) as `notes`" :
         -- "count(`task_to_note`.`task_ulid`) as `notes`" :
-        "ifnull(`tasks`.`priority_adjustment`, 0.0)"
-          <> " + " <> caseStateSql <> "\n"
-          <> " + " <> caseOverdueSql <> "\n"
-          <> " + case count(`task_to_tag`.`tag`) \
-              \when 0 then 0.0 else 2.0 end" <> "\n"
-          <> " as `priority`" :
+        "ifnull(`tasks`.`priority_adjustment`, 0.0)\n\
+        \  + " <> caseStateSql <> "\n\
+        \  + " <> caseOverdueSql <> "\n\
+        \  + case count(`task_to_tag`.`tag`)\n\
+        \      when 0 then 0.0\n\
+        \      else 2.0\n\
+        \    end\n\
+        \as `priority`" :
+        "`tasks`.`metadata`as `metadata`" :
         []
       )
       ("`" <> tableName conf <> "` \n\
@@ -272,6 +275,26 @@ execWithConn func = do
     )
 
 
+insertTask :: Connection -> Task -> IO ()
+insertTask connection task = do
+  runBeamSqlite connection $ runInsert $
+    insert (_tldbTasks taskLiteDb) $
+    insertValues [task]
+
+  putText $ "🆕 Added task \"" <> (Task.body task) <> "\""
+
+
+insertTags :: Connection -> TaskUlid -> [Text] -> IO ()
+insertTags connection primKey tags = do
+  taskToTags <- forM tags (\tag -> do
+    tagUlid <- fmap (toLower . show) getULID
+    pure $ TaskToTag tagUlid primKey tag)
+
+  runBeamSqlite connection $ runInsert $
+    insert (_tldbTaskToTag taskLiteDb) $
+    insertValues taskToTags
+
+
 addTask :: Text -> IO ()
 addTask bodyAndTags = do
   connection <- setupConnection
@@ -292,19 +315,8 @@ addTask bodyAndTags = do
       , metadata = Nothing
       }
 
-  runBeamSqlite connection $ runInsert $
-    insert (_tldbTasks taskLiteDb) $
-    insertValues [task]
-
-  taskToTags <- forM tags (\tag -> do
-    tagUlid <- fmap (toLower . show) getULID
-    pure $ TaskToTag tagUlid (primaryKey task) tag)
-
-  runBeamSqlite connection $ runInsert $
-    insert (_tldbTaskToTag taskLiteDb) $
-    insertValues taskToTags
-
-  putText $ "🆕 Added task \"" <> body <> "\""
+  insertTags connection (primaryKey task) tags
+  insertTask connection task
 
 
 newtype NumRows = NumRows Integer

@@ -69,10 +69,12 @@ annotationToNote annot@Annotation {entry = entry, description = description} =
 parseUtc :: Text -> Maybe DateTime
 parseUtc utcText =
   let
+    isoFormatSpace = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
     isoFormat = toFormat ("YYYYMMDDTHMIS" :: [Char])
     utcString = T.unpack utcText
   in
         (timeParse ISO8601_DateAndTime utcString)
+    <|> (timeParse isoFormatSpace utcString)
     <|> (timeParse isoFormat utcString)
 
 
@@ -159,7 +161,7 @@ instance FromJSON ImportTask where
         _                      -> []
 
     let
-      metadata = Just $ toStrict $ Aeson.encodeToLazyText o
+      metadata = Just $ Object o
       ulid = ""
       tempTask = Task {..}
 
@@ -183,11 +185,20 @@ instance FromJSON ImportTask where
 
 importTask :: IO ()
 importTask = do
+  connection <- setupConnection
   content <- BL.getContents
-  let task = Aeson.eitherDecode content :: Either [Char] ImportTask
-  case task of
+
+  let
+    importResult = Aeson.eitherDecode content :: Either [Char] ImportTask
+
+  case importResult of
     Left error -> die $ (T.pack error) <> " in task \n" <> show content
-    Right task -> print task
+    Right importTask -> do
+      putStr ("Importing … " :: Text)
+      let theTask = task importTask
+      insertTags connection (primaryKey theTask) (tags importTask)
+      insertTask connection theTask
+
 
 dumpCsv :: IO ()
 dumpCsv = do

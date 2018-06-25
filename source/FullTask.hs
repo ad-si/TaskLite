@@ -3,6 +3,7 @@ module FullTask where
 import Protolude as P
 
 import Data.Aeson as Aeson
+import Data.Aeson.Text as Aeson
 import Data.Hourglass
 import Codec.Crockford as Crock
 import Data.Csv as Csv
@@ -41,6 +42,7 @@ data FullTask = FullTask
   , tags :: Maybe [Text]
   , notes :: Maybe [Note]
   , priority :: Maybe Float
+  , metadata :: Maybe Aeson.Value
   } deriving (Generic, Show)
 
 
@@ -50,6 +52,7 @@ instance FromRow FullTask where
     <$> field <*> field <*> field
     <*> field <*> field <*> field
     <*> field <*> field <*> field
+    <*> field
 
 instance Sql.FromField.FromField [Text] where
   fromField (Field (SQLText txt) _) = Ok $ split (== ',') txt
@@ -64,6 +67,9 @@ instance Sql.FromField.FromField [Note] where
 
 instance Csv.ToField [Text] where
   toField = encodeUtf8 . (T.intercalate ",")
+
+instance Csv.ToField Value where
+  toField = encodeUtf8 . toStrict . Aeson.encodeToLazyText
 
 -- For conversion to CSV
 instance ToRecord FullTask
