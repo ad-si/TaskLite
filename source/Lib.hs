@@ -507,16 +507,16 @@ listTasks taskState = do
     bodyWidth = 10
     prioWidth = 4
     strong = bold <> underlined
+    selectQuery = "select * from `tasks_view`"
+    orderBy = "order by `priority` desc"
 
   rows <- case taskState of
-    NoFilter ->
-      query_ connection ("select * from `tasks_view`") :: IO [FullTask]
-    Utils.Only tState ->
-      (query connection
-        ("select * from `tasks_view` where `state` == ?")
-        [tState]):: IO [FullTask]
+    NoFilter          -> query_ connection (selectQuery <> orderBy)
+    Utils.Only tState -> query connection
+      (selectQuery <> " where `state` == ? " <> orderBy)
+      [tState]
 
-  if P.length rows == 0
+  if P.length (rows :: [FullTask]) == 0
   then liftIO $ die "No tasks available"
   else do
     let
