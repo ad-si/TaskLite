@@ -44,7 +44,8 @@ data Command
   | Import
   | Csv
   | Ndjson
-  -- | Backup -- Create a local backup of tasks database
+  | Sql
+  | Backup
 
   {- List -}
   | List (Filter TaskState)
@@ -144,6 +145,10 @@ commandParser =
         "Export tasks in CSV format")
     <> command "ndjson" (toParserInfo (pure Ndjson)
         "Export tasks in NDJSON format")
+    <> command "sql" (toParserInfo (pure Sql)
+        "Show SQL commands to create and populate database")
+    <> command "backup" (toParserInfo (pure Backup)
+        "Create a local backup of tasks database")
     )
   <|> subparser
     (  commandGroup "Advanced Commands:"
@@ -166,6 +171,8 @@ main = do
     Import -> importTask
     Csv -> dumpCsv
     Ndjson -> dumpNdjson
+    Sql -> dumpSql
+    Backup -> backupDatabase
     AddTask body -> addTask body
     DoTask idSubstr -> doTask idSubstr
     EndTask idSubstr -> endTask idSubstr

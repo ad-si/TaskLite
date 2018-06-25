@@ -21,7 +21,6 @@ dependencies:
   - aeson
   - base >= 4.7 && < 5
   - beam-core
-  - beam-migrate
   - beam-sqlite
   - bytestring
   - cassava
@@ -31,6 +30,7 @@ dependencies:
   - optparse-applicative
   - prettyprinter
   - prettyprinter-ansi-terminal
+  - process
   - protolude
   - sqlite-simple
   - text

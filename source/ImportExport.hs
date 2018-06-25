@@ -24,6 +24,7 @@ import Database.SQLite.Simple.Ok
 import Foreign.C
 import Lib
 import System.Directory
+import System.Process
 import Time.System
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
@@ -33,6 +34,7 @@ import qualified SqlUtils as SqlU
 import Task
 import FullTask (FullTask)
 import Note (Note(..))
+import Lib (Config(..), conf)
 
 
 data Annotation = Annotation
@@ -199,3 +201,38 @@ dumpNdjson = do
     rows <- (query_ connection "select * from tasks_view") :: IO [FullTask]
 
     forM_ rows $ putStrLn . Aeson.encode
+
+
+dumpSql :: IO ()
+dumpSql = do
+  homeDir <- getHomeDirectory
+  result <- readProcess "sqlite3"
+    [ (getMainDir homeDir) <> "/" <> (dbName conf)
+    , ".dump"
+    ]
+    []
+  putStrLn result
+
+
+backupDatabase :: IO ()
+backupDatabase = do
+  now <- timeCurrent
+  homeDir <- getHomeDirectory
+
+  let
+    fileUtcFormat = toFormat ("YYYY-MM-DDtHMI" :: [Char])
+    backupDirName = "backups"
+    backupDirPath = (getMainDir homeDir) <> "/" <> backupDirName
+    backupFilePath = backupDirPath <> "/"
+      <> (timePrint fileUtcFormat now) <> ".db"
+
+  -- Create directory (and parents because of True)
+  createDirectoryIfMissing True backupDirPath
+
+  result <- readProcess "sqlite3"
+    [ (getMainDir homeDir) <> "/" <> (dbName conf)
+    , ".dump '" <> backupFilePath <> "'"
+    ]
+    []
+  print result
+

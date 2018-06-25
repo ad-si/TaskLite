@@ -40,6 +40,8 @@ data Config = Config
   , closedStyle :: AnsiStyle
   , tagStyle :: AnsiStyle
   , utcFormat :: TimeFormatString
+  , mainDir :: FilePath
+  , dbName :: FilePath
   }
 
 
@@ -54,7 +56,14 @@ conf = Config
   , closedStyle = color Red
   , tagStyle = color Cyan
   , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
+  , mainDir = "tasklite"
+  , dbName = "main.db"
   }
+
+
+getMainDir :: FilePath -> FilePath
+getMainDir = (<> "/" <> (mainDir conf) )
+
 
 
 -- | Record for storing entries of the `task_to_tag` table
@@ -105,14 +114,6 @@ taskLiteDb = defaultDbSettings `withDbModification`
         tableModification
           { _ttTaskUlid = TaskUlid (fieldNamed "task_ulid") }
     }
-
-
-mainDir :: FilePath -> FilePath
-mainDir = (<> "/tasklite")
-
-
-dbName :: FilePath
-dbName = "main.db"
 
 
 createTaskTable :: Connection -> IO ()
@@ -241,14 +242,14 @@ createNotesTable connection = do
 getDbPath :: IO FilePath
 getDbPath = do
   homeDir <- getHomeDirectory
-  pure $ (mainDir homeDir) <> "/" <> dbName
+  pure $ (getMainDir homeDir) <> "/" <> (dbName conf)
 
 
 setupConnection :: IO Connection
 setupConnection = do
   homeDir <- getHomeDirectory
-  createDirectoryIfMissing True $ mainDir homeDir
-  connection <- open $ (mainDir homeDir) <> "/" <> dbName
+  createDirectoryIfMissing True $ getMainDir homeDir
+  connection <- open $ (getMainDir homeDir) <> "/" <> (dbName conf)
 
   createTaskTable connection
   createTagsTable connection
@@ -261,9 +262,9 @@ setupConnection = do
 execWithConn :: (Connection -> IO a) -> IO a
 execWithConn func = do
   homeDir <- getHomeDirectory
-  createDirectoryIfMissing True $ mainDir homeDir
+  createDirectoryIfMissing True $ getMainDir homeDir
   withConnection
-    ((mainDir homeDir) <> "/" <> dbName)
+    ((getMainDir homeDir) <> "/" <> (dbName conf))
     (\connection -> do
         createTaskTable connection
         func connection
