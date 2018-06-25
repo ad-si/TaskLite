@@ -147,7 +147,7 @@ instance FromJSON ImportTask where
         (T.pack . (timePrint ISO8601_DateAndTime))
         (parseUtc =<< maybeClosed)
 
-    o_notes     <- o .:? "notes" :: Parser (Maybe [Note])
+    o_notes     <- optional (o .: "notes") :: Parser (Maybe [Note])
     annotations <- o .:? "annotations" :: Parser (Maybe [Annotation])
     let
       notes = case (o_notes, annotations) of
@@ -181,8 +181,9 @@ importTask :: IO ()
 importTask = do
   content <- BL.getContents
   let task = Aeson.eitherDecode content :: Either [Char] ImportTask
-  print task
-
+  case task of
+    Left error -> die $ (T.pack error) <> " in task \n" <> show content
+    Right task -> print task
 
 dumpCsv :: IO ()
 dumpCsv = do
