@@ -66,18 +66,6 @@ annotationToNote annot@Annotation {entry = entry, description = description} =
          }
 
 
-parseUtc :: Text -> Maybe DateTime
-parseUtc utcText =
-  let
-    isoFormatSpace = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
-    isoFormat = toFormat ("YYYYMMDDTHMIS" :: [Char])
-    utcString = T.unpack utcText
-  in
-        (timeParse ISO8601_DateAndTime utcString)
-    <|> (timeParse isoFormatSpace utcString)
-    <|> (timeParse isoFormat utcString)
-
-
 setDateTime :: ULID -> DateTime -> ULID
 setDateTime ulid dateTime = ULID
   (mkULIDTimeStamp $ realToFrac

@@ -483,7 +483,7 @@ formatTaskLine :: Int -> FullTask -> Doc AnsiStyle
 formatTaskLine taskUlidWidth task =
   let
     id = pretty $ T.takeEnd taskUlidWidth $ FullTask.ulid task
-    date = fmap
+    createdUtc = fmap
       (pack . timePrint ISO8601_Date)
       (ulidToDateTime $ FullTask.ulid task)
     body = FullTask.body task
@@ -491,14 +491,17 @@ formatTaskLine taskUlidWidth task =
     formatTag = annotate (tagStyle conf)
       . (annotate (color Black) "+" <>)
       . pretty
+    closedUtcMaybe = (FullTask.closed_utc task)
+      >>= parseUtc
+      <&> timePrint (utcFormat conf)
     hangWidth = taskUlidWidth + 2 + (dateWidth conf) + 2 + (prioWidth conf) + 2
-    taskLine = date <$$> \taskDate -> hang hangWidth $
+    taskLine = createdUtc <$$> \taskDate -> hang hangWidth $
            annotate (idStyle conf) id
       <++> annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
             $ showAtPrecision $ fromMaybe 0 (FullTask.priority task))
       <++> annotate (dateStyle conf) (pretty taskDate)
       <++> annotate (bodyStyle conf) (reflow body)
-      <++> annotate (closedStyle conf) (pretty $ FullTask.closed_utc task)
+      <++> annotate (closedStyle conf) (pretty closedUtcMaybe)
       <++> hsep (tags <$$> formatTag )
   in
     fromMaybe
