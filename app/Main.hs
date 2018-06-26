@@ -28,6 +28,7 @@ data Command
   | DoTask IdText
   | EndTask IdText
   | DeleteTask IdText
+  | BoostTask IdText Float
   | AddTag IdText TagText
   -- | Note -- Add a note
   -- | Denote -- Remove all notes
@@ -106,6 +107,13 @@ commandParser =
         "Mark a task as obsolete")
     <> command "delete" (toParserInfo (DeleteTask <$> strArgument idVar)
         "Delete a task from the database (Attention: Irreversible)")
+    <> command "boost"
+        (toParserInfo
+          (BoostTask <$> strArgument idVar <*> argument auto
+            (metavar "BOOST_VALUE"
+              <> help "Value to increase priority"
+              <> value 1))
+          "Increase priority of a task")
     <> command "info" (toParserInfo (InfoTask <$> strArgument idVar)
         "Show detailed information and metadata of task")
     <> command "next" (toParserInfo (pure NextTask)
@@ -187,6 +195,7 @@ main = do
     DoTask idSubstr -> doTask idSubstr
     EndTask idSubstr -> endTask idSubstr
     DeleteTask idSubstr -> deleteTask idSubstr
+    BoostTask idSubstr boostValue -> boostTask idSubstr boostValue
     InfoTask idSubstr -> infoTask idSubstr
     NextTask -> nextTask
     AddTag idSubstr tagText  -> addTag idSubstr tagText

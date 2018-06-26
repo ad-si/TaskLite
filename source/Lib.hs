@@ -439,6 +439,32 @@ deleteTask idSubstr = do
         else "❌ Deleted task \"…" <> idText <> "\""
 
 
+boostTask :: Text -> Float -> IO ()
+boostTask idSubstr boostValue = do
+  dbPath <- getDbPath
+  withConnection dbPath $ \connection -> do
+    execWithId connection idSubstr $ \(TaskUlid idText) -> do
+      -- TODO: Figure out why this doesn't work
+      -- runBeamSqlite connection $ runUpdate $
+      --   update (_tldbTasks taskLiteDb)
+      --     (\task -> [(Task.priority_adjustment task) <-.
+      --         fmap (+ boostValue) (current_ (Task.priority_adjustment task))
+      --     ])
+      --     (\task -> primaryKey task ==. val_ taskUlid)
+
+      execute connection
+        (Query $ "update `tasks` \
+          \set `priority_adjustment` = ifnull(`priority_adjustment`, 0) + ? \
+          \where `ulid` == ?")
+        (boostValue, idText :: Text)
+
+      numOfChanges <- changes connection
+
+      putText $ if numOfChanges == 0
+        then "⚠️ An error occured while boosting task \"…" <> idText <> "\""
+        else "➕ Boosted task \"…" <> idText <> "\" by " <> show boostValue
+
+
 infoTask :: Text -> IO ()
 infoTask idSubstr = do
   dbPath <- getDbPath
