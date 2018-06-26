@@ -286,7 +286,8 @@ insertTask connection task = do
     insert (_tldbTasks taskLiteDb) $
     insertValues [task]
 
-  putText $ "🆕 Added task \"" <> (Task.body task) <> "\""
+  putText $ "🆕 Added task \"" <> (Task.body task)
+    <> "\" with ulid \"" <> (Task.ulid task) <> "\""
 
 
 insertTags :: Connection -> TaskUlid -> [Text] -> IO ()
@@ -447,6 +448,12 @@ ulidToDateTime =
   . T.take 10
 
 
+showAtPrecision :: Float -> Text
+showAtPrecision number =
+  let tuple = breakOn "." (show number)
+  in fst tuple <> (T.replace ".0" "  " . T.take 2 . snd) tuple
+
+
 formatTaskLine :: Int -> FullTask -> Doc AnsiStyle
 formatTaskLine taskUlidWidth task =
   let
@@ -459,7 +466,7 @@ formatTaskLine taskUlidWidth task =
       (\taskDate
         -> annotate (idStyle conf) id
         <++> annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
-              $ show $ fromMaybe 0 (FullTask.priority task))
+              $ showAtPrecision $ fromMaybe 0 (FullTask.priority task))
         <++> annotate (dateStyle conf) (pretty taskDate)
         <++> annotate (bodyStyle conf) (pretty body)
         <++> annotate (closedStyle conf) (pretty $ FullTask.closed_utc task)
