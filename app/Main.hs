@@ -28,6 +28,7 @@ data Command
   | DoTask IdText
   | EndTask IdText
   | DeleteTask IdText
+  | InfoTask IdText
   | AddTag IdText TagText
   -- | Note -- Add a note
   -- | Denote -- Remove all notes
@@ -74,6 +75,8 @@ data Command
 -- "remove" "delete"
 -- "duplicate" "clone"
 
+idVar :: Mod ArgumentFields a
+idVar = metavar "TASK_ID" <> help "Id of the task (Ulid)"
 
 addParser :: Parser Command
 addParser = AddTask <$>
@@ -81,7 +84,7 @@ addParser = AddTask <$>
 
 doneParser :: Parser Command
 doneParser = DoTask <$>
-  strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)")
+  strArgument idVar
 
 countParser :: Parser Command
 countParser = pure $ Count NoFilter
@@ -95,17 +98,16 @@ commandParser =
     (  commandGroup "Basic Commands:"
     <> command "add" (toParserInfo addParser "Add a new task")
     <> command "do" (toParserInfo doneParser "Mark a task as done")
-    <> command "end" (toParserInfo (EndTask <$>
-        strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)"))
+    <> command "end" (toParserInfo (EndTask <$> strArgument idVar)
         "Mark a task as obsolete")
-    <> command "delete" (toParserInfo (DeleteTask <$>
-        strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)"))
+    <> command "delete" (toParserInfo (DeleteTask <$> strArgument idVar)
         "Delete a task from the database (Attention: Irreversible)")
+    <> command "info" (toParserInfo (InfoTask <$> strArgument idVar)
+        "Show detailed information and metadata of task")
     <> command "tag" (toParserInfo (AddTag
-      <$> strArgument (metavar "TASK_ID" <> help "Id of the task (Ulid)")
+      <$> strArgument idVar
       <*> strArgument (metavar "TAG" <> help "The tag"))
       "Add a tag to a task")
-    -- <> command "info" (toParserInfo addParser "Show detailed information to a task")
     )
   <|> subparser
     (  commandGroup "List Commands:"
@@ -134,7 +136,6 @@ commandParser =
     -- <> command "tags" -- "List all tags"
     -- <> command "progress" -- "List all tags with corresponding progress"
     -- <> command "filter" -- "Filter tasks by specified tags"
-
 
     )
   <|> subparser
@@ -177,6 +178,7 @@ main = do
     DoTask idSubstr -> doTask idSubstr
     EndTask idSubstr -> endTask idSubstr
     DeleteTask idSubstr -> deleteTask idSubstr
+    InfoTask idSubstr -> infoTask idSubstr
     AddTag idSubstr tagText  -> addTag idSubstr tagText
     Count taskFilter -> countTasks taskFilter
     Help -> handleParseResult . Failure $

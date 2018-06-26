@@ -35,6 +35,7 @@ dependencies:
   - sqlite-simple
   - text
   - ulid
+  - yaml
 
 default-extensions:
   - DeriveGeneric

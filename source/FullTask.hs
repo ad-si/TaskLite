@@ -4,6 +4,8 @@ import Protolude as P
 
 import Data.Aeson as Aeson
 import Data.Aeson.Text as Aeson
+import Data.Yaml as Yaml
+import qualified Data.ByteString as BS
 import Data.Hourglass
 import Codec.Crockford as Crock
 import Data.Csv as Csv
@@ -80,3 +82,8 @@ instance DefaultOrdered FullTask
 instance ToJSON FullTask
 
 instance Hashable FullTask
+
+instance Pretty FullTask where
+  pretty = pretty
+    . decodeUtf8
+    . Yaml.encode

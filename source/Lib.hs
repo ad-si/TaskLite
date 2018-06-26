@@ -417,6 +417,20 @@ deleteTask idSubstr = do
         else "❌ Deleted task \"…" <> idText <> "\""
 
 
+infoTask :: Text -> IO ()
+infoTask idSubstr = do
+  dbPath <- getDbPath
+  withConnection dbPath $ \connection -> do
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+      tasks <- query connection
+        (Query $ "select * from `tasks_view` where `ulid` == ?")
+        [idText :: Text]
+
+      case P.head (tasks :: [FullTask]) of
+        Nothing -> die "This case should never be executed"
+        Just task -> putDoc $ pretty $ task
+
+
 addTag :: Text -> Text -> IO ()
 addTag idSubstr tag = do
   dbPath <- getDbPath
