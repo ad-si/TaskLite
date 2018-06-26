@@ -72,7 +72,7 @@ getCase fieldNameMaybe valueMap =
       Nothing -> ""
       Just fName -> "`" <> fName <> "`"
   <> (P.fold $ fmap
-        (\(key, val) -> "when " <> key <> " then " <> show val <> " ")
+        (\(key, val) -> "  when " <> key <> " then " <> show val <> "\n")
         valueMap)
   <> " end "
 

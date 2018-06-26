@@ -156,10 +156,9 @@ createTaskTable connection = do
     createTableQuery
 
 
-createTaskView :: Connection -> IO ()
-createTaskView connection = do
+taskViewQuery :: Text -> Query
+taskViewQuery viewName =
   let
-    viewName = "tasks_view"
     caseStateSql = SqlU.getCase (Just "state") $ [stateDefault ..]
       & fmap (\tState -> (SqlU.getValue tState, case tState of
           Open     ->  0
@@ -169,8 +168,10 @@ createTaskView connection = do
         ))
     caseOverdueSql = SqlU.getCase Nothing
       [ ("`due_utc` is null", 0)
-      , ("`due_utc` >= datetime('now')", 0)
-      , ("`due_utc` < datetime('now')", 10)
+      , ("`due_utc` >= datetime('now', '+1 month')", 0)
+      , ("`due_utc` >= datetime('now', '+1 week')", 3)
+      , ("`due_utc` >= datetime('now')", 6)
+      , ("`due_utc` < datetime('now')", 9)
       ]
     selectQuery = SqlU.getSelect
       (
@@ -185,6 +186,10 @@ createTaskView connection = do
         "ifnull(`tasks`.`priority_adjustment`, 0.0)\n\
         \  + " <> caseStateSql <> "\n\
         \  + " <> caseOverdueSql <> "\n\
+        \  + case count(`task_to_note`.`note`)\n\
+        \      when 0 then 0.0\n\
+        \      else 1.0\n\
+        \    end\n\
         \  + case count(`task_to_tag`.`tag`)\n\
         \      when 0 then 0.0\n\
         \      else 2.0\n\
@@ -198,12 +203,19 @@ createTaskView connection = do
         \left join task_to_note on tasks.ulid = task_to_note.task_ulid \n\
         \")
       "`tasks`.`ulid`"
-    createTableQuery = SqlU.getView viewName selectQuery
+  in
+    SqlU.getView viewName selectQuery
+
+
+createTaskView :: Connection -> IO ()
+createTaskView connection = do
+  let
+    viewName = "tasks_view"
 
   SqlU.createTableWithQuery
     connection
     viewName
-    createTableQuery
+    (taskViewQuery viewName)
 
   -- | Update `modified_utc` whenever a task is updated
   -- | (and `modified_utc` itselft isn't changed)
