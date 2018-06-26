@@ -45,6 +45,11 @@ data Config = Config
   , utcFormat :: TimeFormatString
   , mainDir :: FilePath
   , dbName :: FilePath
+  , dateWidth :: Int
+  , bodyWidth :: Int
+  , prioWidth :: Int
+  , headCount :: Int
+  , maxWidth :: Int
   }
 
 
@@ -61,6 +66,11 @@ conf = Config
   , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
   , mainDir = "tasklite"
   , dbName = "main.db"
+  , dateWidth = 10
+  , bodyWidth = 10
+  , prioWidth = 4
+  , headCount = 20
+  , maxWidth = 120
   }
 
 
@@ -345,19 +355,19 @@ instance FromRow NumRows where
 
 execWithId :: Connection -> Text -> (TaskUlid -> IO ()) -> IO ()
 execWithId connection idSubstr callback = do
-  rows <- (query connection
+  tasks <- (query connection
       (Query $ "select * from " <> tableName conf <> " where `ulid` like ?")
       ["%"  <> idSubstr :: Text]
     ) :: IO [Task]
 
-  let numOfRows = P.length rows
+  let numOfTasks = P.length tasks
 
   if
-    | numOfRows == 0 ->
+    | numOfTasks == 0 ->
         putText $ "⚠️  Task \"…" <> idSubstr <> "\" does not exist"
-    | numOfRows == 1 ->
-        callback $ primaryKey $ unsafeHead rows
-    | numOfRows > 1 ->
+    | numOfTasks == 1 ->
+        callback $ primaryKey $ unsafeHead tasks
+    | numOfTasks > 1 ->
         putText $ "⚠️  Id slice \"" <> idSubstr <> "\" is not unique. \
           \Please use a longer slice!"
 
@@ -518,37 +528,59 @@ countTasks taskStateFilter = do
     putText (show taskCount)
 
 
+headTasks :: IO ()
+headTasks = do
+  connection <- setupConnection
+  let
+    -- TODO: Add "state is 'Waiting' and `wait_utc` < datetime('now')"
+    selectQuery = "select * from `tasks_view` where state is 'Open'"
+    orderByAndLimit = "order by `priority` desc limit " <> show (headCount conf)
+  tasks <- query_ connection $ Query $ selectQuery <> orderByAndLimit
+
+  printTasks tasks
+
+
 listTasks :: Filter TaskState -> IO ()
 listTasks taskState = do
   connection <- setupConnection
 
   let
-    dateWidth = 10
-    bodyWidth = 10
-    prioWidth = 4
-    strong = bold <> underlined
     selectQuery = "select * from `tasks_view`"
     orderBy = "order by `priority` desc"
 
-  rows <- case taskState of
+  tasks <- case taskState of
     NoFilter          -> query_ connection (selectQuery <> orderBy)
     Utils.Only tState -> query connection
       (selectQuery <> " where `state` == ? " <> orderBy)
       [tState]
 
-  if P.length (rows :: [FullTask]) == 0
+  printTasks tasks
+
+
+printTasks :: [FullTask] -> IO ()
+printTasks tasks =
+  if P.length tasks == 0
   then liftIO $ die "No tasks available"
   else do
     let
-      taskUlidWidth = getIdLength $ fromIntegral $ P.length rows
+      strong = bold <> underlined
+      taskUlidWidth = getIdLength $ fromIntegral $ P.length tasks
       docHeader =
-             (annotate (idStyle conf <> strong) $ fill taskUlidWidth "Id")
-        <++> (annotate (priorityStyle conf <> strong) $ fill prioWidth "Prio")
-        <++> (annotate (dateStyle conf <> strong) $ fill dateWidth "Opened UTC")
-        <++> (annotate (bodyStyle conf <> strong) $ fill bodyWidth "Body")
+             (annotate (idStyle conf <> strong) $
+                fill taskUlidWidth "Id")
+        <++> (annotate (priorityStyle conf <> strong) $
+                fill (prioWidth conf) "Prio")
+        <++> (annotate (dateStyle conf <> strong) $
+                fill (dateWidth conf) "Opened UTC")
+        <++> (annotate (bodyStyle conf <> strong) $
+                fill (bodyWidth conf) "Body")
         <++> line
+      printTasks = T.putStrLn
+        . renderStrict
+        . layoutPretty defaultLayoutOptions
+            {layoutPageWidth = AvailablePerLine (maxWidth conf) 1.0}
 
-    liftIO $ putDoc $
+    liftIO $ printTasks $
       docHeader <>
-      (vsep $ fmap (formatTaskLine taskUlidWidth) rows) <>
+      (vsep $ fmap (formatTaskLine taskUlidWidth) tasks) <>
       line

@@ -50,6 +50,7 @@ data Command
 
   {- List -}
   | List (Filter TaskState)
+  | ListHead
   | Count (Filter TaskState)
   -- | Views -- List all available views
   -- | Tags -- List all used tags
@@ -92,7 +93,7 @@ countParser = pure $ Count NoFilter
 
 commandParser :: Parser Command
 commandParser =
-  (pure $ List $ Only Open) -- "List all tasks sorted by priority"
+  (pure $ ListHead) -- "Same as "head" command"
   <|>
   ( subparser
     (  commandGroup "Basic Commands:"
@@ -111,6 +112,8 @@ commandParser =
     )
   <|> subparser
     (  commandGroup "List Commands:"
+    <> command "head" (toParserInfo (pure $ ListHead) ("List "<>
+        show (headCount conf) <> " most important tasks sorted by priority"))
     <> command "all" (toParserInfo (pure $ List NoFilter)
         "List all tasks in chronological order")
     <> command "done" (toParserInfo (pure $ List $ Only Done)
@@ -169,6 +172,7 @@ main = do
   cliCommand <- execParser commandParserInfo
   case cliCommand of
     List taskFilter -> listTasks taskFilter
+    ListHead -> headTasks
     Import -> importTask
     Csv -> dumpCsv
     Ndjson -> dumpNdjson
