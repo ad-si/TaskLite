@@ -22,6 +22,7 @@ import Database.SQLite.Simple.Ok
 import System.Directory
 import Time.System
 import Data.Text.Prettyprint.Doc hiding ((<>))
+import Data.Text.Prettyprint.Doc.Util
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Unsafe (unsafeHead)
 import Utils
@@ -462,18 +463,16 @@ formatTaskLine taskUlidWidth task =
       (pack . timePrint ISO8601_Date)
       (ulidToDateTime $ FullTask.ulid task)
     body = FullTask.body task
-    taskLine = fmap
-      (\taskDate
-        -> annotate (idStyle conf) id
-        <++> annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
-              $ showAtPrecision $ fromMaybe 0 (FullTask.priority task))
-        <++> annotate (dateStyle conf) (pretty taskDate)
-        <++> annotate (bodyStyle conf) (pretty body)
-        <++> annotate (closedStyle conf) (pretty $ FullTask.closed_utc task)
-        <++> annotate (tagStyle conf) (pretty $ unwords $
+    -- TODO: Move magic numbers to config
+    taskLine = date <$$> \taskDate -> hang (20 + taskUlidWidth) $
+           annotate (idStyle conf) id
+      <++> annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
+            $ showAtPrecision $ fromMaybe 0 (FullTask.priority task))
+      <++> annotate (dateStyle conf) (pretty taskDate)
+      <++> annotate (bodyStyle conf) (reflow body)
+      <++> annotate (closedStyle conf) (pretty $ FullTask.closed_utc task)
+      <++> annotate (tagStyle conf) (pretty $ unwords $
               fmap ("+" <>) (fromMaybe [] $ FullTask.tags task))
-        )
-      date
   in
     fromMaybe
       ("Id" <+> (dquotes $ pretty $ FullTask.ulid task) <+>

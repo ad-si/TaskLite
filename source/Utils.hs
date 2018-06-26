@@ -12,7 +12,7 @@ data Filter a = NoFilter | Only a
 
 (<++>) :: Doc ann -> Doc ann -> Doc ann
 x <++> y =
-  x <> Char ' ' <> Char ' ' <> y
+  x <> softline <> softline <> y
 
 
 (<$$>) :: Functor f => f a -> (a -> b) -> f b
