@@ -441,6 +441,20 @@ infoTask idSubstr = do
         Just task -> putDoc $ pretty $ task
 
 
+nextTask :: IO ()
+nextTask = do
+  connection <- setupConnection
+  let
+    -- TODO: Add "state is 'Waiting' and `wait_utc` < datetime('now')"
+    selectQuery = "select * from `tasks_view` where state is 'Open'"
+    orderByAndLimit = "order by `priority` desc limit 1"
+  tasks <- query_ connection $ Query $ selectQuery <> orderByAndLimit
+
+  case P.head (tasks :: [FullTask]) of
+    Nothing -> die "This case should never be executed"
+    Just task -> putDoc $ pretty $ task
+
+
 addTag :: Text -> Text -> IO ()
 addTag idSubstr tag = do
   dbPath <- getDbPath

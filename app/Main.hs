@@ -28,7 +28,6 @@ data Command
   | DoTask IdText
   | EndTask IdText
   | DeleteTask IdText
-  | InfoTask IdText
   | AddTag IdText TagText
   -- | Note -- Add a note
   -- | Denote -- Remove all notes
@@ -40,6 +39,10 @@ data Command
   -- | Prepend -- Prepend words to a task description
   -- | Undo -- Revert last change
   -- | Repeat -- Set repeating interval for a task
+
+  {- Show -}
+  | InfoTask IdText
+  | NextTask
 
   {- I/O -}
   | Import
@@ -105,6 +108,8 @@ commandParser =
         "Delete a task from the database (Attention: Irreversible)")
     <> command "info" (toParserInfo (InfoTask <$> strArgument idVar)
         "Show detailed information and metadata of task")
+    <> command "next" (toParserInfo (pure NextTask)
+        "Show the task with the highest priority")
     <> command "tag" (toParserInfo (AddTag
       <$> strArgument idVar
       <*> strArgument (metavar "TAG" <> help "The tag"))
@@ -183,6 +188,7 @@ main = do
     EndTask idSubstr -> endTask idSubstr
     DeleteTask idSubstr -> deleteTask idSubstr
     InfoTask idSubstr -> infoTask idSubstr
+    NextTask -> nextTask
     AddTag idSubstr tagText  -> addTag idSubstr tagText
     Count taskFilter -> countTasks taskFilter
     Help -> handleParseResult . Failure $
