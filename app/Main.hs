@@ -44,6 +44,7 @@ data Command
   {- Show -}
   | InfoTask IdText
   | NextTask
+  | FindTask Text
 
   {- I/O -}
   | Import
@@ -73,6 +74,7 @@ data Command
   deriving (Show, Eq)
 
 
+-- TODO: Add aliases
 -- "blocking" "blockers"
 -- "annotate" "note"
 -- "denotate" "denote"
@@ -118,6 +120,9 @@ commandParser =
         "Show detailed information and metadata of task")
     <> command "next" (toParserInfo (pure NextTask)
         "Show the task with the highest priority")
+    <> command "find" (toParserInfo (FindTask <$> strArgument
+        (metavar "PATTERN" <> help "Search pattern"))
+        "Fuzzy search a task")
     <> command "tag" (toParserInfo (AddTag
       <$> strArgument idVar
       <*> strArgument (metavar "TAG" <> help "The tag"))
@@ -135,7 +140,6 @@ commandParser =
         "List all waiting tasks")
     <> command "obsolete" (toParserInfo (pure $ List $ Only Obsolete)
         "List all obsolete tasks")
-    -- <> command "next" "Show tasks with descending priority"
     -- <> command "newest" "Show all tasks (newest first)"
     -- <> command "oldest" "Show all tasks (oldest first)"
     -- <> command "overdue" -- Overdue tasks
@@ -152,6 +156,7 @@ commandParser =
     -- <> command "tags" -- "List all tags"
     -- <> command "progress" -- "List all tags with corresponding progress"
     -- <> command "filter" -- "Filter tasks by specified tags"
+    -- <> command "find" -- "Filter tasks by specified tags"
 
     )
   <|> subparser
@@ -198,6 +203,7 @@ main = do
     BoostTask idSubstr boostValue -> boostTask idSubstr boostValue
     InfoTask idSubstr -> infoTask idSubstr
     NextTask -> nextTask
+    FindTask pattern -> findTask pattern
     AddTag idSubstr tagText  -> addTag idSubstr tagText
     Count taskFilter -> countTasks taskFilter
     Help -> handleParseResult . Failure $

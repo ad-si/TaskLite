@@ -26,6 +26,7 @@ dependencies:
   - cassava
   - crockford
   - directory
+  - fuzzy
   - hourglass
   - optparse-applicative
   - prettyprinter

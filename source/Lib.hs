@@ -20,6 +20,7 @@ import Database.SQLite.Simple.ToField as Sql.ToField
 import Database.SQLite.Simple.Internal hiding (result)
 import Database.SQLite.Simple.Ok
 import System.Directory
+import qualified Text.Fuzzy as Fuzzy
 import Time.System
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Util
@@ -491,6 +492,55 @@ nextTask = do
   case P.head (tasks :: [FullTask]) of
     Nothing -> die "This case should never be executed"
     Just task -> putDoc $ pretty $ task
+
+
+findTask :: Text -> IO ()
+findTask pattern = do
+  connection <- setupConnection
+  tasks <- query_ connection $ Query $
+    "select ulid, body, tags, notes, metadata from tasks_view"
+
+  let
+    scoreWidth = 5
+    numOfResults = 8
+    results = Fuzzy.filter
+      pattern
+      (tasks :: [(Text, Text, Maybe [Text], Maybe [Text], Maybe Text)])
+      "\x1b[4m\x1b[32m" -- Set underline and color to green
+      "\x1b[0m"
+      (\(ulid, body, tags, notes, metadata) -> unwords
+        [ ulid
+        , "\n"
+        , body
+        , fromMaybe "" (unwords <$> tags)
+        , fromMaybe "" (unwords <$> notes)
+        , T.replace "\",\"" "\", \"" $ fromMaybe "" metadata
+        ])
+      False -- Case insensitive
+    moreResults = (P.length results) - numOfResults
+
+  putDoc $
+    (annotate (underlined <> color Red) $ fill scoreWidth "Score") <++>
+    (annotate (underlined) $ fill 10 "Task") <>
+    hardline
+
+  results
+    & P.take numOfResults
+    <&> (\result ->
+          annotate (color Red)
+            (fill scoreWidth $ pretty $ Fuzzy.score result)
+          <++> (align (reflow $ Fuzzy.rendered result)))
+    & vsep
+    & putDoc
+
+  if moreResults > 0
+  then putDoc $
+       hardline
+    <> hardline
+    <> annotate (color Red)
+        ("There are " <> pretty moreResults <> " more results available")
+    <> hardline
+  else return ()
 
 
 addTag :: Text -> Text -> IO ()
