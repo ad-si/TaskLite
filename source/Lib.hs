@@ -62,7 +62,7 @@ conf = Config
   , dateStyle = color Yellow
   , bodyStyle = color White
   , closedStyle = color Red
-  , tagStyle = color Cyan
+  , tagStyle = color Blue
   , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
   , mainDir = "tasklite"
   , dbName = "main.db"
@@ -487,16 +487,19 @@ formatTaskLine taskUlidWidth task =
       (pack . timePrint ISO8601_Date)
       (ulidToDateTime $ FullTask.ulid task)
     body = FullTask.body task
-    -- TODO: Move magic numbers to config
-    taskLine = date <$$> \taskDate -> hang (20 + taskUlidWidth) $
+    tags = fromMaybe [] $ FullTask.tags task
+    formatTag = annotate (tagStyle conf)
+      . (annotate (color Black) "+" <>)
+      . pretty
+    hangWidth = taskUlidWidth + 2 + (dateWidth conf) + 2 + (prioWidth conf) + 2
+    taskLine = date <$$> \taskDate -> hang hangWidth $
            annotate (idStyle conf) id
       <++> annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
             $ showAtPrecision $ fromMaybe 0 (FullTask.priority task))
       <++> annotate (dateStyle conf) (pretty taskDate)
       <++> annotate (bodyStyle conf) (reflow body)
       <++> annotate (closedStyle conf) (pretty $ FullTask.closed_utc task)
-      <++> annotate (tagStyle conf) (pretty $ unwords $
-              fmap ("+" <>) (fromMaybe [] $ FullTask.tags task))
+      <++> hsep (tags <$$> formatTag )
   in
     fromMaybe
       ("Id" <+> (dquotes $ pretty $ FullTask.ulid task) <+>
