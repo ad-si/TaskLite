@@ -2,23 +2,15 @@ module Lib where
 
 import Protolude as P
 
-import Data.Aeson as Aeson
 import Data.Hourglass
 import Codec.Crockford as Crock
-import Data.Csv as Csv
 import Data.Text as T
 import qualified Data.Text.IO as T
 import Data.ULID
 import Database.Beam
-import Database.Beam.Backend.SQL
 import Database.Beam.Sqlite
 import Database.Beam.Schema.Tables
-import Database.Beam.Sqlite.Syntax (SqliteExpressionSyntax)
 import Database.SQLite.Simple as Sql
-import Database.SQLite.Simple.FromField as Sql.FromField
-import Database.SQLite.Simple.ToField as Sql.ToField
-import Database.SQLite.Simple.Internal hiding (result)
-import Database.SQLite.Simple.Ok
 import System.Directory
 import qualified Text.Fuzzy as Fuzzy
 import Time.System
@@ -327,8 +319,8 @@ insertTags connection primKey tags = do
 
 insertNotes :: Connection -> TaskUlid -> [Note] -> IO ()
 insertNotes connection primKey notes = do
-  taskToNotes <- forM notes $ \note -> do
-    pure $ TaskToNote (Note.ulid note) primKey (Note.body note)
+  taskToNotes <- forM notes $ \theNote -> do
+    pure $ TaskToNote (Note.ulid theNote) primKey (Note.body theNote)
 
   runBeamSqlite connection $ runInsert $
     insert (_tldbTaskToNote taskLiteDb) $
@@ -476,7 +468,7 @@ infoTask :: Text -> IO ()
 infoTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+    execWithId connection idSubstr $ \(TaskUlid idText) -> do
       tasks <- query connection
         (Query $ "select * from `tasks_view` where `ulid` == ?")
         [idText :: Text]
@@ -689,12 +681,12 @@ printTasks tasks =
         <++> (annotate (bodyStyle conf <> strong) $
                 fill (bodyWidth conf) "Body")
         <++> line
-      printTasks = T.putStrLn
+      putTasks = T.putStrLn
         . renderStrict
         . layoutPretty defaultLayoutOptions
             {layoutPageWidth = AvailablePerLine (maxWidth conf) 1.0}
 
-    liftIO $ printTasks $
+    liftIO $ putTasks $
       docHeader <>
       (vsep $ fmap (formatTaskLine taskUlidWidth) tasks) <>
       line

@@ -1,10 +1,8 @@
 module ImportExport where
 
-import Protolude as P
+import Protolude as P hiding (state)
 
-import Codec.Crockford as Crock
 import Data.Aeson as Aeson
-import Data.Aeson.Text as Aeson
 import Data.Aeson.Types
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Csv as Csv
@@ -13,25 +11,13 @@ import Data.Hourglass
 import Data.ULID
 import Data.ULID.TimeStamp
 import Database.Beam
-import Database.Beam.Backend.SQL
-import Database.Beam.Sqlite
-import Database.Beam.Schema.Tables
-import Database.Beam.Sqlite.Syntax (SqliteExpressionSyntax)
 import Database.SQLite.Simple as Sql
-import Database.SQLite.Simple.FromField as Sql.FromField
-import Database.SQLite.Simple.ToField as Sql.ToField
-import Database.SQLite.Simple.Internal hiding (result)
-import Database.SQLite.Simple.Ok
 import Foreign.C
 import Lib
 import System.Directory
 import System.Process
 import Time.System
-import Data.Text.Prettyprint.Doc hiding ((<>))
-import Data.Text.Prettyprint.Doc.Render.Terminal
-import Unsafe (unsafeHead)
 import Utils
-import qualified SqlUtils as SqlU
 import Task
 import FullTask (FullTask)
 import Note (Note(..))
@@ -150,8 +136,7 @@ instance FromJSON ImportTask where
 
     let
       metadata = Just $ Object o
-      ulid = ""
-      tempTask = Task {..}
+      tempTask = Task {ulid = "", ..}
 
     o_ulid  <- o .:? "ulid"
     let
@@ -181,11 +166,11 @@ importTask = do
 
   case importResult of
     Left error -> die $ (T.pack error) <> " in task \n" <> show content
-    Right importTask -> do
+    Right importTaskRecord -> do
       putStr ("Importing … " :: Text)
-      let theTask = task importTask
-      insertTags connection (primaryKey theTask) (tags importTask)
-      insertNotes connection (primaryKey theTask) (notes importTask)
+      let theTask = task importTaskRecord
+      insertTags connection (primaryKey theTask) (tags importTaskRecord)
+      insertNotes connection (primaryKey theTask) (notes importTaskRecord)
       insertTask connection theTask
 
 

@@ -68,6 +68,7 @@ executables:
       - -Wincomplete-record-updates
       - -Wincomplete-uni-patterns
       - -Wredundant-constraints
+      - -fno-warn-orphans
     dependencies:
       - tasklite
 

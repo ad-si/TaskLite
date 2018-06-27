@@ -5,29 +5,16 @@ import Protolude as P
 import Data.Aeson as Aeson
 import Data.Aeson.Text as Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Hourglass
-import Codec.Crockford as Crock
 import Data.Csv as Csv
 import Data.Text as T
-import qualified Data.Text.IO as T
-import Data.ULID
 import Database.Beam
 import Database.Beam.Backend.SQL
-import Database.Beam.Sqlite
-import Database.Beam.Schema.Tables
 import Database.Beam.Sqlite.Syntax (SqliteExpressionSyntax, SqliteValueSyntax)
 import Database.SQLite.Simple as Sql
 import Database.SQLite.Simple.FromField as Sql.FromField
 import Database.SQLite.Simple.ToField as Sql.ToField
 import Database.SQLite.Simple.Internal hiding (result)
 import Database.SQLite.Simple.Ok
-import System.Directory
-import Time.System
-import Data.Text.Prettyprint.Doc hiding ((<>))
-import Data.Text.Prettyprint.Doc.Render.Terminal
-import Unsafe (unsafeHead)
-import Utils
-import qualified SqlUtils as SqlU
 
 
 data TaskState
@@ -128,9 +115,9 @@ instance FromRow Task where
 instance Hashable Task
 
 instance Sql.FromField.FromField Value where
-  fromField field@(Field (SQLText txt) _) =
+  fromField aField@(Field (SQLText txt) _) =
     case Aeson.eitherDecode $ BSL.fromStrict $ encodeUtf8 txt of
-      Left error -> returnError ConversionFailed field error
+      Left error -> returnError ConversionFailed aField error
       Right value -> Ok value
   fromField f = returnError ConversionFailed f "expecting SQLText column type"
 

@@ -4,7 +4,6 @@ import Protolude as P
 
 import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
-import Data.Text.Prettyprint.Doc.Internal
 import Data.Hourglass
 
 
