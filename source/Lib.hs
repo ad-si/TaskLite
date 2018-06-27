@@ -440,8 +440,8 @@ deleteTask idSubstr = do
         else "❌ Deleted task \"…" <> idText <> "\""
 
 
-boostTask :: Text -> Float -> IO ()
-boostTask idSubstr boostValue = do
+adjustTaskPriority :: Text -> Float -> IO ()
+adjustTaskPriority idSubstr adjustment = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
     execWithId connection idSubstr $ \(TaskUlid idText) -> do
@@ -449,7 +449,7 @@ boostTask idSubstr boostValue = do
       -- runBeamSqlite connection $ runUpdate $
       --   update (_tldbTasks taskLiteDb)
       --     (\task -> [(Task.priority_adjustment task) <-.
-      --         fmap (+ boostValue) (current_ (Task.priority_adjustment task))
+      --         fmap (+ adjustment) (current_ (Task.priority_adjustment task))
       --     ])
       --     (\task -> primaryKey task ==. val_ taskUlid)
 
@@ -457,13 +457,19 @@ boostTask idSubstr boostValue = do
         (Query $ "update `tasks` \
           \set `priority_adjustment` = ifnull(`priority_adjustment`, 0) + ? \
           \where `ulid` == ?")
-        (boostValue, idText :: Text)
+        (adjustment, idText :: Text)
 
       numOfChanges <- changes connection
 
       putText $ if numOfChanges == 0
-        then "⚠️ An error occured while boosting task \"…" <> idText <> "\""
-        else "➕ Boosted task \"…" <> idText <> "\" by " <> show boostValue
+        then
+          "⚠️ An error occured \
+          \while adjusting the priority of task \"" <> idText <> "\""
+        else (
+          (if adjustment > 0 then "⬆️  Increased" else "⬇️  Decreased")
+          <> " priority of task \""
+          <> idText <> "\" by " <> (show $ abs adjustment)
+        )
 
 
 infoTask :: Text -> IO ()

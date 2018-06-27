@@ -29,6 +29,7 @@ data Command
   | EndTask IdText
   | DeleteTask IdText
   | BoostTask IdText Float
+  | HushTask IdText Float
   | AddTag IdText TagText
   -- | Note -- Add a note
   -- | Denote -- Remove all notes
@@ -104,11 +105,15 @@ commandParser =
   ( subparser
     (  commandGroup "Basic Commands:"
     <> command "add" (toParserInfo addParser "Add a new task")
+
     <> command "do" (toParserInfo doneParser "Mark a task as done")
+
     <> command "end" (toParserInfo (EndTask <$> strArgument idVar)
         "Mark a task as obsolete")
+
     <> command "delete" (toParserInfo (DeleteTask <$> strArgument idVar)
         "Delete a task from the database (Attention: Irreversible)")
+
     <> command "boost"
         (toParserInfo
           (BoostTask <$> strArgument idVar <*> argument auto
@@ -116,13 +121,25 @@ commandParser =
               <> help "Value to increase priority"
               <> value 1))
           "Increase priority of a task")
+
+    <> command "hush"
+        (toParserInfo
+          (HushTask <$> strArgument idVar <*> argument auto
+            (metavar "HUSH_VALUE"
+              <> help "Value to decrease priority"
+              <> value 1))
+          "Decrease priority of a task")
+
     <> command "info" (toParserInfo (InfoTask <$> strArgument idVar)
         "Show detailed information and metadata of task")
+
     <> command "next" (toParserInfo (pure NextTask)
         "Show the task with the highest priority")
+
     <> command "find" (toParserInfo (FindTask <$> strArgument
         (metavar "PATTERN" <> help "Search pattern"))
         "Fuzzy search a task")
+
     <> command "tag" (toParserInfo (AddTag
       <$> strArgument idVar
       <*> strArgument (metavar "TAG" <> help "The tag"))
@@ -130,14 +147,19 @@ commandParser =
     )
   <|> subparser
     (  commandGroup "List Commands:"
+
     <> command "head" (toParserInfo (pure $ ListHead) ("List "<>
         show (headCount conf) <> " most important tasks sorted by priority"))
+
     <> command "all" (toParserInfo (pure $ List NoFilter)
         "List all tasks in chronological order")
+
     <> command "done" (toParserInfo (pure $ List $ Only Done)
         "List all done tasks")
+
     <> command "waiting" (toParserInfo (pure $ List $ Only Waiting)
         "List all waiting tasks")
+
     <> command "obsolete" (toParserInfo (pure $ List $ Only Obsolete)
         "List all obsolete tasks")
     -- <> command "newest" "Show all tasks (newest first)"
@@ -161,20 +183,27 @@ commandParser =
     )
   <|> subparser
     (  commandGroup "I/O Commands:"
+
     <> command "import" (toParserInfo (pure Import)
         "Import one JSON task")
+
     <> command "csv" (toParserInfo (pure Csv)
         "Export tasks in CSV format")
+
     <> command "ndjson" (toParserInfo (pure Ndjson)
         "Export tasks in NDJSON format")
+
     <> command "sql" (toParserInfo (pure Sql)
         "Show SQL commands to create and populate database")
+
     <> command "backup" (toParserInfo (pure Backup)
         "Create a local backup of tasks database")
     )
   <|> subparser
     (  commandGroup "Advanced Commands:"
+
     <> command "count" (toParserInfo countParser "Output total number of tasks")
+
     <> command "help" (toParserInfo (pure $ Help) "Display current help page")
     )
   )
@@ -200,7 +229,8 @@ main = do
     DoTask idSubstr -> doTask idSubstr
     EndTask idSubstr -> endTask idSubstr
     DeleteTask idSubstr -> deleteTask idSubstr
-    BoostTask idSubstr boostValue -> boostTask idSubstr boostValue
+    BoostTask idSubstr boostValue -> adjustTaskPriority idSubstr boostValue
+    HushTask idSubstr hushValue -> adjustTaskPriority idSubstr (-hushValue)
     InfoTask idSubstr -> infoTask idSubstr
     NextTask -> nextTask
     FindTask pattern -> findTask pattern
