@@ -18,8 +18,6 @@ toParserInfo :: Parser a -> Text -> ParserInfo a
 toParserInfo parser description =
   info (helper <*> parser) (fullDesc <> progDesc (T.unpack description))
 
-type IdText = Text
-type TagText = Text
 
 data Command
   {- Modify -}
@@ -28,8 +26,9 @@ data Command
   | DoTask IdText
   | EndTask IdText
   | DeleteTask IdText
-  | BoostTask IdText Float
-  | HushTask IdText Float
+  | BoostTasks [IdText]
+  | HushTasks [IdText]
+  | Prioritize Float [IdText]
   | AddTag IdText TagText
   -- | Note -- Add a note
   -- | Denote -- Remove all notes
@@ -116,21 +115,17 @@ commandParser =
     <> command "delete" (toParserInfo (DeleteTask <$> strArgument idVar)
         "Delete a task from the database (Attention: Irreversible)")
 
-    <> command "boost"
-        (toParserInfo
-          (BoostTask <$> strArgument idVar <*> argument auto
-            (metavar "BOOST_VALUE"
-              <> help "Value to increase priority"
-              <> value 1))
-          "Increase priority of a task")
+    <> command "boost" (toParserInfo (BoostTasks <$> some (strArgument idVar))
+          "Increase priority of specified tasks by 1")
 
-    <> command "hush"
-        (toParserInfo
-          (HushTask <$> strArgument idVar <*> argument auto
-            (metavar "HUSH_VALUE"
-              <> help "Value to decrease priority"
-              <> value 1))
-          "Decrease priority of a task")
+    <> command "hush" (toParserInfo (HushTasks <$> some (strArgument idVar))
+          "Decrease priority of specified tasks by 1")
+
+    <> command "prioritize" (toParserInfo (Prioritize
+          <$> argument auto (metavar "VALUE"
+            <> help "Value to adjust priority by")
+          <*> some (strArgument idVar))
+          "Adjust priority of specified tasks")
 
     <> command "info" (toParserInfo (InfoTask <$> strArgument idVar)
         "Show detailed information and metadata of task")
@@ -197,7 +192,7 @@ commandParser =
     (  commandGroup "I/O Commands:"
 
     <> command "import" (toParserInfo (pure Import)
-        "Import one JSON task")
+        "Import one JSON task from stdin")
 
     <> command "csv" (toParserInfo (pure Csv)
         "Export tasks in CSV format")
@@ -243,12 +238,19 @@ main = do
     DoTask idSubstr -> doTask idSubstr
     EndTask idSubstr -> endTask idSubstr
     DeleteTask idSubstr -> deleteTask idSubstr
-    BoostTask idSubstr boostValue -> adjustTaskPriority idSubstr boostValue
-    HushTask idSubstr hushValue -> adjustTaskPriority idSubstr (-hushValue)
+    BoostTasks ids -> adjustPriority 1 ids
+    HushTasks ids -> adjustPriority (-1) ids
+    Prioritize val ids -> adjustPriority val ids
     InfoTask idSubstr -> infoTask idSubstr
     NextTask -> nextTask
     FindTask pattern -> findTask pattern
     AddTag idSubstr tagText  -> addTag idSubstr tagText
     Count taskFilter -> countTasks taskFilter
-    Help -> handleParseResult . Failure $
-      parserFailure defaultPrefs commandParserInfo ShowHelpText mempty
+    Help ->
+      case (parserFailure defaultPrefs commandParserInfo ShowHelpText mempty) of
+        ParserFailure a -> case a "tasklite" of
+          (theHelp, _, _) -> theHelp
+            & show
+            & T.replace "\n  add     " "\n  add BODY"
+            & putStrLn
+

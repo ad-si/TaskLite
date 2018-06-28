@@ -7,6 +7,9 @@ import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Hourglass
 
 
+type IdText = Text
+type TagText = Text
+
 data Filter a = NoFilter | Only a
   deriving (Eq, Ord, Show)
 

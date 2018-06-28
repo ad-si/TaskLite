@@ -72,6 +72,9 @@ getMainDir :: FilePath -> FilePath
 getMainDir = (<> "/" <> (mainDir conf) )
 
 
+noTasksWarning :: Text
+noTasksWarning = "No tasks available"
+
 
 -- | Record for storing entries of the `task_to_tag` table
 data TaskToTagT f = TaskToTag
@@ -433,36 +436,37 @@ deleteTask idSubstr = do
         else "❌ Deleted task \"…" <> idText <> "\""
 
 
-adjustTaskPriority :: Text -> Float -> IO ()
-adjustTaskPriority idSubstr adjustment = do
+adjustPriority :: Float -> [IdText] -> IO ()
+adjustPriority adjustment ids  = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    execWithId connection idSubstr $ \(TaskUlid idText) -> do
-      -- TODO: Figure out why this doesn't work
-      -- runBeamSqlite connection $ runUpdate $
-      --   update (_tldbTasks taskLiteDb)
-      --     (\task -> [(Task.priority_adjustment task) <-.
-      --         fmap (+ adjustment) (current_ (Task.priority_adjustment task))
-      --     ])
-      --     (\task -> primaryKey task ==. val_ taskUlid)
+    forM_ ids $ \idSubstr ->
+      execWithId connection idSubstr $ \(TaskUlid idText) -> do
+        -- TODO: Figure out why this doesn't work
+        -- runBeamSqlite connection $ runUpdate $
+        --   update (_tldbTasks taskLiteDb)
+        --     (\task -> [(Task.priority_adjustment task) <-.
+        --       fmap (+ adjustment) (current_ (Task.priority_adjustment task))
+        --     ])
+        --     (\task -> primaryKey task ==. val_ taskUlid)
 
-      execute connection
-        (Query $ "update `tasks` \
-          \set `priority_adjustment` = ifnull(`priority_adjustment`, 0) + ? \
-          \where `ulid` == ?")
-        (adjustment, idText :: Text)
+        execute connection
+          (Query $ "update `tasks` \
+            \set `priority_adjustment` = ifnull(`priority_adjustment`, 0) + ? \
+            \where `ulid` == ?")
+          (adjustment, idText :: Text)
 
-      numOfChanges <- changes connection
+        numOfChanges <- changes connection
 
-      putText $ if numOfChanges == 0
-        then
-          "⚠️ An error occured \
-          \while adjusting the priority of task \"" <> idText <> "\""
-        else (
-          (if adjustment > 0 then "⬆️  Increased" else "⬇️  Decreased")
-          <> " priority of task \""
-          <> idText <> "\" by " <> (show $ abs adjustment)
-        )
+        putText $ if numOfChanges == 0
+          then
+            "⚠️ An error occured \
+            \while adjusting the priority of task \"" <> idText <> "\""
+          else (
+            (if adjustment > 0 then "⬆️  Increased" else "⬇️  Decreased")
+            <> " priority of task \""
+            <> idText <> "\" by " <> (show $ abs adjustment)
+          )
 
 
 infoTask :: Text -> IO ()
@@ -475,7 +479,7 @@ infoTask idSubstr = do
         [idText :: Text]
 
       case P.head (tasks :: [FullTask]) of
-        Nothing -> die "This case should never be executed"
+        Nothing -> die "This case should already be handled by `execWithId`"
         Just task -> putDoc $ pretty $ task
 
 
@@ -489,7 +493,7 @@ nextTask = do
   tasks <- query_ connection $ Query $ selectQuery <> orderByAndLimit
 
   case P.head (tasks :: [FullTask]) of
-    Nothing -> die "This case should never be executed"
+    Nothing -> die noTasksWarning
     Just task -> putDoc $ pretty $ task
 
 
@@ -689,7 +693,7 @@ runSql query = do
 printTasks :: [FullTask] -> IO ()
 printTasks tasks =
   if P.length tasks == 0
-  then liftIO $ die "No tasks available"
+  then liftIO $ die noTasksWarning
   else do
     let
       strong = bold <> underlined
