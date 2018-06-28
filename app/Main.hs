@@ -58,6 +58,8 @@ data Command
   | List (Filter TaskState)
   | ListHead
   | Count (Filter TaskState)
+  | QueryTasks Text
+  | RunSql Text
   -- | Views -- List all available views
   -- | Tags -- List all used tags
   -- | Active -- Started tasks
@@ -145,6 +147,7 @@ commandParser =
       <*> strArgument (metavar "TAG" <> help "The tag"))
       "Add a tag to a task")
     )
+
   <|> subparser
     (  commandGroup "List Commands:"
 
@@ -162,6 +165,15 @@ commandParser =
 
     <> command "obsolete" (toParserInfo (pure $ List $ Only Obsolete)
         "List all obsolete tasks")
+
+    <> command "query" (toParserInfo (QueryTasks <$> strArgument
+        (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
+        "Run \"select * from tasks where QUERY\" on the database")
+
+    <> command "runsql" (toParserInfo (RunSql <$> strArgument
+        (metavar "QUERY" <> help "The SQL query"))
+        "Run any SQL query and output result as CSV")
+
     -- <> command "newest" "Show all tasks (newest first)"
     -- <> command "oldest" "Show all tasks (oldest first)"
     -- <> command "overdue" -- Overdue tasks
@@ -220,6 +232,8 @@ main = do
   case cliCommand of
     List taskFilter -> listTasks taskFilter
     ListHead -> headTasks
+    QueryTasks query -> queryTasks query
+    RunSql query -> runSql query
     Import -> importTask
     Csv -> dumpCsv
     Ndjson -> dumpNdjson

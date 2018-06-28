@@ -12,6 +12,7 @@ import Database.Beam.Sqlite
 import Database.Beam.Schema.Tables
 import Database.SQLite.Simple as Sql
 import System.Directory
+import System.Process (readProcess)
 import qualified Text.Fuzzy as Fuzzy
 import Time.System
 import Data.Text.Prettyprint.Doc hiding ((<>))
@@ -661,6 +662,28 @@ listTasks taskState = do
       [tState]
 
   printTasks tasks
+
+
+queryTasks :: Text -> IO ()
+queryTasks query = do
+  connection <- setupConnection
+  tasks <- query_ connection $ Query $
+    "select * from `tasks_view` where " <> query
+  printTasks tasks
+
+
+runSql :: Text -> IO ()
+runSql query = do
+  homeDir <- getHomeDirectory
+  result <- readProcess "sqlite3"
+    [ (getMainDir homeDir) <> "/" <> (dbName conf)
+    , ".headers on"
+    , ".mode csv"
+    , ".separator , '\n'"
+    , T.unpack query
+    ]
+    []
+  putStr result
 
 
 printTasks :: [FullTask] -> IO ()
