@@ -21,7 +21,7 @@ toParserInfo parser description =
 
 data Command
   {- Modify -}
-  = AddTask Text
+  = AddTask [Text]
   -- | LogTask Text
   | DoTask IdText
   | EndTask IdText
@@ -88,10 +88,6 @@ data Command
 idVar :: Mod ArgumentFields a
 idVar = metavar "TASK_ID" <> help "Id of the task (Ulid)"
 
-addParser :: Parser Command
-addParser = AddTask <$>
-  strArgument (metavar "BODY" <> help "Body of the task")
-
 doneParser :: Parser Command
 doneParser = DoTask <$>
   strArgument idVar
@@ -106,7 +102,8 @@ commandParser =
   <|>
   ( subparser
     (  commandGroup "Basic Commands:"
-    <> command "add" (toParserInfo addParser "Add a new task")
+    <> command "add" (toParserInfo (AddTask <$> some (strArgument
+        (metavar "BODY" <> help "Body of the task"))) "Add a new task")
 
     -- <> command "log" (toParserInfo addParser "Log an already completed task")
 
@@ -241,7 +238,7 @@ main = do
     Ndjson -> dumpNdjson
     Sql -> dumpSql
     Backup -> backupDatabase
-    AddTask body -> addTask body
+    AddTask words -> addTask words
     DoTask idSubstr -> doTask idSubstr
     EndTask idSubstr -> endTask idSubstr
     DeleteTask idSubstr -> deleteTask idSubstr

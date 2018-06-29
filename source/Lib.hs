@@ -331,24 +331,29 @@ insertNotes connection primKey notes = do
     insertValues taskToNotes
 
 
-addTask :: Text -> IO ()
-addTask bodyAndTags = do
+addTask :: [Text] -> IO ()
+addTask bodyWords = do
   connection <- setupConnection
   ulid <- fmap (toLower . show) getULID
-  now <- fmap (timePrint $ utcFormat conf) timeCurrent
+  modified_utc <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
   let
-    fragments = splitOn " +" bodyAndTags
-    body = fromMaybe "" $ headMay fragments
-    tags = fromMaybe [] $ tailMay fragments
+    -- Handle case when word is actually a text
+    bodyWordsReversed = bodyWords & T.unwords & T.words & P.reverse
+    tags = bodyWordsReversed
+      & P.takeWhile ("+" `T.isPrefixOf`)
+      <&> T.replace "+" ""
+      & P.reverse
+    body = bodyWordsReversed
+      & P.dropWhile ("+" `T.isPrefixOf`)
+      & P.reverse
+      & unwords
     task = Task
-      { ulid = ulid
-      , body = body
-      , state = Open
+      { state = Open
       , due_utc = Nothing
       , closed_utc = Nothing
-      , modified_utc = pack now
       , priority_adjustment = Nothing
       , metadata = Nothing
+      , ..
       }
 
   insertTags connection (primaryKey task) tags
