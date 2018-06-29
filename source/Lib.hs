@@ -59,7 +59,7 @@ conf = Config
   , tagStyle = color Blue
   , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
   , mainDir = "tasklite"
-  , dbName = "main.db"
+  , dbName = "demo.db"
   , dateWidth = 10
   , bodyWidth = 10
   , prioWidth = 4
@@ -546,24 +546,25 @@ findTask pattern = do
   else return ()
 
 
-addTag :: Text -> Text -> IO ()
-addTag idSubstr tag = do
+addTag :: Text -> [IdText] -> IO ()
+addTag tag ids = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    execWithId connection idSubstr $ \taskUlid -> do
-      now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
-      ulid <- fmap (toLower . show) getULID
+    forM_ ids $ \idSubstr ->
+      execWithId connection idSubstr $ \taskUlid -> do
+        now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
+        ulid <- fmap (toLower . show) getULID
 
-      let taskToTag = TaskToTag ulid taskUlid tag
+        let taskToTag = TaskToTag ulid taskUlid tag
 
-      runBeamSqlite connection $ runInsert $
-        insert (_tldbTaskToTag taskLiteDb) $
-        insertValues [taskToTag]
+        runBeamSqlite connection $ runInsert $
+          insert (_tldbTaskToTag taskLiteDb) $
+          insertValues [taskToTag]
 
-      runBeamSqlite connection $ runUpdate $
-        update (_tldbTasks taskLiteDb)
-          (\task -> [(Task.modified_utc task) <-. val_ now])
-          (\task -> primaryKey task ==. val_ taskUlid)
+        runBeamSqlite connection $ runUpdate $
+          update (_tldbTasks taskLiteDb)
+            (\task -> [(Task.modified_utc task) <-. val_ now])
+            (\task -> primaryKey task ==. val_ taskUlid)
 
 
 ulidToDateTime :: Text -> Maybe DateTime

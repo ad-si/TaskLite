@@ -21,15 +21,15 @@ toParserInfo parser description =
 
 data Command
   {- Modify -}
-  = AddTask IdText
-  -- | LogTask IdText
+  = AddTask Text
+  -- | LogTask Text
   | DoTask IdText
   | EndTask IdText
   | DeleteTask IdText
   | BoostTasks [IdText]
   | HushTasks [IdText]
   | Prioritize Float [IdText]
-  | AddTag IdText TagText
+  | AddTag TagText [IdText]
   -- | Note -- Add a note
   -- | Denote -- Remove all notes
   -- | Start -- Add a note that work on task was started
@@ -108,6 +108,8 @@ commandParser =
     (  commandGroup "Basic Commands:"
     <> command "add" (toParserInfo addParser "Add a new task")
 
+    -- <> command "log" (toParserInfo addParser "Log an already completed task")
+
     <> command "do" (toParserInfo doneParser "Mark a task as done")
 
     <> command "end" (toParserInfo (EndTask <$> strArgument idVar)
@@ -139,9 +141,9 @@ commandParser =
         "Fuzzy search a task")
 
     <> command "tag" (toParserInfo (AddTag
-      <$> strArgument idVar
-      <*> strArgument (metavar "TAG" <> help "The tag"))
-      "Add a tag to a task")
+      <$> strArgument (metavar "TAG" <> help "The tag")
+      <*> some (strArgument idVar))
+      "Add a tag to specified tasks")
     )
 
   <|> subparser
@@ -151,7 +153,6 @@ commandParser =
         show (headCount conf) <> " most important tasks sorted by priority"))
 
     <> command "all" (toParserInfo (pure $ List NoFilter)
-        "List all tasks in chronological order")
         "List all tasks by priority")
 
     <> command "new" (toParserInfo (pure $ ListNew) ("List "<>
@@ -250,7 +251,7 @@ main = do
     InfoTask idSubstr -> infoTask idSubstr
     NextTask -> nextTask
     FindTask pattern -> findTask pattern
-    AddTag idSubstr tagText  -> addTag idSubstr tagText
+    AddTag tagText ids -> addTag tagText ids
     Count taskFilter -> countTasks taskFilter
     Help ->
       case (parserFailure defaultPrefs commandParserInfo ShowHelpText mempty) of
