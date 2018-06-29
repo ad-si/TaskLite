@@ -651,6 +651,17 @@ headTasks = do
   printTasks tasks
 
 
+newTasks :: IO ()
+newTasks = do
+  connection <- setupConnection
+  let
+    -- TODO: Add "state is 'Waiting' and `wait_utc` < datetime('now')"
+    selectQuery = "select * from `tasks_view` where state is 'Open'"
+    orderByAndLimit = "order by `ulid` desc limit " <> show (headCount conf)
+  tasks <- query_ connection $ Query $ selectQuery <> orderByAndLimit
+  printTasks tasks
+
+
 listTasks :: Filter TaskState -> IO ()
 listTasks taskState = do
   connection <- setupConnection

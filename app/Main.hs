@@ -56,6 +56,7 @@ data Command
   {- List -}
   | List (Filter TaskState)
   | ListHead
+  | ListNew
   | Count (Filter TaskState)
   | QueryTasks Text
   | RunSql Text
@@ -151,6 +152,10 @@ commandParser =
 
     <> command "all" (toParserInfo (pure $ List NoFilter)
         "List all tasks in chronological order")
+        "List all tasks by priority")
+
+    <> command "new" (toParserInfo (pure $ ListNew) ("List "<>
+        show (headCount conf) <> " newest tasks sorted chronologically"))
 
     <> command "done" (toParserInfo (pure $ List $ Only Done)
         "List all done tasks")
@@ -227,6 +232,7 @@ main = do
   case cliCommand of
     List taskFilter -> listTasks taskFilter
     ListHead -> headTasks
+    ListNew -> newTasks
     QueryTasks query -> queryTasks query
     RunSql query -> runSql query
     Import -> importTask
