@@ -109,6 +109,22 @@ commandParser =
     <> command "add" (toParserInfo (AddTask <$> some (strArgument
         (metavar "BODY" <> help "Body of the task"))) "Add a new task")
 
+    -- <> command "read" (toParserInfo (AddTask <$> some (strArgument
+    --     (metavar "URL" <> help "URL to a website or blog post")))
+    --     "Add a task to read the specified URL")
+
+    -- <> command "watch" (toParserInfo (AddTask <$> some (strArgument
+    --     (metavar "URL" <> help "URL to a video or movie to watch")))
+    --     "Add a task to watch a movie or a video")
+
+    -- <> command "buy" (toParserInfo (AddTask <$> some (strArgument
+    --     (metavar "URL" <> help "URL to a website or blog post")))
+    --     "Add a task to read the specified URL")
+
+    -- <> command "send" (toParserInfo (AddTask <$> some (strArgument
+    --     (metavar "URL" <> help "URL to a website or blog post")))
+    --     "Add a task to send something to someone")
+
     -- <> command "log" (toParserInfo addParser "Log an already completed task")
 
     <> command "do" (toParserInfo doneParser "Mark a task as done")
@@ -172,6 +188,9 @@ commandParser =
 
     <> command "obsolete" (toParserInfo (pure $ List $ Only Obsolete)
         "List all obsolete tasks")
+
+    -- <> command "inbox" (toParserInfo (pure $ List $ Only Obsolete)
+    --     "List all tasks with the \"inbox\" tag")
 
     <> command "query" (toParserInfo (QueryTasks <$> strArgument
         (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
