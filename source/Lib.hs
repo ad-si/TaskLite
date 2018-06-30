@@ -587,6 +587,25 @@ addTag connection tag ids = do
   pure $ vsep docs
 
 
+setDueUtc :: Connection -> DateTime -> [IdText] -> IO (Doc AnsiStyle)
+setDueUtc connection datetime ids = do
+  let
+    utcText :: Text
+    utcText = pack $ timePrint (utcFormat conf) datetime
+
+  docs <- forM ids $ \idSubstr -> do
+    doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task -> [(Task.due_utc task) <-. (val_ $ Just utcText)])
+          (\task -> primaryKey task ==. val_ taskUlid)
+
+      pure $ "📅 Set due UTC to" <+> (dquotes $ pretty utcText)
+        <+> "of task" <+> (dquotes $ pretty idText)
+    pure doc
+  pure $ vsep docs
+
+
 ulidToDateTime :: Text -> Maybe DateTime
 ulidToDateTime =
   (fmap $

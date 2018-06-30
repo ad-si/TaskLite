@@ -28,9 +28,13 @@ parseUtc :: Text -> Maybe DateTime
 parseUtc utcText =
   let
     isoFormatSpace = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
-    isoFormat = toFormat ("YYYYMMDDTHMIS" :: [Char])
+    isoFormatNoSec = toFormat ("YYYY-MM-DD H:MI" :: [Char])
+    isoDate        = toFormat ("YYYY-MM-DD" :: [Char])
+    isoFormat      = toFormat ("YYYYMMDDTHMIS" :: [Char])
     utcString = T.unpack utcText
   in
         (timeParse ISO8601_DateAndTime utcString)
     <|> (timeParse isoFormatSpace utcString)
+    <|> (timeParse isoFormatNoSec utcString)
+    <|> (timeParse isoDate utcString)
     <|> (timeParse isoFormat utcString)

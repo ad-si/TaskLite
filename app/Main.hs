@@ -7,6 +7,7 @@ module Main where
 import Protolude
 
 import Lib
+import Data.Hourglass
 import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
@@ -32,6 +33,7 @@ data Command
   | HushTasks [IdText]
   | Prioritize Float [IdText]
   | AddTag TagText [IdText]
+  | SetDueUtc DateTime [IdText]
   -- | Note -- Add a note
   -- | Denote -- Remove all notes
   -- | Start -- Add a note that work on task was started
@@ -143,8 +145,13 @@ commandParser =
       <$> strArgument (metavar "TAG" <> help "The tag")
       <*> some (strArgument idVar))
       "Add a tag to specified tasks")
-    )
 
+    <> command "due" (toParserInfo (SetDueUtc
+      <$> argument (maybeReader (parseUtc . T.pack))
+            (metavar "DUE_UTC" <> help "Due timestamp in UTC")
+      <*> some (strArgument idVar))
+      "Set due UTC of specified tasks")
+  )
   <|> subparser
     (  commandGroup "List Commands:"
 
@@ -264,6 +271,7 @@ main = do
     NextTask -> nextTask connection
     FindTask pattern -> findTask pattern
     AddTag tagText ids -> addTag connection tagText ids
+    SetDueUtc datetime ids -> setDueUtc connection datetime ids
     Count taskFilter -> countTasks taskFilter
     Help -> pure helpText
 

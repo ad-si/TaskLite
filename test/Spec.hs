@@ -4,7 +4,9 @@ import Test.Hspec
 import qualified Database.SQLite.Simple as Sql
 import Data.Text as T
 import System.IO.Temp
+import System.IO.Error
 import Lib
+import Utils
 
 
 setupTestConnection :: FilePath -> IO Sql.Connection
@@ -34,7 +36,9 @@ testSuite connection = do
 
 
     context "When a task exists" $ do
-      let taskStart = "state: Open\npriority: 0\nbody: Just a test\nulid: "
+      let
+        taskStart = "state: Open\npriority: 0\nbody: Just a test\nulid: "
+        getUlidFromBody = T.take 26 . T.drop (P.length taskStart) . pack . show
 
 
       it "Lists next task" $ do
@@ -44,13 +48,24 @@ testSuite connection = do
 
       it "Adds a tag" $ do
         result <- nextTask connection
-        let ulidText = (T.take 26 . T.drop (P.length taskStart) . pack)
-              (show result)
+        let ulidText = getUlidFromBody result
 
         -- it "Adds a tag to a task" $ do
         tagResult <- addTag connection "test" [ulidText]
         (unpack $ show tagResult) `shouldStartWith`
           "🏷  Added tag \"test\" to task"
+
+
+      it "Set due UTC" $ do
+        resultTask <- nextTask connection
+        let ulidText = getUlidFromBody resultTask
+
+        case (parseUtc "2087-03-21 17:43") of
+          Nothing -> throwIO $ userError "Invalid UTC string"
+          Just utcStamp -> do
+            result <- setDueUtc connection utcStamp [ulidText]
+            (unpack $ show result) `shouldStartWith`
+              "📅 Set due UTC to \"2087-03-21 17:43:00\" of task"
 
 
       it "Completes it" $ do
