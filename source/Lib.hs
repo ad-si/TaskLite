@@ -305,9 +305,10 @@ insertTask connection task = do
     insert (_tldbTasks taskLiteDb) $
     insertValues [task]
 
-  pure $ pretty $
-    "🆕 Added task \"" <> (Task.body task)
-    <> "\" with ulid \"" <> (Task.ulid task) <> "\""
+  pure $
+    "🆕 Added task" <+> (dquotes $ pretty $ Task.body task)
+    <+> "with ulid" <+> (dquotes $ pretty $ Task.ulid task)
+    <+> hardline
 
 
 insertTags :: Connection -> TaskUlid -> [Text] -> IO ()
@@ -374,16 +375,22 @@ execWithId connection idSubstr callback = do
       ["%"  <> idSubstr :: Text]
     ) :: IO [Task]
 
-  let numOfTasks = P.length tasks
+  let
+    numOfTasks = P.length tasks
+    ulidLength = 26
+    prefix = if (T.length idSubstr) == ulidLength
+      then ""
+      else "…"
+    quote = dquotes . pretty
 
   if
-    | numOfTasks == 0 ->
-        pure $ pretty $ "⚠️  Task \"…" <> idSubstr <> "\" does not exist"
+    | numOfTasks == 0 -> pure $
+        "⚠️  Task" <+> (quote $ prefix <> idSubstr) <+> "does not exist"
     | numOfTasks == 1 ->
         callback $ primaryKey $ unsafeHead tasks
-    | numOfTasks > 1 ->
-        pure $ pretty $ "⚠️  Id slice \"" <> idSubstr <> "\" is not unique. \
-          \Please use a longer slice!"
+    | numOfTasks > 1 -> pure $
+        "⚠️  Id slice" <+> (quote idSubstr) <+> "is not unique."
+        <+> "Please use a longer slice!"
 
 
 setStateAndClosed :: Connection -> TaskUlid -> TaskState -> IO ()
@@ -556,29 +563,28 @@ findTask pattern = do
 --     ContT $ withConnection dbPath
 
 
-addTag :: Text -> [IdText] -> IO (Doc AnsiStyle)
-addTag tag ids = do
-  dbPath <- getDbPath
-  withConnection dbPath $ \connection -> do
-    docs <- forM ids $ \idSubstr -> do
-      doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
-        now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
-        ulid <- fmap (toLower . show) getULID
+addTag :: Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
+addTag connection tag ids = do
+  docs <- forM ids $ \idSubstr -> do
+    doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+      now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
+      ulid <- fmap (toLower . show) getULID
 
-        let taskToTag = TaskToTag ulid taskUlid tag
+      let taskToTag = TaskToTag ulid taskUlid tag
 
-        runBeamSqlite connection $ runInsert $
-          insert (_tldbTaskToTag taskLiteDb) $
-          insertValues [taskToTag]
+      runBeamSqlite connection $ runInsert $
+        insert (_tldbTaskToTag taskLiteDb) $
+        insertValues [taskToTag]
 
-        runBeamSqlite connection $ runUpdate $
-          update (_tldbTasks taskLiteDb)
-            (\task -> [(Task.modified_utc task) <-. val_ now])
-            (\task -> primaryKey task ==. val_ taskUlid)
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task -> [(Task.modified_utc task) <-. val_ now])
+          (\task -> primaryKey task ==. val_ taskUlid)
 
-        pure $ pretty $ "Add tag " <> tag <> " to task \"" <> idText <> "\""
-      pure doc
-    pure $ vsep docs
+      pure $ "🏷  Added tag" <+> (dquotes $ pretty tag)
+        <+> "to task" <+> (dquotes $ pretty idText)
+    pure doc
+  pure $ vsep docs
 
 
 ulidToDateTime :: Text -> Maybe DateTime

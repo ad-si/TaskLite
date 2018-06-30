@@ -263,7 +263,7 @@ main = do
     InfoTask idSubstr -> infoTask idSubstr
     NextTask -> nextTask connection
     FindTask pattern -> findTask pattern
-    AddTag tagText ids -> addTag tagText ids
+    AddTag tagText ids -> addTag connection tagText ids
     Count taskFilter -> countTasks taskFilter
     Help -> pure helpText
 
