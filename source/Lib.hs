@@ -34,6 +34,7 @@ data Config = Config
   , dateStyle :: AnsiStyle
   , bodyStyle :: AnsiStyle
   , closedStyle :: AnsiStyle
+  , dueStyle :: AnsiStyle
   , tagStyle :: AnsiStyle
   , utcFormat :: TimeFormatString
   , mainDir :: FilePath
@@ -54,7 +55,8 @@ conf = Config
   , priorityStyle = color Magenta
   , dateStyle = color Yellow
   , bodyStyle = color White
-  , closedStyle = color Red
+  , closedStyle = color Black
+  , dueStyle = color Red
   , tagStyle = color Blue
   , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
   , mainDir = "tasklite"
@@ -639,6 +641,9 @@ formatTaskLine taskUlidWidth task =
     closedUtcMaybe = (FullTask.closed_utc task)
       >>= parseUtc
       <&> timePrint (utcFormat conf)
+    dueUtcMaybe = (FullTask.due_utc task)
+      >>= parseUtc
+      <&> timePrint (utcFormat conf)
     hangWidth = taskUlidWidth + 2 + (dateWidth conf) + 2 + (prioWidth conf) + 2
     taskLine = createdUtc <$$> \taskDate -> hang hangWidth $
            annotate (idStyle conf) id
@@ -646,8 +651,9 @@ formatTaskLine taskUlidWidth task =
             $ showAtPrecision $ fromMaybe 0 (FullTask.priority task))
       <++> annotate (dateStyle conf) (pretty taskDate)
       <++> annotate (bodyStyle conf) (reflow body)
+      <++> annotate (dueStyle conf) (pretty dueUtcMaybe)
       <++> annotate (closedStyle conf) (pretty closedUtcMaybe)
-      <++> hsep (tags <$$> formatTag )
+      <++> hsep (tags <$$> formatTag)
   in
     fromMaybe
       ("Id" <+> (dquotes $ pretty $ FullTask.ulid task) <+>
