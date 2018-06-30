@@ -254,14 +254,14 @@ main = do
     Sql -> dumpSql
     Backup -> backupDatabase
     AddTask bodyWords -> addTask connection bodyWords
-    DoTask idSubstr -> doTask idSubstr
+    DoTask idSubstr -> doTask connection idSubstr
     EndTask idSubstr -> endTask idSubstr
     DeleteTask idSubstr -> deleteTask idSubstr
     BoostTasks ids -> adjustPriority 1 ids
     HushTasks ids -> adjustPriority (-1) ids
     Prioritize val ids -> adjustPriority val ids
     InfoTask idSubstr -> infoTask idSubstr
-    NextTask -> nextTask
+    NextTask -> nextTask connection
     FindTask pattern -> findTask pattern
     AddTag tagText ids -> addTag tagText ids
     Count taskFilter -> countTasks taskFilter

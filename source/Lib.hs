@@ -395,18 +395,16 @@ setStateAndClosed connection taskUlid theTaskState = do
                 (Task.state task) /=. val_ theTaskState)
 
 
-doTask :: Text -> IO (Doc AnsiStyle)
-doTask idSubstr = do
-  dbPath <- getDbPath
-  withConnection dbPath $ \connection -> do
-    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
-      setStateAndClosed connection taskUlid Done
+doTask :: Connection -> Text -> IO (Doc AnsiStyle)
+doTask connection idSubstr = do
+  execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+    setStateAndClosed connection taskUlid Done
 
-      numOfChanges <- changes connection
+    numOfChanges <- changes connection
 
-      pure $ pretty $ if numOfChanges == 0
-        then "⚠️  Task \"…" <> idText <> "\" is already done"
-        else "✅ Finished task \"…" <> idText <> "\""
+    pure $ pretty $ if numOfChanges == 0
+      then "⚠️  Task \"…" <> idText <> "\" is already done"
+      else "✅ Finished task \"…" <> idText <> "\""
 
 
 endTask :: Text -> IO (Doc AnsiStyle)
@@ -491,9 +489,8 @@ infoTask idSubstr = do
         Just task -> pretty task
 
 
-nextTask :: IO (Doc AnsiStyle)
-nextTask = do
-  connection <- setupConnection
+nextTask :: Connection -> IO (Doc AnsiStyle)
+nextTask connection = do
   let
     -- TODO: Add "state is 'Waiting' and `wait_utc` < datetime('now')"
     selectQuery = "select * from `tasks_view` where state is 'Open'"
