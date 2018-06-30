@@ -84,3 +84,6 @@ tests:
       - -Wredundant-constraints
     dependencies:
       - tasklite
+      - hspec
+      - temporary
+

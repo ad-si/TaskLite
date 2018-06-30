@@ -240,9 +240,11 @@ main :: IO ()
 main = do
   cliCommand <- execParser commandParserInfo
 
+  connection <- setupConnection
+
   doc <- case cliCommand of
     List taskFilter -> listTasks taskFilter
-    ListHead -> headTasks
+    ListHead -> headTasks connection
     ListNew -> newTasks
     QueryTasks query -> queryTasks query
     RunSql query -> runSql query
@@ -251,7 +253,7 @@ main = do
     Ndjson -> dumpNdjson
     Sql -> dumpSql
     Backup -> backupDatabase
-    AddTask bodyWords -> addTask bodyWords
+    AddTask bodyWords -> addTask connection bodyWords
     DoTask idSubstr -> doTask idSubstr
     EndTask idSubstr -> endTask idSubstr
     DeleteTask idSubstr -> deleteTask idSubstr

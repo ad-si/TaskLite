@@ -5,7 +5,6 @@ import Protolude as P
 import Data.Hourglass
 import Codec.Crockford as Crock
 import Data.Text as T
-import qualified Data.Text.IO as T
 import Data.ULID
 import Database.Beam
 import Database.Beam.Sqlite
@@ -332,9 +331,8 @@ insertNotes connection primKey notes = do
     insertValues taskToNotes
 
 
-addTask :: [Text] -> IO (Doc AnsiStyle)
-addTask bodyWords = do
-  connection <- setupConnection
+addTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
+addTask connection bodyWords = do
   ulid <- fmap (toLower . show) getULID
   modified_utc <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
   let
@@ -555,6 +553,7 @@ findTask pattern = do
   pure $ header <> body <> footer
 
 
+-- TODO: Use Continuation monad to avoid callback hell
 -- withConnectCont :: Text -> ContT a IO Connection
 -- withConnectCont dbPath =
 --     ContT $ withConnection dbPath
@@ -658,9 +657,8 @@ countTasks taskStateFilter = do
     pure $ pretty taskCount
 
 
-headTasks :: IO (Doc AnsiStyle)
-headTasks = do
-  connection <- setupConnection
+headTasks :: Connection -> IO (Doc AnsiStyle)
+headTasks connection = do
   let
     -- TODO: Add "state is 'Waiting' and `wait_utc` < datetime('now')"
     selectQuery = "select * from `tasks_view` where state is 'Open'"
@@ -698,22 +696,22 @@ listTasks taskState = do
 
 
 queryTasks :: Text -> IO (Doc AnsiStyle)
-queryTasks query = do
+queryTasks sqlQuery = do
   connection <- setupConnection
   tasks <- query_ connection $ Query $
-    "select * from `tasks_view` where " <> query
+    "select * from `tasks_view` where " <> sqlQuery
   pure $ formatTasks tasks
 
 
 runSql :: Text -> IO (Doc AnsiStyle)
-runSql query = do
+runSql sqlQuery = do
   homeDir <- getHomeDirectory
   result <- readProcess "sqlite3"
     [ (getMainDir homeDir) <> "/" <> (dbName conf)
     , ".headers on"
     , ".mode csv"
     , ".separator , '\n'"
-    , T.unpack query
+    , T.unpack sqlQuery
     ]
     []
   pure $ pretty result
