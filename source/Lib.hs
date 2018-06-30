@@ -59,7 +59,7 @@ conf = Config
   , tagStyle = color Blue
   , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
   , mainDir = "tasklite"
-  , dbName = "demo.db"
+  , dbName = "main.db"
   , dateWidth = 10
   , bodyWidth = 10
   , prioWidth = 4
@@ -300,13 +300,14 @@ execWithConn func = do
     )
 
 
-insertTask :: Connection -> Task -> IO ()
+insertTask :: Connection -> Task -> IO (Doc AnsiStyle)
 insertTask connection task = do
   runBeamSqlite connection $ runInsert $
     insert (_tldbTasks taskLiteDb) $
     insertValues [task]
 
-  putText $ "🆕 Added task \"" <> (Task.body task)
+  pure $ pretty $
+    "🆕 Added task \"" <> (Task.body task)
     <> "\" with ulid \"" <> (Task.ulid task) <> "\""
 
 
@@ -331,7 +332,7 @@ insertNotes connection primKey notes = do
     insertValues taskToNotes
 
 
-addTask :: [Text] -> IO ()
+addTask :: [Text] -> IO (Doc AnsiStyle)
 addTask bodyWords = do
   connection <- setupConnection
   ulid <- fmap (toLower . show) getULID
@@ -367,7 +368,8 @@ instance FromRow NumRows where
   fromRow = NumRows <$> field
 
 
-execWithId :: Connection -> Text -> (TaskUlid -> IO ()) -> IO ()
+execWithId ::
+  Connection -> Text -> (TaskUlid -> IO (Doc AnsiStyle)) -> IO (Doc AnsiStyle)
 execWithId connection idSubstr callback = do
   tasks <- (query connection
       (Query $ "select * from " <> tableName conf <> " where `ulid` like ?")
@@ -378,11 +380,11 @@ execWithId connection idSubstr callback = do
 
   if
     | numOfTasks == 0 ->
-        putText $ "⚠️  Task \"…" <> idSubstr <> "\" does not exist"
+        pure $ pretty $ "⚠️  Task \"…" <> idSubstr <> "\" does not exist"
     | numOfTasks == 1 ->
         callback $ primaryKey $ unsafeHead tasks
     | numOfTasks > 1 ->
-        putText $ "⚠️  Id slice \"" <> idSubstr <> "\" is not unique. \
+        pure $ pretty $ "⚠️  Id slice \"" <> idSubstr <> "\" is not unique. \
           \Please use a longer slice!"
 
 
@@ -395,7 +397,7 @@ setStateAndClosed connection taskUlid theTaskState = do
                 (Task.state task) /=. val_ theTaskState)
 
 
-doTask :: Text -> IO ()
+doTask :: Text -> IO (Doc AnsiStyle)
 doTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
@@ -404,12 +406,12 @@ doTask idSubstr = do
 
       numOfChanges <- changes connection
 
-      if numOfChanges == 0
-      then putText $ "⚠️  Task \"…" <> idText <> "\" is already done"
-      else putText $ "✅ Finished task \"…" <> idText <> "\""
+      pure $ pretty $ if numOfChanges == 0
+        then "⚠️  Task \"…" <> idText <> "\" is already done"
+        else "✅ Finished task \"…" <> idText <> "\""
 
 
-endTask :: Text -> IO ()
+endTask :: Text -> IO (Doc AnsiStyle)
 endTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
@@ -418,13 +420,12 @@ endTask idSubstr = do
 
       numOfChanges <- changes connection
 
-      if numOfChanges == 0
-      then putText $ "⚠️  Task \"…" <> idText <>
-        "\" is already marked as obsolete"
-      else putText $ "⏹  Marked task \"…" <> idText <> "\" as obsolete"
+      pure $ pretty $ if numOfChanges == 0
+        then "⚠️  Task \"…" <> idText <> "\" is already marked as obsolete"
+        else "⏹  Marked task \"…" <> idText <> "\" as obsolete"
 
 
-deleteTask :: Text -> IO ()
+deleteTask :: Text -> IO (Doc AnsiStyle)
 deleteTask idSubstr = do
   -- TODO: Delete corresponding tags and notes
   dbPath <- getDbPath
@@ -436,17 +437,17 @@ deleteTask idSubstr = do
 
       numOfChanges <- changes connection
 
-      putText $ if numOfChanges == 0
+      pure $ pretty $ if numOfChanges == 0
         then "⚠️ An error occured while deleting task \"…" <> idText <> "\""
         else "❌ Deleted task \"…" <> idText <> "\""
 
 
-adjustPriority :: Float -> [IdText] -> IO ()
+adjustPriority :: Float -> [IdText] -> IO (Doc AnsiStyle)
 adjustPriority adjustment ids  = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    forM_ ids $ \idSubstr ->
-      execWithId connection idSubstr $ \(TaskUlid idText) -> do
+    docs <- forM ids $ \idSubstr -> do
+      doc <- execWithId connection idSubstr $ \(TaskUlid idText) -> do
         -- TODO: Figure out why this doesn't work
         -- runBeamSqlite connection $ runUpdate $
         --   update (_tldbTasks taskLiteDb)
@@ -463,7 +464,7 @@ adjustPriority adjustment ids  = do
 
         numOfChanges <- changes connection
 
-        putText $ if numOfChanges == 0
+        pure $ pretty $ if numOfChanges == 0
           then
             "⚠️ An error occured \
             \while adjusting the priority of task \"" <> idText <> "\""
@@ -473,8 +474,11 @@ adjustPriority adjustment ids  = do
             <> idText <> "\" by " <> (show $ abs adjustment)
           )
 
+      pure doc
+    pure $ vsep docs
 
-infoTask :: Text -> IO ()
+
+infoTask :: Text -> IO (Doc AnsiStyle)
 infoTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
@@ -483,12 +487,13 @@ infoTask idSubstr = do
         (Query $ "select * from `tasks_view` where `ulid` == ?")
         [idText :: Text]
 
-      case P.head (tasks :: [FullTask]) of
-        Nothing -> die "This case should already be handled by `execWithId`"
-        Just task -> putDoc $ pretty $ task
+      pure $ case P.head (tasks :: [FullTask]) of
+        Nothing -> pretty
+          ("This case should already be handled by `execWithId`" :: Text)
+        Just task -> pretty task
 
 
-nextTask :: IO ()
+nextTask :: IO (Doc AnsiStyle)
 nextTask = do
   connection <- setupConnection
   let
@@ -497,12 +502,12 @@ nextTask = do
     orderByAndLimit = "order by `priority` desc limit 1"
   tasks <- query_ connection $ Query $ selectQuery <> orderByAndLimit
 
-  case P.head (tasks :: [FullTask]) of
-    Nothing -> die noTasksWarning
-    Just task -> putDoc $ pretty $ task
+  pure $ case P.head (tasks :: [FullTask]) of
+    Nothing -> pretty noTasksWarning
+    Just task -> pretty task
 
 
-findTask :: Text -> IO ()
+findTask :: Text -> IO (Doc AnsiStyle)
 findTask pattern = do
   connection <- setupConnection
   tasks <- query_ connection $ Query $
@@ -526,37 +531,41 @@ findTask pattern = do
         ])
       False -- Case insensitive
     moreResults = (P.length results) - numOfResults
+    header =
+      (annotate (underlined <> color Red) $ fill scoreWidth "Score") <++>
+      (annotate (underlined) $ fill 10 "Task") <>
+      hardline
+    body =
+      results
+        & P.take numOfResults
+        <&> (\result ->
+              annotate (color Red)
+                (fill scoreWidth $ pretty $ Fuzzy.score result)
+              <++> (align (reflow $ Fuzzy.rendered result)))
+        & vsep
+    footer =
+      if moreResults > 0
+      then hardline
+        <> hardline
+        <> annotate (color Red)
+            ("There are " <> pretty moreResults <> " more results available")
+        <> hardline
+      else hardline
 
-  putDoc $
-    (annotate (underlined <> color Red) $ fill scoreWidth "Score") <++>
-    (annotate (underlined) $ fill 10 "Task") <>
-    hardline
-
-  results
-    & P.take numOfResults
-    <&> (\result ->
-          annotate (color Red)
-            (fill scoreWidth $ pretty $ Fuzzy.score result)
-          <++> (align (reflow $ Fuzzy.rendered result)))
-    & vsep
-    & putDoc
-
-  if moreResults > 0
-  then putDoc $
-       hardline
-    <> hardline
-    <> annotate (color Red)
-        ("There are " <> pretty moreResults <> " more results available")
-    <> hardline
-  else return ()
+  pure $ header <> body <> footer
 
 
-addTag :: Text -> [IdText] -> IO ()
+-- withConnectCont :: Text -> ContT a IO Connection
+-- withConnectCont dbPath =
+--     ContT $ withConnection dbPath
+
+
+addTag :: Text -> [IdText] -> IO (Doc AnsiStyle)
 addTag tag ids = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    forM_ ids $ \idSubstr ->
-      execWithId connection idSubstr $ \taskUlid -> do
+    docs <- forM ids $ \idSubstr -> do
+      doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
         now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
         ulid <- fmap (toLower . show) getULID
 
@@ -570,6 +579,10 @@ addTag tag ids = do
           update (_tldbTasks taskLiteDb)
             (\task -> [(Task.modified_utc task) <-. val_ now])
             (\task -> primaryKey task ==. val_ taskUlid)
+
+        pure $ pretty $ "Add tag " <> tag <> " to task \"" <> idText <> "\""
+      pure doc
+    pure $ vsep docs
 
 
 ulidToDateTime :: Text -> Maybe DateTime
@@ -631,7 +644,7 @@ getIdLength numOfItems =
       log (numOfItems / targetCollisionChance) / log sizeOfAlphabet
 
 
-countTasks :: Filter TaskState -> IO ()
+countTasks :: Filter TaskState -> IO (Doc AnsiStyle)
 countTasks taskStateFilter = do
   execWithConn $ \connection -> do
     [NumRows taskCount] <- case taskStateFilter of
@@ -642,10 +655,10 @@ countTasks taskStateFilter = do
           <> "` where `state` == ?")
         [(show taskState) :: Text]
 
-    putText (show taskCount)
+    pure $ pretty taskCount
 
 
-headTasks :: IO ()
+headTasks :: IO (Doc AnsiStyle)
 headTasks = do
   connection <- setupConnection
   let
@@ -653,11 +666,10 @@ headTasks = do
     selectQuery = "select * from `tasks_view` where state is 'Open'"
     orderByAndLimit = "order by `priority` desc limit " <> show (headCount conf)
   tasks <- query_ connection $ Query $ selectQuery <> orderByAndLimit
+  pure $ formatTasks tasks
 
-  printTasks tasks
 
-
-newTasks :: IO ()
+newTasks :: IO (Doc AnsiStyle)
 newTasks = do
   connection <- setupConnection
   let
@@ -665,10 +677,10 @@ newTasks = do
     selectQuery = "select * from `tasks_view` where state is 'Open'"
     orderByAndLimit = "order by `ulid` desc limit " <> show (headCount conf)
   tasks <- query_ connection $ Query $ selectQuery <> orderByAndLimit
-  printTasks tasks
+  pure $ formatTasks tasks
 
 
-listTasks :: Filter TaskState -> IO ()
+listTasks :: Filter TaskState -> IO (Doc AnsiStyle)
 listTasks taskState = do
   connection <- setupConnection
 
@@ -682,18 +694,18 @@ listTasks taskState = do
       (selectQuery <> " where `state` == ? " <> orderBy)
       [tState]
 
-  printTasks tasks
+  pure $ formatTasks tasks
 
 
-queryTasks :: Text -> IO ()
+queryTasks :: Text -> IO (Doc AnsiStyle)
 queryTasks query = do
   connection <- setupConnection
   tasks <- query_ connection $ Query $
     "select * from `tasks_view` where " <> query
-  printTasks tasks
+  pure $ formatTasks tasks
 
 
-runSql :: Text -> IO ()
+runSql :: Text -> IO (Doc AnsiStyle)
 runSql query = do
   homeDir <- getHomeDirectory
   result <- readProcess "sqlite3"
@@ -704,14 +716,14 @@ runSql query = do
     , T.unpack query
     ]
     []
-  putStr result
+  pure $ pretty result
 
 
-printTasks :: [FullTask] -> IO ()
-printTasks tasks =
+formatTasks :: [FullTask] -> Doc AnsiStyle
+formatTasks tasks =
   if P.length tasks == 0
-  then liftIO $ die noTasksWarning
-  else do
+  then pretty noTasksWarning
+  else
     let
       strong = bold <> underlined
       taskUlidWidth = getIdLength $ fromIntegral $ P.length tasks
@@ -725,12 +737,10 @@ printTasks tasks =
         <++> (annotate (bodyStyle conf <> strong) $
                 fill (bodyWidth conf) "Body")
         <++> line
-      putTasks = T.putStrLn
-        . renderStrict
-        . layoutPretty defaultLayoutOptions
-            {layoutPageWidth = AvailablePerLine (maxWidth conf) 1.0}
-
-    liftIO $ putTasks $
-      docHeader <>
-      (vsep $ fmap (formatTaskLine taskUlidWidth) tasks) <>
-      line
+      renderTasks = renderStrict . layoutPretty defaultLayoutOptions
+        {layoutPageWidth = AvailablePerLine (maxWidth conf) 1.0}
+    in
+      pretty $ renderTasks $
+        docHeader <>
+        (vsep $ fmap (formatTaskLine taskUlidWidth) tasks) <>
+        line

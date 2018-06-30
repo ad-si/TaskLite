@@ -7,6 +7,9 @@ import Data.Aeson.Types
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Csv as Csv
 import qualified Data.Text as T
+import qualified Data.Text.Lazy.Encoding as TL
+import Data.Text.Prettyprint.Doc hiding ((<>))
+import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.Hourglass
 import Data.ULID
 import Data.ULID.TimeStamp
@@ -156,7 +159,7 @@ instance FromJSON ImportTask where
     pure $ ImportTask finalTask notes tags
 
 
-importTask :: IO ()
+importTask :: IO (Doc AnsiStyle)
 importTask = do
   connection <- setupConnection
   content <- BL.getContents
@@ -174,25 +177,24 @@ importTask = do
       insertTask connection theTask
 
 
-dumpCsv :: IO ()
+-- TODO: Use Task instead of FullTask to fix broken notes export
+dumpCsv :: IO (Doc AnsiStyle)
 dumpCsv = do
-  -- TODO: Use Task instead of FullTask to fix broken notes export
   execWithConn $ \connection -> do
     rows <- (query_ connection "select * from tasks_view") :: IO [FullTask]
+    pure $ pretty $ TL.decodeUtf8 $ Csv.encodeDefaultOrderedByName rows
 
-    putStrLn $ Csv.encodeDefaultOrderedByName rows
 
-
-dumpNdjson :: IO ()
+dumpNdjson :: IO (Doc AnsiStyle)
 dumpNdjson = do
   -- TODO: Use Task instead of FullTask to fix broken notes export
   execWithConn $ \connection -> do
-    rows <- (query_ connection "select * from tasks_view") :: IO [FullTask]
+    tasks <- (query_ connection "select * from tasks_view") :: IO [FullTask]
+    pure $ vsep $
+      fmap (pretty . TL.decodeUtf8 . Aeson.encode) tasks
 
-    forM_ rows $ putStrLn . Aeson.encode
 
-
-dumpSql :: IO ()
+dumpSql :: IO (Doc AnsiStyle)
 dumpSql = do
   homeDir <- getHomeDirectory
   result <- readProcess "sqlite3"
@@ -200,10 +202,10 @@ dumpSql = do
     , ".dump"
     ]
     []
-  putStrLn result
+  pure $ pretty result
 
 
-backupDatabase :: IO ()
+backupDatabase :: IO (Doc AnsiStyle)
 backupDatabase = do
   now <- timeCurrent
   homeDir <- getHomeDirectory
@@ -218,12 +220,14 @@ backupDatabase = do
   -- Create directory (and parents because of True)
   createDirectoryIfMissing True backupDirPath
 
-  result <- readProcess "sqlite3"
+  result <- pretty <$> readProcess "sqlite3"
     [ (getMainDir homeDir) <> "/" <> (dbName conf)
     , ".backup '" <> backupFilePath <> "'"
     ]
     []
 
-  putStr result
-  putStrLn $ "✅ Backed up database \"" <> (dbName conf)
-    <> "\" to \"" <> backupFilePath <> "\""
+  pure $ result
+    <> hardline
+    <> (pretty $
+          "✅ Backed up database \"" <> (dbName conf)
+          <> "\" to \"" <> backupFilePath <> "\"")

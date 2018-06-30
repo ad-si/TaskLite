@@ -8,6 +8,8 @@ import Protolude
 
 import Lib
 import qualified Data.Text as T
+import Data.Text.Prettyprint.Doc hiding ((<>))
+import Data.Text.Prettyprint.Doc.Render.Terminal
 import Options.Applicative
 import Utils
 import ImportExport
@@ -224,10 +226,21 @@ commandParserInfo = info
   fullDesc
 
 
+helpText :: Doc AnsiStyle
+helpText =
+  case (parserFailure defaultPrefs commandParserInfo ShowHelpText mempty) of
+    ParserFailure a -> case a "tasklite" of
+      (theHelp, _, _) -> theHelp
+        & show
+        & T.replace "\n  add     " "\n  add BODY"
+        & pretty
+
+
 main :: IO ()
 main = do
   cliCommand <- execParser commandParserInfo
-  case cliCommand of
+
+  doc <- case cliCommand of
     List taskFilter -> listTasks taskFilter
     ListHead -> headTasks
     ListNew -> newTasks
@@ -238,7 +251,7 @@ main = do
     Ndjson -> dumpNdjson
     Sql -> dumpSql
     Backup -> backupDatabase
-    AddTask words -> addTask words
+    AddTask bodyWords -> addTask bodyWords
     DoTask idSubstr -> doTask idSubstr
     EndTask idSubstr -> endTask idSubstr
     DeleteTask idSubstr -> deleteTask idSubstr
@@ -250,11 +263,7 @@ main = do
     FindTask pattern -> findTask pattern
     AddTag tagText ids -> addTag tagText ids
     Count taskFilter -> countTasks taskFilter
-    Help ->
-      case (parserFailure defaultPrefs commandParserInfo ShowHelpText mempty) of
-        ParserFailure a -> case a "tasklite" of
-          (theHelp, _, _) -> theHelp
-            & show
-            & T.replace "\n  add     " "\n  add BODY"
-            & putStrLn
+    Help -> pure helpText
+
+  putDoc doc
 
