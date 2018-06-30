@@ -737,10 +737,7 @@ formatTasks tasks =
         <++> (annotate (bodyStyle conf <> strong) $
                 fill (bodyWidth conf) "Body")
         <++> line
-      renderTasks = renderStrict . layoutPretty defaultLayoutOptions
-        {layoutPageWidth = AvailablePerLine (maxWidth conf) 1.0}
     in
-      pretty $ renderTasks $
-        docHeader <>
-        (vsep $ fmap (formatTaskLine taskUlidWidth) tasks) <>
-        line
+      docHeader <>
+      (vsep $ fmap (formatTaskLine taskUlidWidth) tasks) <>
+      line
