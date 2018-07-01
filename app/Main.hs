@@ -7,10 +7,12 @@ import Data.Hourglass
 import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
+import Data.Version (showVersion)
 import Options.Applicative
 import Utils
 import ImportExport
 import Task (TaskState(..))
+import Paths_tasklite (version)
 
 
 data Command
@@ -73,7 +75,7 @@ data Command
 
   {- Misc -}
   -- | Demo -- Switch to demo mode
-  -- | Version -- Show version
+  | Version -- Show version
   -- | License -- Show license
   | Alias Text
   | Help
@@ -270,6 +272,8 @@ commandParser =
     <> command "count" (toParserInfo (pure $ Count NoFilter)
         "Output total number of tasks")
 
+    <> command "version" (toParserInfo (pure Version) "Display version")
+
     <> command "help" (toParserInfo (pure Help) "Display current help page")
     )
 
@@ -339,10 +343,11 @@ main = do
     AddTag tagText ids -> addTag connection tagText ids
     SetDueUtc datetime ids -> setDueUtc connection datetime ids
     Count taskFilter -> countTasks taskFilter
+    Version -> pure $ (pretty $ showVersion version) <> hardline
     Help -> pure helpText
     Alias alias -> pure $ "Invalid command."
       <+> "Use" <+> (dquotes $ pretty alias) <+> "instead."
-      <+> hardline
+      <> hardline
 
   putDoc doc
 
