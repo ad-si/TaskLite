@@ -66,7 +66,7 @@ data Command
   | QueryTasks Text
   | RunSql Text
   -- | Views -- List all available views
-  -- | Tags -- List all used tags
+  | Tags -- List all used tags
   -- | Active -- Started tasks
   -- | Blocked -- Tasks that are blocked by other tasks (newest first)
   -- | Blockers -- Tasks that block other tasks (newest first)
@@ -94,6 +94,13 @@ nameToAliasList = (
   [])
 
 
+aliasWarning :: Text -> Doc AnsiStyle
+aliasWarning alias =
+  "Invalid command."
+    <+> "Use" <+> (dquotes $ pretty alias) <+> "instead."
+    <> hardline
+
+
 getCommand :: (Text, Text) -> Mod CommandFields Command
 getCommand (alias, commandName) =
   command (T.unpack alias) $ info
@@ -114,8 +121,8 @@ commandParser :: Parser Command
 commandParser =
   (pure $ ListHead) -- "Same as "head" command"
   <|>
-  ( subparser
-    (  commandGroup "Basic Commands:"
+  ( subparser ( commandGroup "Basic Commands:"
+
     <> command "add" (toParserInfo (AddTask <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
         "Add a new task")
@@ -167,8 +174,7 @@ commandParser =
       "Set due UTC of specified tasks")
     )
 
-  <|> subparser
-    (  commandGroup "Shortcuts to Add a Task:"
+  <|> subparser ( commandGroup "Shortcuts to Add a Task:"
 
     <> command "write" (toParserInfo (AddSend <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
@@ -195,8 +201,7 @@ commandParser =
         "Ship an item to someone")
     )
 
-  <|> subparser
-    (  commandGroup "List Commands:"
+  <|> subparser ( commandGroup "List Commands:"
 
     <> command "head" (toParserInfo (pure $ ListHead) ("List "<>
         show (headCount conf) <> " most important tasks sorted by priority"))
@@ -227,14 +232,15 @@ commandParser =
         (metavar "QUERY" <> help "The SQL query"))
         "Run any SQL query and output result as CSV")
 
+    <> command "tags" (toParserInfo (pure $ Tags) "List all used tags")
+
     -- <> command "newest" "Show all tasks (newest first)"
     -- <> command "oldest" "Show all tasks (oldest first)"
     -- <> command "overdue" -- Overdue tasks
     -- <> command "repeating" -- Open repeating tasks (soonest first)
     -- <> command "unblocked" -- Tasks that are not blocked (by priority)
 
-  -- <|> subparser
-    -- (  commandGroup "Visualizations:"
+  -- <|> subparser ( commandGroup "Visualizations:"
     -- <> command "burndown" -- "Burndown chart by week"
     -- <> command "calendar" -- "Calendar view of all open tasks"
     -- <> command "history" -- "History of tasks"
@@ -247,8 +253,7 @@ commandParser =
 
     )
 
-  <|> subparser
-    (  commandGroup "I/O Commands:"
+  <|> subparser ( commandGroup "I/O Commands:"
 
     <> command "import" (toParserInfo (pure Import)
         "Import one JSON task from stdin")
@@ -266,8 +271,7 @@ commandParser =
         "Create a local backup of tasks database")
     )
 
-  <|> subparser
-    (  commandGroup "Advanced Commands:"
+  <|> subparser ( commandGroup "Advanced Commands:"
 
     <> command "count" (toParserInfo (pure $ Count NoFilter)
         "Output total number of tasks")
@@ -277,8 +281,7 @@ commandParser =
     <> command "help" (toParserInfo (pure Help) "Display current help page")
     )
 
-  <|> subparser
-    (  commandGroup "Aliases:"
+  <|> subparser ( commandGroup "Aliases:"
 
     <> fold (fmap getCommand nameToAliasList)
     )
@@ -318,6 +321,7 @@ main = do
     ListNew -> newTasks
     QueryTasks query -> queryTasks query
     RunSql query -> runSql query
+    Tags -> listTags connection
     Import -> importTask
     Csv -> dumpCsv
     Ndjson -> dumpNdjson
@@ -345,9 +349,7 @@ main = do
     Count taskFilter -> countTasks taskFilter
     Version -> pure $ (pretty $ showVersion version) <> hardline
     Help -> pure helpText
-    Alias alias -> pure $ "Invalid command."
-      <+> "Use" <+> (dquotes $ pretty alias) <+> "instead."
-      <> hardline
+    Alias alias -> pure $ aliasWarning alias
 
   putDoc doc
 

@@ -808,3 +808,31 @@ formatTasks tasks =
       docHeader <>
       (vsep $ fmap (formatTaskLine taskUlidWidth) tasks) <>
       line
+
+
+listTags :: Connection -> IO (Doc AnsiStyle)
+listTags connection = do
+  let
+    selectQuery = "select `tag`, count(`tag`) as `count` \
+      \from `task_to_tag` \
+      \group by `tag` \
+      \order by `tag` asc\
+      \"
+
+  tags <- query_ connection $ Query selectQuery
+
+  let
+    maxTagLength = (tags :: [(Text, Integer)])
+      <&> (T.length . fst)
+      & P.maximum
+    formatLine (tag, count) =
+      (fill maxTagLength $ pretty tag) <++>
+      (pretty $ justifyRight (T.length "count") ' ' $ show count)
+
+  pure $
+    (annotate (bold <> underlined) $ fill maxTagLength "Tag") <++>
+    (annotate (bold <> underlined) $ "Count") <>
+    line <>
+    (vsep $ fmap formatLine tags) <>
+    hardline
+
