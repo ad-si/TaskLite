@@ -175,6 +175,10 @@ importTask = do
       insertTags connection (primaryKey theTask) (tags importTaskRecord)
       insertNotes connection (primaryKey theTask) (notes importTaskRecord)
       insertTask connection theTask
+      pure $
+        "📥 Imported task" <+> (dquotes $ pretty $ Task.body theTask)
+        <+> "with ulid" <+> (dquotes $ pretty $ Task.ulid theTask)
+        <+> hardline
 
 
 -- TODO: Use Task instead of FullTask to fix broken notes export

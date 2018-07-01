@@ -23,9 +23,17 @@ toParserInfo parser description =
 
 
 data Command
+  {- Add -}
+  = AddTask  [Text]
+  | AddSend  [Text]
+  | AddRead  [Text]
+  | AddWatch [Text]
+  | AddBuy   [Text]
+  | AddSell  [Text]
+  | AddShip  [Text]
+  | LogTask  [Text]
+
   {- Modify -}
-  = AddTask [Text]
-  -- | LogTask Text
   | DoTask IdText
   | EndTask IdText
   | DeleteTask IdText
@@ -92,13 +100,6 @@ data Command
 idVar :: Mod ArgumentFields a
 idVar = metavar "TASK_ID" <> help "Id of the task (Ulid)"
 
-doneParser :: Parser Command
-doneParser = DoTask <$>
-  strArgument idVar
-
-countParser :: Parser Command
-countParser = pure $ Count NoFilter
-
 
 commandParser :: Parser Command
 commandParser =
@@ -107,27 +108,15 @@ commandParser =
   ( subparser
     (  commandGroup "Basic Commands:"
     <> command "add" (toParserInfo (AddTask <$> some (strArgument
-        (metavar "BODY" <> help "Body of the task"))) "Add a new task")
+        (metavar "BODY" <> help "Body of the task")))
+        "Add a new task")
 
-    -- <> command "read" (toParserInfo (AddTask <$> some (strArgument
-    --     (metavar "URL" <> help "URL to a website or blog post")))
-    --     "Add a task to read the specified URL")
+    <> command "log" (toParserInfo (LogTask <$> some (strArgument
+        (metavar "BODY" <> help "Body of the task")))
+        "Log an already completed task")
 
-    -- <> command "watch" (toParserInfo (AddTask <$> some (strArgument
-    --     (metavar "URL" <> help "URL to a video or movie to watch")))
-    --     "Add a task to watch a movie or a video")
-
-    -- <> command "buy" (toParserInfo (AddTask <$> some (strArgument
-    --     (metavar "URL" <> help "URL to a website or blog post")))
-    --     "Add a task to read the specified URL")
-
-    -- <> command "send" (toParserInfo (AddTask <$> some (strArgument
-    --     (metavar "URL" <> help "URL to a website or blog post")))
-    --     "Add a task to send something to someone")
-
-    -- <> command "log" (toParserInfo addParser "Log an already completed task")
-
-    <> command "do" (toParserInfo doneParser "Mark a task as done")
+    <> command "do" (toParserInfo (DoTask <$> strArgument idVar)
+        "Mark a task as done")
 
     <> command "end" (toParserInfo (EndTask <$> strArgument idVar)
         "Mark a task as obsolete")
@@ -167,7 +156,36 @@ commandParser =
             (metavar "DUE_UTC" <> help "Due timestamp in UTC")
       <*> some (strArgument idVar))
       "Set due UTC of specified tasks")
-  )
+    )
+
+  <|> subparser
+    (  commandGroup "Shortcuts to Add a Task:"
+
+    <> command "write" (toParserInfo (AddSend <$> some (strArgument
+        (metavar "BODY" <> help "Body of the task")))
+        "Write a message or a post")
+
+    <> command "read" (toParserInfo (AddRead <$> some (strArgument
+        (metavar "BODY" <> help "Url or title oo a website or blog post")))
+        "Read the specified URL")
+
+    <> command "watch" (toParserInfo (AddWatch <$> some (strArgument
+        (metavar "BODY" <> help "Url or title of a video or movie to watch")))
+        "Watch a movie or a video")
+
+    <> command "buy" (toParserInfo (AddBuy <$> some (strArgument
+        (metavar "BODY" <> help "Body of the task")))
+        "Buy something")
+
+    <> command "sell" (toParserInfo (AddSell <$> some (strArgument
+        (metavar "BODY" <> help "Body of the task")))
+        "Sell something")
+
+    <> command "ship" (toParserInfo (AddShip <$> some (strArgument
+        (metavar "BODY" <> help "Body of the task")))
+        "Ship an item to someone")
+    )
+
   <|> subparser
     (  commandGroup "List Commands:"
 
@@ -189,8 +207,8 @@ commandParser =
     <> command "obsolete" (toParserInfo (pure $ List $ Only Obsolete)
         "List all obsolete tasks")
 
-    -- <> command "inbox" (toParserInfo (pure $ List $ Only Obsolete)
-    --     "List all tasks with the \"inbox\" tag")
+    -- <> command "notag" (toParserInfo (pure $ List $ Only Obsolete)
+    --     "List all tasks without a tag (aka you inbox)")
 
     <> command "query" (toParserInfo (QueryTasks <$> strArgument
         (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
@@ -240,7 +258,8 @@ commandParser =
   <|> subparser
     (  commandGroup "Advanced Commands:"
 
-    <> command "count" (toParserInfo countParser "Output total number of tasks")
+    <> command "count" (toParserInfo (pure $ Count NoFilter)
+        "Output total number of tasks")
 
     <> command "help" (toParserInfo (pure $ Help) "Display current help page")
     )
@@ -268,6 +287,10 @@ main = do
 
   connection <- setupConnection
 
+  let addTaskC = addTask connection
+
+  -- runMigrations connection
+
   doc <- case cliCommand of
     List taskFilter -> listTasks taskFilter
     ListHead -> headTasks connection
@@ -279,7 +302,14 @@ main = do
     Ndjson -> dumpNdjson
     Sql -> dumpSql
     Backup -> backupDatabase
-    AddTask bodyWords -> addTask connection bodyWords
+    AddTask bodyWords -> addTaskC bodyWords
+    AddSend bodyWords -> addTaskC $ ["Send"] <> bodyWords <> ["+send"]
+    AddRead bodyWords -> addTaskC $ ["Read"] <> bodyWords <> ["+read"]
+    AddWatch bodyWords -> addTaskC $ ["Watch"] <> bodyWords <> ["+watch"]
+    AddBuy bodyWords -> addTaskC $ ["Buy"] <> bodyWords <> ["+buy"]
+    AddSell bodyWords -> addTaskC $ ["Sell"] <> bodyWords <> ["+sell"]
+    AddShip bodyWords -> addTaskC $ ["Ship"] <> bodyWords <> ["+ship"]
+    LogTask bodyWords -> logTask connection bodyWords
     DoTask idSubstr -> doTask connection idSubstr
     EndTask idSubstr -> endTask idSubstr
     DeleteTask idSubstr -> deleteTask connection idSubstr

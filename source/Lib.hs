@@ -308,16 +308,11 @@ execWithConn func = do
     )
 
 
-insertTask :: Connection -> Task -> IO (Doc AnsiStyle)
+insertTask :: Connection -> Task -> IO ()
 insertTask connection task = do
   runBeamSqlite connection $ runInsert $
     insert (_tldbTasks taskLiteDb) $
     insertValues [task]
-
-  pure $
-    "🆕 Added task" <+> (dquotes $ pretty $ Task.body task)
-    <+> "with ulid" <+> (dquotes $ pretty $ Task.ulid task)
-    <+> hardline
 
 
 insertTags :: Connection -> TaskUlid -> [Text] -> IO ()
@@ -341,21 +336,39 @@ insertNotes connection primKey notes = do
     insertValues taskToNotes
 
 
-addTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
-addTask connection bodyWords = do
-  ulid <- fmap (toLower . show) getULID
-  modified_utc <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
+formatElapsed :: IO Elapsed -> IO Text
+formatElapsed =
+  fmap (pack . (timePrint $ utcFormat conf))
+
+
+formatUlid :: IO ULID -> IO Text
+formatUlid =
+  fmap (toLower . show)
+
+
+parseTaskBody :: [Text] -> (Text, [Text])
+parseTaskBody bodyWords =
   let
     -- Handle case when word is actually a text
     bodyWordsReversed = bodyWords & T.unwords & T.words & P.reverse
-    tags = bodyWordsReversed
-      & P.takeWhile ("+" `T.isPrefixOf`)
-      <&> T.replace "+" ""
-      & P.reverse
     body = bodyWordsReversed
       & P.dropWhile ("+" `T.isPrefixOf`)
       & P.reverse
       & unwords
+    tags = bodyWordsReversed
+      & P.takeWhile ("+" `T.isPrefixOf`)
+      <&> T.replace "+" ""
+      & P.reverse
+  in
+    (body, tags)
+
+
+addTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
+addTask connection bodyWords = do
+  ulid <- formatUlid getULID
+  modified_utc <- formatElapsed timeCurrent
+  let
+    (body, tags) = parseTaskBody bodyWords
     task = Task
       { state = Open
       , due_utc = Nothing
@@ -365,11 +378,36 @@ addTask connection bodyWords = do
       , ..
       }
 
-  insertTags connection (primaryKey task) tags
   insertTask connection task
+  insertTags connection (primaryKey task) tags
+  pure $
+    "🆕 Added task" <+> (dquotes $ pretty $ Task.body task)
+    <+> "with ulid" <+> (dquotes $ pretty $ Task.ulid task)
+    <+> hardline
 
 
+logTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
+logTask connection bodyWords = do
+  ulid <- formatUlid getULID
+  -- TODO: Set via a SQL trigger
+  modified_utc <- formatElapsed timeCurrent
+  let
+    (body, tags) = parseTaskBody bodyWords
+    task = Task
+      { state = Done
+      , due_utc = Nothing
+      , closed_utc = Just modified_utc
+      , priority_adjustment = Nothing
+      , metadata = Nothing
+      , ..
+      }
 
+  insertTask connection task
+  insertTags connection (primaryKey task) tags
+  pure $
+    "📝 Logged task" <+> (dquotes $ pretty $ Task.body task)
+    <+> "with ulid" <+> (dquotes $ pretty $ Task.ulid task)
+    <+> hardline
 
 
 execWithId ::
@@ -586,6 +624,7 @@ addTag connection tag ids = do
 
       pure $ "🏷  Added tag" <+> (dquotes $ pretty tag)
         <+> "to task" <+> (dquotes $ pretty idText)
+        <+> hardline
     pure doc
   pure $ vsep docs
 
@@ -664,12 +703,13 @@ formatTaskLine taskUlidWidth task =
 
 getIdLength :: Float -> Int
 getIdLength numOfItems =
+  -- TODO: Calculate idLength by total number of tasks, not just of the viewed
   let
     targetCollisionChance = 0.01  -- Targeted likelihood of id collisions
     sizeOfAlphabet = 32  -- Crockford's base 32 alphabet
   in
-    ceiling $
-      log (numOfItems / targetCollisionChance) / log sizeOfAlphabet
+    (ceiling $ log
+      (numOfItems / targetCollisionChance) / log sizeOfAlphabet) + 1
 
 
 countTasks :: Filter TaskState -> IO (Doc AnsiStyle)

@@ -86,6 +86,11 @@ testSuite connection = do
         nextRes <- nextTask connection
         (show nextRes) `shouldBe` ("No tasks available" :: Text)
 
+    it "logs a task" $ do
+      result <- logTask connection ["Just a test"]
+      (unpack $ show result) `shouldStartWith`
+        "📝 Logged task \"Just a test\" with ulid"
+
 
 main :: IO ()
 main = do
