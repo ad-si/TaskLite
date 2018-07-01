@@ -24,12 +24,12 @@ setupTestConnection filePath = do
 testSuite :: Sql.Connection -> SpecWith ()
 testSuite connection = do
   describe "TaskLite" $ do
-    it "Creates necessary tables on initial run" $ do
+    it "creates necessary tables on initial run" $ do
       tasks <- headTasks connection
       (show tasks) `shouldBe` ("No tasks available" :: Text)
 
 
-    it "Adds a task" $ do
+    it "adds a task" $ do
       result <- addTask connection ["Just a test"]
       (unpack $ show result) `shouldStartWith`
         "🆕 Added task \"Just a test\" with ulid"
@@ -41,12 +41,12 @@ testSuite connection = do
         getUlidFromBody = T.take 26 . T.drop (P.length taskStart) . pack . show
 
 
-      it "Lists next task" $ do
+      it "lists next task" $ do
         result <- nextTask connection
         (unpack $ show result) `shouldStartWith` taskStart
 
 
-      it "Adds a tag" $ do
+      it "adds a tag" $ do
         result <- nextTask connection
         let ulidText = getUlidFromBody result
 
@@ -56,7 +56,7 @@ testSuite connection = do
           "🏷  Added tag \"test\" to task"
 
 
-      it "Set due UTC" $ do
+      it "sets due UTC" $ do
         resultTask <- nextTask connection
         let ulidText = getUlidFromBody resultTask
 
@@ -68,13 +68,23 @@ testSuite connection = do
               "📅 Set due UTC to \"2087-03-21 17:43:00\" of task"
 
 
-      it "Completes it" $ do
+      it "completes it" $ do
         result <- nextTask connection
-        let ulidText = (T.take 26 . T.drop (P.length taskStart) . pack)
-              (show result)
+        let ulidText = getUlidFromBody result
 
         doResult <- doTask connection ulidText
-        (unpack $ show doResult) `shouldStartWith` ("✅ Finished task")
+        (unpack $ show doResult) `shouldStartWith` "✅ Finished task"
+
+
+      it "deletes it" $ do
+        result <- nextTask connection
+        let ulidText = getUlidFromBody result
+
+        deleteResult <- deleteTask connection ulidText
+        (unpack $ show deleteResult) `shouldStartWith` "❌ Deleted task"
+
+        nextRes <- nextTask connection
+        (show nextRes) `shouldBe` ("No tasks available" :: Text)
 
 
 main :: IO ()

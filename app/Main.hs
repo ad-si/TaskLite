@@ -282,7 +282,7 @@ main = do
     AddTask bodyWords -> addTask connection bodyWords
     DoTask idSubstr -> doTask connection idSubstr
     EndTask idSubstr -> endTask idSubstr
-    DeleteTask idSubstr -> deleteTask idSubstr
+    DeleteTask idSubstr -> deleteTask connection idSubstr
     BoostTasks ids -> adjustPriority 1 ids
     HushTasks ids -> adjustPriority (-1) ids
     Prioritize val ids -> adjustPriority val ids

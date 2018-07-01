@@ -77,6 +77,13 @@ noTasksWarning :: Text
 noTasksWarning = "No tasks available"
 
 
+newtype NumRows = NumRows Integer
+  deriving (Eq, Ord, Read, Show)
+
+instance FromRow NumRows where
+  fromRow = NumRows <$> field
+
+
 -- | Record for storing entries of the `task_to_tag` table
 data TaskToTagT f = TaskToTag
   { _ttUlid :: Columnar f Text -- Ulid
@@ -153,6 +160,24 @@ createTaskTable connection = do
     theTableName
     createTableQuery
 
+  -- | Update `modified_utc` whenever a task is updated
+  -- | (and `modified_utc` itselft isn't changed)
+  execute_ connection $ SqlU.createTriggerAfterUpdate "set_modified_utc" "tasks"
+    "`new`.`modified_utc` is `old`.`modified_utc`"
+    "\
+      \update `tasks`\n\
+      \set `modified_utc` = datetime('now')\n\
+      \where `ulid` = `new`.`ulid`\n\
+      \"
+
+  execute_ connection $ SqlU.createTriggerAfterUpdate "set_closed_utc" "tasks"
+    "`new`.`state` is 'Done' or `new`.`state` is 'Obsolete'"
+    "\
+      \update `tasks`\n\
+      \set `closed_utc` = datetime('now')\n\
+      \where `ulid` = `new`.`ulid`\n\
+      \"
+
 
 taskViewQuery :: Text -> Query
 taskViewQuery viewName =
@@ -214,24 +239,6 @@ createTaskView connection = do
     connection
     viewName
     (taskViewQuery viewName)
-
-  -- | Update `modified_utc` whenever a task is updated
-  -- | (and `modified_utc` itselft isn't changed)
-  execute_ connection $ SqlU.createTriggerAfterUpdate "set_modified_utc" "tasks"
-    "`new`.`modified_utc` is `old`.`modified_utc`"
-    "\
-      \update `tasks`\n\
-      \set `modified_utc` = datetime('now')\n\
-      \where `ulid` = `new`.`ulid`\n\
-      \"
-
-  execute_ connection $ SqlU.createTriggerAfterUpdate "set_closed_utc" "tasks"
-    "`new`.`state` is 'Done' or `new`.`state` is 'Obsolete'"
-    "\
-      \update `tasks`\n\
-      \set `closed_utc` = datetime('now')\n\
-      \where `ulid` = `new`.`ulid`\n\
-      \"
 
 
 createTagsTable :: Connection -> IO ()
@@ -362,11 +369,7 @@ addTask connection bodyWords = do
   insertTask connection task
 
 
-newtype NumRows = NumRows Integer
-  deriving (Eq, Ord, Read, Show)
 
-instance FromRow NumRows where
-  fromRow = NumRows <$> field
 
 
 execWithId ::
@@ -430,21 +433,19 @@ endTask idSubstr = do
         else "⏹  Marked task \"…" <> idText <> "\" as obsolete"
 
 
-deleteTask :: Text -> IO (Doc AnsiStyle)
-deleteTask idSubstr = do
+deleteTask :: Connection -> Text -> IO (Doc AnsiStyle)
+deleteTask connection idSubstr = do
   -- TODO: Delete corresponding tags and notes
-  dbPath <- getDbPath
-  withConnection dbPath $ \connection -> do
-    execWithId connection idSubstr $ \(TaskUlid idText) -> do
-      execute connection
-        (Query $ "delete from `" <> tableName conf <> "` where `ulid` == ?")
-        [idText :: Text]
+  execWithId connection idSubstr $ \(TaskUlid idText) -> do
+    execute connection
+      (Query $ "delete from `" <> tableName conf <> "` where `ulid` == ?")
+      [idText :: Text]
 
-      numOfChanges <- changes connection
+    numOfChanges <- changes connection
 
-      pure $ pretty $ if numOfChanges == 0
-        then "⚠️ An error occured while deleting task \"…" <> idText <> "\""
-        else "❌ Deleted task \"…" <> idText <> "\""
+    pure $ pretty $ if numOfChanges == 0
+      then "⚠️ An error occured while deleting task \"…" <> idText <> "\""
+      else "❌ Deleted task \"…" <> idText <> "\""
 
 
 adjustPriority :: Float -> [IdText] -> IO (Doc AnsiStyle)
