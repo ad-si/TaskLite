@@ -1,7 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedStrings #-}
-
-
 module Main where
 
 import Protolude
@@ -15,11 +11,6 @@ import Options.Applicative
 import Utils
 import ImportExport
 import Task (TaskState(..))
-
-
-toParserInfo :: Parser a -> Text -> ParserInfo a
-toParserInfo parser description =
-  info (helper <*> parser) (fullDesc <> progDesc (T.unpack description))
 
 
 data Command
@@ -84,18 +75,34 @@ data Command
   -- | Demo -- Switch to demo mode
   -- | Version -- Show version
   -- | License -- Show license
+  | Alias Text
   | Help
 
   deriving (Show, Eq)
 
 
--- TODO: Add aliases
--- "blocking" "blockers"
--- "annotate" "note"
--- "denotate" "denote"
--- "rm" "delete"
--- "remove" "delete"
--- "duplicate" "clone"
+nameToAliasList :: [(Text, Text)]
+nameToAliasList = (
+  ("rm", "delete") :
+  ("remove", "delete") :
+  -- ("duplicate", "clone") :
+  -- ("blocking", "blockers") :
+  -- ("annotate", "note") :
+  -- ("denotate", "denote") :
+  [])
+
+
+getCommand :: (Text, Text) -> Mod CommandFields Command
+getCommand (alias, commandName) =
+  command (T.unpack alias) $ info
+    (pure $ Alias commandName)
+    (progDesc $ T.unpack $ "-> " <> commandName)
+
+
+toParserInfo :: Parser a -> Text -> ParserInfo a
+toParserInfo parser description =
+  info (helper <*> parser) (fullDesc <> progDesc (T.unpack description))
+
 
 idVar :: Mod ArgumentFields a
 idVar = metavar "TASK_ID" <> help "Id of the task (Ulid)"
@@ -237,6 +244,7 @@ commandParser =
     -- <> command "find" -- "Filter tasks by specified tags"
 
     )
+
   <|> subparser
     (  commandGroup "I/O Commands:"
 
@@ -255,15 +263,23 @@ commandParser =
     <> command "backup" (toParserInfo (pure Backup)
         "Create a local backup of tasks database")
     )
+
   <|> subparser
     (  commandGroup "Advanced Commands:"
 
     <> command "count" (toParserInfo (pure $ Count NoFilter)
         "Output total number of tasks")
 
-    <> command "help" (toParserInfo (pure $ Help) "Display current help page")
+    <> command "help" (toParserInfo (pure Help) "Display current help page")
+    )
+
+  <|> subparser
+    (  commandGroup "Aliases:"
+
+    <> fold (fmap getCommand nameToAliasList)
     )
   )
+
 
 commandParserInfo :: ParserInfo Command
 commandParserInfo = info
@@ -279,6 +295,7 @@ helpText =
         & show
         & T.replace "\n  add     " "\n  add BODY"
         & pretty
+        & (<> hardline)
 
 
 main :: IO ()
@@ -323,6 +340,9 @@ main = do
     SetDueUtc datetime ids -> setDueUtc connection datetime ids
     Count taskFilter -> countTasks taskFilter
     Help -> pure helpText
+    Alias alias -> pure $ "Invalid command."
+      <+> "Use" <+> (dquotes $ pretty alias) <+> "instead."
+      <+> hardline
 
   putDoc doc
 
