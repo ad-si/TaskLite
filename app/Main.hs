@@ -351,5 +351,6 @@ main = do
     Help -> pure helpText
     Alias alias -> pure $ aliasWarning alias
 
+  -- TODO: Remove color when piping into other command
   putDoc doc
 

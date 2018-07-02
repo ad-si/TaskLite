@@ -19,11 +19,13 @@ import Data.Text.Prettyprint.Doc.Util
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Unsafe (unsafeHead)
 import Utils
-import qualified SqlUtils as SqlU
+import qualified SqlUtils as S
 import Task as Task
 import FullTask as FullTask
 import Note as Note
 import TaskToNote as TaskToNote
+import Language.SQL.SimpleSQL.Syntax
+import Language.SQL.SimpleSQL.Pretty
 
 
 data Config = Config
@@ -143,7 +145,7 @@ createTaskTable connection = do
   let
     theTableName = tableName conf
     -- TODO: Replace with beam-migrate based table creation
-    createTableQuery = SqlU.getTable theTableName (
+    createTableQuery = S.getTable theTableName (
       "`ulid` text not null primary key" :
       "`body` text not null" :
       ("`state` text check(`state` in (" <> stateOptions
@@ -155,14 +157,14 @@ createTaskTable connection = do
       "`metadata` text" :
       [])
 
-  SqlU.createTableWithQuery
+  S.createTableWithQuery
     connection
     theTableName
     createTableQuery
 
   -- | Update `modified_utc` whenever a task is updated
   -- | (and `modified_utc` itselft isn't changed)
-  execute_ connection $ SqlU.createTriggerAfterUpdate "set_modified_utc" "tasks"
+  execute_ connection $ S.createTriggerAfterUpdate "set_modified_utc" "tasks"
     "`new`.`modified_utc` is `old`.`modified_utc`"
     "\
       \update `tasks`\n\
@@ -170,7 +172,7 @@ createTaskTable connection = do
       \where `ulid` = `new`.`ulid`\n\
       \"
 
-  execute_ connection $ SqlU.createTriggerAfterUpdate "set_closed_utc" "tasks"
+  execute_ connection $ S.createTriggerAfterUpdate "set_closed_utc" "tasks"
     "`new`.`state` is 'Done' or `new`.`state` is 'Obsolete'"
     "\
       \update `tasks`\n\
@@ -182,21 +184,21 @@ createTaskTable connection = do
 taskViewQuery :: Text -> Query
 taskViewQuery viewName =
   let
-    caseStateSql = SqlU.getCase (Just "state") $ [stateDefault ..]
-      & fmap (\tState -> (SqlU.getValue tState, case tState of
+    caseStateSql = S.getCase (Just "state") $ [stateDefault ..]
+      & fmap (\tState -> (S.getValue tState, case tState of
           Open     ->  0
           Waiting  -> -3
           Done     ->  0
           Obsolete ->  0
         ))
-    caseOverdueSql = SqlU.getCase Nothing
+    caseOverdueSql = S.getCase Nothing
       [ ("`due_utc` is null", 0)
       , ("`due_utc` >= datetime('now', '+1 month')", 0)
       , ("`due_utc` >= datetime('now', '+1 week')", 3)
       , ("`due_utc` >= datetime('now')", 6)
       , ("`due_utc` < datetime('now')", 9)
       ]
-    selectQuery = SqlU.getSelect
+    selectQuery = S.getSelect
       (
         "`tasks`.`ulid` as `ulid`" :
         "`tasks`.`body` as `body`" :
@@ -227,7 +229,7 @@ taskViewQuery viewName =
         \")
       "`tasks`.`ulid`"
   in
-    SqlU.getView viewName selectQuery
+    S.getView viewName selectQuery
 
 
 createTaskView :: Connection -> IO ()
@@ -235,7 +237,7 @@ createTaskView connection = do
   let
     viewName = "tasks_view"
 
-  SqlU.createTableWithQuery
+  S.createTableWithQuery
     connection
     viewName
     (taskViewQuery viewName)
@@ -245,7 +247,7 @@ createTagsTable :: Connection -> IO ()
 createTagsTable connection = do
   let
     theTableName = "task_to_tag"
-    createTableQuery = SqlU.getTable theTableName (
+    createTableQuery = S.getTable theTableName (
       "`ulid` text not null primary key" :
       "`task_ulid` text not null" :
       "`tag` text not null" :
@@ -253,24 +255,92 @@ createTagsTable connection = do
       "constraint `no_duplicate_tags` unique (`task_ulid`, `tag`) " :
       [])
 
-  SqlU.createTableWithQuery
+  S.createTableWithQuery
     connection
     theTableName
     createTableQuery
+
+
+createTagsView :: Connection -> IO ()
+createTagsView connection = do
+  let
+    viewName = "tags"
+
+    txtToName = Name . T.unpack
+
+    tasks_t         = txtToName "tasks"
+    tags_t          = txtToName "tags"
+    task_to_tag_t   = txtToName "task_to_tag"
+    task_to_tag_1_t = txtToName "task_to_tag_1"
+    task_to_tag_2_t = txtToName "task_to_tag_2"
+
+    closed_count_c  = txtToName "closed_count"
+    tag_c           = txtToName "tag"
+    ulid_c          = txtToName "ulid"
+    task_ulid_c     = txtToName "task_ulid"
+    closed_utc_c    = txtToName "closed_utc"
+    open_c          = txtToName "open"
+    closed_c        = txtToName "closed"
+    progress_c      = txtToName "progress"
+
+    t1Tag = S.tableCol task_to_tag_1_t tag_c
+    t2Tag = S.tableCol task_to_tag_2_t tag_c
+    closedCount = S.ifNull closed_count_c "0"
+    t1TagCount = S.count t1Tag
+
+    subQueryAst = makeSelect
+      { qeSelectList = (
+          S.col tag_c `S.as` (Name "") :
+          S.count (S.tableCol tasks_t ulid_c) `S.as` closed_count_c :
+          [])
+      , qeFrom = [ S.leftJoinOn tasks_t task_to_tag_t $
+            (tasks_t `S.dot` ulid_c)
+            `S.is`
+            (task_to_tag_t `S.dot` task_ulid_c)
+          ]
+      , qeWhere = Just $ S.isNotNull closed_utc_c
+      , qeGroupBy = [ S.groupBy $ S.col tag_c ]
+      }
+    selectQueryAst = makeSelect
+      { qeSelectList = (
+          t1Tag `S.as` (Name "") :
+          t1TagCount `S.as` open_c :
+          closedCount `S.as` closed_c :
+          (closedCount `S.castTo` "float")
+            `S.div` t1TagCount `S.as` progress_c :
+          [])
+      , qeFrom = [ S.leftTRJoinOn
+          (TRAlias
+            (TRSimple [task_to_tag_t])
+            (S.alias task_to_tag_1_t))
+          (TRAlias
+            (TRQueryExpr subQueryAst)
+            (S.alias task_to_tag_2_t))
+          (t1Tag `S.is` t2Tag)
+        ]
+      , qeGroupBy = [ S.groupBy t1Tag ]
+      , qeOrderBy = [ S.orderByAsc t1Tag ]
+      }
+    selectQueryText = T.pack $ prettyQueryExpr SQL2011 selectQueryAst
+
+  S.createTableWithQuery
+    connection
+    viewName
+    (S.getView viewName $ Query  selectQueryText)
 
 
 createNotesTable :: Connection -> IO ()
 createNotesTable connection = do
   let
     theTableName = "task_to_note"
-    createTableQuery = SqlU.getTable theTableName (
+    createTableQuery = S.getTable theTableName (
       "`ulid` text not null primary key" :
       "`task_ulid` text not null" :
       "`note` text not null" :
       "foreign key(`task_ulid`) references `" <> tableName conf <> "`(`ulid`)" :
       [])
 
-  SqlU.createTableWithQuery
+  S.createTableWithQuery
     connection
     theTableName
     createTableQuery
@@ -291,7 +361,9 @@ setupConnection = do
   createTaskTable connection
   createTagsTable connection
   createNotesTable connection
+
   createTaskView connection
+  createTagsView connection
 
   return connection
 
@@ -684,7 +756,11 @@ formatTaskLine taskUlidWidth task =
     dueUtcMaybe = (FullTask.due_utc task)
       >>= parseUtc
       <&> timePrint (utcFormat conf)
-    hangWidth = taskUlidWidth + 2 + (dateWidth conf) + 2 + (prioWidth conf) + 2
+    multilineIndent = 2
+    hangWidth = taskUlidWidth + 2
+      + (dateWidth conf) + 2
+      + (prioWidth conf) + 2
+      + multilineIndent
     taskLine = createdUtc <$$> \taskDate -> hang hangWidth $
            annotate (idStyle conf) id
       <++> annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
@@ -810,29 +886,30 @@ formatTasks tasks =
       line
 
 
+formatTagLine :: Int -> (Text, Integer, Integer, Float) -> Doc AnsiStyle
+formatTagLine maxTagLength (tag, open_count, closed_count, progress) =
+       (fill maxTagLength $ pretty tag)
+  <++> (pretty $ justifyRight (T.length "open") ' ' $ show open_count)
+  <++> (pretty $ justifyRight (T.length "closed") ' ' $ show closed_count)
+  <++> (pretty $ justifyRight (T.length "progress") ' ' $ show progress)
+
+
 listTags :: Connection -> IO (Doc AnsiStyle)
 listTags connection = do
-  let
-    selectQuery = "select `tag`, count(`tag`) as `count` \
-      \from `task_to_tag` \
-      \group by `tag` \
-      \order by `tag` asc\
-      \"
-
-  tags <- query_ connection $ Query selectQuery
+  tags <- query_ connection $ Query "select * from tags"
 
   let
-    maxTagLength = (tags :: [(Text, Integer)])
-      <&> (T.length . fst)
+    firstOf4 = \(a, b, c, d) -> a
+    maxTagLength = tags
+      <&> (T.length . firstOf4)
       & P.maximum
-    formatLine (tag, count) =
-      (fill maxTagLength $ pretty tag) <++>
-      (pretty $ justifyRight (T.length "count") ' ' $ show count)
 
   pure $
-    (annotate (bold <> underlined) $ fill maxTagLength "Tag") <++>
-    (annotate (bold <> underlined) $ "Count") <>
-    line <>
-    (vsep $ fmap formatLine tags) <>
-    hardline
+         (annotate (bold <> underlined) $ fill maxTagLength "Tag")
+    <++> (annotate (bold <> underlined) $ "Open")
+    <++> (annotate (bold <> underlined) $ "Closed")
+    <++> (annotate (bold <> underlined) $ "Progress")
+    <> line
+    <> (vsep $ fmap (formatTagLine maxTagLength) tags)
+    <> hardline
 

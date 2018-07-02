@@ -33,6 +33,7 @@ dependencies:
   - prettyprinter-ansi-terminal
   - process
   - protolude
+  - simple-sql-parser
   - sqlite-simple
   - text
   - ulid
