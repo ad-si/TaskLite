@@ -126,6 +126,15 @@ div valueA valueB =
   BinOp valueA [Name "/"] valueB
 
 
+roundTo :: Integer -> ValueExpr -> ValueExpr
+roundTo numOfDigits column  =
+  App
+    [ Name "round" ]
+    [ column
+    , NumLit $ show numOfDigits
+    ]
+
+
 alias :: Name -> Alias
 alias aliasName =
   Alias aliasName Nothing

@@ -10,6 +10,7 @@ import Database.Beam
 import Database.Beam.Sqlite
 import Database.Beam.Schema.Tables
 import Database.SQLite.Simple as Sql
+import Numeric
 import System.Directory
 import System.Process (readProcess)
 import qualified Text.Fuzzy as Fuzzy
@@ -46,6 +47,7 @@ data Config = Config
   , prioWidth :: Int
   , headCount :: Int
   , maxWidth :: Int
+  , progressBarWidth :: Int
   }
 
 
@@ -68,6 +70,7 @@ conf = Config
   , prioWidth = 4
   , headCount = 20
   , maxWidth = 120
+  , progressBarWidth = 24
   }
 
 
@@ -181,8 +184,8 @@ createTaskTable connection = do
       \"
 
 
-taskViewQuery :: Text -> Query
-taskViewQuery viewName =
+taskViewQuery :: Query
+taskViewQuery =
   let
     caseStateSql = S.getCase (Just "state") $ [stateDefault ..]
       & fmap (\tState -> (S.getValue tState, case tState of
@@ -229,7 +232,7 @@ taskViewQuery viewName =
         \")
       "`tasks`.`ulid`"
   in
-    S.getView viewName selectQuery
+    selectQuery
 
 
 createTaskView :: Connection -> IO ()
@@ -240,7 +243,7 @@ createTaskView connection = do
   S.createTableWithQuery
     connection
     viewName
-    (taskViewQuery viewName)
+    (S.getView viewName taskViewQuery)
 
 
 createTagsTable :: Connection -> IO ()
@@ -261,11 +264,9 @@ createTagsTable connection = do
     createTableQuery
 
 
-createTagsView :: Connection -> IO ()
-createTagsView connection = do
+tagsViewQuery :: Query
+tagsViewQuery =
   let
-    viewName = "tags"
-
     txtToName = Name . T.unpack
 
     tasks_t         = txtToName "tasks"
@@ -306,8 +307,8 @@ createTagsView connection = do
           t1Tag `S.as` (Name "") :
           t1TagCount `S.as` open_c :
           closedCount `S.as` closed_c :
-          (closedCount `S.castTo` "float")
-            `S.div` t1TagCount `S.as` progress_c :
+          (S.roundTo 6 (closedCount `S.castTo` "float" `S.div` t1TagCount))
+            `S.as` progress_c :
           [])
       , qeFrom = [ S.leftTRJoinOn
           (TRAlias
@@ -322,11 +323,18 @@ createTagsView connection = do
       , qeOrderBy = [ S.orderByAsc t1Tag ]
       }
     selectQueryText = T.pack $ prettyQueryExpr SQL2011 selectQueryAst
+  in
+    Query selectQueryText
+
+
+createTagsView :: Connection -> IO ()
+createTagsView connection = do
+  let viewName = "tags"
 
   S.createTableWithQuery
     connection
     viewName
-    (S.getView viewName $ Query  selectQueryText)
+    (S.getView viewName tagsViewQuery)
 
 
 createNotesTable :: Connection -> IO ()
@@ -732,7 +740,7 @@ ulidToDateTime =
   . T.take 10
 
 
-showAtPrecision :: Float -> Text
+showAtPrecision :: Double -> Text
 showAtPrecision number =
   let tuple = breakOn "." (show number)
   in fst tuple <> (T.replace ".0" "  " . T.take 2 . snd) tuple
@@ -764,7 +772,8 @@ formatTaskLine taskUlidWidth task =
     taskLine = createdUtc <$$> \taskDate -> hang hangWidth $
            annotate (idStyle conf) id
       <++> annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
-            $ showAtPrecision $ fromMaybe 0 (FullTask.priority task))
+            $ showAtPrecision $ realToFrac
+            $ fromMaybe 0 (FullTask.priority task))
       <++> annotate (dateStyle conf) (pretty taskDate)
       <++> annotate (bodyStyle conf) (reflow body)
       <++> annotate (dueStyle conf) (pretty dueUtcMaybe)
@@ -886,12 +895,35 @@ formatTasks tasks =
       line
 
 
-formatTagLine :: Int -> (Text, Integer, Integer, Float) -> Doc AnsiStyle
+getProgressBar :: Integer -> Double -> Doc AnsiStyle
+getProgressBar maxWidthInChars progress =
+  let
+    width = floor (progress * (fromInteger maxWidthInChars))
+    remainingWidth = fromIntegral $ maxWidthInChars - width
+  in
+    (annotate (bgColorDull Green <> colorDull Green) $ pretty $
+      P.take (fromIntegral width) $ P.repeat '#') <>
+    -- (annotate (bgColorDull Green) $ fill (fromIntegral width) "" <>
+    (annotate (bgColorDull Black) $ fill remainingWidth "")
+
+
+formatTagLine :: Int -> (Text, Integer, Integer, Double) -> Doc AnsiStyle
 formatTagLine maxTagLength (tag, open_count, closed_count, progress) =
-       (fill maxTagLength $ pretty tag)
-  <++> (pretty $ justifyRight (T.length "open") ' ' $ show open_count)
-  <++> (pretty $ justifyRight (T.length "closed") ' ' $ show closed_count)
-  <++> (pretty $ justifyRight (T.length "progress") ' ' $ show progress)
+  let
+    barWidth = toInteger $ progressBarWidth conf
+    progressPercentage =
+      if progress == 0
+      then "     "
+      else
+        (pretty $ justifyRight 3 ' ' $ T.pack $
+          showFFloat (Just 0) (progress * 100) "")
+        <+> "%"
+  in
+    (fill maxTagLength $ pretty tag)
+    <++> (pretty $ justifyRight (T.length "open") ' ' $ show open_count)
+    <++> (pretty $ justifyRight (T.length "closed") ' ' $ show closed_count)
+    <++> progressPercentage <+> (getProgressBar barWidth progress)
+
 
 
 listTags :: Connection -> IO (Doc AnsiStyle)
@@ -899,6 +931,8 @@ listTags connection = do
   tags <- query_ connection $ Query "select * from tags"
 
   let
+    percWidth = 6  -- Width of e.g. 100 %
+    progressWith = (progressBarWidth conf) + percWidth
     firstOf4 = \(a, b, c, d) -> a
     maxTagLength = tags
       <&> (T.length . firstOf4)
@@ -908,7 +942,7 @@ listTags connection = do
          (annotate (bold <> underlined) $ fill maxTagLength "Tag")
     <++> (annotate (bold <> underlined) $ "Open")
     <++> (annotate (bold <> underlined) $ "Closed")
-    <++> (annotate (bold <> underlined) $ "Progress")
+    <++> (annotate (bold <> underlined) $ fill progressWith "Progress")
     <> line
     <> (vsep $ fmap (formatTagLine maxTagLength) tags)
     <> hardline
