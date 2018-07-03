@@ -36,7 +36,7 @@ data Command
   | AddTag TagText [IdText]
   | SetDueUtc DateTime [IdText]
   -- | Note -- Add a note
-  -- | Denote -- Remove all notes
+  -- | Unnote -- Remove all notes
   -- | Start -- Add a note that work on task was started
   -- | Stop -- Add a note that work on task was stopped
   -- | Clone -- Clone an existing task
@@ -66,6 +66,7 @@ data Command
   | ListDone
   | ListObsolete
   | ListWaiting
+  | ListOverdue
   | ListNoTag
   | Count (Filter TaskState)
   | QueryTasks Text
@@ -225,6 +226,9 @@ commandParser =
     <> command "open" (toParserInfo (pure $ ListOpen)
         "List all open tasks by creation UTC desc")
 
+    <> command "overdue" (toParserInfo (pure $ ListOverdue)
+        "List all overdue tasks by priority desc")
+
     <> command "new" (toParserInfo (pure $ ListNew)
         ("List " <> show (headCount conf)
           <> " newest open tasks by creation UTC desc"))
@@ -264,7 +268,6 @@ commandParser =
 
     -- <> command "newest" "Show all tasks (newest first)"
     -- <> command "oldest" "Show all tasks (oldest first)"
-    -- <> command "overdue" -- Overdue tasks
     -- <> command "repeating" -- Open repeating tasks (soonest first)
     -- <> command "unblocked" -- Tasks that are not blocked (by priority)
 
@@ -358,6 +361,7 @@ main = do
     ListHead -> headTasks connection
     ListNew -> newTasks connection
     ListOpen -> openTasks connection
+    ListOverdue -> overdueTasks connection
     ListWaiting -> listWaiting connection
     ListDone -> doneTasks connection
     ListObsolete -> obsoleteTasks connection

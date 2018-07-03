@@ -841,6 +841,15 @@ openTasks connection = do
   pure $ formatTasks tasks
 
 
+overdueTasks :: Connection -> IO (Doc AnsiStyle)
+overdueTasks connection = do
+  tasks <- query_ connection $ Query $
+    "select * from `tasks_view` \
+    \where closed_utc is null and due_utc < datetime('now') \
+    \order by `priority` desc"
+  pure $ formatTasks tasks
+
+
 doneTasks :: Connection -> IO (Doc AnsiStyle)
 doneTasks connection = do
   tasks <- query_ connection $ Query $
