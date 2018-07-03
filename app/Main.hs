@@ -195,6 +195,10 @@ commandParser =
 
     -- <> command "touch" (toParserInfo (TouchTask <$> strArgument idVar)
     --     "Update modified UTC")
+
+    -- <> command "timer" (toParserInfo (TouchTask <$> strArgument idVar)
+    --     "Show an overview of the currently active task \
+    --     \with a timer of the past time since you started the task")
     )
 
   <|> subparser ( commandGroup "Shortcuts to Add a Task:"
@@ -471,5 +475,5 @@ main = do
     Alias alias -> pure $ aliasWarning alias
 
   -- TODO: Remove color when piping into other command
-  putDoc doc
+  putDoc $ doc <> hardline
 
