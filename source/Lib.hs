@@ -876,6 +876,15 @@ listAll connection = do
   pure $ formatTasks tasks
 
 
+listNoTag :: Connection -> IO (Doc AnsiStyle)
+listNoTag connection = do
+  tasks <-  query_ connection
+    "select * from tasks_view \
+    \where closed_utc is null and tags is null \
+    \order by priority desc"
+  pure $ formatTasks tasks
+
+
 queryTasks :: Text -> IO (Doc AnsiStyle)
 queryTasks sqlQuery = do
   connection <- setupConnection

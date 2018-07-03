@@ -66,6 +66,7 @@ data Command
   | ListDone
   | ListObsolete
   | ListWaiting
+  | ListNoTag
   | Count (Filter TaskState)
   | QueryTasks Text
   | RunSql Text
@@ -91,6 +92,7 @@ nameToAliasList :: [(Text, Text)]
 nameToAliasList = (
   ("rm", "delete") :
   ("remove", "delete") :
+  ("inbox", "notag") :
   -- ("duplicate", "clone") :
   -- ("blocking", "blockers") :
   -- ("annotate", "note") :
@@ -237,8 +239,8 @@ commandParser =
     <> command "obsolete" (toParserInfo (pure $ ListObsolete)
         "List all obsolete tasks by closing UTC")
 
-    -- <> command "notag" (toParserInfo (pure $ ListNoTag)
-    --     "List all tasks without a tag (aka you inbox)")
+    <> command "notag" (toParserInfo (pure $ ListNoTag)
+        "List all tasks without a tag")
 
     -- TODO: Replace with tasks and tags commands
     <> command "query" (toParserInfo (QueryTasks <$> strArgument
@@ -359,6 +361,7 @@ main = do
     ListWaiting -> listWaiting connection
     ListDone -> doneTasks connection
     ListObsolete -> obsoleteTasks connection
+    ListNoTag -> listNoTag connection
     QueryTasks query -> queryTasks query
     RunSql query -> runSql query
     Tags -> listTags connection
