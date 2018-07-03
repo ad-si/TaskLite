@@ -91,9 +91,18 @@ data Command
 
 nameToAliasList :: [(Text, Text)]
 nameToAliasList = (
-  ("rm", "delete") :
-  ("remove", "delete") :
+  ("decrease", "hush") :
+  ("finish", "do") :
+  ("fix", "do") :
+  ("implement", "do") :
   ("inbox", "notag") :
+  ("increase", "boost") :
+  ("remove", "delete") :
+  ("rm", "delete") :
+  ("stop", "end") :
+  -- ("snooze", "wait") :
+  -- ("sleep", "wait") :
+  -- ("schedule", "wait") :
   -- ("duplicate", "clone") :
   -- ("blocking", "blockers") :
   -- ("annotate", "note") :
@@ -226,6 +235,19 @@ commandParser =
     <> command "open" (toParserInfo (pure $ ListOpen)
         "List all open tasks by creation UTC desc")
 
+    -- All tasks due to no later than
+    -- <> command "today"
+    -- <> command "tomorrow"
+    -- <> command "monday"
+    -- <> command "tuesday"
+    -- <> command "wednesday"
+    -- <> command "thursday"
+    -- <> command "friday"
+    -- <> command "saturday"
+    -- <> command "sunday"
+    -- <> command "month"  -- … last day of the month
+    -- <> command "year"  -- … last day of the year
+
     <> command "overdue" (toParserInfo (pure $ ListOverdue)
         "List all overdue tasks by priority desc")
 
@@ -236,12 +258,20 @@ commandParser =
     <> command "waiting" (toParserInfo (pure $ ListWaiting)
         "List all waiting tasks by priority")
 
+    -- <> command "scheduled"
+    --     "List tasks which have an earliest day to work on"
+
+
     <> command "done" (toParserInfo (pure $ ListDone)
         ("List " <> show (headCount conf)
           <> "  done tasks by closing UTC desc"))
 
     <> command "obsolete" (toParserInfo (pure $ ListObsolete)
         "List all obsolete tasks by closing UTC")
+
+    -- <> command "expired"
+    -- "List tasks which are obsolete, \
+    -- \because they crossed their expiration date"
 
     <> command "notag" (toParserInfo (pure $ ListNoTag)
         "List all tasks without a tag")
@@ -259,29 +289,23 @@ commandParser =
     --     (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
     --     "Run \"select * from tasks where QUERY\" on the database")
 
-    <> command "tags" (toParserInfo (pure $ Tags)
-        "List all used tags and their progress summary")
-
-    <> command "runsql" (toParserInfo (RunSql <$> strArgument
-        (metavar "QUERY" <> help "The SQL query"))
-        "Run any SQL query and output result as CSV")
-
     -- <> command "newest" "Show all tasks (newest first)"
     -- <> command "oldest" "Show all tasks (oldest first)"
     -- <> command "repeating" -- Open repeating tasks (soonest first)
     -- <> command "unblocked" -- Tasks that are not blocked (by priority)
+    )
 
-  -- <|> subparser ( commandGroup "Visualizations:"
+  <|> subparser ( commandGroup "Visualizations:"
     -- <> command "burndown" -- "Burndown chart by week"
     -- <> command "calendar" -- "Calendar view of all open tasks"
     -- <> command "history" -- "History of tasks"
     -- <> command "stats" -- "Statistics of all tasks"
     -- <> command "ulids" -- "List all ULIDs"
-    -- <> command "tags" -- "List all tags"
-    -- <> command "progress" -- "List all tags with corresponding progress"
-    -- <> command "filter" -- "Filter tasks by specified tags"
-    -- <> command "find" -- "Filter tasks by specified tags"
 
+    <> command "tags" (toParserInfo (pure $ Tags)
+        "List all used tags and their progress summary")
+
+    -- <> command "filter" -- "Filter tasks by specified tags"
     )
 
   <|> subparser ( commandGroup "I/O Commands:"
@@ -290,16 +314,20 @@ commandParser =
         "Import one JSON task from stdin")
 
     <> command "csv" (toParserInfo (pure Csv)
-        "Export tasks in CSV format")
+        "Show tasks in CSV format")
+
+    <> command "runsql" (toParserInfo (RunSql <$> strArgument
+        (metavar "QUERY" <> help "The SQL query"))
+        "Run any SQL query and show result as CSV")
 
     <> command "ndjson" (toParserInfo (pure Ndjson)
-        "Export tasks in NDJSON format")
+        "Show tasks in NDJSON format")
 
     <> command "sql" (toParserInfo (pure Sql)
         "Show SQL commands to create and populate database")
 
     <> command "backup" (toParserInfo (pure Backup)
-        "Create a local backup of tasks database")
+        "Create a backup of the tasks database at ~/tasklite/backups")
     )
 
   <|> subparser ( commandGroup "Advanced Commands:"
