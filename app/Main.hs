@@ -36,7 +36,6 @@ data Command
   | AddTag TagText [IdText]
   | SetDueUtc DateTime [IdText]
   -- | Note -- Add a note
-  -- | Unnote -- Remove all notes
   -- | Start -- Add a note that work on task was started
   -- | Stop -- Add a note that work on task was stopped
   -- | Clone -- Clone an existing task
@@ -91,6 +90,7 @@ data Command
 
 nameToAliasList :: [(Text, Text)]
 nameToAliasList = (
+  ("close", "end") :
   ("decrease", "hush") :
   ("finish", "do") :
   ("fix", "do") :
@@ -98,8 +98,11 @@ nameToAliasList = (
   ("inbox", "notag") :
   ("increase", "boost") :
   ("remove", "delete") :
+  -- ("reopen", "unclose") :
   ("rm", "delete") :
   ("stop", "end") :
+  -- ("week", "sunday") :
+  -- ("latest", "newest") :
   -- ("snooze", "wait") :
   -- ("sleep", "wait") :
   -- ("schedule", "wait") :
@@ -189,6 +192,9 @@ commandParser =
             (metavar "DUE_UTC" <> help "Due timestamp in UTC")
       <*> some (strArgument idVar))
       "Set due UTC of specified tasks")
+
+    -- <> command "touch" (toParserInfo (TouchTask <$> strArgument idVar)
+    --     "Update modified UTC")
     )
 
   <|> subparser ( commandGroup "Shortcuts to Add a Task:"
@@ -236,8 +242,10 @@ commandParser =
         "List all open tasks by creation UTC desc")
 
     -- All tasks due to no later than
+    -- <> command "yesterday"
     -- <> command "today"
     -- <> command "tomorrow"
+
     -- <> command "monday"
     -- <> command "tuesday"
     -- <> command "wednesday"
@@ -245,7 +253,9 @@ commandParser =
     -- <> command "friday"
     -- <> command "saturday"
     -- <> command "sunday"
+
     -- <> command "month"  -- … last day of the month
+    -- <> command "quarter"  -- … last day of the quarter
     -- <> command "year"  -- … last day of the year
 
     <> command "overdue" (toParserInfo (pure $ ListOverdue)
@@ -273,6 +283,9 @@ commandParser =
     -- "List tasks which are obsolete, \
     -- \because they crossed their expiration date"
 
+    -- <> command "tagged" (toParserInfo (pure $ ListTagged)
+    --     "List all tasks with a tag")
+
     <> command "notag" (toParserInfo (pure $ ListNoTag)
         "List all tasks without a tag")
 
@@ -280,6 +293,12 @@ commandParser =
     <> command "query" (toParserInfo (QueryTasks <$> strArgument
         (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
         "Run \"select * from tasks where QUERY\" on the database")
+
+    -- <> command "metadata" (toParserInfo (pure $ ListNoTag)
+    --     "List all tasks with metadata")
+
+    -- <> command "prioritized" (toParserInfo (pure $ ListNoTag)
+    --     "List all tasks with an adjusted priority")
 
     -- <> command "tasks" (toParserInfo (QueryTasks <$> strArgument
     --     (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
@@ -289,8 +308,8 @@ commandParser =
     --     (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
     --     "Run \"select * from tasks where QUERY\" on the database")
 
-    -- <> command "newest" "Show all tasks (newest first)"
-    -- <> command "oldest" "Show all tasks (oldest first)"
+    -- <> command "newest" "Show the newest task"
+    -- <> command "oldest" "Show the oldest task"
     -- <> command "repeating" -- Open repeating tasks (soonest first)
     -- <> command "unblocked" -- Tasks that are not blocked (by priority)
     )
@@ -339,6 +358,30 @@ commandParser =
 
     <> command "help" (toParserInfo (pure Help) "Display current help page")
     )
+
+  -- <|> subparser ( commandGroup "Unset Fields:"
+
+  --   <> command "unclose"
+  --       "Delete closed UTC and delete Obsolete / Done state"
+
+  --   <> command "untag"
+  --       "Delete all tags"
+
+  --   <> command "unnote"
+  --       "Delete all notes"
+
+  --   <> command "undue"
+  --       "Delete due UTC"
+
+  --   <> command "unwait"
+  --       "Delete wait UTC"
+
+  --   <> command "unprioritize"
+  --       "Delete priority adjustment"
+
+  --   <> command "unmeta"
+  --       "Delete metadata"
+  --   )
 
   <|> subparser ( commandGroup "Aliases:"
 
