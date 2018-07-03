@@ -27,9 +27,9 @@ data Command
   | LogTask   [Text]
 
   {- Modify -}
-  | DoTask IdText
-  | EndTask IdText
-  | DeleteTask IdText
+  | DoTasks [IdText]
+  | EndTasks [IdText]
+  | DeleteTasks [IdText]
   | BoostTasks [IdText]
   | HushTasks [IdText]
   | Prioritize Float [IdText]
@@ -151,13 +151,13 @@ commandParser =
         (metavar "BODY" <> help "Body of the task")))
         "Log an already completed task")
 
-    <> command "do" (toParserInfo (DoTask <$> strArgument idVar)
+    <> command "do" (toParserInfo (DoTasks <$> some (strArgument idVar))
         "Mark a task as done")
 
-    <> command "end" (toParserInfo (EndTask <$> strArgument idVar)
+    <> command "end" (toParserInfo (EndTasks <$> some (strArgument idVar))
         "Mark a task as obsolete")
 
-    <> command "delete" (toParserInfo (DeleteTask <$> strArgument idVar)
+    <> command "delete" (toParserInfo (DeleteTasks <$> some (strArgument idVar))
         "Delete a task from the database (Attention: Irreversible)")
 
     <> command "boost" (toParserInfo (BoostTasks <$> some (strArgument idVar))
@@ -458,9 +458,9 @@ main = do
     AddSell bodyWords -> addTaskC $ ["Sell"] <> bodyWords <> ["+sell"]
     AddShip bodyWords -> addTaskC $ ["Ship"] <> bodyWords <> ["+ship"]
     LogTask bodyWords -> logTask connection bodyWords
-    DoTask idSubstr -> doTask connection idSubstr
-    EndTask idSubstr -> endTask idSubstr
-    DeleteTask idSubstr -> deleteTask connection idSubstr
+    DoTasks ids -> doTasks connection ids
+    EndTasks ids -> endTasks connection ids
+    DeleteTasks ids -> deleteTasks connection ids
     BoostTasks ids -> adjustPriority 1 ids
     HushTasks ids -> adjustPriority (-1) ids
     Prioritize val ids -> adjustPriority val ids

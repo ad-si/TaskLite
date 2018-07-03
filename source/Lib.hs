@@ -525,23 +525,25 @@ setStateAndClosed connection taskUlid theTaskState = do
                 (Task.state task) /=. val_ theTaskState)
 
 
-doTask :: Connection -> Text -> IO (Doc AnsiStyle)
-doTask connection idSubstr = do
-  execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
-    setStateAndClosed connection taskUlid Done
+doTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
+doTasks connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+      setStateAndClosed connection taskUlid Done
 
-    numOfChanges <- changes connection
+      numOfChanges <- changes connection
 
-    pure $ pretty $ if numOfChanges == 0
-      then "⚠️  Task \"…" <> idText <> "\" is already done"
-      else "✅ Finished task \"…" <> idText <> "\""
+      pure $ pretty $ if numOfChanges == 0
+        then "⚠️  Task \"…" <> idText <> "\" is already done"
+        else "✅ Finished task \"…" <> idText <> "\""
+    pure doc
+  pure $ vsep docs
 
 
-endTask :: Text -> IO (Doc AnsiStyle)
-endTask idSubstr = do
-  dbPath <- getDbPath
-  withConnection dbPath $ \connection -> do
-    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+endTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
+endTasks connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
       setStateAndClosed connection taskUlid Obsolete
 
       numOfChanges <- changes connection
@@ -549,21 +551,26 @@ endTask idSubstr = do
       pure $ pretty $ if numOfChanges == 0
         then "⚠️  Task \"…" <> idText <> "\" is already marked as obsolete"
         else "⏹  Marked task \"…" <> idText <> "\" as obsolete"
+    pure doc
+  pure $ vsep docs
 
 
-deleteTask :: Connection -> Text -> IO (Doc AnsiStyle)
-deleteTask connection idSubstr = do
+deleteTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
+deleteTasks connection ids = do
   -- TODO: Delete corresponding tags and notes
-  execWithId connection idSubstr $ \(TaskUlid idText) -> do
-    execute connection
-      (Query $ "delete from `" <> tableName conf <> "` where `ulid` == ?")
-      [idText :: Text]
+  docs <- forM ids $ \idSubstr -> do
+    doc <- execWithId connection idSubstr $ \(TaskUlid idText) -> do
+      execute connection
+        (Query $ "delete from `" <> tableName conf <> "` where `ulid` == ?")
+        [idText :: Text]
 
-    numOfChanges <- changes connection
+      numOfChanges <- changes connection
 
-    pure $ pretty $ if numOfChanges == 0
-      then "⚠️ An error occured while deleting task \"…" <> idText <> "\""
-      else "❌ Deleted task \"…" <> idText <> "\""
+      pure $ pretty $ if numOfChanges == 0
+        then "⚠️ An error occured while deleting task \"…" <> idText <> "\""
+        else "❌ Deleted task \"…" <> idText <> "\""
+    pure doc
+  pure $ vsep docs
 
 
 adjustPriority :: Float -> [IdText] -> IO (Doc AnsiStyle)
@@ -855,7 +862,7 @@ doneTasks connection = do
   tasks <- query_ connection $ Query $
     "select * from tasks_view \
     \where closed_utc is not null and state is 'Done' \
-    \order by ulid desc limit " <> show (headCount conf)
+    \order by closed_utc desc limit " <> show (headCount conf)
   pure $ formatTasks tasks
 
 

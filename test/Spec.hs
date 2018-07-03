@@ -72,7 +72,7 @@ testSuite connection = do
         result <- nextTask connection
         let ulidText = getUlidFromBody result
 
-        doResult <- doTask connection ulidText
+        doResult <- doTasks connection [ulidText]
         (unpack $ show doResult) `shouldStartWith` "✅ Finished task"
 
 
@@ -80,7 +80,7 @@ testSuite connection = do
         result <- nextTask connection
         let ulidText = getUlidFromBody result
 
-        deleteResult <- deleteTask connection ulidText
+        deleteResult <- deleteTasks connection [ulidText]
         (unpack $ show deleteResult) `shouldStartWith` "❌ Deleted task"
 
         nextRes <- nextTask connection
