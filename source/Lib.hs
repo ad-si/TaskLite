@@ -811,41 +811,68 @@ countTasks taskStateFilter = do
     pure $ pretty taskCount
 
 
+-- TODO: Print number of remaining tasks and how to display them at the bottom
 headTasks :: Connection -> IO (Doc AnsiStyle)
 headTasks connection = do
-  let
-    -- TODO: Add "state is 'Waiting' and `wait_utc` < datetime('now')"
-    selectQuery = "select * from `tasks_view` where state is 'Open'"
-    orderByAndLimit = "order by `priority` desc limit " <> show (headCount conf)
-  tasks <- query_ connection $ Query $ selectQuery <> orderByAndLimit
+  tasks <- query_ connection $ Query $
+    -- TODO: Add `wait_utc` < datetime('now')"
+    "select * from tasks_view \
+    \where closed_utc is null \
+    \order by `priority` desc limit " <> show (headCount conf)
   pure $ formatTasks tasks
 
 
-newTasks :: IO (Doc AnsiStyle)
-newTasks = do
-  connection <- setupConnection
-  let
-    -- TODO: Add "state is 'Waiting' and `wait_utc` < datetime('now')"
-    selectQuery = "select * from `tasks_view` where state is 'Open'"
-    orderByAndLimit = "order by `ulid` desc limit " <> show (headCount conf)
-  tasks <- query_ connection $ Query $ selectQuery <> orderByAndLimit
+newTasks :: Connection -> IO (Doc AnsiStyle)
+newTasks connection = do
+  tasks <- query_ connection $ Query $
+    -- TODO: Add `wait_utc` < datetime('now')"
+    "select * from `tasks_view` \
+    \where closed_utc is null \
+    \order by `ulid` desc limit " <> show (headCount conf)
   pure $ formatTasks tasks
 
 
-listTasks :: Filter TaskState -> IO (Doc AnsiStyle)
-listTasks taskState = do
-  connection <- setupConnection
+openTasks :: Connection -> IO (Doc AnsiStyle)
+openTasks connection = do
+  tasks <- query_ connection $ Query $
+    "select * from `tasks_view` \
+    \where closed_utc is null \
+    \order by `ulid` desc"
+  pure $ formatTasks tasks
 
-  let
-    selectQuery = "select * from `tasks_view`"
-    orderBy = "order by `priority` desc"
 
-  tasks <- case taskState of
-    NoFilter          -> query_ connection (selectQuery <> orderBy)
-    Utils.Only tState -> query connection
-      (selectQuery <> " where `state` == ? " <> orderBy)
-      [tState]
+doneTasks :: Connection -> IO (Doc AnsiStyle)
+doneTasks connection = do
+  tasks <- query_ connection $ Query $
+    "select * from tasks_view \
+    \where closed_utc is not null and state is 'Done' \
+    \order by ulid desc limit " <> show (headCount conf)
+  pure $ formatTasks tasks
 
+
+obsoleteTasks :: Connection -> IO (Doc AnsiStyle)
+obsoleteTasks connection = do
+  tasks <- query_ connection $ Query $
+    "select * from tasks_view \
+    \where closed_utc is not null and state is 'Obsolete' \
+    \order by ulid desc limit " <> show (headCount conf)
+  pure $ formatTasks tasks
+
+
+listWaiting :: Connection -> IO (Doc AnsiStyle)
+listWaiting connection = do
+  tasks <- query_ connection
+    "select * from tasks_view \
+    \where state == 'Waiting' \
+    \order by priority desc"
+
+  pure $ formatTasks tasks
+
+
+listAll :: Connection -> IO (Doc AnsiStyle)
+listAll connection = do
+  tasks <-  query_ connection
+    "select * from tasks_view order by priority desc"
   pure $ formatTasks tasks
 
 

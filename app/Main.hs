@@ -14,17 +14,17 @@ import ImportExport
 import Task (TaskState(..))
 import Paths_tasklite (version)
 
-
 data Command
   {- Add -}
-  = AddTask  [Text]
-  | AddSend  [Text]
-  | AddRead  [Text]
-  | AddWatch [Text]
-  | AddBuy   [Text]
-  | AddSell  [Text]
-  | AddShip  [Text]
-  | LogTask  [Text]
+  = AddTask   [Text]
+  | AddWrite  [Text]
+  | AddRead   [Text]
+  | AddWatch  [Text]
+  | AddListen [Text]
+  | AddBuy    [Text]
+  | AddSell   [Text]
+  | AddShip   [Text]
+  | LogTask   [Text]
 
   {- Modify -}
   | DoTask IdText
@@ -59,9 +59,13 @@ data Command
   | Backup
 
   {- List -}
-  | List (Filter TaskState)
+  | ListAll
   | ListHead
   | ListNew
+  | ListOpen
+  | ListDone
+  | ListObsolete
+  | ListWaiting
   | Count (Filter TaskState)
   | QueryTasks Text
   | RunSql Text
@@ -114,12 +118,13 @@ toParserInfo parser description =
 
 
 idVar :: Mod ArgumentFields a
-idVar = metavar "TASK_ID" <> help "Id of the task (Ulid)"
+idVar =
+  metavar "TASK_ID" <> help "Id of the task (Ulid)"
 
 
 commandParser :: Parser Command
 commandParser =
-  (pure $ ListHead) -- "Same as "head" command"
+  (pure $ ListHead)
   <|>
   ( subparser ( commandGroup "Basic Commands:"
 
@@ -176,7 +181,7 @@ commandParser =
 
   <|> subparser ( commandGroup "Shortcuts to Add a Task:"
 
-    <> command "write" (toParserInfo (AddSend <$> some (strArgument
+    <> command "write" (toParserInfo (AddWrite <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
         "Write a message or a post")
 
@@ -187,6 +192,11 @@ commandParser =
     <> command "watch" (toParserInfo (AddWatch <$> some (strArgument
         (metavar "BODY" <> help "Url or title of a video or movie to watch")))
         "Watch a movie or a video")
+
+    <> command "listen" (toParserInfo (AddListen <$> some (strArgument
+        (metavar "BODY"
+          <> help "Url or title of a song or podcast to listen to")))
+        "Listen to a song or podcast")
 
     <> command "buy" (toParserInfo (AddBuy <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
@@ -203,36 +213,52 @@ commandParser =
 
   <|> subparser ( commandGroup "List Commands:"
 
-    <> command "head" (toParserInfo (pure $ ListHead) ("List "<>
-        show (headCount conf) <> " most important tasks sorted by priority"))
+    <> command "head" (toParserInfo (pure $ ListHead)
+        ("List " <> show (headCount conf)
+          <> " most important open tasks by priority"))
 
-    <> command "all" (toParserInfo (pure $ List NoFilter)
+    <> command "all" (toParserInfo (pure $ ListAll)
         "List all tasks by priority")
 
-    <> command "new" (toParserInfo (pure $ ListNew) ("List "<>
-        show (headCount conf) <> " newest tasks sorted chronologically"))
+    <> command "open" (toParserInfo (pure $ ListOpen)
+        "List all open tasks by creation UTC desc")
 
-    <> command "done" (toParserInfo (pure $ List $ Only Done)
-        "List all done tasks")
+    <> command "new" (toParserInfo (pure $ ListNew)
+        ("List " <> show (headCount conf)
+          <> " newest open tasks by creation UTC desc"))
 
-    <> command "waiting" (toParserInfo (pure $ List $ Only Waiting)
-        "List all waiting tasks")
+    <> command "waiting" (toParserInfo (pure $ ListWaiting)
+        "List all waiting tasks by priority")
 
-    <> command "obsolete" (toParserInfo (pure $ List $ Only Obsolete)
-        "List all obsolete tasks")
+    <> command "done" (toParserInfo (pure $ ListDone)
+        ("List " <> show (headCount conf)
+          <> "  done tasks by closing UTC desc"))
 
-    -- <> command "notag" (toParserInfo (pure $ List $ Only Obsolete)
+    <> command "obsolete" (toParserInfo (pure $ ListObsolete)
+        "List all obsolete tasks by closing UTC")
+
+    -- <> command "notag" (toParserInfo (pure $ ListNoTag)
     --     "List all tasks without a tag (aka you inbox)")
 
+    -- TODO: Replace with tasks and tags commands
     <> command "query" (toParserInfo (QueryTasks <$> strArgument
         (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
         "Run \"select * from tasks where QUERY\" on the database")
 
+    -- <> command "tasks" (toParserInfo (QueryTasks <$> strArgument
+    --     (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
+    --     "Run \"select * from tasks where QUERY\" on the database")
+
+    -- <> command "tags" (toParserInfo (QueryTasks <$> strArgument
+    --     (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
+    --     "Run \"select * from tasks where QUERY\" on the database")
+
+    <> command "tags" (toParserInfo (pure $ Tags)
+        "List all used tags and their progress summary")
+
     <> command "runsql" (toParserInfo (RunSql <$> strArgument
         (metavar "QUERY" <> help "The SQL query"))
         "Run any SQL query and output result as CSV")
-
-    <> command "tags" (toParserInfo (pure $ Tags) "List all used tags")
 
     -- <> command "newest" "Show all tasks (newest first)"
     -- <> command "oldest" "Show all tasks (oldest first)"
@@ -289,9 +315,19 @@ commandParser =
 
 
 commandParserInfo :: ParserInfo Command
-commandParserInfo = info
-  (commandParser <**> helper)
-  fullDesc
+commandParserInfo =
+  info
+    (helper <*> commandParser)
+    (noIntersperse
+      <> briefDesc
+      <> (headerDoc $ Just
+            "TaskLite - Task-list manager powered by Haskell and SQLite")
+      <> (progDescDoc $ Just
+            "The default command `tasklite` is the same as `tasklite head`.")
+      <> (footer $
+            "Version " <> (showVersion version)
+            <> ", developed by <adriansieber.com> at <feram.io>")
+    )
 
 
 helpText :: Doc AnsiStyle
@@ -316,9 +352,13 @@ main = do
   -- runMigrations connection
 
   doc <- case cliCommand of
-    List taskFilter -> listTasks taskFilter
+    ListAll -> listAll connection
     ListHead -> headTasks connection
-    ListNew -> newTasks
+    ListNew -> newTasks connection
+    ListOpen -> openTasks connection
+    ListWaiting -> listWaiting connection
+    ListDone -> doneTasks connection
+    ListObsolete -> obsoleteTasks connection
     QueryTasks query -> queryTasks query
     RunSql query -> runSql query
     Tags -> listTags connection
@@ -328,9 +368,10 @@ main = do
     Sql -> dumpSql
     Backup -> backupDatabase
     AddTask bodyWords -> addTaskC bodyWords
-    AddSend bodyWords -> addTaskC $ ["Send"] <> bodyWords <> ["+send"]
+    AddWrite bodyWords -> addTaskC $ ["Write"] <> bodyWords <> ["+write"]
     AddRead bodyWords -> addTaskC $ ["Read"] <> bodyWords <> ["+read"]
     AddWatch bodyWords -> addTaskC $ ["Watch"] <> bodyWords <> ["+watch"]
+    AddListen bodyWords -> addTaskC $ ["Listen"] <> bodyWords <> ["+listen"]
     AddBuy bodyWords -> addTaskC $ ["Buy"] <> bodyWords <> ["+buy"]
     AddSell bodyWords -> addTaskC $ ["Sell"] <> bodyWords <> ["+sell"]
     AddShip bodyWords -> addTaskC $ ["Ship"] <> bodyWords <> ["+ship"]
