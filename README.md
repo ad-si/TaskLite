@@ -90,6 +90,23 @@ curl https://api.github.com/repos/$OWNER/$REPO/issues/$NUM | tl import
 ```
 
 
+### Exports Fields Matrix
+
+*Implicit State* | Open | Waiting | Repeating | Done   | Closed
+state            | -    |         |           | Done   | Obsolete
+-----------------|------|---------|-----------|--------|---------
+ulid             | ✅   |   ✅    |   ✅     |   ✅   |   ✅
+wait_utc         |      |   ✅    |   ✅     |   ❔   |   ❔
+closed_utc       |      |         |          |   ✅   |   ✅
+priority         | 🛠   |   🛠    |   🛠     |   🛠   |   🛠
+
+Legend:
+- [ ] = Not allowed
+- ✅ = Required
+- ❔ = Maybe
+- 🛠 = Generated
+
+
 ### REST API
 
 Powered by [Datasette](https://github.com/simonw/datasette):
