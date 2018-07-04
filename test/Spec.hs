@@ -23,12 +23,19 @@ setupTestConnection filePath = do
     pure connection
 
 
+-- | The tests build up upon each other
+-- | and therefore the order must not be changed
 testSuite :: Sql.Connection -> SpecWith ()
 testSuite connection = do
   describe "TaskLite" $ do
+    let
+      taskStart = "state: Open\npriority: 0\nbody: Just a test\nulid: "
+      getUlidFromBody = T.take 26 . T.drop (P.length taskStart) . pack . show
+
+
     it "creates necessary tables on initial run" $ do
       tasks <- headTasks connection
-      (show tasks) `shouldBe` ("No tasks available" :: Text)
+      (unpack $ show tasks) `shouldStartWith` "No tasks available"
 
 
     it "adds a task" $ do
@@ -38,11 +45,6 @@ testSuite connection = do
 
 
     context "When a task exists" $ do
-      let
-        taskStart = "state: Open\npriority: 0\nbody: Just a test\nulid: "
-        getUlidFromBody = T.take 26 . T.drop (P.length taskStart) . pack . show
-
-
       it "lists next task" $ do
         result <- nextTask connection
         (unpack $ show result) `shouldStartWith` taskStart
@@ -78,20 +80,21 @@ testSuite connection = do
         (unpack $ show doResult) `shouldStartWith` "✅ Finished task"
 
 
-      it "deletes it" $ do
-        result <- nextTask connection
-        let ulidText = getUlidFromBody result
+    it "adds a taks and deletes it" $ do
+      _ <- addTask connection ["Just a test"]
+      result <- nextTask connection
+      let ulidText = getUlidFromBody result
 
-        deleteResult <- deleteTasks connection [ulidText]
-        (unpack $ show deleteResult) `shouldStartWith` "❌ Deleted task"
+      deleteResult <- deleteTasks connection [ulidText]
+      (unpack $ show deleteResult) `shouldStartWith` "❌ Deleted task"
 
-        nextRes <- nextTask connection
-        (show nextRes) `shouldBe` ("No tasks available" :: Text)
 
-    it "logs a task" $ do
-      result <- logTask connection ["Just a test"]
-      (unpack $ show result) `shouldStartWith`
-        "📝 Logged task \"Just a test\" with ulid"
+    context "When a task was logged" $ do
+
+      it "logs a task" $ do
+        result <- logTask connection ["Just a test"]
+        (unpack $ show result) `shouldStartWith`
+          "📝 Logged task \"Just a test\" with ulid"
 
 
 main :: IO ()
