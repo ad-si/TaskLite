@@ -5,8 +5,10 @@ import qualified Database.SQLite.Simple as Sql
 import Data.Text as T
 import System.IO.Temp
 import System.IO.Error
+
 import Lib
 import Utils
+import DbSetup
 
 
 setupTestConnection :: FilePath -> IO Sql.Connection

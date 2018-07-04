@@ -24,7 +24,7 @@ import Utils
 import Task
 import FullTask (FullTask)
 import Note (Note(..))
-import Lib (Config(..), conf)
+import Config
 
 
 data Annotation = Annotation

@@ -9,10 +9,13 @@ import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.Version (showVersion)
 import Options.Applicative
+
 import Utils
 import ImportExport
 import Task (TaskState(..))
 import Paths_tasklite (version)
+import Config
+
 
 data Command
   {- Add -}
