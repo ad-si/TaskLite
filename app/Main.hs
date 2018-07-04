@@ -3,7 +3,9 @@ module Main where
 import Protolude
 
 import Lib
+import Data.Char (isSpace)
 import Data.Hourglass
+import Data.String (fromString)
 import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
@@ -241,7 +243,7 @@ commandParser =
 
     <> command "head" (toParserInfo (pure $ ListHead)
         ("List " <> show (headCount conf)
-          <> " most important open tasks by priority"))
+          <> " most important open tasks by priority desc"))
 
     <> command "all" (toParserInfo (pure $ ListAll)
         "List all tasks by priority")
@@ -410,25 +412,92 @@ commandParserInfo =
     (helper <*> commandParser)
     (noIntersperse
       <> briefDesc
-      <> (headerDoc $ Just
-            "TaskLite - Task-list manager powered by Haskell and SQLite")
-      <> (progDescDoc $ Just
-            "The default command `tasklite` is the same as `tasklite head`.")
-      <> (footer $
+      <> (headerDoc $ Just "{{header}}")
+      <> (progDescDoc $ Just "{{examples}}")
+      <> (footerDoc $ Just $ fromString $
             "Version " <> (showVersion version)
-            <> ", developed by <adriansieber.com> at <feram.io>")
+            <> ", developed by <adriansieber.com> at <feram.io>\n")
     )
+
+
+groupBySpace :: Text -> [Doc ann]
+groupBySpace =
+  fmap pretty . T.groupBy (\a b ->
+    isSpace a && isSpace b || not (isSpace a) && not (isSpace b))
+
+
+replaceDoc :: Doc ann -> Doc ann -> [Doc ann] -> [Doc ann]
+replaceDoc oldDoc newDoc =
+  fmap $ \doc ->
+    if (show oldDoc :: Text) == (show doc :: Text)
+    then newDoc
+    else doc
+
+
+-- | Because optparse-applicative uses an old pretty printer,
+-- | this function is necessary to splice new Docs into the old Docs
+spliceDocsIntoText :: [(Text, Doc AnsiStyle)] -> Text -> [Doc AnsiStyle]
+spliceDocsIntoText replacements renderedDoc =
+  let
+    docElems = groupBySpace renderedDoc
+    replaceDocs (txt, doc) accum =
+      replaceDoc (pretty txt) doc accum
+  in
+    foldr replaceDocs docElems replacements
+
+
+examples :: Doc AnsiStyle
+examples =
+  let
+    mkBold = annotate bold . pretty . T.justifyRight 26 ' '
+    hiLite = (enclose "`" "`") . annotate (color Cyan)
+  in ""
+    <> hardline
+    <> indent 2
+      (  mkBold "Add an alias:" <+> hiLite "alias tl tasklite"
+      <> hardline
+
+      <> mkBold "Add a task with a tag:" <+> hiLite "tl add Buy milk +groceries"
+      <> hardline
+
+      <> mkBold "… or with the shortcut:" <+> hiLite "tl buy milk +groceries"
+      <> hardline
+
+      <> mkBold "List most important tasks:"
+        <+> hiLite "tl"
+        <+> parens ("same as" <+> hiLite "tl head")
+      <> hardline
+
+      <> mkBold "Complete it:" <+> hiLite "tl do <id>"
+      )
+
+
+helpReplacements :: [(Text, Doc AnsiStyle)]
+helpReplacements =
+  let
+    prettyVersion = annotate (color Black) (pretty $ showVersion version)
+  in (
+    -- ("add", annotate (colorDull Green) "add BODY") :
+    ("{{header}}",
+        (annotate (bold <> color Green) $ "TaskLite") <+> prettyVersion
+        <> hardline <> hardline
+        <> annotate (color Green)
+            "Task-list manager powered by Haskell and SQLite") :
+    ("{{examples}}", examples) :
+    [])
 
 
 helpText :: Doc AnsiStyle
 helpText =
-  case (parserFailure defaultPrefs commandParserInfo ShowHelpText mempty) of
-    ParserFailure a -> case a "tasklite" of
-      (theHelp, _, _) -> theHelp
-        & show
-        & T.replace "\n  add     " "\n  add BODY"
-        & pretty
-        & (<> hardline)
+  let
+    extendHelp theHelp = theHelp
+      & show
+      & spliceDocsIntoText helpReplacements
+      & hcat
+  in
+    case (parserFailure defaultPrefs commandParserInfo ShowHelpText mempty) of
+      ParserFailure a -> case a "tasklite" of
+        (theHelp, _, _) -> extendHelp theHelp
 
 
 main :: IO ()
