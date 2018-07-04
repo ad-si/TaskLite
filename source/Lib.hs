@@ -208,7 +208,6 @@ addTask connection bodyWords = do
   pure $
     "🆕 Added task" <+> (dquotes $ pretty $ Task.body task)
     <+> "with ulid" <+> (dquotes $ pretty $ Task.ulid task)
-    <+> hardline
 
 
 logTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
@@ -232,7 +231,6 @@ logTask connection bodyWords = do
   pure $
     "📝 Logged task" <+> (dquotes $ pretty $ Task.body task)
     <+> "with ulid" <+> (dquotes $ pretty $ Task.ulid task)
-    <+> hardline
 
 
 execWithId ::
@@ -665,7 +663,8 @@ listWithTag connection tags = do
         \tasks_view.ulid as ulid, body, state, due_utc, closed_utc, \
         \modified_utc, tags, notes, priority, metadata \
       \from (" <> ulidsQuery <> ") tasks1 \
-      \left join tasks_view on tasks1.ulid is tasks_view.ulid"
+      \left join tasks_view on tasks1.ulid is tasks_view.ulid \
+      \order by priority desc"
 
   tasks <- query_ connection $ Query mainQuery
   pure $ formatTasks tasks
@@ -690,7 +689,8 @@ runSql sqlQuery = do
     , T.unpack sqlQuery
     ]
     []
-  pure $ pretty result
+  -- Remove trailing newline
+  pure $ pretty (T.dropEnd 1 $ T.pack result)
 
 
 formatTasks :: [FullTask] -> Doc AnsiStyle
@@ -767,5 +767,4 @@ listTags connection = do
     <++> (annotate (bold <> underlined) $ fill progressWith "Progress")
     <> line
     <> (vsep $ fmap (formatTagLine maxTagLength) tags)
-    <> hardline
 
