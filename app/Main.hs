@@ -143,11 +143,26 @@ idVar =
   metavar "TASK_ID" <> help "Id of the task (Ulid)"
 
 
+-- | Help Sections
+basic_sec, shortcut_sec, list_sec,
+  vis_sec, i_o_sec, advanced_sec, alias_sec
+  :: (Text, Text)
+
+basic_sec    = ("{{basic_sec}}", "Basic Commands:")
+shortcut_sec = ("{{shortcut_sec}}", "Shortcuts to Add a Task:")
+list_sec     = ("{{list_sec}}", "List Commands:")
+vis_sec      = ("{{vis_sec}}", "Visualizations:")
+i_o_sec      = ("{{i_o_sec}}", "I/O Commands:")
+advanced_sec = ("{{advanced_sec}}", "Advanced Commands:")
+alias_sec    = ("{{alias_sec}}", "Aliases:")
+
+
+
 commandParser :: Parser Command
 commandParser =
   (pure $ ListHead)
   <|>
-  ( subparser ( commandGroup "Basic Commands:"
+  (   subparser ( commandGroup (T.unpack $ fst basic_sec)
 
     <> command "add" (toParserInfo (AddTask <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
@@ -207,7 +222,7 @@ commandParser =
     --     \with a timer of the past time since you started the task")
     )
 
-  <|> subparser ( commandGroup "Shortcuts to Add a Task:"
+  <|> subparser ( commandGroup (T.unpack $ fst shortcut_sec)
 
     <> command "write" (toParserInfo (AddWrite <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
@@ -239,7 +254,7 @@ commandParser =
         "Ship an item to someone")
     )
 
-  <|> subparser ( commandGroup "List Commands:"
+  <|> subparser ( commandGroup (T.unpack $ fst list_sec)
 
     <> command "head" (toParserInfo (pure $ ListHead)
         ("List " <> show (headCount conf)
@@ -330,7 +345,7 @@ commandParser =
     -- <> command "unblocked" -- Tasks that are not blocked (by priority)
     )
 
-  <|> subparser ( commandGroup "Visualizations:"
+  <|> subparser ( commandGroup (T.unpack $ fst vis_sec)
     -- <> command "burndown" -- "Burndown chart by week"
     -- <> command "calendar" -- "Calendar view of all open tasks"
     -- <> command "history" -- "History of tasks"
@@ -343,7 +358,7 @@ commandParser =
     -- <> command "filter" -- "Filter tasks by specified tags"
     )
 
-  <|> subparser ( commandGroup "I/O Commands:"
+  <|> subparser ( commandGroup (T.unpack $ fst i_o_sec)
 
     <> command "import" (toParserInfo (pure Import)
         "Import one JSON task from stdin")
@@ -365,7 +380,7 @@ commandParser =
         "Create a backup of the tasks database at ~/tasklite/backups")
     )
 
-  <|> subparser ( commandGroup "Advanced Commands:"
+  <|> subparser ( commandGroup (T.unpack $ fst advanced_sec)
 
     <> command "count" (toParserInfo (pure $ Count NoFilter)
         "Output total number of tasks")
@@ -399,7 +414,7 @@ commandParser =
   --       "Delete metadata"
   --   )
 
-  <|> subparser ( commandGroup "Aliases:"
+  <|> subparser ( commandGroup (T.unpack $ fst alias_sec)
 
     <> fold (fmap getCommand nameToAliasList)
     )
@@ -479,12 +494,22 @@ helpReplacements =
   in (
     -- ("add", annotate (colorDull Green) "add BODY") :
     ("{{header}}",
-        (annotate (bold <> color Green) $ "TaskLite") <+> prettyVersion
+        (annotate (bold <> color Blue) $ "TaskLite") <+> prettyVersion
         <> hardline <> hardline
-        <> annotate (color Green)
+        <> annotate (color Blue)
             "Task-list manager powered by Haskell and SQLite") :
     ("{{examples}}", examples) :
-    [])
+    fmap
+      (\(a, b) -> (a, annotate (colorDull Yellow) (pretty b)))
+      (
+        basic_sec :
+        shortcut_sec :
+        list_sec :
+        vis_sec :
+        i_o_sec :
+        advanced_sec :
+        alias_sec :
+      []))
 
 
 helpText :: Doc AnsiStyle

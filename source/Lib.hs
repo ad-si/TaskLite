@@ -34,7 +34,8 @@ getMainDir = (<> "/" <> (mainDir conf) )
 
 
 noTasksWarning :: Text
-noTasksWarning = "No tasks available"
+noTasksWarning = "No tasks available. "
+  <> "Run `tasklite help` to learn how to create tasks."
 
 
 newtype NumRows = NumRows Integer
