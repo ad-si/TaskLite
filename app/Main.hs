@@ -67,6 +67,7 @@ data Command
   | ListWaiting
   | ListOverdue
   | ListNoTag
+  | ListWithTag [Text]
   | Count (Filter TaskState)
   | QueryTasks Text
   | RunSql Text
@@ -291,7 +292,13 @@ commandParser =
     --     "List all tasks with a tag")
 
     <> command "notag" (toParserInfo (pure $ ListNoTag)
-        "List all tasks without a tag")
+        "List tasks without any tags")
+
+    <> command "withtag"
+        (toParserInfo
+          (ListWithTag <$> some
+            (strArgument $ metavar "TAGS" <> help "The tags"))
+          "List tasks which have all of the specified tags")
 
     -- TODO: Replace with tasks and tags commands
     <> command "query" (toParserInfo (QueryTasks <$> strArgument
@@ -441,6 +448,7 @@ main = do
     ListDone -> doneTasks connection
     ListObsolete -> obsoleteTasks connection
     ListNoTag -> listNoTag connection
+    ListWithTag tags -> listWithTag connection tags
     QueryTasks query -> queryTasks query
     RunSql query -> runSql query
     Tags -> listTags connection

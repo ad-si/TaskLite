@@ -901,6 +901,31 @@ listNoTag connection = do
   pure $ formatTasks tasks
 
 
+listWithTag :: Connection -> [Text] -> IO (Doc AnsiStyle)
+listWithTag connection tags = do
+  let
+    getTagQuery =
+      (T.intercalate " or ") . (fmap (("tag like '" <>) . (<> "'")))
+
+    ulidsQuery = "\
+      \select tasks.ulid \
+      \from tasks \
+      \left join task_to_tag on tasks.ulid is task_to_tag.task_ulid \
+      \where " <> (getTagQuery tags) <> " \
+      \group by tasks.ulid \
+      \having count(tag) = " <> (show $ P.length tags)
+
+    mainQuery = "\
+      \select \
+        \tasks_view.ulid as ulid, body, state, due_utc, closed_utc, \
+        \modified_utc, tags, notes, priority, metadata \
+      \from (" <> ulidsQuery <> ") tasks1 \
+      \left join tasks_view on tasks1.ulid is tasks_view.ulid"
+
+  tasks <- query_ connection $ Query mainQuery
+  pure $ formatTasks tasks
+
+
 queryTasks :: Text -> IO (Doc AnsiStyle)
 queryTasks sqlQuery = do
   connection <- setupConnection
