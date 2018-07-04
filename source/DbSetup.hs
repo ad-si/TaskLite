@@ -2,29 +2,10 @@ module DbSetup where
 
 import Protolude as P
 
-import Data.Hourglass
-import Codec.Crockford as Crock
 import Data.Text as T
-import Data.ULID
-import Database.Beam
-import Database.Beam.Sqlite
-import Database.Beam.Schema.Tables
 import Database.SQLite.Simple as Sql
-import Numeric
-import System.Directory
-import System.Process (readProcess)
-import qualified Text.Fuzzy as Fuzzy
-import Time.System
-import Data.Text.Prettyprint.Doc hiding ((<>))
-import Data.Text.Prettyprint.Doc.Util
-import Data.Text.Prettyprint.Doc.Render.Terminal
-import Unsafe (unsafeHead)
-import Utils
 import qualified SqlUtils as S
 import Task as Task
-import FullTask as FullTask
-import Note as Note
-import TaskToNote as TaskToNote
 import Language.SQL.SimpleSQL.Syntax
 import Language.SQL.SimpleSQL.Pretty
 import Config
@@ -157,7 +138,6 @@ tagsViewQuery =
     txtToName = Name . T.unpack
 
     tasks_t         = txtToName "tasks"
-    tags_t          = txtToName "tags"
     task_to_tag_t   = txtToName "task_to_tag"
     task_to_tag_1_t = txtToName "task_to_tag_1"
     task_to_tag_2_t = txtToName "task_to_tag_2"

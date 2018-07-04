@@ -7,7 +7,7 @@ module SqlUtils where
 import Protolude as P
 
 import Data.Text as T
-import Database.SQLite.Simple as Sql
+import Database.SQLite.Simple as Sql hiding (columnName)
 import Language.SQL.SimpleSQL.Syntax
 
 
@@ -78,6 +78,7 @@ as column aliasName@(Name theAlias) =
     then Nothing
     else Just aliasName
   )
+as column otherAlias = (column, Just otherAlias)
 
 
 groupBy :: ValueExpr -> GroupingExpr

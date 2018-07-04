@@ -10,8 +10,6 @@ import Database.Beam
 import Database.Beam.Sqlite
 import Database.Beam.Schema.Tables
 import Database.SQLite.Simple as Sql
-import Language.SQL.SimpleSQL.Syntax
-import Language.SQL.SimpleSQL.Pretty
 import Numeric
 import System.Directory
 import System.Process (readProcess)
@@ -23,7 +21,6 @@ import Data.Text.Prettyprint.Doc.Render.Terminal
 import Unsafe (unsafeHead)
 
 import Utils
-import qualified SqlUtils as S
 import Task as Task
 import FullTask as FullTask
 import Note as Note
@@ -398,10 +395,10 @@ findTask pattern = do
       (tasks :: [(Text, Text, Maybe [Text], Maybe [Text], Maybe Text)])
       "\x1b[4m\x1b[32m" -- Set underline and color to green
       "\x1b[0m"
-      (\(ulid, body, tags, notes, metadata) -> unwords
+      (\(ulid, theBody, tags, notes, metadata) -> unwords
         [ ulid
         , "\n"
-        , body
+        , theBody
         , fromMaybe "" (unwords <$> tags)
         , fromMaybe "" (unwords <$> notes)
         , T.replace "\",\"" "\", \"" $ fromMaybe "" metadata
@@ -722,12 +719,12 @@ formatTasks tasks =
 getProgressBar :: Integer -> Double -> Doc AnsiStyle
 getProgressBar maxWidthInChars progress =
   let
-    width = floor (progress * (fromInteger maxWidthInChars))
-    remainingWidth = fromIntegral $ maxWidthInChars - width
+    barWidth = floor (progress * (fromInteger maxWidthInChars))
+    remainingWidth = fromIntegral $ maxWidthInChars - barWidth
   in
     (annotate (bgColorDull Green <> colorDull Green) $ pretty $
-      P.take (fromIntegral width) $ P.repeat '#') <>
-    -- (annotate (bgColorDull Green) $ fill (fromIntegral width) "" <>
+      P.take (fromIntegral barWidth) $ P.repeat '#') <>
+    -- (annotate (bgColorDull Green) $ fill (fromIntegral barWidth) "" <>
     (annotate (bgColorDull Black) $ fill remainingWidth "")
 
 
@@ -757,7 +754,7 @@ listTags connection = do
   let
     percWidth = 6  -- Width of e.g. 100 %
     progressWith = (progressBarWidth conf) + percWidth
-    firstOf4 = \(a, b, c, d) -> a
+    firstOf4 = \(a, _, _, _) -> a
     maxTagLength = tags
       <&> (T.length . firstOf4)
       & P.maximum
