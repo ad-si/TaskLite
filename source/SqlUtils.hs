@@ -8,7 +8,7 @@ import Protolude as P
 
 import Data.Text as T
 import Database.SQLite.Simple as Sql hiding (columnName)
-import Data.Text.Prettyprint.Doc (Doc, pretty, hardline)
+import Data.Text.Prettyprint.Doc (Doc, pretty)
 import Language.SQL.SimpleSQL.Syntax
 
 
@@ -196,10 +196,10 @@ createTableWithQuery connection aTableName theQuery = do
       Left errorMessage ->
         if isSuffixOf "already exists" (sqlErrorDetails errorMessage)
         then ""
-        else T.pack $ show errorMessage
-      Right _ -> "🆕 Create table \"" <> aTableName <> "\""
+        else T.pack $ (show errorMessage) <> "\n"
+      Right _ -> "🆕 Create table \"" <> aTableName <> "\"\n"
 
-  pure $ (pretty output) <> hardline
+  pure $ pretty output
 
 
 getCase :: Maybe Text -> [(Text, Float)] -> Text
