@@ -25,6 +25,7 @@ import Task as Task
 import FullTask as FullTask
 import Note as Note
 import TaskToNote as TaskToNote
+import TaskToTag as TaskToTag
 import DbSetup
 import Config
 
@@ -43,29 +44,6 @@ newtype NumRows = NumRows Integer
 
 instance FromRow NumRows where
   fromRow = NumRows <$> field
-
-
--- | Record for storing entries of the `task_to_tag` table
-data TaskToTagT f = TaskToTag
-  { _ttUlid :: Columnar f Text -- Ulid
-  , _ttTaskUlid :: PrimaryKey TaskT f
-  , _ttTag :: Columnar f Text
-  } deriving Generic
-
-type TaskToTag = TaskToTagT Identity
-type TaskToTagId = PrimaryKey TaskToTagT Identity
-
--- FIXME: Probably doesn't work because of `PrimaryKey TaskT f`
--- deriving instance Show TaskToTag
--- deriving instance Eq TaskToTag
-
-instance Beamable TaskToTagT
-
-instance Table TaskToTagT where
-  data PrimaryKey TaskToTagT f = TaskToTagId (Columnar f Text)
-    deriving Generic
-  primaryKey = TaskToTagId . _ttUlid
-instance Beamable (PrimaryKey TaskToTagT)
 
 
 -- | Record for storing entries of the `tasks_view` table
@@ -356,15 +334,21 @@ infoTask :: Text -> IO (Doc AnsiStyle)
 infoTask idSubstr = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
-    execWithId connection idSubstr $ \(TaskUlid idText) -> do
-      tasks <- query connection
-        (Query $ "select * from `tasks_view` where `ulid` == ?")
-        [idText :: Text]
+    execWithId connection idSubstr $ \taskUlid -> do
+      runBeamSqlite connection $ do
+        task <- runSelectReturningOne $
+          lookup_ (_tldbTasks taskLiteDb) taskUlid
 
-      pure $ case P.head (tasks :: [FullTask]) of
-        Nothing -> pretty
-          ("This case should already be handled by `execWithId`" :: Text)
-        Just task -> pretty task
+        tags <- runSelectReturningList $ select $
+          filter_ (\tag -> TaskToTag._ttTaskUlid tag ==. val_ taskUlid) $
+          all_ (_tldbTaskToTag taskLiteDb)
+
+        notes <- runSelectReturningList $ select $
+          filter_ (\note -> TaskToNote.task_ulid note ==. val_ taskUlid) $
+          all_ (_tldbTaskToNote taskLiteDb)
+
+        pure $ pretty $ T.pack $
+          (show task) <> (show tags) <> (show notes)
 
 
 nextTask :: Connection -> IO (Doc AnsiStyle)
@@ -436,8 +420,8 @@ findTask pattern = do
 
 addTag :: Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
 addTag connection tag ids = do
-  docs <- forM ids $ \idSubstr -> do
-    doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+  docs <- forM ids $ \idSubstr ->
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
       now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
       ulid <- fmap (toLower . show) getULID
 
@@ -454,8 +438,6 @@ addTag connection tag ids = do
 
       pure $ "🏷  Added tag" <+> (dquotes $ pretty tag)
         <+> "to task" <+> (dquotes $ pretty idText)
-        <+> hardline
-    pure doc
   pure $ vsep docs
 
 
@@ -465,8 +447,8 @@ setDueUtc connection datetime ids = do
     utcText :: Text
     utcText = pack $ timePrint (utcFormat conf) datetime
 
-  docs <- forM ids $ \idSubstr -> do
-    doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+  docs <- forM ids $ \idSubstr ->
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
       runBeamSqlite connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
           (\task -> [(Task.due_utc task) <-. (val_ $ Just utcText)])
@@ -474,7 +456,7 @@ setDueUtc connection datetime ids = do
 
       pure $ "📅 Set due UTC to" <+> (dquotes $ pretty utcText)
         <+> "of task" <+> (dquotes $ pretty idText)
-    pure doc
+
   pure $ vsep docs
 
 

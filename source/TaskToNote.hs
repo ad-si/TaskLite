@@ -17,8 +17,7 @@ data TaskToNoteT f = TaskToNote
 type TaskToNote = TaskToNoteT Identity
 type TaskToNoteId = PrimaryKey TaskToNoteT Identity
 
--- FIXME: Probably doesn't work because of `PrimaryKey TaskT f`
--- deriving instance Show TaskToNote
+deriving instance Show TaskToNote
 -- deriving instance Eq TaskToNote
 
 instance Beamable TaskToNoteT

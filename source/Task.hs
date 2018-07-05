@@ -9,6 +9,7 @@ import Data.Csv as Csv
 import Data.Text as T
 import Database.Beam
 import Database.Beam.Backend.SQL
+import Database.Beam.Sqlite.Connection
 import Database.Beam.Sqlite.Syntax (SqliteExpressionSyntax, SqliteValueSyntax)
 import Database.SQLite.Simple as Sql
 import Database.SQLite.Simple.FromField as Sql.FromField
@@ -36,6 +37,8 @@ instance Sql.ToField.ToField TaskState where
 
 instance HasSqlValueSyntax be [Char] => HasSqlValueSyntax be TaskState where
   sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow Sqlite TaskState
 
 instance HasSqlEqualityCheck SqliteExpressionSyntax TaskState
 
@@ -91,12 +94,15 @@ data TaskT f = Task
 type Task = TaskT Identity
 type TaskUlid = PrimaryKey TaskT Identity
 
+deriving instance Show TaskUlid
 deriving instance Show Task
 deriving instance Eq Task
 
 instance HasSqlValueSyntax SqliteValueSyntax Value where
   sqlValueSyntax =
     sqlValueSyntax . toStrict . Aeson.encodeToLazyText
+
+instance FromBackendRow Sqlite Value
 
 instance Beamable TaskT
 
