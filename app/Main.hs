@@ -37,10 +37,12 @@ data Command
   | DeleteTasks [IdText]
   | BoostTasks [IdText]
   | HushTasks [IdText]
+
+  {- Modify With Parameter -}
   | Prioritize Float [IdText]
   | AddTag TagText [IdText]
+  | AddNote Text [IdText]
   | SetDueUtc DateTime [IdText]
-  -- | Note -- Add a note
   -- | Start -- Add a note that work on task was started
   -- | Stop -- Add a note that work on task was stopped
   -- | Clone -- Clone an existing task
@@ -96,6 +98,7 @@ data Command
 
 nameToAliasList :: [(Text, Text)]
 nameToAliasList = (
+  ("annotate", "note") :
   ("close", "end") :
   ("decrease", "hush") :
   ("finish", "do") :
@@ -114,7 +117,6 @@ nameToAliasList = (
   -- ("schedule", "wait") :
   -- ("duplicate", "clone") :
   -- ("blocking", "blockers") :
-  -- ("annotate", "note") :
   -- ("denotate", "denote") :
   [])
 
@@ -168,6 +170,9 @@ commandParser =
         (metavar "BODY" <> help "Body of the task")))
         "Add a new task")
 
+    -- <> command "prompt" (toParserInfo (pure AddInteractive)
+    --     "Add a new task via an interactive prompt")
+
     <> command "log" (toParserInfo (LogTask <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
         "Log an already completed task")
@@ -207,6 +212,11 @@ commandParser =
       <$> strArgument (metavar "TAG" <> help "The tag")
       <*> some (strArgument idVar))
       "Add a tag to specified tasks")
+
+    <> command "note" (toParserInfo (AddNote
+      <$> strArgument (metavar "NOTE" <> help "The note")
+      <*> some (strArgument idVar))
+      "Add a note to specified tasks")
 
     <> command "due" (toParserInfo (SetDueUtc
       <$> argument (maybeReader (parseUtc . T.pack))
@@ -353,7 +363,10 @@ commandParser =
     -- <> command "ulids" -- "List all ULIDs"
 
     <> command "tags" (toParserInfo (pure $ Tags)
-        "List all used tags and their progress summary")
+        "List all used tags and their progress")
+
+    -- <> command "active-tags" (toParserInfo (pure $ Tags)
+    --     "List all active tags (a.k.a projects) and their progress")
 
     -- <> command "filter" -- "Filter tasks by specified tags"
     )
@@ -573,6 +586,7 @@ main = do
     NextTask -> nextTask connection
     FindTask pattern -> findTask pattern
     AddTag tagText ids -> addTag connection tagText ids
+    AddNote noteText ids -> addNote connection noteText ids
     SetDueUtc datetime ids -> setDueUtc connection datetime ids
     Count taskFilter -> countTasks taskFilter
     Version -> pure $ (pretty $ showVersion version) <> hardline

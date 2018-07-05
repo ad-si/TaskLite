@@ -438,6 +438,30 @@ addTag connection tag ids = do
 
       pure $ "🏷  Added tag" <+> (dquotes $ pretty tag)
         <+> "to task" <+> (dquotes $ pretty idText)
+
+  pure $ vsep docs
+
+
+addNote :: Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
+addNote connection note ids = do
+  docs <- forM ids $ \idSubstr ->
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+      now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
+      ulid <- fmap (toLower . show) getULID
+
+      let taskToNote = TaskToNote ulid taskUlid note
+
+      runBeamSqlite connection $ runInsert $
+        insert (_tldbTaskToNote taskLiteDb) $
+        insertValues [taskToNote]
+
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task -> [(Task.modified_utc task) <-. val_ now])
+          (\task -> primaryKey task ==. val_ taskUlid)
+
+      pure $ "🗒  Added a note to task" <+> (dquotes $ pretty idText)
+
   pure $ vsep docs
 
 

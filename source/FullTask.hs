@@ -69,5 +69,6 @@ instance Hashable FullTask
 
 instance Pretty FullTask where
   pretty = pretty
+    . T.dropEnd 1 -- Drop trailing newline to maybe add it later
     . decodeUtf8
     . Yaml.encode

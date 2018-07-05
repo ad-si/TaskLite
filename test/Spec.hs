@@ -54,10 +54,18 @@ testSuite connection = do
         result <- nextTask connection
         let ulidText = getUlidFromBody result
 
-        -- it "Adds a tag to a task" $ do
         tagResult <- addTag connection "test" [ulidText]
         (unpack $ show tagResult) `shouldStartWith`
           "🏷  Added tag \"test\" to task"
+
+
+      it "adds a note" $ do
+        result <- nextTask connection
+        let ulidText = getUlidFromBody result
+
+        tagResult <- addNote connection "Just a test note" [ulidText]
+        (unpack $ show tagResult) `shouldStartWith`
+          "🗒  Added a note to task"
 
 
       it "sets due UTC" $ do
