@@ -8,6 +8,7 @@ import Protolude as P
 
 import Data.Text as T
 import Database.SQLite.Simple as Sql hiding (columnName)
+import Data.Text.Prettyprint.Doc (Doc, pretty, hardline)
 import Language.SQL.SimpleSQL.Syntax
 
 
@@ -186,17 +187,19 @@ getView viewName selectQuery = Query $ T.unlines (
   [])
 
 
-createTableWithQuery :: Connection -> Text -> Query -> IO ()
+createTableWithQuery :: Connection -> Text -> Query -> IO (Doc ann)
 createTableWithQuery connection aTableName theQuery = do
   result <- try $ execute_ connection theQuery
 
-  case result :: Either SQLError () of
-    Left errorMessage ->
-      if isSuffixOf "already exists" (sqlErrorDetails errorMessage)
-      then return ()
-      else P.print errorMessage
-    Right _ ->
-      putText $ "🆕 Create table \"" <> aTableName <> "\""
+  let
+    output = case result :: Either SQLError () of
+      Left errorMessage ->
+        if isSuffixOf "already exists" (sqlErrorDetails errorMessage)
+        then ""
+        else T.pack $ show errorMessage
+      Right _ -> "🆕 Create table \"" <> aTableName <> "\""
+
+  pure $ (pretty output) <> hardline
 
 
 getCase :: Maybe Text -> [(Text, Float)] -> Text

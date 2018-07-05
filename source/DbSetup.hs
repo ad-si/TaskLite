@@ -8,10 +8,11 @@ import qualified SqlUtils as S
 import Task as Task
 import Language.SQL.SimpleSQL.Syntax
 import Language.SQL.SimpleSQL.Pretty
+import Data.Text.Prettyprint.Doc hiding ((<>))
 import Config
 
 
-createTaskTable :: Connection -> IO ()
+createTaskTable :: Connection -> IO (Doc ann)
 createTaskTable connection = do
   let
     theTableName = tableName conf
@@ -28,7 +29,7 @@ createTaskTable connection = do
       "`metadata` text" :
       [])
 
-  S.createTableWithQuery
+  result <- S.createTableWithQuery
     connection
     theTableName
     createTableQuery
@@ -50,6 +51,8 @@ createTaskTable connection = do
       \set `closed_utc` = datetime('now')\n\
       \where `ulid` = `new`.`ulid`\n\
       \"
+
+  pure result
 
 
 taskViewQuery :: Query
@@ -103,7 +106,7 @@ taskViewQuery =
     selectQuery
 
 
-createTaskView :: Connection -> IO ()
+createTaskView :: Connection -> IO (Doc ann)
 createTaskView connection = do
   let
     viewName = "tasks_view"
@@ -114,7 +117,7 @@ createTaskView connection = do
     (S.getView viewName taskViewQuery)
 
 
-createTagsTable :: Connection -> IO ()
+createTagsTable :: Connection -> IO (Doc ann)
 createTagsTable connection = do
   let
     theTableName = "task_to_tag"
@@ -194,7 +197,7 @@ tagsViewQuery =
     Query selectQueryText
 
 
-createTagsView :: Connection -> IO ()
+createTagsView :: Connection -> IO (Doc ann)
 createTagsView connection = do
   let viewName = "tags"
 
@@ -204,7 +207,7 @@ createTagsView connection = do
     (S.getView viewName tagsViewQuery)
 
 
-createNotesTable :: Connection -> IO ()
+createNotesTable :: Connection -> IO (Doc ann)
 createNotesTable connection = do
   let
     theTableName = "task_to_note"
@@ -219,3 +222,17 @@ createNotesTable connection = do
     connection
     theTableName
     createTableQuery
+
+
+createTables :: Connection -> IO (Doc ann)
+createTables connection = do
+  t1 <- createTaskTable connection
+  t2 <- createTagsTable connection
+  t3 <- createNotesTable connection
+
+  v1 <- createTaskView connection
+  v2 <- createTagsView connection
+
+  pure $
+    t1 <> t2 <> t3 <>
+    v1 <> v2

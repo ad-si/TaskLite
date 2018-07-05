@@ -17,6 +17,7 @@ import ImportExport
 import Task (TaskState(..))
 import Paths_tasklite (version)
 import Config
+import DbSetup
 
 
 data Command
@@ -543,6 +544,7 @@ main = do
   cliCommand <- execParser commandParserInfo
 
   connection <- setupConnection
+  tableStatus <- createTables connection
 
   let addTaskC = addTask connection
 
@@ -559,7 +561,7 @@ main = do
     ListObsolete -> obsoleteTasks connection
     ListNoTag -> listNoTag connection
     ListWithTag tags -> listWithTag connection tags
-    QueryTasks query -> queryTasks query
+    QueryTasks query -> queryTasks connection query
     RunSql query -> runSql query
     Tags -> listTags connection
     Import -> importTask
@@ -584,7 +586,7 @@ main = do
     Prioritize val ids -> adjustPriority val ids
     InfoTask idSubstr -> infoTask connection idSubstr
     NextTask -> nextTask connection
-    FindTask pattern -> findTask pattern
+    FindTask pattern -> findTask connection pattern
     AddTag tagText ids -> addTag connection tagText ids
     AddNote noteText ids -> addNote connection noteText ids
     SetDueUtc datetime ids -> setDueUtc connection datetime ids
@@ -594,5 +596,5 @@ main = do
     Alias alias -> pure $ aliasWarning alias
 
   -- TODO: Remove color when piping into other command
-  putDoc $ doc <> hardline
+  putDoc $ tableStatus <> doc <> hardline
 

@@ -11,18 +11,6 @@ import Utils
 import DbSetup
 
 
-setupTestConnection :: FilePath -> IO Sql.Connection
-setupTestConnection filePath = do
-    connection <- Sql.open filePath
-
-    createTaskTable connection
-    createTagsTable connection
-    createNotesTable connection
-    createTaskView connection
-
-    pure connection
-
-
 -- | The tests build up upon each other
 -- | and therefore the order must not be changed
 testSuite :: Sql.Connection -> SpecWith ()
@@ -34,6 +22,16 @@ testSuite connection = do
 
 
     it "creates necessary tables on initial run" $ do
+      tableStatus <- createTables connection
+      (unpack $ show tableStatus) `shouldBe`
+        "🆕 Create table \"tasks\"\n\
+        \🆕 Create table \"task_to_tag\"\n\
+        \🆕 Create table \"task_to_note\"\n\
+        \🆕 Create table \"tasks_view\"\n\
+        \🆕 Create table \"tags\"\n"
+
+
+    it "initially contains no tasks" $ do
       tasks <- headTasks connection
       (unpack $ show tasks) `shouldStartWith` "No tasks available"
 
@@ -108,12 +106,12 @@ testSuite connection = do
 main :: IO ()
 main = do
   withSystemTempFile "main.db" $ \filePath _ -> do
-    connection <- setupTestConnection filePath
+    connection <- Sql.open filePath
     hspec $ testSuite connection
 
   -- | Do not delete database after tests for debugging
   -- filePath <- emptySystemTempFile "main.db"
   -- putText ""
   -- print filePath
-  -- connection <- setupTestConnection filePath
+  -- connection <- Sql.open filePath
   -- hspec $ testSuite connection

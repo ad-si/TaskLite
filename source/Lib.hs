@@ -88,16 +88,7 @@ setupConnection :: IO Connection
 setupConnection = do
   homeDir <- getHomeDirectory
   createDirectoryIfMissing True $ getMainDir homeDir
-  connection <- open $ (getMainDir homeDir) <> "/" <> (dbName conf)
-
-  createTaskTable connection
-  createTagsTable connection
-  createNotesTable connection
-
-  createTaskView connection
-  createTagsView connection
-
-  return connection
+  open $ (getMainDir homeDir) <> "/" <> (dbName conf)
 
 
 execWithConn :: (Connection -> IO a) -> IO a
@@ -371,9 +362,8 @@ nextTask connection = do
     Just task -> pretty task
 
 
-findTask :: Text -> IO (Doc AnsiStyle)
-findTask pattern = do
-  connection <- setupConnection
+findTask :: Connection -> Text -> IO (Doc AnsiStyle)
+findTask connection pattern = do
   tasks <- query_ connection $ Query $
     "select ulid, body, tags, notes, metadata from tasks_view"
 
@@ -683,9 +673,8 @@ listWithTag connection tags = do
   pure $ formatTasks tasks
 
 
-queryTasks :: Text -> IO (Doc AnsiStyle)
-queryTasks sqlQuery = do
-  connection <- setupConnection
+queryTasks :: Connection -> Text -> IO (Doc AnsiStyle)
+queryTasks connection sqlQuery = do
   tasks <- query_ connection $ Query $
     "select * from `tasks_view` where " <> sqlQuery
   pure $ formatTasks tasks
