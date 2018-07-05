@@ -330,25 +330,23 @@ adjustPriority adjustment ids  = do
     pure $ vsep docs
 
 
-infoTask :: Text -> IO (Doc AnsiStyle)
-infoTask idSubstr = do
-  dbPath <- getDbPath
-  withConnection dbPath $ \connection -> do
-    execWithId connection idSubstr $ \taskUlid -> do
-      runBeamSqlite connection $ do
-        task <- runSelectReturningOne $
-          lookup_ (_tldbTasks taskLiteDb) taskUlid
+infoTask :: Connection -> Text -> IO (Doc AnsiStyle)
+infoTask connection idSubstr = do
+  execWithId connection idSubstr $ \taskUlid -> do
+    runBeamSqlite connection $ do
+      task <- runSelectReturningOne $
+        lookup_ (_tldbTasks taskLiteDb) taskUlid
 
-        tags <- runSelectReturningList $ select $
-          filter_ (\tag -> TaskToTag._ttTaskUlid tag ==. val_ taskUlid) $
-          all_ (_tldbTaskToTag taskLiteDb)
+      tags <- runSelectReturningList $ select $
+        filter_ (\tag -> TaskToTag._ttTaskUlid tag ==. val_ taskUlid) $
+        all_ (_tldbTaskToTag taskLiteDb)
 
-        notes <- runSelectReturningList $ select $
-          filter_ (\note -> TaskToNote.task_ulid note ==. val_ taskUlid) $
-          all_ (_tldbTaskToNote taskLiteDb)
+      notes <- runSelectReturningList $ select $
+        filter_ (\theNote -> TaskToNote.task_ulid theNote ==. val_ taskUlid) $
+        all_ (_tldbTaskToNote taskLiteDb)
 
-        pure $ pretty $ T.pack $
-          (show task) <> (show tags) <> (show notes)
+      pure $ pretty $ T.pack $
+        (show task) <> (show tags) <> (show notes)
 
 
 nextTask :: Connection -> IO (Doc AnsiStyle)
@@ -443,13 +441,13 @@ addTag connection tag ids = do
 
 
 addNote :: Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
-addNote connection note ids = do
+addNote connection noteBody ids = do
   docs <- forM ids $ \idSubstr ->
     execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
       now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
       ulid <- fmap (toLower . show) getULID
 
-      let taskToNote = TaskToNote ulid taskUlid note
+      let taskToNote = TaskToNote ulid taskUlid noteBody
 
       runBeamSqlite connection $ runInsert $
         insert (_tldbTaskToNote taskLiteDb) $

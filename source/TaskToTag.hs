@@ -3,9 +3,7 @@ module TaskToTag where
 import Protolude as P
 
 import Database.Beam
-import Database.Beam.Schema.Tables
 import Task (TaskT)
-import TaskToNote (TaskToNoteT)
 
 
 -- | Record for storing entries of the `task_to_tag` table

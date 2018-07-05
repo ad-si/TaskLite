@@ -582,7 +582,7 @@ main = do
     BoostTasks ids -> adjustPriority 1 ids
     HushTasks ids -> adjustPriority (-1) ids
     Prioritize val ids -> adjustPriority val ids
-    InfoTask idSubstr -> infoTask idSubstr
+    InfoTask idSubstr -> infoTask connection idSubstr
     NextTask -> nextTask connection
     FindTask pattern -> findTask pattern
     AddTag tagText ids -> addTag connection tagText ids
