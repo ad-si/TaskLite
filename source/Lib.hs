@@ -12,6 +12,7 @@ import Database.Beam.Schema.Tables
 import Database.SQLite.Simple as Sql
 import Numeric
 import System.Directory
+import System.IO as SIO
 import System.Process (readProcess)
 import qualified Text.Fuzzy as Fuzzy
 import Time.System
@@ -111,9 +112,17 @@ execWithConn func = do
     )
 
 
+writeToLog :: [Char] -> IO ()
+writeToLog message = do
+  homeDir <- getHomeDirectory
+  let logFile = (getMainDir homeDir) <> "/log.sql"
+  -- Use System.IO so it doesn't have to be converted to Text first
+  SIO.appendFile logFile $ message <> "\n"
+
+
 insertTask :: Connection -> Task -> IO ()
 insertTask connection task = do
-  runBeamSqlite connection $ runInsert $
+  runBeamSqliteDebug writeToLog connection $ runInsert $
     insert (_tldbTasks taskLiteDb) $
     insertValues [task]
 
@@ -124,7 +133,7 @@ insertTags connection primKey tags = do
     tagUlid <- fmap (toLower . show) getULID
     pure $ TaskToTag tagUlid primKey tag
 
-  runBeamSqlite connection $ runInsert $
+  runBeamSqliteDebug writeToLog connection $ runInsert $
     insert (_tldbTaskToTag taskLiteDb) $
     insertValues taskToTags
 
@@ -134,7 +143,7 @@ insertNotes connection primKey notes = do
   taskToNotes <- forM notes $ \theNote -> do
     pure $ TaskToNote (Note.ulid theNote) primKey (Note.body theNote)
 
-  runBeamSqlite connection $ runInsert $
+  runBeamSqliteDebug writeToLog connection $ runInsert $
     insert (_tldbTaskToNote taskLiteDb) $
     insertValues taskToNotes
 
@@ -239,7 +248,7 @@ execWithId connection idSubstr callback = do
 
 setStateAndClosed :: Connection -> TaskUlid -> TaskState -> IO ()
 setStateAndClosed connection taskUlid theTaskState = do
-  runBeamSqlite connection $ runUpdate $
+  runBeamSqliteDebug writeToLog connection $ runUpdate $
     update (_tldbTasks taskLiteDb)
       (\task -> [ (Task.state task) <-. val_  theTaskState])
       (\task -> primaryKey task ==. val_ taskUlid &&.
@@ -301,7 +310,7 @@ adjustPriority adjustment ids  = do
     docs <- forM ids $ \idSubstr -> do
       doc <- execWithId connection idSubstr $ \(TaskUlid idText) -> do
         -- TODO: Figure out why this doesn't work
-        -- runBeamSqlite connection $ runUpdate $
+        -- runBeamSqliteDebug writeToLog connection $ runUpdate $
         --   update (_tldbTasks taskLiteDb)
         --     (\task -> [(Task.priority_adjustment task) <-.
         --       fmap (+ adjustment) (current_ (Task.priority_adjustment task))
@@ -425,11 +434,11 @@ addTag connection tag ids = do
 
       let taskToTag = TaskToTag ulid taskUlid tag
 
-      runBeamSqlite connection $ runInsert $
+      runBeamSqliteDebug writeToLog connection $ runInsert $
         insert (_tldbTaskToTag taskLiteDb) $
         insertValues [taskToTag]
 
-      runBeamSqlite connection $ runUpdate $
+      runBeamSqliteDebug writeToLog connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
           (\task -> [(Task.modified_utc task) <-. val_ now])
           (\task -> primaryKey task ==. val_ taskUlid)
@@ -449,11 +458,11 @@ addNote connection noteBody ids = do
 
       let taskToNote = TaskToNote ulid taskUlid noteBody
 
-      runBeamSqlite connection $ runInsert $
+      runBeamSqliteDebug writeToLog connection $ runInsert $
         insert (_tldbTaskToNote taskLiteDb) $
         insertValues [taskToNote]
 
-      runBeamSqlite connection $ runUpdate $
+      runBeamSqliteDebug writeToLog connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
           (\task -> [(Task.modified_utc task) <-. val_ now])
           (\task -> primaryKey task ==. val_ taskUlid)
@@ -471,7 +480,7 @@ setDueUtc connection datetime ids = do
 
   docs <- forM ids $ \idSubstr ->
     execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
-      runBeamSqlite connection $ runUpdate $
+      runBeamSqliteDebug writeToLog connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
           (\task -> [(Task.due_utc task) <-. (val_ $ Just utcText)])
           (\task -> primaryKey task ==. val_ taskUlid)
