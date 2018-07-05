@@ -4,9 +4,11 @@ import Protolude as P
 
 import Data.Aeson as Aeson
 import Data.Aeson.Text as Aeson
+import Data.Yaml as Yaml
 import qualified Data.ByteString.Lazy as BSL
 import Data.Csv as Csv
 import Data.Text as T
+import Data.Text.Prettyprint.Doc hiding ((<>))
 import Database.Beam
 import Database.Beam.Backend.SQL
 import Database.Beam.Sqlite.Connection
@@ -127,3 +129,12 @@ instance Sql.FromField.FromField Value where
       Right value -> Ok value
   fromField f = returnError ConversionFailed f "expecting SQLText column type"
 
+-- For conversion to JSON
+instance ToJSON Task
+instance ToJSON (PrimaryKey TaskT Identity)
+
+instance Pretty Task where
+  pretty = pretty
+    . T.dropEnd 1 -- Drop trailing newline to maybe add it later
+    . decodeUtf8
+    . Yaml.encode

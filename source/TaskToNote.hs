@@ -2,9 +2,11 @@ module TaskToNote where
 
 import Protolude as P
 
+import Data.Yaml as Yaml
 import Database.Beam
 import Task (TaskT)
--- import qualified FullTask as FullTask
+import Data.Text as T
+import Data.Text.Prettyprint.Doc hiding ((<>))
 
 
 -- | Record for storing entries of the `task_to_note` table
@@ -27,3 +29,12 @@ instance Table TaskToNoteT where
     deriving Generic
   primaryKey = TaskToNoteId . ulid
 instance Beamable (PrimaryKey TaskToNoteT)
+
+-- For conversion to JSON
+instance ToJSON TaskToNote
+
+instance Pretty TaskToNote where
+  pretty = pretty
+    . T.dropEnd 1 -- Drop trailing newline to maybe add it later
+    . decodeUtf8
+    . Yaml.encode

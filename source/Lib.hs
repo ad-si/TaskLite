@@ -23,6 +23,7 @@ import Unsafe (unsafeHead)
 
 import Utils
 import Task as Task
+import TaskView
 import FullTask as FullTask
 import Note as Note
 import TaskToNote as TaskToNote
@@ -47,15 +48,6 @@ instance FromRow NumRows where
   fromRow = NumRows <$> field
 
 
--- | Record for storing entries of the `tasks_view` table
--- TODO: Use Beam instead of SQLite.Simple
-data TaskView f = TaskView
-  { _tvTask :: TaskT f
-  , _tvTag :: TaskToTagT f
-  } deriving Generic
-instance Beamable TaskView
-
-
 data TaskLiteDb f = TaskLiteDb
   { _tldbTasks :: f (TableEntity TaskT)
   , _tldbTaskToTag :: f (TableEntity TaskToTagT)
@@ -71,7 +63,7 @@ taskLiteDb = defaultDbSettings `withDbModification`
   dbModification
     { _tldbTaskToTag = modifyTable identity $
         tableModification
-          { _ttTaskUlid = TaskUlid (fieldNamed "task_ulid") }
+          { TaskToTag.task_ulid = TaskUlid (fieldNamed "task_ulid") }
     , _tldbTaskToNote = modifyTable identity $
         tableModification
           { TaskToNote.task_ulid = TaskUlid (fieldNamed "task_ulid") }
@@ -332,21 +324,42 @@ adjustPriority adjustment ids  = do
 
 infoTask :: Connection -> Text -> IO (Doc AnsiStyle)
 infoTask connection idSubstr = do
-  execWithId connection idSubstr $ \taskUlid -> do
+  execWithId connection idSubstr $ \taskUlid@(TaskUlid idText)-> do
+    tasks <- query connection
+      (Query "select * from tasks_view where ulid is ?")
+      [idText :: Text]
+
     runBeamSqlite connection $ do
       task <- runSelectReturningOne $
         lookup_ (_tldbTasks taskLiteDb) taskUlid
 
       tags <- runSelectReturningList $ select $
-        filter_ (\tag -> TaskToTag._ttTaskUlid tag ==. val_ taskUlid) $
+        filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
         all_ (_tldbTaskToTag taskLiteDb)
 
       notes <- runSelectReturningList $ select $
         filter_ (\theNote -> TaskToNote.task_ulid theNote ==. val_ taskUlid) $
         all_ (_tldbTaskToNote taskLiteDb)
 
-      pure $ pretty $ T.pack $
-        (show task) <> (show tags) <> (show notes)
+      let
+        -- TODO: Colorize all YAML keys
+        mkGreen = annotate (color Green)
+        yamlList = (hang 2) . ("-" <+>)
+        rmLastLine = unlines . P.reverse . P.drop 1 . P.reverse . lines . show
+        formattedTask priority =
+          pretty task <> hardline
+          <> mkGreen "priority:" <+> (pretty priority) <> hardline
+          <> mkGreen "tags:\n"
+          <> indent 2 (vsep $ fmap
+              (yamlList . pretty . rmLastLine . pretty) tags)
+          <> hardline
+          <> mkGreen "notes:\n"
+          <> indent 2 (vsep $ fmap
+              (yamlList . pretty . rmLastLine . pretty) notes)
+
+      pure $ case P.head (tasks :: [FullTask]) of
+        Nothing -> pretty noTasksWarning
+        Just fullTask -> formattedTask (priority fullTask :: Maybe Float)
 
 
 nextTask :: Connection -> IO (Doc AnsiStyle)
