@@ -93,6 +93,7 @@ data Command
   -- | License -- Show license
   | Alias Text
   | Help
+  | UlidToUtc Text
 
   deriving (Show, Eq)
 
@@ -148,7 +149,7 @@ idVar =
 
 -- | Help Sections
 basic_sec, shortcut_sec, list_sec,
-  vis_sec, i_o_sec, advanced_sec, alias_sec
+  vis_sec, i_o_sec, advanced_sec, alias_sec, utils_sec
   :: (Text, Text)
 
 basic_sec    = ("{{basic_sec}}", "Basic Commands:")
@@ -158,6 +159,7 @@ vis_sec      = ("{{vis_sec}}", "Visualizations:")
 i_o_sec      = ("{{i_o_sec}}", "I/O Commands:")
 advanced_sec = ("{{advanced_sec}}", "Advanced Commands:")
 alias_sec    = ("{{alias_sec}}", "Aliases:")
+utils_sec    = ("{{utils_sec}}", "Utils:")
 
 
 
@@ -432,6 +434,29 @@ commandParser =
 
     <> fold (fmap getCommand nameToAliasList)
     )
+
+  <|> subparser ( commandGroup (T.unpack $ fst utils_sec)
+
+    <> command "ulid2utc" (toParserInfo
+        (UlidToUtc <$> strArgument (metavar "ULID" <> help "The ULID"))
+        "Extract UTC timestamp from ULID")
+
+    -- <> command "utc-yesterday"
+    -- <> command "utc-today"
+    -- <> command "utc-tomorrow"
+
+    -- <> command "utc-monday"
+    -- <> command "utc-tuesday"
+    -- <> command "utc-wednesday"
+    -- <> command "utc-thursday"
+    -- <> command "utc-friday"
+    -- <> command "utc-saturday"
+    -- <> command "utc-sunday"
+
+    -- <> command "utc-month"  -- … last day of the month
+    -- <> command "utc-quarter"  -- … last day of the quarter
+    -- <> command "utc-year"  -- … last day of the year
+    )
   )
 
 
@@ -523,6 +548,7 @@ helpReplacements =
         i_o_sec :
         advanced_sec :
         alias_sec :
+        utils_sec :
       []))
 
 
@@ -546,7 +572,11 @@ main = do
   connection <- setupConnection
   tableStatus <- createTables connection
 
-  let addTaskC = addTask connection
+  let
+    addTaskC = addTask connection
+    prettyUlid ulid = pretty $ fmap
+      (T.pack . timePrint (utcFormat conf))
+      (ulidToDateTime ulid)
 
   -- runMigrations connection
 
@@ -594,6 +624,7 @@ main = do
     Version -> pure $ (pretty $ showVersion version) <> hardline
     Help -> pure helpText
     Alias alias -> pure $ aliasWarning alias
+    UlidToUtc ulid -> pure $ prettyUlid ulid
 
   -- TODO: Remove color when piping into other command
   putDoc $ tableStatus <> doc <> hardline

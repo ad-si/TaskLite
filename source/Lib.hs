@@ -3,7 +3,6 @@ module Lib where
 import Protolude as P
 
 import Data.Hourglass
-import Codec.Crockford as Crock
 import Data.Text as T
 import Data.ULID
 import Database.Beam
@@ -492,18 +491,6 @@ setDueUtc connection datetime ids = do
         <+> "of task" <+> (dquotes $ pretty idText)
 
   pure $ vsep docs
-
-
-ulidToDateTime :: Text -> Maybe DateTime
-ulidToDateTime =
-  (fmap $
-    timeGetDateTimeOfDay
-    . Elapsed
-    . (`div` 1000)
-  )
-  . Crock.decode
-  . unpack
-  . T.take 10
 
 
 showAtPrecision :: Double -> Text

@@ -2,7 +2,8 @@ module Utils where
 
 import Protolude as P
 
-import qualified Data.Text as T
+import Codec.Crockford as Crock
+import Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Hourglass
 
@@ -38,3 +39,15 @@ parseUtc utcText =
     <|> (timeParse isoFormatNoSec utcString)
     <|> (timeParse isoDate utcString)
     <|> (timeParse isoFormat utcString)
+
+
+ulidToDateTime :: Text -> Maybe DateTime
+ulidToDateTime =
+  (fmap $
+    timeGetDateTimeOfDay
+    . Elapsed
+    . (`div` 1000)
+  )
+  . Crock.decode
+  . unpack
+  . T.take 10
