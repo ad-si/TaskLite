@@ -27,7 +27,6 @@ import FullTask as FullTask
 import Note as Note
 import TaskToNote as TaskToNote
 import TaskToTag as TaskToTag
-import DbSetup
 import Config
 
 
@@ -88,10 +87,7 @@ execWithConn func = do
   createDirectoryIfMissing True $ getMainDir homeDir
   withConnection
     ((getMainDir homeDir) <> "/" <> (dbName conf))
-    (\connection -> do
-        createTaskTable connection
-        func connection
-    )
+    func
 
 
 writeToLog :: [Char] -> IO ()
@@ -140,21 +136,33 @@ formatUlid =
   fmap (toLower . show)
 
 
-parseTaskBody :: [Text] -> (Text, [Text])
+-- | Parses the body of the tasks and extracts all meta data
+-- | Returns a tuple (body, tags, due_utc)
+-- TODO: Replace with parsec implementation
+parseTaskBody :: [Text] -> (Text, [Text], Maybe Text)
 parseTaskBody bodyWords =
   let
+    isTag = ("+" `T.isPrefixOf`)
+    isDueUtc = ("due:" `T.isPrefixOf`)
+    isMeta word = isTag word || isDueUtc word
     -- Handle case when word is actually a text
     bodyWordsReversed = bodyWords & T.unwords & T.words & P.reverse
     body = bodyWordsReversed
-      & P.dropWhile ("+" `T.isPrefixOf`)
+      & P.dropWhile isMeta
       & P.reverse
       & unwords
-    tags = bodyWordsReversed
-      & P.takeWhile ("+" `T.isPrefixOf`)
-      <&> T.replace "+" ""
+    metadata = bodyWordsReversed
+      & P.takeWhile isMeta
       & P.reverse
+    tags = fmap (T.replace "+" "") (P.filter isTag metadata)
+    dueUtc = metadata
+      & P.filter isDueUtc
+      <&> T.replace "due:" ""
+      & P.lastMay
+      >>= parseUtc
+      <&> pack . (timePrint $ utcFormat conf)
   in
-    (body, tags)
+    (body, tags, dueUtc)
 
 
 addTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
@@ -162,10 +170,9 @@ addTask connection bodyWords = do
   ulid <- formatUlid getULID
   modified_utc <- formatElapsed timeCurrent
   let
-    (body, tags) = parseTaskBody bodyWords
+    (body, tags, due_utc) = parseTaskBody bodyWords
     task = Task
       { state = Open
-      , due_utc = Nothing
       , closed_utc = Nothing
       , priority_adjustment = Nothing
       , metadata = Nothing
@@ -185,10 +192,9 @@ logTask connection bodyWords = do
   -- TODO: Set via a SQL trigger
   modified_utc <- formatElapsed timeCurrent
   let
-    (body, tags) = parseTaskBody bodyWords
+    (body, tags, due_utc) = parseTaskBody bodyWords
     task = Task
       { state = Done
-      , due_utc = Nothing
       , closed_utc = Just modified_utc
       , priority_adjustment = Nothing
       , metadata = Nothing

@@ -86,8 +86,8 @@ testSuite connection = do
         (unpack $ show doResult) `shouldStartWith` "✅ Finished task"
 
 
-    it "adds a taks and deletes it" $ do
-      _ <- addTask connection ["Just a test"]
+    it "adds a task with metadata and deletes it" $ do
+      _ <- addTask connection ["Just a test +tag due:2082-10-03 +what"]
       result <- nextTask connection
       let ulidText = getUlidFromBody result
 
@@ -109,7 +109,7 @@ main = do
     connection <- Sql.open filePath
     hspec $ testSuite connection
 
-  -- | Do not delete database after tests for debugging
+  -- | Does not delete database after tests for debugging
   -- filePath <- emptySystemTempFile "main.db"
   -- putText ""
   -- print filePath
