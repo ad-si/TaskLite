@@ -522,22 +522,26 @@ formatTaskLine taskUlidWidth task =
       <&> timePrint (utcFormat conf)
     dueUtcMaybe = (FullTask.due_utc task)
       >>= parseUtc
-      <&> timePrint (utcFormat conf)
+      <&> T.replace " 00:00:00" "" . T.pack . timePrint (utcFormat conf)
     multilineIndent = 2
     hangWidth = taskUlidWidth + 2
       + (dateWidth conf) + 2
       + (prioWidth conf) + 2
       + multilineIndent
-    taskLine = createdUtc <$$> \taskDate -> hang hangWidth $
-           annotate (idStyle conf) id
-      <++> annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
-            $ showAtPrecision $ realToFrac
-            $ fromMaybe 0 (FullTask.priority task))
-      <++> annotate (dateStyle conf) (pretty taskDate)
-      <++> annotate (bodyStyle conf) (reflow body)
-      <++> annotate (dueStyle conf) (pretty dueUtcMaybe)
-      <++> annotate (closedStyle conf) (pretty closedUtcMaybe)
-      <++> hsep (tags <$$> formatTag)
+    hhsep = concatWith (<++>)
+    isEmptyDoc doc = (show doc) /= ("" :: Text)
+    taskLine = createdUtc <$$> \taskDate ->
+      hang hangWidth $ hhsep $ P.filter isEmptyDoc (
+        annotate (idStyle conf) id :
+        annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
+          $ showAtPrecision $ realToFrac
+          $ fromMaybe 0 (FullTask.priority task)) :
+        annotate (dateStyle conf) (pretty taskDate) :
+        annotate (bodyStyle conf) (reflow body) :
+        annotate (dueStyle conf) (pretty dueUtcMaybe) :
+        annotate (closedStyle conf) (pretty closedUtcMaybe) :
+        hsep (tags <$$> formatTag) :
+        [])
   in
     fromMaybe
       ("Id" <+> (dquotes $ pretty $ FullTask.ulid task) <+>
