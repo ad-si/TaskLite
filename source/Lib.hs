@@ -534,6 +534,9 @@ formatTaskLine taskUlidWidth task =
       + multilineIndent
     hhsep = concatWith (<++>)
     isEmptyDoc doc = (show doc) /= ("" :: Text)
+    grayOut isDone doc = if isDone
+      then annotate (bodyStyle conf) doc
+      else annotate (bodyClosedStyle conf) doc
     taskLine = createdUtc <$$> \taskDate ->
       hang hangWidth $ hhsep $ P.filter isEmptyDoc (
         annotate (idStyle conf) id :
@@ -541,7 +544,7 @@ formatTaskLine taskUlidWidth task =
           $ showAtPrecision $ realToFrac
           $ fromMaybe 0 (FullTask.priority task)) :
         annotate (dateStyle conf) (pretty taskDate) :
-        annotate (bodyStyle conf) (reflow body) :
+        grayOut (isNothing $ FullTask.closed_utc task) (reflow body) :
         annotate (dueStyle conf) (pretty dueUtcMaybe) :
         annotate (closedStyle conf) (pretty closedUtcMaybe) :
         hsep (tags <$$> formatTag) :

@@ -17,6 +17,7 @@ data Config = Config
   , priorityStyle :: AnsiStyle
   , dateStyle :: AnsiStyle
   , bodyStyle :: AnsiStyle
+  , bodyClosedStyle :: AnsiStyle
   , closedStyle :: AnsiStyle
   , dueStyle :: AnsiStyle
   , tagStyle :: AnsiStyle
@@ -40,7 +41,8 @@ conf = Config
   , priorityStyle = color Magenta
   , dateStyle = color Yellow
   , bodyStyle = color White
-  , closedStyle = color Black
+  , bodyClosedStyle = color Black
+  , closedStyle = colorDull Black
   , dueStyle = color Red
   , tagStyle = color Blue
   , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
