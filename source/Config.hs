@@ -1,3 +1,7 @@
+{-|
+The default config primarily defines the styling and formatting
+-}
+
 module Config where
 
 import Protolude as P

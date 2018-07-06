@@ -1,3 +1,7 @@
+{-|
+Several utility functions (e.g for parsing & serializing UTC stamps)
+-}
+
 module Utils where
 
 import Protolude as P

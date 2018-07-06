@@ -1,3 +1,7 @@
+{-|
+Unit and integration tests
+-}
+
 import Protolude as P
 
 import Test.Hspec

@@ -1,3 +1,7 @@
+{-|
+Creates all tables and views
+-}
+
 module DbSetup where
 
 import Protolude as P
@@ -34,8 +38,8 @@ createTaskTable connection = do
     theTableName
     createTableQuery
 
-  -- | Update `modified_utc` whenever a task is updated
-  -- | (and `modified_utc` itselft isn't changed)
+  -- Update modified_utc whenever a task is updated
+  -- (and modified_utc itself isn't changed)
   execute_ connection $ S.createTriggerAfterUpdate "set_modified_utc" "tasks"
     "`new`.`modified_utc` is `old`.`modified_utc`"
     "\

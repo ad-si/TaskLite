@@ -1,6 +1,6 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedStrings #-}
-
+{-|
+Utils to simplify creation of SQL queries
+-}
 
 module SqlUtils where
 

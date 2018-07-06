@@ -1,3 +1,7 @@
+{-|
+This is the main module which provides the CLI
+-}
+
 module Main where
 
 import Protolude

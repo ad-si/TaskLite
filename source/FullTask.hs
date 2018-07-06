@@ -1,3 +1,7 @@
+{-|
+Data type to represent tasks from the `tasks_view`
+-}
+
 module FullTask where
 
 import Protolude as P

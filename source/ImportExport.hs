@@ -1,3 +1,7 @@
+{-|
+Functions to import and export tasks
+-}
+
 module ImportExport where
 
 import Protolude as P hiding (state)

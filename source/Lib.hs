@@ -1,3 +1,7 @@
+{-|
+Functions to create, update, and delete tasks / tags / notes
+-}
+
 module Lib where
 
 import Protolude as P

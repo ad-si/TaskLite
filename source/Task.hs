@@ -1,3 +1,7 @@
+{-|
+Datatype to represent a task as stored in the `tasks` table
+-}
+
 module Task where
 
 import Protolude as P
