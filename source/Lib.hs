@@ -18,6 +18,8 @@ import System.Directory
 import System.IO as SIO
 import System.Process (readProcess)
 import qualified Text.Fuzzy as Fuzzy
+import Text.ParserCombinators.ReadP as ReadP
+import GHC.Unicode (isSpace)
 import Time.System
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Util
@@ -710,6 +712,55 @@ runSql sqlQuery = do
     []
   -- Remove trailing newline
   pure $ pretty (T.dropEnd 1 $ T.pack result)
+
+
+data FilterExp
+  = HasTag Text
+  | NotTag Text
+  | HasDue Text
+  | HasStatus TaskState
+  | InvalidFilter Text
+  deriving Show
+
+
+tagParser :: ReadP FilterExp
+tagParser = do
+  _ <- char '+'
+  aTag <- munch (not . isSpace)
+  pure $ HasTag $ pack aTag
+
+
+dueParser :: ReadP FilterExp
+dueParser = do
+  _ <- string "due:"
+  utcStr <- munch (not . isSpace)
+  pure $ HasDue $ pack utcStr
+
+
+filterExpParser :: ReadP FilterExp
+filterExpParser = do
+  tagParser
+  <++ dueParser
+  <++ ((InvalidFilter . pack) <$> (munch1 $ not . isSpace))
+
+
+filterExpsParser :: ReadP [FilterExp]
+filterExpsParser = do
+  val <- sepBy1 filterExpParser skipSpaces
+  eof
+  return val
+
+
+parseFilterExp :: Text -> IO ()
+parseFilterExp input =
+  P.print $ readP_to_S filterExpsParser $ T.unpack input
+
+
+runFilter :: Connection -> [Text] -> IO (Doc AnsiStyle)
+runFilter connection exps =
+  undefined
+  -- TODO: Implement
+
 
 
 formatTasks :: [FullTask] -> Doc AnsiStyle

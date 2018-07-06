@@ -83,6 +83,7 @@ data Command
   | Count (Filter TaskState)
   | QueryTasks Text
   | RunSql Text
+  | RunFilter [Text]
   -- | Views -- List all available views
   | Tags -- List all used tags
   -- | Active -- Started tasks
@@ -375,9 +376,12 @@ commandParser =
     -- <> command "active-tags" (toParserInfo (pure $ Tags)
     --     "List all active tags (a.k.a projects) and their progress")
 
-    -- <> command "filter" -- "Filter tasks by specified tags"
-    )
-
+    <> command "filter"
+        (toParserInfo
+          (RunFilter <$> some
+            (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions"))
+          "Filter tasks by specified expressions")
+  )
   <|> subparser ( commandGroup (T.unpack $ fst i_o_sec)
 
     <> command "import" (toParserInfo (pure Import)
@@ -597,6 +601,7 @@ main = do
     ListWithTag tags -> listWithTag connection tags
     QueryTasks query -> queryTasks connection query
     RunSql query -> runSql query
+    RunFilter expressions -> runFilter connection expressions
     Tags -> listTags connection
     Import -> importTask
     Csv -> dumpCsv
