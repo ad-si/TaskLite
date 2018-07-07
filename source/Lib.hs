@@ -681,11 +681,11 @@ listWithTag connection tags = do
       \having count(tag) = " <> (show $ P.length tags)
 
     mainQuery = "\
-      \select \
-        \tasks_view.ulid as ulid, body, state, due_utc, closed_utc, \
-        \modified_utc, tags, notes, priority, metadata \
-      \from (" <> ulidsQuery <> ") tasks1 \
-      \left join tasks_view on tasks1.ulid is tasks_view.ulid \
+      \select\n\
+        \tasks_view.ulid as ulid, body, state, due_utc, closed_utc,\n\
+        \modified_utc, tags, notes, priority, metadata\n\
+      \from (" <> ulidsQuery <> ") tasks1\n\
+      \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
       \order by priority desc"
 
   tasks <- query_ connection $ Query mainQuery
@@ -722,12 +722,18 @@ data FilterExp
   | InvalidFilter Text
   deriving Show
 
-
 tagParser :: ReadP FilterExp
 tagParser = do
   _ <- char '+'
   aTag <- munch (not . isSpace)
   pure $ HasTag $ pack aTag
+
+
+notTagParser :: ReadP FilterExp
+notTagParser = do
+  _ <- char '-'
+  aTag <- munch (not . isSpace)
+  pure $ NotTag $ pack aTag
 
 
 dueParser :: ReadP FilterExp
@@ -737,10 +743,19 @@ dueParser = do
   pure $ HasDue $ pack utcStr
 
 
+stateParser :: ReadP FilterExp
+stateParser = do
+  _ <- string "state:"
+  utcStr <- munch (not . isSpace)
+  pure $ HasStatus $ fromMaybe Open (textToTaskState $ pack utcStr)
+
+
 filterExpParser :: ReadP FilterExp
 filterExpParser = do
-  tagParser
+      tagParser
+  <++ notTagParser
   <++ dueParser
+  <++ stateParser
   <++ ((InvalidFilter . pack) <$> (munch1 $ not . isSpace))
 
 
@@ -751,15 +766,73 @@ filterExpsParser = do
   return val
 
 
-parseFilterExp :: Text -> IO ()
-parseFilterExp input =
+parseFilterExps :: Text -> IO ()
+parseFilterExps input =
   P.print $ readP_to_S filterExpsParser $ T.unpack input
 
 
+-- | Returns (operator, where-query) tuple
+filterToSql :: FilterExp -> (Text, Text)
+filterToSql = \case
+  HasTag tag          -> ("intersect", "tag like '" <> tag <> "'")
+  NotTag tag          -> ("except", "tag like '" <> tag <> "'")
+  HasDue utc          -> ("intersect", "due_utc < datetime('" <> utc <>"')")
+  HasStatus taskState -> ("intersect", "state is '" <> (show taskState) <> "'")
+  InvalidFilter _     -> ("", "") -- Should never be called
+
+
 runFilter :: Connection -> [Text] -> IO (Doc AnsiStyle)
-runFilter connection exps =
-  undefined
-  -- TODO: Implement
+runFilter connection exps = do
+  let
+    parserResults = readP_to_S filterExpsParser $ T.unpack (unwords exps)
+    filterMay = listToMaybe parserResults
+
+  case filterMay of
+    Nothing -> pure "This case should be impossible as the parser doesn't fail"
+    Just (filterExps, _) -> do
+      let
+        isValid = \case InvalidFilter _ -> False; _ -> True
+        ppInvalidFilter (InvalidFilter error) =
+          pretty $ "\"" <> error <> "\" is an invalid filter"
+        errors = P.filter (not . isValid) filterExps
+        errorsDoc = if (P.length errors) > 0
+          then (vsep $ fmap (annotate (color Red) . ppInvalidFilter) errors)
+                <> hardline <> hardline
+          else emptyDoc
+        sqlQuery = getFilterQuery filterExps
+
+      tasks <- query_ connection sqlQuery
+
+      pure $ errorsDoc <> (formatTasks tasks)
+
+
+-- TODO: Increase performance of this query
+getFilterQuery :: [FilterExp] -> Query
+getFilterQuery filterExps =
+  let
+    isValid = \case InvalidFilter _ -> False; _ -> True
+    filterTuple = fmap filterToSql $ P.filter isValid filterExps
+
+    queries = filterTuple <&> \(operator, whereQuery) ->
+      operator <> "\n\
+      \select tasks.ulid\n\
+      \from tasks\n\
+      \left join task_to_tag on tasks.ulid is task_to_tag.task_ulid\n\
+      \where " <> whereQuery <> "\n\
+      \group by tasks.ulid"
+
+    ulidsQuery
+      =  "select tasks.ulid from tasks\n"
+      <> unlines queries
+
+    mainQuery = "\
+      \select\n\
+      \  tasks_view.ulid as ulid, body, state, due_utc, closed_utc,\n\
+      \  modified_utc, tags, notes, priority, metadata\n\
+      \from (" <> ulidsQuery <> ") tasks1\n\
+      \left join tasks_view on tasks1.ulid is tasks_view.ulid"
+  in
+    Query mainQuery
 
 
 

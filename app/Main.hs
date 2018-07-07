@@ -376,11 +376,11 @@ commandParser =
     -- <> command "active-tags" (toParserInfo (pure $ Tags)
     --     "List all active tags (a.k.a projects) and their progress")
 
-    <> command "filter"
+    <> command "get"
         (toParserInfo
           (RunFilter <$> some
             (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions"))
-          "Filter tasks by specified expressions")
+          "Get all tasks filtered by the specified expressions")
   )
   <|> subparser ( commandGroup (T.unpack $ fst i_o_sec)
 
