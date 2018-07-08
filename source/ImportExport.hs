@@ -16,10 +16,8 @@ import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.Hourglass
 import Data.ULID
-import Data.ULID.TimeStamp
 import Database.Beam
 import Database.SQLite.Simple as Sql
-import Foreign.C
 import Lib
 import System.Directory
 import System.Process
@@ -50,20 +48,13 @@ instance FromJSON Annotation where
 annotationToNote :: Annotation -> Note
 annotationToNote annot@Annotation {entry = entry, description = description} =
   let
-    utc = fromMaybe (timeFromElapsed 0 :: DateTime) (parseUtc entry)
+    utc = fromMaybe (timeFromElapsedP 0 :: DateTime) (parseUtc entry)
     ulidGenerated = (ulidFromInteger . abs . toInteger . hash) annot
     ulidCombined = setDateTime ulidGenerated utc
   in
     Note { ulid = (T.toLower . show) ulidCombined
          , body = description
          }
-
-
-setDateTime :: ULID -> DateTime -> ULID
-setDateTime ulid dateTime = ULID
-  (mkULIDTimeStamp $ realToFrac
-    (timeFromElapsed $ timeGetElapsed dateTime :: CTime))
-  (random ulid)
 
 
 data ImportTask = ImportTask
@@ -78,7 +69,7 @@ instance FromJSON ImportTask where
     entry        <- o .:? "entry"
     creation     <- o .:? "creation"
     created_at   <- o .:? "created_at"
-    let createdUtc = fromMaybe (timeFromElapsed 0 :: DateTime)
+    let createdUtc = fromMaybe (timeFromElapsedP 0 :: DateTime)
           (parseUtc =<< (entry <|> creation <|> created_at))
 
     o_body       <- o .:? "body"

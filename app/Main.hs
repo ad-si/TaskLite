@@ -50,7 +50,7 @@ data Command
   | SetDueUtc DateTime [IdText]
   -- | Start -- Add a note that work on task was started
   -- | Stop -- Add a note that work on task was stopped
-  -- | Clone -- Clone an existing task
+  | Duplicate [IdText]-- duplicate an existing task
   -- | Edit -- Launch editor with YAML version of task
   -- | Append -- Append words to a task description
   -- | Prepend -- Prepend words to a task description
@@ -106,6 +106,7 @@ data Command
 nameToAliasList :: [(Text, Text)]
 nameToAliasList = (
   ("annotate", "note") :
+  ("clone", "duplicate") :
   ("close", "end") :
   ("decrease", "hush") :
   ("finish", "do") :
@@ -122,7 +123,6 @@ nameToAliasList = (
   -- ("snooze", "wait") :
   -- ("sleep", "wait") :
   -- ("schedule", "wait") :
-  -- ("duplicate", "clone") :
   -- ("blocking", "blockers") :
   -- ("denotate", "denote") :
   [])
@@ -193,6 +193,10 @@ commandParser =
 
     <> command "delete" (toParserInfo (DeleteTasks <$> some (strArgument idVar))
         "Delete a task from the database (Attention: Irreversible)")
+
+    <> command "duplicate" (toParserInfo
+        (Duplicate <$> some (strArgument idVar))
+        "Duplicates a task (and deletes the closed and due UTC fields)")
 
     <> command "boost" (toParserInfo (BoostTasks <$> some (strArgument idVar))
           "Increase priority of specified tasks by 1")
@@ -583,8 +587,8 @@ main = do
   let
     addTaskC = addTask connection
     prettyUlid ulid = pretty $ fmap
-      (T.pack . timePrint (utcFormat conf))
-      (ulidToDateTime ulid)
+      (T.pack . timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])))
+      (ulidTextToDateTime ulid)
 
   -- runMigrations connection
 
@@ -629,6 +633,7 @@ main = do
     AddTag tagText ids -> addTag connection tagText ids
     AddNote noteText ids -> addNote connection noteText ids
     SetDueUtc datetime ids -> setDueUtc connection datetime ids
+    Duplicate ids -> duplicateTasks connection ids
     Count taskFilter -> countTasks taskFilter
     Version -> pure $ (pretty $ showVersion version) <> hardline
     Help -> pure helpText

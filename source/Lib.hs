@@ -112,10 +112,10 @@ insertTask connection task = do
 
 
 insertTags :: Connection -> TaskUlid -> [Text] -> IO ()
-insertTags connection primKey tags = do
+insertTags connection taskUlid tags = do
   taskToTags <- forM tags $ \tag -> do
     tagUlid <- fmap (toLower . show) getULID
-    pure $ TaskToTag tagUlid primKey tag
+    pure $ TaskToTag tagUlid taskUlid tag
 
   runBeamSqliteDebug writeToLog connection $ runInsert $
     insert (_tldbTaskToTag taskLiteDb) $
@@ -132,8 +132,25 @@ insertNotes connection primKey notes = do
     insertValues taskToNotes
 
 
-formatElapsed :: IO Elapsed -> IO Text
-formatElapsed =
+-- | Tuple is (Maybe createdUtc, noteBody)
+insertNoteTuples :: Connection -> TaskUlid -> [(Maybe DateTime, Text)] -> IO ()
+insertNoteTuples connection taskUlid notes = do
+  taskToNotes <- forM notes $ \(createdUtc, noteBody) -> do
+    noteUlid <- getULID
+    pure $ TaskToNote
+      (fromMaybe
+        (toLower $ show noteUlid)
+        (fmap (toLower . show . setDateTime noteUlid) createdUtc))
+      taskUlid
+      noteBody
+
+  runBeamSqliteDebug writeToLog connection $ runInsert $
+    insert (_tldbTaskToNote taskLiteDb) $
+    insertValues taskToNotes
+
+
+formatElapsedP :: IO ElapsedP -> IO Text
+formatElapsedP =
   fmap (pack . (timePrint $ utcFormat conf))
 
 
@@ -174,7 +191,7 @@ parseTaskBody bodyWords =
 addTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
 addTask connection bodyWords = do
   ulid <- formatUlid getULID
-  modified_utc <- formatElapsed timeCurrent
+  modified_utc <- formatElapsedP timeCurrentP
   let
     (body, tags, due_utc) = parseTaskBody bodyWords
     task = Task
@@ -196,9 +213,10 @@ logTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
 logTask connection bodyWords = do
   ulid <- formatUlid getULID
   -- TODO: Set via a SQL trigger
-  modified_utc <- formatElapsed timeCurrent
+  modified_utc <- formatElapsedP timeCurrentP
   let
-    (body, tags, due_utc) = parseTaskBody bodyWords
+    (body, extractedTags, due_utc) = parseTaskBody bodyWords
+    tags = extractedTags <> ["log"]
     task = Task
       { state = Done
       , closed_utc = Just modified_utc
@@ -443,7 +461,7 @@ addTag :: Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
 addTag connection tag ids = do
   docs <- forM ids $ \idSubstr ->
     execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
-      now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
+      now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrentP
       ulid <- fmap (toLower . show) getULID
 
       let taskToTag = TaskToTag ulid taskUlid tag
@@ -467,7 +485,7 @@ addNote :: Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
 addNote connection noteBody ids = do
   docs <- forM ids $ \idSubstr ->
     execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
-      now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrent
+      now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrentP
       ulid <- fmap (toLower . show) getULID
 
       let taskToNote = TaskToNote ulid taskUlid noteBody
@@ -499,8 +517,70 @@ setDueUtc connection datetime ids = do
           (\task -> [(Task.due_utc task) <-. (val_ $ Just utcText)])
           (\task -> primaryKey task ==. val_ taskUlid)
 
+        -- TODO: Update modified_utc via SQL trigger
+
       pure $ "📅 Set due UTC to" <+> (dquotes $ pretty utcText)
         <+> "of task" <+> (dquotes $ pretty idText)
+
+  pure $ vsep docs
+
+
+duplicateTasks :: Connection -> [IdText] -> IO (Doc AnsiStyle)
+duplicateTasks connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+      dupeUlid <- formatUlid getULID
+      -- TODO: Check if modified_utc can be set via an SQL trigger
+      modified_utc <- formatElapsedP timeCurrentP
+
+      -- Duplicate task
+      runBeamSqliteDebug writeToLog connection $ do
+        runInsert $ insert (_tldbTasks taskLiteDb) $ insertFrom $ do
+          task <- filter_
+            (\task -> primaryKey task ==. val_ taskUlid)
+            (all_ $ _tldbTasks taskLiteDb)
+
+          pure task
+            { Task.ulid = val_ dupeUlid
+            , Task.due_utc = val_ Nothing
+            , Task.closed_utc = val_ Nothing
+            , Task.modified_utc = val_ modified_utc
+            }
+
+        -- Duplicate tags
+        tags <- runSelectReturningList $ select $
+          filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
+          all_ (_tldbTaskToTag taskLiteDb)
+
+        liftIO $ insertTags
+          connection
+          (TaskUlid dupeUlid)
+          (fmap TaskToTag.tag tags)
+
+        -- Duplicate notes
+        notes <- runSelectReturningList $ select $
+          filter_ (\theNote -> TaskToNote.task_ulid theNote ==. val_ taskUlid) $
+          all_ (_tldbTaskToNote taskLiteDb)
+
+        let
+          noteTuples = fmap
+            (\theNote ->
+              ( ulidTextToDateTime (TaskToNote.ulid theNote)
+              , TaskToNote.note theNote)
+              )
+            notes
+        liftIO $ insertNoteTuples
+          connection
+          (TaskUlid dupeUlid)
+          noteTuples
+
+
+      numOfChanges <- changes connection
+
+      pure $ pretty $ if numOfChanges == 0
+        then "⚠️  Task \"" <> idText <> "\" could not be duplicated"
+        else "👯  Created a duplicate of task \"" <> idText
+          <> "\" with id \"" <> dupeUlid <> "\""
 
   pure $ vsep docs
 
@@ -517,7 +597,7 @@ formatTaskLine taskUlidWidth task =
     id = pretty $ T.takeEnd taskUlidWidth $ FullTask.ulid task
     createdUtc = fmap
       (pack . timePrint ISO8601_Date)
-      (ulidToDateTime $ FullTask.ulid task)
+      (ulidTextToDateTime $ FullTask.ulid task)
     body = FullTask.body task
     tags = fromMaybe [] $ FullTask.tags task
     formatTag = annotate (tagStyle conf)

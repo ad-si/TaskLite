@@ -44,6 +44,7 @@ default-extensions:
   - FlexibleContexts
   - FlexibleInstances
   - GADTs
+  - LambdaCase
   - MultiParamTypeClasses
   - MultiWayIf
   - NoImplicitPrelude
