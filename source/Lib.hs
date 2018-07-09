@@ -351,6 +351,26 @@ adjustPriority adjustment ids  = do
     pure $ vsep docs
 
 
+startTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
+startTasks connection ids = do
+  logMessage <- addNote connection "start" ids
+
+  pure $ pretty $ T.replace
+    "🗒  Added a note to"
+    "⏳ Started"
+    (show logMessage)
+
+
+stopTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
+stopTasks connection ids = do
+  logMessages <- addNote connection "stop" ids
+
+  pure $ pretty $ T.replace
+    "🗒  Added a note to"
+    "⌛️ Stopped"
+    (show logMessages)
+
+
 infoTask :: Connection -> Text -> IO (Doc AnsiStyle)
 infoTask connection idSubstr = do
   execWithId connection idSubstr $ \taskUlid@(TaskUlid idText)-> do

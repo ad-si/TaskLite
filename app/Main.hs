@@ -26,15 +26,15 @@ import DbSetup
 
 data Command
   {- Add -}
-  = AddTask   [Text]
-  | AddWrite  [Text]
-  | AddRead   [Text]
-  | AddWatch  [Text]
-  | AddListen [Text]
-  | AddBuy    [Text]
-  | AddSell   [Text]
-  | AddShip   [Text]
-  | LogTask   [Text]
+  = AddTask   [IdText]
+  | AddWrite  [IdText]
+  | AddRead   [IdText]
+  | AddWatch  [IdText]
+  | AddListen [IdText]
+  | AddBuy    [IdText]
+  | AddSell   [IdText]
+  | AddShip   [IdText]
+  | LogTask   [IdText]
 
   {- Modify -}
   | DoTasks [IdText]
@@ -48,9 +48,9 @@ data Command
   | AddTag TagText [IdText]
   | AddNote Text [IdText]
   | SetDueUtc DateTime [IdText]
-  -- | Start -- Add a note that work on task was started
-  -- | Stop -- Add a note that work on task was stopped
-  | Duplicate [IdText]-- duplicate an existing task
+  | Start [IdText]
+  | Stop [IdText]
+  | Duplicate [IdText]
   -- | Edit -- Launch editor with YAML version of task
   -- | Append -- Append words to a task description
   -- | Prepend -- Prepend words to a task description
@@ -235,6 +235,18 @@ commandParser =
             (metavar "DUE_UTC" <> help "Due timestamp in UTC")
       <*> some (strArgument idVar))
       "Set due UTC of specified tasks")
+
+    <> command "start" (toParserInfo
+        (Start <$> some (strArgument idVar))
+        "Add a note that work on task was started")
+
+    <> command "stop" (toParserInfo
+        (Stop <$> some (strArgument idVar))
+        "Add a note that work on task was stopped")
+
+    -- <> command "active" (toParserInfo
+    --     (Active <$> some (strArgument idVar))
+    --     "List all currently worked on tasks")
 
     -- <> command "touch" (toParserInfo (TouchTask <$> strArgument idVar)
     --     "Update modified UTC")
@@ -626,6 +638,8 @@ main = do
     DeleteTasks ids -> deleteTasks connection ids
     BoostTasks ids -> adjustPriority 1 ids
     HushTasks ids -> adjustPriority (-1) ids
+    Start ids -> startTasks connection ids
+    Stop ids -> stopTasks connection ids
     Prioritize val ids -> adjustPriority val ids
     InfoTask idSubstr -> infoTask connection idSubstr
     NextTask -> nextTask connection
