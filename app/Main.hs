@@ -33,6 +33,7 @@ data Command
   | AddListen [IdText]
   | AddBuy    [IdText]
   | AddSell   [IdText]
+  | AddPay    [IdText]
   | AddShip   [IdText]
   | LogTask   [IdText]
 
@@ -282,6 +283,10 @@ commandParser =
     <> command "sell" (toParserInfo (AddSell <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
         "Sell something")
+
+    <> command "pay" (toParserInfo (AddPay <$> some (strArgument
+        (metavar "BODY" <> help "Body of the task")))
+        "Pay for something")
 
     <> command "ship" (toParserInfo (AddShip <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
@@ -631,6 +636,7 @@ main = do
     AddListen bodyWords -> addTaskC $ ["Listen"] <> bodyWords <> ["+listen"]
     AddBuy bodyWords -> addTaskC $ ["Buy"] <> bodyWords <> ["+buy"]
     AddSell bodyWords -> addTaskC $ ["Sell"] <> bodyWords <> ["+sell"]
+    AddPay bodyWords -> addTaskC $ ["Pay"] <> bodyWords <> ["+pay"]
     AddShip bodyWords -> addTaskC $ ["Ship"] <> bodyWords <> ["+ship"]
     LogTask bodyWords -> logTask connection bodyWords
     DoTasks ids -> doTasks connection ids
