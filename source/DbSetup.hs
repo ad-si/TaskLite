@@ -71,10 +71,12 @@ taskViewQuery =
         ))
     caseOverdueSql = S.getCase Nothing
       [ ("`due_utc` is null", 0)
-      , ("`due_utc` >= datetime('now', '+1 month')", 0)
-      , ("`due_utc` >= datetime('now', '+1 week')", 3)
-      , ("`due_utc` >= datetime('now')", 6)
-      , ("`due_utc` < datetime('now')", 9)
+      , ("`due_utc` >= datetime('now', '+24 days')",  0)
+      , ("`due_utc` >= datetime('now',  '+6 days')",  3)
+      , ("`due_utc` >= datetime('now'            )",  6)
+      , ("`due_utc` >= datetime('now',  '-6 days')",  9)
+      , ("`due_utc` >= datetime('now', '-24 days')", 12)
+      , ("`due_utc` <  datetime('now', '-24 days')", 15)
       ]
     selectQuery = S.getSelect
       (
