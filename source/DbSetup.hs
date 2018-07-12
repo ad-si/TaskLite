@@ -33,30 +33,37 @@ createTaskTable connection = do
       "`metadata` text" :
       [])
 
-  result <- S.createTableWithQuery
+  S.createTableWithQuery
     connection
     theTableName
     createTableQuery
 
+
+createTriggerModified :: Connection -> IO (Doc ann)
+createTriggerModified connection = do
   -- Update modified_utc whenever a task is updated
   -- (and modified_utc itself isn't changed)
-  execute_ connection $ S.createTriggerAfterUpdate "set_modified_utc" "tasks"
-    "`new`.`modified_utc` is `old`.`modified_utc`"
-    "\
-      \update `tasks`\n\
-      \set `modified_utc` = datetime('now')\n\
-      \where `ulid` = `new`.`ulid`\n\
-      \"
+  S.createWithQuery connection $
+    S.createTriggerAfterUpdate "set_modified_utc" "tasks"
+      "`new`.`modified_utc` is `old`.`modified_utc`"
+      "\
+        \update `tasks`\n\
+        \set `modified_utc` = datetime('now')\n\
+        \where `ulid` = `new`.`ulid`\n\
+        \"
 
-  execute_ connection $ S.createTriggerAfterUpdate "set_closed_utc" "tasks"
-    "`new`.`state` is 'Done' or `new`.`state` is 'Obsolete'"
-    "\
-      \update `tasks`\n\
-      \set `closed_utc` = datetime('now')\n\
-      \where `ulid` = `new`.`ulid`\n\
-      \"
 
-  pure result
+createTriggerClosed :: Connection -> IO (Doc ann)
+createTriggerClosed connection = do
+  S.createWithQuery connection $
+    S.createTriggerAfterUpdate "set_closed_utc" "tasks"
+      "(new.state is 'Done' or new.state is 'Obsolete') \
+        \and (old.state is null or old.state is 'Open')"
+      "\
+        \update `tasks`\n\
+        \set `closed_utc` = datetime('now')\n\
+        \where `ulid` = `new`.`ulid`\n\
+        \"
 
 
 taskViewQuery :: Query
@@ -236,9 +243,13 @@ createTables connection = do
   t2 <- createTagsTable connection
   t3 <- createNotesTable connection
 
+  tr1 <- createTriggerModified connection
+  tr2 <- createTriggerClosed connection
+
   v1 <- createTaskView connection
   v2 <- createTagsView connection
 
   pure $
     t1 <> t2 <> t3 <>
+    tr1 <> tr2 <>
     v1 <> v2

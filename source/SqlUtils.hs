@@ -187,6 +187,22 @@ getView viewName selectQuery = Query $ T.unlines (
   [])
 
 
+createWithQuery :: Connection -> Query -> IO (Doc ann)
+createWithQuery connection theQuery = do
+  result <- try $ execute_ connection theQuery
+
+  let
+    output = case result :: Either SQLError () of
+      Left errorMessage ->
+        if isSuffixOf "already exists" (sqlErrorDetails errorMessage)
+        then ""
+        else T.pack $ (show errorMessage) <> "\n"
+      Right _ ->
+        "🆕 " <> (unwords $ P.take 3 $ words $ show theQuery) <> "… \n"
+
+  pure $ pretty output
+
+
 createTableWithQuery :: Connection -> Text -> Query -> IO (Doc ann)
 createTableWithQuery connection aTableName theQuery = do
   result <- try $ execute_ connection theQuery
@@ -216,7 +232,7 @@ getCase fieldNameMaybe valueMap =
 
 createTriggerAfterUpdate :: Text -> Text -> Text -> Text -> Query
 createTriggerAfterUpdate name tableName whenBlock body = Query $ "\
-    \create trigger if not exists `" <> name <> "_after_update`\n\
+    \create trigger `" <> name <> "_after_update`\n\
     \after update on `" <> tableName <> "`\n\
     \when " <> whenBlock <> "\n\
     \begin\n\
