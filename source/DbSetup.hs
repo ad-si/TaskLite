@@ -58,7 +58,7 @@ createTriggerClosed connection = do
   S.createWithQuery connection $
     S.createTriggerAfterUpdate "set_closed_utc" "tasks"
       "(new.state is 'Done' or new.state is 'Obsolete') \
-        \and (old.state is null or old.state is 'Open')"
+        \and old.state is not 'Done' and old.state is not 'Obsolete'"
       "\
         \update `tasks`\n\
         \set `closed_utc` = datetime('now')\n\
