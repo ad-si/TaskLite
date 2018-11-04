@@ -12,10 +12,6 @@ import Data.Text.Prettyprint.Doc (Doc, pretty)
 import Language.SQL.SimpleSQL.Syntax
 
 
-newtype SqlQuery = SqlQuery Text
-  deriving Show
-
-
 id :: Name -> ValueExpr
 id columnName =
   Iden [ columnName ]
@@ -162,8 +158,8 @@ getTable tableName columns = Query $ T.unlines (
   [])
 
 
-getColumns :: Text -> [Text] -> SqlQuery
-getColumns tableName columns  = SqlQuery $ unlines $ (
+getColumns :: Text -> [Text] -> Query
+getColumns tableName columns  = Query $ unlines $ (
   "select" :
   "  " <> T.intercalate ",\n  " columns <> "\n" :
   "from `" <> tableName <> "`;" :

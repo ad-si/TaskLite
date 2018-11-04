@@ -119,6 +119,7 @@ nameToAliasList = (
   -- ("reopen", "unclose") :
   ("rm", "delete") :
   ("stop", "end") :
+  ("search", "find") :
   -- ("week", "sunday") :
   -- ("latest", "newest") :
   -- ("snooze", "wait") :

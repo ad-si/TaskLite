@@ -21,16 +21,25 @@ testSuite :: Sql.Connection -> SpecWith ()
 testSuite connection = do
   describe "TaskLite" $ do
     let
-      taskStart = "state: Open\npriority: 0\nbody: Just a test\nulid: "
+      taskStart =
+        "state: Open\n\
+        \priority: 0\n\
+        \body: Just a test\n\
+        \ulid: "
       getUlidFromBody = T.take 26 . T.drop (P.length taskStart) . pack . show
 
 
     it "creates necessary tables on initial run" $ do
       tableStatus <- createTables connection
       (unpack $ show tableStatus) `shouldBe`
+        -- TODO: Improve formatting "create trigger"
         "🆕 Create table \"tasks\"\n\
         \🆕 Create table \"task_to_tag\"\n\
         \🆕 Create table \"task_to_note\"\n\
+        \🆕 \"create trigger `set_modified_utc_after_update`\\n\
+          \after… \n\
+        \🆕 \"create trigger `set_closed_utc_after_update`\\n\
+          \after… \n\
         \🆕 Create table \"tasks_view\"\n\
         \🆕 Create table \"tags\"\n"
 

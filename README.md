@@ -1,6 +1,6 @@
 # TaskLite
 
-CLI task-list manager built with Haskell and SQLite.
+CLI task-list manager built with [Haskell] and [SQLite].
 
 <img
   src='screenshots/withtag.svg'
@@ -31,14 +31,14 @@ stack install tasklite
 - **More Robust & Stable** \
   Taskwarrior is plagued by [numerous bugs][TW Issues] due to its
   unncessary complexity and nonoptimal choice of programming languages.
-  TaskLite's simple structure and Haskell's excellent correctness guarantees,
+  TaskLite's simple structure and [Haskell]'s excellent correctness guarantees,
   however, yield to a very stable and robust piece of software.
 
 - **Faster** \
-  Haskell plus SQLite yields to an outstanding performance.
+  [Haskell] plus [SQLite] yields to an outstanding performance.
 
 - **More Powerful** \
-  As all tasks are stored in a SQLite database, you can use all the available
+  As all tasks are stored in a [SQLite] database, you can use all the available
   tooling for it to supercharge your TaskLite installation.
   For example [Datasette] for an instant REST API, or [DB Browser for SQLite]
   to manipulate and view your data in a GUI.
@@ -104,21 +104,21 @@ curl https://api.github.com/repos/$OWNER/$REPO/issues/$NUM | tl import
 ```
 
 
-### Exports Fields Matrix
+### Import / Export Fields Matrix
 
 *Implicit State* | Open | Waiting | Repeating | Done   | Closed
-state            | -    |         |           | Done   | Obsolete
 -----------------|------|---------|-----------|--------|---------
+state            | 🛠   |   🛠    |   🛠     | Done   | Obsolete
 ulid             | ✅   |   ✅    |   ✅     |   ✅   |   ✅
-wait_utc         |      |   ✅    |   ✅     |   ❔   |   ❔
+wait_utc         |      |   ✅    |   ❔     |   ❔   |   ❔
 closed_utc       |      |         |          |   ✅   |   ✅
 priority         | 🛠   |   🛠    |   🛠     |   🛠   |   🛠
 
 Legend:
-- [ ] = Not allowed
+- ( ) = Not allowed
 - ✅ = Required
 - ❔ = Maybe
-- 🛠 = Generated
+- 🛠 = Generated (Will be generated during export, but ignored during import)
 
 
 ### REST API
@@ -177,3 +177,36 @@ svg-term \
 ```
 
 [svg-term](https://github.com/marionebl/svg-term-cli)
+
+
+## Programmatic Use
+
+While TaskLite is great tool to manage your personal tasks,
+it can also be used as a dependency of other programms.
+For example as a queue for processing tasks.
+As a matter of fact, we're using it as our queue of repositories to check
+at [feram.io].
+
+
+## 3rd Party Tools to Edit Tables
+
+- [VisiData] - Interactive CLI multitool for tabular data.
+- [DB Browser for SQLite]
+
+[VisiData]: http://visidata.org
+
+
+## Related
+
+- [Taskbook]
+- [Taskwarrior] - Commandline Task Management.
+- [CommitTasks]
+- [Ff] - A distributed note taker and task manager.
+- [Toodles] - Project management from the TODO's in your codebase
+
+[Taskbook]: https://github.com/klauscfhq/taskbook
+[Taskwarrior]: https://github.com/GothenburgBitFactory/taskwarrior
+[CommitTasks]: https://github.com/ZeroX-DG/CommitTasks
+[Ff]: https://github.com/ff-notes/ff
+[Toodles]: https://github.com/aviaviavi/toodles
+

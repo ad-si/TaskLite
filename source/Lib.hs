@@ -276,8 +276,8 @@ doTasks connection ids = do
       numOfChanges <- changes connection
 
       pure $ pretty $ if numOfChanges == 0
-        then "⚠️  Task \"…" <> idText <> "\" is already done"
-        else "✅ Finished task \"…" <> idText <> "\""
+        then "⚠️  Task \"" <> idText <> "\" is already done"
+        else "✅ Finished task \"" <> idText <> "\""
     pure doc
   pure $ vsep docs
 
@@ -291,8 +291,8 @@ endTasks connection ids = do
       numOfChanges <- changes connection
 
       pure $ pretty $ if numOfChanges == 0
-        then "⚠️  Task \"…" <> idText <> "\" is already marked as obsolete"
-        else "⏹  Marked task \"…" <> idText <> "\" as obsolete"
+        then "⚠️  Task \"" <> idText <> "\" is already marked as obsolete"
+        else "⏹  Marked task \"" <> idText <> "\" as obsolete"
     pure doc
   pure $ vsep docs
 
@@ -309,8 +309,8 @@ deleteTasks connection ids = do
       numOfChanges <- changes connection
 
       pure $ pretty $ if numOfChanges == 0
-        then "⚠️ An error occured while deleting task \"…" <> idText <> "\""
-        else "❌ Deleted task \"…" <> idText <> "\""
+        then "⚠️ An error occured while deleting task \"" <> idText <> "\""
+        else "❌ Deleted task \"" <> idText <> "\""
     pure doc
   pure $ vsep docs
 
