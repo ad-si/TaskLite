@@ -211,6 +211,19 @@ createTableWithQuery connection aTableName theQuery = do
         else T.pack $ (show errorMessage) <> "\n"
       Right _ -> "🆕 Create table \"" <> aTableName <> "\"\n"
 
+  appendFile "create-table.log" $ fromQuery theQuery
+  pure $ pretty output
+
+
+runMigration :: Connection -> Query -> IO (Doc ann)
+runMigration connection theQuery = do
+  result <- try $ execute_ connection theQuery
+
+  let
+    output = case result :: Either SQLError () of
+      Left errorMessage -> T.pack $ (show errorMessage) <> "\n"
+      Right _ -> "Migrated from TODO to TODO"
+
   pure $ pretty output
 
 

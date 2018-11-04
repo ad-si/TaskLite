@@ -601,6 +601,7 @@ main = do
 
   connection <- setupConnection
   tableStatus <- createTables connection
+  migrationsStatus <- runMigrations connection
 
   let
     addTaskC = addTask connection
