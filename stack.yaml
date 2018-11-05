@@ -5,4 +5,5 @@ extra-deps:
   - ulid-0.2.0.0
   - crockford-0.2
   - fuzzy-0.1.0.0
-  - simple-sql-parser-0.4.3
+  - github: JakeWheat/simple-sql-parser
+    commit: 00433a26e8303c9e61359f406da5a2dbf1293fc8

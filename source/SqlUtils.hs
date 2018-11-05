@@ -12,87 +12,87 @@ import Data.Text.Prettyprint.Doc (Doc, pretty)
 import Language.SQL.SimpleSQL.Syntax
 
 
-id :: Name -> ValueExpr
+id :: Name -> ScalarExpr
 id columnName =
   Iden [ columnName ]
 
 
-ids :: [Name] -> ValueExpr
+ids :: [Name] -> ScalarExpr
 ids segments =
   Iden $ segments
 
 
-tableCol :: Name -> Name -> ValueExpr
+tableCol :: Name -> Name -> ScalarExpr
 tableCol table column =
   Iden [table, column]
 
 
-col :: Name -> ValueExpr
+col :: Name -> ScalarExpr
 col column =
   Iden [column]
 
 
-count :: ValueExpr -> ValueExpr
+count :: ScalarExpr -> ScalarExpr
 count column =
   App
-    [ Name "count" ]
+    [ Name Nothing "count" ]
     [ column ]
 
 
-ifNull :: Name -> Text -> ValueExpr
+ifNull :: Name -> Text -> ScalarExpr
 ifNull ifValue thenValue =
   App
-    [ Name "ifnull" ]
+    [ Name Nothing "ifnull" ]
     [ Iden [ifValue]
     , NumLit $ T.unpack thenValue
     ]
 
 
-dot :: Name -> Name -> ValueExpr
+dot :: Name -> Name -> ScalarExpr
 dot item subItem =
   ids [item, subItem]
 
 
-is :: ValueExpr -> ValueExpr -> ValueExpr
+is :: ScalarExpr -> ScalarExpr -> ScalarExpr
 is exprA exprB =
   BinOp
     exprA
-    [ Name "is" ]
+    [ Name Nothing "is" ]
     exprB
 
 
-isNotNull :: Name -> ValueExpr
+isNotNull :: Name -> ScalarExpr
 isNotNull columnName =
   PostfixOp
-    [ Name "is not null" ]
+    [ Name Nothing "is not null" ]
     ( Iden [ columnName ] )
 
 
-as :: ValueExpr -> Name -> (ValueExpr, Maybe Name)
-as column aliasName@(Name theAlias) =
+as :: ScalarExpr -> Name -> (ScalarExpr, Maybe Name)
+as column aliasName@(Name maybe theAlias) =
   ( column
   , if theAlias == ""
     then Nothing
     else Just aliasName
   )
-as column otherAlias = (column, Just otherAlias)
+-- as column otherAlias = (column, Just otherAlias)
 
 
-groupBy :: ValueExpr -> GroupingExpr
+groupBy :: ScalarExpr -> GroupingExpr
 groupBy = SimpleGroup
 
 
-orderByAsc :: ValueExpr -> SortSpec
+orderByAsc :: ScalarExpr -> SortSpec
 orderByAsc column =
   SortSpec column Asc NullsOrderDefault
 
 
-orderByDesc :: ValueExpr -> SortSpec
+orderByDesc :: ScalarExpr -> SortSpec
 orderByDesc column =
   SortSpec column Desc NullsOrderDefault
 
 
-leftJoinOn :: Name -> Name -> ValueExpr -> TableRef
+leftJoinOn :: Name -> Name -> ScalarExpr -> TableRef
 leftJoinOn tableA tableB joinOnExpr =
   TRJoin
     ( TRSimple [ tableA ] )
@@ -102,7 +102,7 @@ leftJoinOn tableA tableB joinOnExpr =
     ( Just ( JoinOn joinOnExpr ) )
 
 
-leftTRJoinOn :: TableRef -> TableRef -> ValueExpr -> TableRef
+leftTRJoinOn :: TableRef -> TableRef -> ScalarExpr -> TableRef
 leftTRJoinOn tableA tableB joinOnExpr =
   TRJoin
     tableA
@@ -112,22 +112,22 @@ leftTRJoinOn tableA tableB joinOnExpr =
     ( Just ( JoinOn joinOnExpr ) )
 
 
-castTo :: ValueExpr -> Text -> ValueExpr
-castTo valueExpr castType =
+castTo :: ScalarExpr -> Text -> ScalarExpr
+castTo scalarExpr castType =
   Cast
-    valueExpr
-    (TypeName [Name $ T.unpack castType])
+    scalarExpr
+    (TypeName [Name Nothing $ T.unpack castType])
 
 
-div :: ValueExpr -> ValueExpr -> ValueExpr
+div :: ScalarExpr -> ScalarExpr -> ScalarExpr
 div valueA valueB =
-  BinOp valueA [Name "/"] valueB
+  BinOp valueA [Name Nothing "/"] valueB
 
 
-roundTo :: Integer -> ValueExpr -> ValueExpr
+roundTo :: Integer -> ScalarExpr -> ScalarExpr
 roundTo numOfDigits column  =
   App
-    [ Name "round" ]
+    [ Name Nothing "round" ]
     [ column
     , NumLit $ show numOfDigits
     ]

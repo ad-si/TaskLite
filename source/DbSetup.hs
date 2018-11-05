@@ -151,7 +151,7 @@ createTagsTable connection = do
 tagsViewQuery :: Query
 tagsViewQuery =
   let
-    txtToName = Name . T.unpack
+    txtToName = (Name Nothing) . T.unpack
 
     tasks_t         = txtToName "tasks"
     task_to_tag_t   = txtToName "task_to_tag"
@@ -174,7 +174,7 @@ tagsViewQuery =
 
     subQueryAst = makeSelect
       { qeSelectList = (
-          S.col tag_c `S.as` (Name "") :
+          S.col tag_c `S.as` (Name Nothing "") :
           S.count (S.tableCol tasks_t ulid_c) `S.as` closed_count_c :
           [])
       , qeFrom = [ S.leftJoinOn tasks_t task_to_tag_t $
@@ -187,7 +187,7 @@ tagsViewQuery =
       }
     selectQueryAst = makeSelect
       { qeSelectList = (
-          t1Tag `S.as` (Name "") :
+          t1Tag `S.as` (Name Nothing "") :
           t1TagCount `S.as` open_c :
           closedCount `S.as` closed_c :
           (S.roundTo 6 (closedCount `S.castTo` "float" `S.div` t1TagCount))
@@ -205,7 +205,7 @@ tagsViewQuery =
       , qeGroupBy = [ S.groupBy t1Tag ]
       , qeOrderBy = [ S.orderByAsc t1Tag ]
       }
-    selectQueryText = T.pack $ prettyQueryExpr SQL2011 selectQueryAst
+    selectQueryText = T.pack $ prettyQueryExpr ansi2011 selectQueryAst
   in
     Query selectQueryText
 

@@ -601,7 +601,7 @@ main = do
 
   connection <- setupConnection
   tableStatus <- createTables connection
-  migrationsStatus <- runMigrations connection
+  -- migrationsStatus <- runMigrations connection
 
   let
     addTaskC = addTask connection
@@ -609,7 +609,6 @@ main = do
       (T.pack . timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])))
       (ulidTextToDateTime ulid)
 
-  -- runMigrations connection
 
   doc <- case cliCommand of
     ListAll -> listAll connection

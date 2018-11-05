@@ -13,6 +13,7 @@ import System.IO.Error
 import Lib
 import Utils
 import DbSetup
+import Migrations
 
 
 -- | The tests build up upon each other
@@ -42,6 +43,19 @@ testSuite connection = do
           \after… \n\
         \🆕 Create table \"tasks_view\"\n\
         \🆕 Create table \"tags\"\n"
+
+
+    it "migrates tables to latest version" $ do
+      migrationStatus <- runMigrations connection
+      (unpack $ show migrationStatus) `shouldBe`
+        "[\"pragma foreign_keys=OFF; \
+        \begin transaction; \
+        \alter table tasks add column user text not null; \
+        \pragma foreign_key_check; \
+        \pragma user_version = 1; \
+        \end transaction; \
+        \pragma foreign_keys=ON; \
+        \\"]"
 
 
     it "initially contains no tasks" $ do
