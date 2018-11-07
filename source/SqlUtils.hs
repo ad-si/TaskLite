@@ -69,7 +69,7 @@ isNotNull columnName =
 
 
 as :: ScalarExpr -> Name -> (ScalarExpr, Maybe Name)
-as column aliasName@(Name maybe theAlias) =
+as column aliasName@(Name _ theAlias) =
   ( column
   , if theAlias == ""
     then Nothing
@@ -215,16 +215,19 @@ createTableWithQuery connection aTableName theQuery = do
   pure $ pretty output
 
 
-runMigration :: Connection -> Query -> IO (Doc ann)
-runMigration connection theQuery = do
-  result <- try $ execute_ connection theQuery
+runMigration :: Connection -> [Query] -> IO (Doc ann)
+runMigration connection querySet = do
+  withTransaction connection $ do
+    result <- try $ sequence $ fmap (execute_ connection) querySet
 
-  let
-    output = case result :: Either SQLError () of
-      Left errorMessage -> T.pack $ (show errorMessage) <> "\n"
-      Right _ -> "Migrated from TODO to TODO"
+    putText $ "Result: " <> show querySet
 
-  pure $ pretty output
+    let
+      output = case result :: Either SQLError [()] of
+        Left errorMessage -> T.pack $ (show errorMessage) <> "\n"
+        Right _ -> "Migrated from TODO to TODO"
+
+    pure $ pretty output
 
 
 getCase :: Maybe Text -> [(Text, Float)] -> Text

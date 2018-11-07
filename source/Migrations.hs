@@ -13,51 +13,60 @@ import Language.SQL.SimpleSQL.Parse
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import SqlUtils
 
+-- | List of queries for one migration
+type QuerySet = [Query]
 
 data MigrateDirection = MigrateUp | MigrateDown
+data Migration = Migration
+  { id :: Int
+  , querySet :: QuerySet
+  }
 
 
-_2018_11_04_add_user :: MigrateDirection -> Query
-_2018_11_04_add_user = \case
-  MigrateUp -> "\
-    \alter table tasks \
-    \add column user text not null; \
-    \"
 
-  MigrateDown -> "\
-    \create table tasks_temp; \
-    \\
-    \insert into tasks_temp \
-    \select ulid, body, state, due_utc, closed_utc, \
-    \  modified_utc, priority_adjustment, metadata from tasks; \
-    \\
-    \drop table tasks; \
-    \\
-    \alter table tasks_temp rename to tasks; \
-    \"
+_2018_11_04_add_user :: MigrateDirection -> Migration
+_2018_11_04_add_user =
+  let
+    base = Migration
+      { id = 20181104
+      , querySet = []
+      }
+  in \case
+    MigrateUp -> base {
+        Migrations.querySet =
+          ["alter table tasks add column user text"]
+      }
 
-
-_2018_11_04_add_deleted :: MigrateDirection -> Query
-_2018_11_04_add_deleted = \case
-  MigrateUp -> "\
-    \\
-    \"
-
-  MigrateDown -> "\
-    \\
-    \"
+    MigrateDown -> base {
+        Migrations.querySet =
+          [ "create table tasks_temp"
+          , "insert into tasks_temp \
+            \select ulid, body, state, due_utc, closed_utc, \
+            \  modified_utc, priority_adjustment, metadata from tasks"
+          , "drop table tasks"
+          , "alter table tasks_temp rename to tasks"
+        ]
+      }
 
 
-wrapQuery :: Query -> Query
-wrapQuery (Query queryText) = Query $ "\
-  \pragma foreign_keys=OFF; \
-  \begin transaction; "
-  <> queryText <> "\
-  \pragma foreign_key_check; \
-  \pragma user_version = 1; \
-  \end transaction; \
-  \pragma foreign_keys=ON; \
-  \"
+_2018_12_01_add_deleted :: MigrateDirection -> Migration
+_2018_12_01_add_deleted =
+  let
+    base = Migration
+      { id = 20181201
+      , querySet = []
+      }
+  in \case
+    MigrateUp -> base { Migrations.querySet = [] }
+    MigrateDown -> base { Migrations.querySet = [] }
+
+
+wrapQuery :: QuerySet -> QuerySet
+wrapQuery querySet =
+  querySet <>
+  [ "pragma foreign_key_check"
+  , "pragma user_version = 123"
+  ]
 
 
 lintQuery :: Query -> Either Text Query
@@ -70,6 +79,11 @@ lintQuery sqlQuery =
     Right _ -> Right sqlQuery
 
 
+lintQuerySet :: QuerySet -> Either Text QuerySet
+lintQuerySet queries =
+  sequence $ fmap lintQuery queries
+
+
 runMigrations :: Connection -> IO (Doc ann)
 runMigrations connection = do
   let
@@ -77,19 +91,17 @@ runMigrations connection = do
       [ _2018_11_04_add_user
       -- , _2018_11_04_add_deleted
       ]
-    lintedMigrations :: Either Text [Query]
+    lintedMigrations :: Either Text [QuerySet]
     lintedMigrations = migrations
       <&> ($ MigrateUp)
-      <&> lintQuery
+      <&> (lintQuerySet . Migrations.querySet)
       <&> fmap wrapQuery
       & sequence
 
-  -- pure $ pretty $ (show lintedMigrations :: Text)
-
   case lintedMigrations of
     Left error -> pure $ pretty error
-    Right queries -> pure $ pretty $ (show queries :: Text)
-      -- queries
-      --   <&> runMigration connection
-      --   & sequence
-      --   <&> P.fold
+    Right querySets ->
+      querySets
+        <&> runMigration connection
+        & sequence
+        <&> P.fold

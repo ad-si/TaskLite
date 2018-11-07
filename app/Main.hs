@@ -15,6 +15,7 @@ import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.Version (showVersion)
 import Options.Applicative
+import Database.SQLite.Simple (close)
 
 import Utils
 import ImportExport
@@ -660,6 +661,9 @@ main = do
     Help -> pure helpText
     Alias alias -> pure $ aliasWarning alias
     UlidToUtc ulid -> pure $ prettyUlid ulid
+
+  -- TODO: Use withConnection instead
+  close connection
 
   -- TODO: Remove color when piping into other command
   putDoc $ tableStatus <> doc <> hardline
