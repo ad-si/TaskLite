@@ -211,23 +211,20 @@ createTableWithQuery connection aTableName theQuery = do
         else T.pack $ (show errorMessage) <> "\n"
       Right _ -> "🆕 Create table \"" <> aTableName <> "\"\n"
 
-  appendFile "create-table.log" $ fromQuery theQuery
   pure $ pretty output
 
 
-runMigration :: Connection -> [Query] -> IO (Doc ann)
-runMigration connection querySet = do
-  withTransaction connection $ do
-    result <- try $ sequence $ fmap (execute_ connection) querySet
+replaceTableWithQuery :: Connection -> Text -> Query -> IO (Doc ann)
+replaceTableWithQuery connection aTableName theQuery = do
+  execute_ connection $ Query $ "drop table if exists `" <> aTableName <> "`"
+  result <- try $ execute_ connection theQuery
 
-    putText $ "Result: " <> show querySet
+  let
+    output = case result :: Either SQLError () of
+      Left errorMessage -> T.pack $ (show errorMessage) <> "\n"
+      Right _ -> "🆕 Replace table \"" <> aTableName <> "\"\n"
 
-    let
-      output = case result :: Either SQLError [()] of
-        Left errorMessage -> T.pack $ (show errorMessage) <> "\n"
-        Right _ -> "Migrated from TODO to TODO"
-
-    pure $ pretty output
+  pure $ pretty output
 
 
 getCase :: Maybe Text -> [(Text, Float)] -> Text

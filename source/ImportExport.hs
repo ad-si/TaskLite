@@ -81,7 +81,7 @@ instance FromJSON ImportTask where
     let state = fromMaybe Open (textToTaskState =<< (o_state <|> status))
 
     o_priority_adjustment <- o .:? "priority_adjustment"
-    urgency             <- o .:? "urgency"
+    urgency           <- o .:? "urgency"
     priority          <- optional (o .: "priority")
     let priority_adjustment = o_priority_adjustment <|> urgency <|> priority
 
@@ -131,6 +131,9 @@ instance FromJSON ImportTask where
         (Just theNotes , _   ) -> theNotes
         (Nothing, Just values) -> values <$$> annotationToNote
         _                      -> []
+
+    o_user      <- o .:? "user"
+    let user = fromMaybe "" o_user
 
     let
       metadata = Just $ Object o

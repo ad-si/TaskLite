@@ -108,6 +108,7 @@ taskViewQuery =
         \    end\n\
         \as `priority`" :
         "`tasks`.`metadata`as `metadata`" :
+        "`tasks`.`user`as `user`" :
         []
       )
       ("`" <> tableName conf <> "` \n\
@@ -123,6 +124,19 @@ createTaskView :: Connection -> IO (Doc ann)
 createTaskView connection = do
   let
     viewName = "tasks_view"
+
+  S.createTableWithQuery
+    connection
+    viewName
+    (S.getView viewName taskViewQuery)
+
+
+replaceTaskView :: Connection -> IO (Doc ann)
+replaceTaskView connection = do
+  let
+    viewName = "tasks_view"
+
+  execute_ connection $ Query $ "drop view if exists `" <> viewName <> "`"
 
   S.createTableWithQuery
     connection
@@ -220,6 +234,18 @@ createTagsView connection = do
     (S.getView viewName tagsViewQuery)
 
 
+replaceTagsView :: Connection -> IO (Doc ann)
+replaceTagsView connection = do
+  let viewName = "tags"
+
+  execute_ connection $ Query $ "drop view if exists `" <> viewName <> "`"
+
+  S.replaceTableWithQuery
+    connection
+    viewName
+    (S.getView viewName tagsViewQuery)
+
+
 createNotesTable :: Connection -> IO (Doc ann)
 createNotesTable connection = do
   let
@@ -237,19 +263,37 @@ createNotesTable connection = do
     createTableQuery
 
 
-createTables :: Connection -> IO (Doc ann)
-createTables connection = do
-  t1 <- createTaskTable connection
-  t2 <- createTagsTable connection
-  t3 <- createNotesTable connection
-
+createViewsAndTriggers :: Connection -> IO (Doc ann)
+createViewsAndTriggers connection = do
   tr1 <- createTriggerModified connection
   tr2 <- createTriggerClosed connection
 
   v1 <- createTaskView connection
   v2 <- createTagsView connection
 
-  pure $
-    t1 <> t2 <> t3 <>
-    tr1 <> tr2 <>
-    v1 <> v2
+  pure $ tr1 <> tr2 <> v1 <> v2
+
+
+replaceViewsAndTriggers :: Connection -> IO (Doc ann)
+replaceViewsAndTriggers connection = do
+  execute_ connection $ "drop trigger if exists `set_modified_utc_after_update`"
+  tr1 <- createTriggerModified connection
+
+  execute_ connection $ "drop trigger if exists `set_closed_utc_after_update`"
+  tr2 <- createTriggerClosed connection
+
+  v1 <- replaceTaskView connection
+  v2 <- replaceTagsView connection
+
+  pure $ tr1 <> tr2 <> v1 <> v2
+
+
+createTables :: Connection -> IO (Doc ann)
+createTables connection = do
+  t1 <- createTaskTable connection
+  t2 <- createTagsTable connection
+  t3 <- createNotesTable connection
+
+  viewsTriggers <- createViewsAndTriggers connection
+
+  pure $ t1 <> t2 <> t3 <> viewsTriggers

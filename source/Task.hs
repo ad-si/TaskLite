@@ -93,6 +93,7 @@ data TaskT f = Task
   , modified_utc :: Columnar f Text
   , priority_adjustment :: Columnar f (Maybe Float)
   , metadata :: Columnar f (Maybe Aeson.Value)
+  , user :: Columnar f Text
   } deriving Generic
 
 
@@ -122,7 +123,7 @@ instance FromRow Task where
   fromRow = Task
     <$> field <*> field <*> field
     <*> field <*> field <*> field
-    <*> field <*> field
+    <*> field <*> field <*> field
 
 instance Hashable Task
 

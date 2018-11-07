@@ -33,6 +33,7 @@ data FullTask = FullTask
   , notes :: Maybe [Note]
   , priority :: Maybe Float
   , metadata :: Maybe Aeson.Value
+  , user :: Text
   } deriving (Generic, Show)
 
 
@@ -42,7 +43,7 @@ instance FromRow FullTask where
     <$> field <*> field <*> field
     <*> field <*> field <*> field
     <*> field <*> field <*> field
-    <*> field
+    <*> field <*> field
 
 instance Sql.FromField.FromField [Text] where
   fromField (Field (SQLText txt) _) = Ok $ split (== ',') txt

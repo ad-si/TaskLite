@@ -11,62 +11,83 @@ import Database.SQLite.Simple
 import Language.SQL.SimpleSQL.Syntax
 import Language.SQL.SimpleSQL.Parse
 import Data.Text.Prettyprint.Doc hiding ((<>))
-import SqlUtils
+import DbSetup
+
+
+newtype UserVersion = UserVersion Int
+  deriving (Eq, Ord, Read, Show)
+
+instance FromRow UserVersion where
+  fromRow = UserVersion <$> field
+
 
 -- | List of queries for one migration
 type QuerySet = [Query]
 
+
 data MigrateDirection = MigrateUp | MigrateDown
 data Migration = Migration
-  { id :: Int
+  { id :: UserVersion
   , querySet :: QuerySet
   }
 
 
-
-_2018_11_04_add_user :: MigrateDirection -> Migration
-_2018_11_04_add_user =
+_1_add_user :: MigrateDirection -> Migration
+_1_add_user =
   let
     base = Migration
-      { id = 20181104
+      { id = UserVersion 1
       , querySet = []
       }
   in \case
-    MigrateUp -> base {
-        Migrations.querySet =
+    MigrateUp -> base { Migrations.querySet =
           ["alter table tasks add column user text"]
       }
 
-    MigrateDown -> base {
-        Migrations.querySet =
+    MigrateDown -> base { Migrations.querySet =
           [ "create table tasks_temp"
           , "insert into tasks_temp \
-            \select ulid, body, state, due_utc, closed_utc, \
-            \  modified_utc, priority_adjustment, metadata from tasks"
+              \select ulid, body, state, due_utc, closed_utc, \
+              \  modified_utc, priority_adjustment, metadata from tasks"
           , "drop table tasks"
           , "alter table tasks_temp rename to tasks"
         ]
       }
 
 
-_2018_12_01_add_deleted :: MigrateDirection -> Migration
-_2018_12_01_add_deleted =
-  let
-    base = Migration
-      { id = 20181201
-      , querySet = []
-      }
-  in \case
-    MigrateUp -> base { Migrations.querySet = [] }
-    MigrateDown -> base { Migrations.querySet = [] }
+-- _2_add_deleted :: MigrateDirection -> Migration
+-- _2_add_deleted =
+--   let
+--     base = Migration
+--       { id = UserVersion 2
+--       , querySet = []
+--       }
+--   in \case
+--     MigrateUp -> base { Migrations.querySet =
+--         ["alter table tasks add column deleted boolean"]
+--       }
+--     MigrateDown -> base { Migrations.querySet = [] }
 
 
-wrapQuery :: QuerySet -> QuerySet
-wrapQuery querySet =
+hasDuplicates :: Eq a => [a] -> Bool
+hasDuplicates [] = False
+hasDuplicates (x:xs) =
+  x `elem` xs || hasDuplicates xs
+
+
+wrapQuery :: UserVersion -> QuerySet -> QuerySet
+wrapQuery (UserVersion userVersion) querySet =
   querySet <>
   [ "pragma foreign_key_check"
-  , "pragma user_version = 123"
+  , "pragma user_version = " <> (Query $ show userVersion)
   ]
+
+
+wrapMigration :: Migration -> Migration
+wrapMigration migration =
+  migration { querySet =
+    wrapQuery (Migrations.id migration) (Migrations.querySet migration)
+  }
 
 
 lintQuery :: Query -> Either Text Query
@@ -79,29 +100,75 @@ lintQuery sqlQuery =
     Right _ -> Right sqlQuery
 
 
-lintQuerySet :: QuerySet -> Either Text QuerySet
-lintQuerySet queries =
-  sequence $ fmap lintQuery queries
+lintMigration :: Migration -> Either Text Migration
+lintMigration migration =
+  either
+    (\leftVal -> Left leftVal)
+    (\_ -> Right migration)
+    (sequence $ fmap lintQuery (Migrations.querySet migration))
+
+
+runMigration :: Connection -> [Query] -> IO (Either SQLError [()])
+runMigration connection querySet = do
+  withTransaction connection $ do
+    result <- try $ sequence $ fmap (execute_ connection) querySet
+
+    -- | For debuging: Print querySet of migrations
+    putText $ "Result: " <> show querySet
+
+    pure result
 
 
 runMigrations :: Connection -> IO (Doc ann)
 runMigrations connection = do
+  currentVersionList <- (query_ connection
+    "pragma user_version" :: IO [UserVersion])
+
   let
     migrations =
-      [ _2018_11_04_add_user
-      -- , _2018_11_04_add_deleted
+      [ _1_add_user
+      -- , _2_add_deleted
       ]
-    lintedMigrations :: Either Text [QuerySet]
-    lintedMigrations = migrations
-      <&> ($ MigrateUp)
-      <&> (lintQuerySet . Migrations.querySet)
-      <&> fmap wrapQuery
-      & sequence
+    migrationsUp = fmap ($ MigrateUp) migrations
+    (UserVersion userVersionMax) = migrationsUp
+      <&> Migrations.id
+      & P.maximum
 
-  case lintedMigrations of
+    migrationsUpLinted :: Either Text [Migration]
+    migrationsUpLinted = do
+      currentVersion <- maybeToEither
+        "'pragma user_verison' does not return current version"
+        (P.head currentVersionList)
+
+      -- | Check if duplicate user versions are defined
+      case migrationsUp
+        <&> Migrations.id
+        & hasDuplicates of
+          True -> Left "Your migrations contain duplicate user versions"
+          False -> Right []
+
+      migrationsUp
+        & P.filter (\m -> (Migrations.id m) > currentVersion)
+        <&> lintMigration
+        <&> fmap wrapMigration
+        & sequence
+
+  case migrationsUpLinted of
     Left error -> pure $ pretty error
-    Right querySets ->
-      querySets
+    Right migsUpLinted -> do
+      result <- migsUpLinted
+        <&> Migrations.querySet
         <&> runMigration connection
         & sequence
-        <&> P.fold
+
+      case sequence result of
+        Left error -> pure $ pretty $ (show error :: Text)
+        _ -> do
+          execute_ connection $
+            Query $ "pragma user_version = " <> (show userVersionMax)
+          status <- replaceViewsAndTriggers connection
+          pure $ (
+            "Replaced views and triggers: "
+            <> status
+            <> "Migration succeeded. New user-version:"
+            <> (pretty userVersionMax))

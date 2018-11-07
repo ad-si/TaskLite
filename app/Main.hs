@@ -17,12 +17,13 @@ import Data.Version (showVersion)
 import Options.Applicative
 import Database.SQLite.Simple (close)
 
-import Utils
-import ImportExport
-import Task (TaskState(..))
-import Paths_tasklite (version)
 import Config
 import DbSetup
+import ImportExport
+import Migrations
+import Paths_tasklite (version)
+import Task (TaskState(..))
+import Utils
 
 
 data Command
@@ -602,7 +603,7 @@ main = do
 
   connection <- setupConnection
   tableStatus <- createTables connection
-  -- migrationsStatus <- runMigrations connection
+  migrationsStatus <- runMigrations connection
 
   let
     addTaskC = addTask connection
@@ -666,5 +667,5 @@ main = do
   close connection
 
   -- TODO: Remove color when piping into other command
-  putDoc $ tableStatus <> doc <> hardline
+  putDoc $ tableStatus <> migrationsStatus <> doc <> hardline
 

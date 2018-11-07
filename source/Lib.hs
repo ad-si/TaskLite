@@ -199,6 +199,7 @@ addTask connection bodyWords = do
       , closed_utc = Nothing
       , priority_adjustment = Nothing
       , metadata = Nothing
+      , user = ""
       , ..
       }
 
@@ -222,6 +223,7 @@ logTask connection bodyWords = do
       , closed_utc = Just modified_utc
       , priority_adjustment = Nothing
       , metadata = Nothing
+      , user = ""
       , ..
       }
 
@@ -783,7 +785,7 @@ listWithTag connection tags = do
     mainQuery = "\
       \select\n\
         \tasks_view.ulid as ulid, body, state, due_utc, closed_utc,\n\
-        \modified_utc, tags, notes, priority, metadata\n\
+        \modified_utc, tags, notes, priority, metadata, user\n\
       \from (" <> ulidsQuery <> ") tasks1\n\
       \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
       \order by priority desc"
@@ -928,7 +930,7 @@ getFilterQuery filterExps =
     mainQuery = "\
       \select\n\
       \  tasks_view.ulid as ulid, body, state, due_utc, closed_utc,\n\
-      \  modified_utc, tags, notes, priority, metadata\n\
+      \  modified_utc, tags, notes, priority, metadata, user\n\
       \from (" <> ulidsQuery <> ") tasks1\n\
       \left join tasks_view on tasks1.ulid is tasks_view.ulid"
   in
