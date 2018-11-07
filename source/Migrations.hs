@@ -114,7 +114,7 @@ runMigration connection querySet = do
     result <- try $ sequence $ fmap (execute_ connection) querySet
 
     -- | For debuging: Print querySet of migrations
-    putText $ "Result: " <> show querySet
+    -- putText $ "Result: " <> show querySet
 
     pure result
 
@@ -147,6 +147,7 @@ runMigrations connection = do
           True -> Left "Your migrations contain duplicate user versions"
           False -> Right []
 
+      -- | Get new migrations, lint and wrap them
       migrationsUp
         & P.filter (\m -> (Migrations.id m) > currentVersion)
         <&> lintMigration
@@ -155,6 +156,7 @@ runMigrations connection = do
 
   case migrationsUpLinted of
     Left error -> pure $ pretty error
+    Right [] -> pure ""
     Right migsUpLinted -> do
       result <- migsUpLinted
         <&> Migrations.querySet
@@ -172,3 +174,4 @@ runMigrations connection = do
             <> status
             <> "Migration succeeded. New user-version:"
             <> (pretty userVersionMax))
+            <> hardline

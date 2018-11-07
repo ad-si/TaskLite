@@ -26,6 +26,7 @@ testSuite connection = do
         "state: Open\n\
         \priority: 0\n\
         \body: Just a test\n\
+        \user: ''\n\
         \ulid: "
       getUlidFromBody = T.take 26 . T.drop (P.length taskStart) . pack . show
 
@@ -47,15 +48,8 @@ testSuite connection = do
 
     it "migrates tables to latest version" $ do
       migrationStatus <- runMigrations connection
-      (unpack $ show migrationStatus) `shouldBe`
-        "[\"pragma foreign_keys=OFF; \
-        \begin transaction; \
-        \alter table tasks add column user text not null; \
-        \pragma foreign_key_check; \
-        \pragma user_version = 1; \
-        \end transaction; \
-        \pragma foreign_keys=ON; \
-        \\"]"
+      (unpack $ show migrationStatus) `shouldStartWith`
+        "Replaced views and triggers:"
 
 
     it "initially contains no tasks" $ do
@@ -138,7 +132,6 @@ main = do
 
   -- | Does not delete database after tests for debugging
   -- filePath <- emptySystemTempFile "main.db"
-  -- putText ""
-  -- print filePath
+  -- putStrLn $ "\nFilepath: " <> filePath
   -- connection <- Sql.open filePath
   -- hspec $ testSuite connection
