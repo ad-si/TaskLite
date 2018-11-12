@@ -1,0 +1,22 @@
+{
+  "id": 867,
+  "description": "Generate statistics for each file before uploading it",
+  "entry": "20171016T123718Z",
+  "end": "20180601T075113Z",
+  "due": "20191016T123718Z",
+  "priority": "M",
+  "project": "just/aTest",
+  "status": "pending",
+  "tags": [
+    "upload",
+    "frontend"
+  ],
+  "annotations":[
+    {
+      "entry": "20180512T212022Z",
+      "description": "Wow, what an important note!"
+    }
+  ],
+  "uuid": "71c195f9-cc8a-4683-ad09-177643a0cb23",
+  "urgency": 5.79
+}

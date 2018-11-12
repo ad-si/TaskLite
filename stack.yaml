@@ -7,3 +7,15 @@ extra-deps:
   - fuzzy-0.1.0.0
   - github: JakeWheat/simple-sql-parser
     commit: 00433a26e8303c9e61359f406da5a2dbf1293fc8
+
+image:
+  containers:
+    - base: library/haskell
+      # name: tasklite
+      # add:
+      entrypoints:
+        - tasklite-exe
+
+# Also build TaskLite in a container
+docker:
+    enable: true
