@@ -90,3 +90,16 @@ tests:
       - hspec
       - temporary
 
+benchmarks:
+  tasklite-bench:
+    main: Main.hs
+    source-dirs: benchmarks
+    ghc-options:
+      - -Wall
+      - -Wcompat
+      - -Wincomplete-record-updates
+      - -Wincomplete-uni-patterns
+      - -Wredundant-constraints
+    dependencies:
+      - criterion
+      - tasklite
