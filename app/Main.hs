@@ -200,7 +200,7 @@ commandParser =
 
     <> command "duplicate" (toParserInfo
         (Duplicate <$> some (strArgument idVar))
-        "Duplicates a task (and deletes the closed and due UTC fields)")
+        "Duplicates a task (and resets the closed and due UTC fields)")
 
     <> command "boost" (toParserInfo (BoostTasks <$> some (strArgument idVar))
           "Increase priority of specified tasks by 1")
@@ -432,6 +432,9 @@ commandParser =
 
     <> command "count" (toParserInfo (pure $ Count NoFilter)
         "Output total number of tasks")
+
+    -- <> command "verify" (toParserInfo (pure Verify)
+    --     "Verify the integrity of the database")
 
     <> command "version" (toParserInfo (pure Version) "Display version")
 
