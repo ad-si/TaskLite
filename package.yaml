@@ -37,6 +37,7 @@ dependencies:
   - sqlite-simple
   - text
   - ulid
+  - unix
   - yaml
 
 default-extensions:

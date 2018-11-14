@@ -17,6 +17,7 @@ import Numeric
 import System.Directory
 import System.IO as SIO
 import System.Process (readProcess)
+import System.Posix.User (getEffectiveUserName)
 import qualified Text.Fuzzy as Fuzzy
 import Text.ParserCombinators.ReadP as ReadP
 import GHC.Unicode (isSpace)
@@ -192,6 +193,7 @@ addTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
 addTask connection bodyWords = do
   ulid <- formatUlid getULID
   modified_utc <- formatElapsedP timeCurrentP
+  effectiveUserName <- getEffectiveUserName
   let
     (body, tags, due_utc) = parseTaskBody bodyWords
     task = Task
@@ -199,7 +201,7 @@ addTask connection bodyWords = do
       , closed_utc = Nothing
       , priority_adjustment = Nothing
       , metadata = Nothing
-      , user = ""
+      , user = T.pack effectiveUserName
       , ..
       }
 
@@ -215,6 +217,7 @@ logTask connection bodyWords = do
   ulid <- formatUlid getULID
   -- TODO: Set via a SQL trigger
   modified_utc <- formatElapsedP timeCurrentP
+  effectiveUserName <- getEffectiveUserName
   let
     (body, extractedTags, due_utc) = parseTaskBody bodyWords
     tags = extractedTags <> ["log"]
@@ -223,7 +226,7 @@ logTask connection bodyWords = do
       , closed_utc = Just modified_utc
       , priority_adjustment = Nothing
       , metadata = Nothing
-      , user = ""
+      , user = T.pack effectiveUserName
       , ..
       }
 

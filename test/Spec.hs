@@ -9,6 +9,7 @@ import qualified Database.SQLite.Simple as Sql
 import Data.Text as T
 import System.IO.Temp
 import System.IO.Error
+import Data.List ((!!))
 
 import Lib
 import Utils
@@ -26,9 +27,8 @@ testSuite connection = do
         "state: Open\n\
         \priority: 0\n\
         \body: Just a test\n\
-        \user: ''\n\
-        \ulid: "
-      getUlidFromBody = T.take 26 . T.drop (P.length taskStart) . pack . show
+        \user: "
+      getUlidFromBody = (!! 11) . T.words . pack . show
 
 
     it "creates necessary tables on initial run" $ do
@@ -61,6 +61,13 @@ testSuite connection = do
       result <- addTask connection ["Just a test"]
       (unpack $ show result) `shouldStartWith`
         "🆕 Added task \"Just a test\" with ulid"
+
+
+    it "debug" $ do
+      result <- nextTask connection
+      let ulidText = getUlidFromBody result
+
+      print ulidText
 
 
     context "When a task exists" $ do

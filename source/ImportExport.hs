@@ -21,6 +21,7 @@ import Database.SQLite.Simple as Sql
 import Lib
 import System.Directory
 import System.Process
+import System.Posix.User (getEffectiveUserName)
 import Time.System
 import Utils
 import Task
@@ -169,7 +170,12 @@ importTask = do
     Left error -> die $ (T.pack error) <> " in task \n" <> show content
     Right importTaskRecord -> do
       putStr ("Importing … " :: Text)
-      let theTask = task importTaskRecord
+      effectiveUserName <- getEffectiveUserName
+      let
+        taskParsed = task importTaskRecord
+        theTask = if Task.user taskParsed == ""
+          then taskParsed { Task.user = T.pack effectiveUserName }
+          else taskParsed
       insertTags connection (primaryKey theTask) (tags importTaskRecord)
       insertNotes connection (primaryKey theTask) (notes importTaskRecord)
       insertTask connection theTask
