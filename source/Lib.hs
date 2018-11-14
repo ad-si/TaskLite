@@ -304,18 +304,22 @@ endTasks connection ids = do
 
 deleteTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
 deleteTasks connection ids = do
-  -- TODO: Delete corresponding tags and notes
   docs <- forM ids $ \idSubstr -> do
-    doc <- execWithId connection idSubstr $ \(TaskUlid idText) -> do
-      execute connection
-        (Query $ "delete from `" <> tableName conf <> "` where `ulid` == ?")
-        [idText :: Text]
+    doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+      runBeamSqlite connection $ do
+        runDelete $ delete
+          (_tldbTasks taskLiteDb)
+          (\task -> primaryKey task ==. val_ taskUlid)
 
-      numOfChanges <- changes connection
+        runDelete $ delete
+          (_tldbTaskToTag taskLiteDb)
+          (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid)
 
-      pure $ pretty $ if numOfChanges == 0
-        then "⚠️ An error occured while deleting task \"" <> idText <> "\""
-        else "❌ Deleted task \"" <> idText <> "\""
+        runDelete $ delete
+          (_tldbTaskToNote taskLiteDb)
+          (\noteValue -> TaskToNote.task_ulid noteValue ==. val_ taskUlid)
+
+        pure $ pretty ("❌ Deleted task \"" <> idText <> "\"" :: Text)
     pure doc
   pure $ vsep docs
 
