@@ -1,0 +1,15 @@
+{
+  "name": "web",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-pux": "^13.0.0",
+    "purescript-foreign-object": "^1.1.0",
+    "purescript-effect": "^2.0.0"
+  },
+  "devDependencies": {}
+}
