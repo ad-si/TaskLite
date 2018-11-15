@@ -1,0 +1,7 @@
+from haskell:8.4.3
+
+run apt-get update
+run apt-get install -y python3.5 python3-pip
+run pip3 install datasette
+
+expose 8001

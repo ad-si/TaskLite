@@ -15,6 +15,36 @@ CLI task-list manager built with [Haskell] and [SQLite].
 stack install tasklite
 ```
 
+or
+
+```shell
+docker pull adius/tasklite
+```
+
+
+## Usage
+
+To run TaskLite in a container:
+
+```sh
+docker run --rm --volume ~/tasklite:/root/tasklite adius/tasklite
+```
+
+Start [Datasette] REST API:
+
+```sh
+docker run \
+  --rm \
+  --entrypoint datasette \
+  --publish 8001:8001 \
+  --volume ~/tasklite:/root/tasklite \
+  adius/tasklite-tasklite \
+  serve --host 0.0.0.0 /root/tasklite/main.db
+```
+
+Attention: Make sure that the IP address matches with your host's.
+
+
 ## Features / TODO
 
 - Multi User
@@ -25,12 +55,12 @@ stack install tasklite
 ## Differences to Taskwarrior
 
 - **Simpler** \
-  Taskwarrior has several redundant features and unnecessarily reimplements
+  Taskwarrior has several redundant features and unnecessarily re-implements
   shell features like aliases.
 
 - **More Robust & Stable** \
   Taskwarrior is plagued by [numerous bugs][TW Issues] due to its
-  unncessary complexity and nonoptimal choice of programming languages.
+  unnecessary complexity and non-optimal choice of programming languages.
   TaskLite's simple structure and [Haskell]'s excellent correctness guarantees,
   however, yield to a very stable and robust piece of software.
 
@@ -135,6 +165,25 @@ curl --location http://127.0.0.1:8001/main/tasks_view.json
 
 
 ## Development
+
+### Build Images
+
+Build base image for runtime image:
+
+```sh
+docker build \
+  --file dockerfiles/haskell-datasette \
+  --tag haskell-datasette \
+  dockerfiles
+```
+
+Build runtime image:
+
+```sh
+stack image container
+docker tag adius/tasklite-tasklite:latest adius/tasklite:latest
+```
+
 
 ### Generate Screenshot
 

@@ -1,21 +1,22 @@
-resolver: lts-11.17
+resolver: lts-12.18
 packages:
   - .
 extra-deps:
-  - ulid-0.2.0.0
+  - beam-sqlite-0.3.2.3
   - crockford-0.2
   - fuzzy-0.1.0.0
+  - ulid-0.2.0.0
   - github: JakeWheat/simple-sql-parser
     commit: 00433a26e8303c9e61359f406da5a2dbf1293fc8
 
+# Build TaskLite in a container
+docker:
+  repo: fpco/stack-build
+
+# Copy executable to new image
 image:
   containers:
-    - base: library/haskell
-      # name: tasklite
-      # add:
+    - base: haskell-datasette
+      name: adius/tasklite
       entrypoints:
-        - tasklite-exe
-
-# Also build TaskLite in a container
-docker:
-    enable: true
+        - tasklite
