@@ -62,7 +62,6 @@ Generate custom view by appending the SQL query to the URL:
 
 [select-tasks]: http://0.0.0.0:8001/main?sql=select%20*%20from%20tasks
 
-
 Some example views:
 
 Equivalent to `tl head`:
@@ -211,6 +210,27 @@ Build runtime image:
 stack image container
 docker tag adius/tasklite-tasklite:latest adius/tasklite:latest
 ```
+
+
+### Deployment
+
+```sh
+docker tag adius/tasklite-tasklite:latest gcr.io/deploy-219812/tasklite:latest
+```
+
+```sh
+docker push gcr.io/deploy-219812/tasklite:latest
+```
+
+```sh
+kubectl create -f kubernetes/deployment.yaml
+```
+
+```sh
+kubectl port-forward tasklite-deployment-77884ff4f6-66sjf 8001
+```
+
+Open [127.0.0.1:8001](http://127.0.0.1:8001)
 
 
 ### Generate Screenshot

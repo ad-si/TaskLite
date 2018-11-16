@@ -1,0 +1,23 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: tasklite-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tasklite
+  template:
+    metadata:
+      labels:
+        app: tasklite
+    spec:
+      containers:
+        - image: gcr.io/deploy-219812/tasklite:latest
+          name: tasklite-container
+          command: ["datasette"]
+          args: ["serve", "/root/tasklite/main.db"]
+          ports:
+            - containerPort: 8001
+              name: tasklite-port
+              protocol: TCP
