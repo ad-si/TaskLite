@@ -30,7 +30,15 @@ To run TaskLite in a container:
 docker run --rm --volume ~/tasklite:/root/tasklite adius/tasklite
 ```
 
-Start [Datasette] REST API:
+
+### Web Interface
+
+The web interface can currently only be used to display existing tasks,
+but not to create new ones.
+
+![Web User Interface](screenshots/web-ui.png)
+
+Use [Datasette] to serve the web frontend for the SQLite database:
 
 ```sh
 docker run \
@@ -38,18 +46,38 @@ docker run \
   --entrypoint datasette \
   --publish 8001:8001 \
   --volume ~/tasklite:/root/tasklite \
+  --volume web:/root/web \
   adius/tasklite-tasklite \
-  serve --host 0.0.0.0 /root/tasklite/main.db
+  serve \
+    --host 0.0.0.0 \
+    /root/tasklite/main.db
 ```
 
 Attention: Make sure that the IP address matches with your host's.
 
 
-## Features / TODO
+Generate custom view by appending the SQL query to the URL:
+[http://0.0.0.0:8001/main?sql=](http://0.0.0.0:8001/main?sql=)
+(e.g. [http://0.0.0.0:8001/main?sql=select%20*%20from%20tasks][select-tasks])
 
-- Multi User
-  - Add a `created_by` field to each entry
-- Burndown Chart
+[select-tasks]: http://0.0.0.0:8001/main?sql=select%20*%20from%20tasks
+
+
+Some example views:
+
+Equivalent to `tl head`:
+```sql
+select substr(ulid,22) as ulid,priority,body,due_utc,replace(tags,',',', ') as tags,notes,user %20
+from tasks_view %20
+where closed_utc is null %20
+order by priority desc %20
+limit 50
+```
+
+(`%20` is necessary to make it copy & pasteable):
+
+
+Make sure to bookmark the views for easy access.
 
 
 ## Differences to Taskwarrior
@@ -259,3 +287,7 @@ at [feram.io].
 [Ff]: https://github.com/ff-notes/ff
 [Toodles]: https://github.com/aviaviavi/toodles
 
+
+## TODO
+
+- Burndown Chart
