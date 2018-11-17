@@ -17,7 +17,10 @@ spec:
           name: tasklite-container
           command: ["datasette"]
           args: ["serve", "/root/tasklite/main.db"]
+
+        - image: gcr.io/deploy-219812/nginx-proxy:latest
+          name: basic-auth-container
           ports:
-            - containerPort: 8001
-              name: tasklite-port
+            - containerPort: 8080
+              name: basic-auth-port
               protocol: TCP

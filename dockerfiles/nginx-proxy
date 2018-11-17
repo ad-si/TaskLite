@@ -1,0 +1,4 @@
+from nginx:alpine
+
+copy nginx.conf /etc/nginx/conf.d/nginx-proxy.conf
+copy nginx.htpasswd /etc/nginx/nginx-proxy.htpasswd

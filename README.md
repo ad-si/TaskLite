@@ -233,6 +233,22 @@ kubectl port-forward tasklite-deployment-77884ff4f6-66sjf 8001
 Open [127.0.0.1:8001](http://127.0.0.1:8001)
 
 
+```fish
+docker build \
+  --file dockerfiles/nginx-proxy \
+  --tag gcr.io/deploy-219812/nginx-proxy:latest \
+  dockerfiles; \
+and docker push gcr.io/deploy-219812/nginx-proxy:latest; \
+and kubectl replace --filename kubernetes/deployment.yaml --force; \
+and sleep 8;
+and kubectl port-forward \
+  (kubectl get pods --selector app=tasklite --output name) 8080
+```
+
+Afterwards change the health check URL to `/healthcheck`
+for the load balancer at https://console.cloud.google.com/compute/healthChecks.
+
+
 ### Generate Screenshot
 
 Use asciinema to generate the terminal recording:
