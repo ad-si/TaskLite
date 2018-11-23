@@ -554,6 +554,20 @@ setDueUtc connection datetime ids = do
   pure $ vsep docs
 
 
+undueTasks :: Connection -> [IdText] -> IO (Doc AnsiStyle)
+undueTasks connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+      runBeamSqliteDebug writeToLog connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task -> [(Task.due_utc task) <-. (val_ Nothing)])
+          (\task -> primaryKey task ==. val_ taskUlid)
+
+      pure $ pretty ("💥 Removed due UTC of task \"" <> idText <> "\"" :: Text)
+
+  pure $ vsep docs
+
+
 duplicateTasks :: Connection -> [IdText] -> IO (Doc AnsiStyle)
 duplicateTasks connection ids = do
   docs <- forM ids $ \idSubstr -> do

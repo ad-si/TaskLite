@@ -94,6 +94,8 @@ data Command
   -- | Blockers -- Tasks that block other tasks (newest first)
   -- | Unblocked -- Tasks that are not blocked
 
+  {- Unset -}
+  | UnDueTasks [IdText]
 
   {- Misc -}
   -- | Demo -- Switch to demo mode
@@ -158,7 +160,8 @@ idVar =
 
 -- | Help Sections
 basic_sec, shortcut_sec, list_sec,
-  vis_sec, i_o_sec, advanced_sec, alias_sec, utils_sec
+  vis_sec, i_o_sec, advanced_sec,
+  alias_sec, unset_sec, utils_sec
   :: (Text, Text)
 
 basic_sec    = ("{{basic_sec}}", "Basic Commands:")
@@ -168,6 +171,7 @@ vis_sec      = ("{{vis_sec}}", "Visualizations:")
 i_o_sec      = ("{{i_o_sec}}", "I/O Commands:")
 advanced_sec = ("{{advanced_sec}}", "Advanced Commands:")
 alias_sec    = ("{{alias_sec}}", "Aliases:")
+unset_sec    = ("{{unset_sec}}", "Unset:")
 utils_sec    = ("{{utils_sec}}", "Utils:")
 
 
@@ -441,7 +445,7 @@ commandParser =
     <> command "help" (toParserInfo (pure Help) "Display current help page")
     )
 
-  -- <|> subparser ( commandGroup "Unset Fields:"
+  <|> subparser ( commandGroup (T.unpack $ fst unset_sec)
 
   --   <> command "unclose"
   --       "Delete closed UTC and delete Obsolete / Done state"
@@ -452,8 +456,8 @@ commandParser =
   --   <> command "unnote"
   --       "Delete all notes"
 
-  --   <> command "undue"
-  --       "Delete due UTC"
+    <> command "undue" (toParserInfo (UnDueTasks <$> some (strArgument idVar))
+        "Delete due UTC")
 
   --   <> command "unwait"
   --       "Delete wait UTC"
@@ -463,7 +467,7 @@ commandParser =
 
   --   <> command "unmeta"
   --       "Delete metadata"
-  --   )
+    )
 
   <|> subparser ( commandGroup (T.unpack $ fst alias_sec)
 
@@ -661,6 +665,10 @@ main = do
     SetDueUtc datetime ids -> setDueUtc connection datetime ids
     Duplicate ids -> duplicateTasks connection ids
     Count taskFilter -> countTasks taskFilter
+
+    {- Unset -}
+    UnDueTasks ids -> undueTasks connection ids
+
     Version -> pure $ (pretty $ showVersion version) <> hardline
     Help -> pure helpText
     Alias alias -> pure $ aliasWarning alias
