@@ -161,21 +161,52 @@ curl https://api.github.com/repos/$OWNER/$REPO/issues/$NUM | tl import
 ```
 
 
-### Import / Export Fields Matrix
+### States
 
-*Implicit State* | Open | Waiting | Repeating | Done   | Closed
------------------|------|---------|-----------|--------|---------
-state            | 🛠   |   🛠    |   🛠     | Done   | Obsolete
-ulid             | ✅   |   ✅    |   ✅     |   ✅   |   ✅
-wait_utc         |      |   ✅    |   ❔     |   ❔   |   ❔
-closed_utc       |      |         |          |   ✅   |   ✅
-priority         | 🛠   |   🛠    |   🛠     |   🛠   |   🛠
+Instead of allowing one to explicitly set a state, TaskLite infers the
+current state from several other fields.
+
+Each task can only be in one of the 5 main states at any given time.
+
+- Open - Waits to be done
+- Asleep - Is hidden because it's not relevant yet
+- Awake - Has become relevant and can be done (similar to Open)
+- Done - Has been done
+- Closed - Has become obsolete and can not be done anymore
+
+*Implicit State* | Open | Asleep | Awake | Done   | Closed   |
+-----------------|------|--------|-------|--------|----------|
+state            | ❌   |   ❌  |   ❌  |  Done  | Obsolete |
+sleep_utc        | ❌   | > now  | < now |   ❔   |   ❔    |
+closed_utc       | ❌   |   ❌  |   ❌  |   ✅   |   ✅    |
 
 Legend:
-- ( ) = Not allowed
+- ❌ = Not allowed
 - ✅ = Required
 - ❔ = Maybe
-- 🛠 = Generated (Will be generated during export, but ignored during import)
+
+
+Additional secondary states:
+
+- Blocked - Another task must be done first
+- Repeating - If this task get completed, a duplicate will be created
+    with the specified time offset.
+    I.e. subsequent tasks get delayed
+    (e.g. mowing the lawn)
+- Recurring - Task which needs to be done every day, week, etc.
+    I.e. missed completions must be caught up immediately.
+    (e.g. paying rent)
+- Waiting - It's still unclear if the task needs to be done or really has been
+    done. Regular checks are necessary until situation clears up.
+- Review - It's necessary to check if the task can finally be started or
+    if it has finally been completed.
+
+*Implicit State*  | Blocked | Repeating | Recurring | Waiting | Review |
+------------------|---------|-----------|-----------|---------|--------|
+blocking_tasks    |   ✅    |    ❔    |    ❔     |   ❔    |   ❔   |
+repetition_period |   ?     |    ✅    |    ❌     |   ❔    |   ❔   |
+recurrence_period |   ?     |    ❌    |    ✅     |   ❔    |   ❔   |
+review_utc        |   ❌    |   ❌     |     ❌    | > now   | < now  |
 
 
 ### REST API
