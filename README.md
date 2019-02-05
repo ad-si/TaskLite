@@ -297,33 +297,40 @@ svg-term \
 While TaskLite is great tool to manage your personal tasks,
 it can also be used as a dependency of other programms.
 For example as a queue for processing tasks.
-As a matter of fact, we're using it as our queue of repositories to check
-at [feram.io].
 
 
 ## 3rd Party Tools to Edit Tables
 
 - [VisiData] - Interactive CLI multitool for tabular data.
 - [DB Browser for SQLite]
+- [LiteCLI] - CLI browser with auto-completion and syntax highlighting.
 
 [VisiData]: http://visidata.org
-
+[LiteCLI]: https://litecli.com
 
 ## Related
 
+- [Buku] -Store and manage your bookmarks from the command line
+- [CommitTasks]
+- [Eureka] - CLI tool to input and store ideas without leaving the terminal
+- [Ff] - A distributed note taker and task manager.
 - [Taskbook]
 - [Taskwarrior] - Commandline Task Management.
-- [CommitTasks]
-- [Ff] - A distributed note taker and task manager.
 - [Toodles] - Project management from the TODO's in your codebase
 
+[Buku]: https://github.com/jarun/Buku
+[CommitTasks]: https://github.com/ZeroX-DG/CommitTasks
+[Eureka]: https://github.com/simeg/eureka
+[Ff]: https://github.com/ff-notes/ff
 [Taskbook]: https://github.com/klauscfhq/taskbook
 [Taskwarrior]: https://github.com/GothenburgBitFactory/taskwarrior
-[CommitTasks]: https://github.com/ZeroX-DG/CommitTasks
-[Ff]: https://github.com/ff-notes/ff
 [Toodles]: https://github.com/aviaviavi/toodles
 
 
 ## TODO
 
 - Burndown Chart
+
+
+[Haskell]: https://haskell.org
+[SQLite]: https://sqlite.org
