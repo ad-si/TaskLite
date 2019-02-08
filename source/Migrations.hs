@@ -66,7 +66,7 @@ _2_ =
       \create table tasks_temp ( \n\
       \  ulid text not null primary key, \n\
       \  body text not null, \n\
-      \  state text check(state in ('Done', 'Obsolete', 'Deleted')), \n\
+      \  state text check(state in (NULL, 'Done', 'Obsolete', 'Deleted')), \n\
       \  due_utc text, \n\
       \  sleep_utc text, \n\
       \  closed_utc text, \n\
@@ -84,8 +84,10 @@ _2_ =
     MigrateUp -> base { Migrations.querySet = (
         createTempTableQueryUp :
         "insert into tasks_temp \
-          \select ulid, body, state, due_utc, NULL, closed_utc, \
-          \  modified_utc, priority_adjustment, metadata, user from tasks" :
+          \select ulid, body, nullif(nullif(state,'Open'),'Waiting') as state, \
+          \due_utc, NULL, closed_utc, \
+          \modified_utc, priority_adjustment, metadata, user \
+          \from tasks" :
         "drop table tasks" :
         "alter table tasks_temp rename to tasks" :
         [])
