@@ -28,12 +28,12 @@ import Data.Text.Prettyprint.Doc.Render.Terminal
 import Unsafe (unsafeHead)
 
 import Utils
-import Task as Task
+import Task
 import TaskView
-import FullTask as FullTask
-import Note as Note
-import TaskToNote as TaskToNote
-import TaskToTag as TaskToTag
+import FullTask
+import Note
+import TaskToNote
+import TaskToTag
 import Config
 
 
@@ -139,9 +139,8 @@ insertNoteTuples connection taskUlid notes = do
   taskToNotes <- forM notes $ \(createdUtc, noteBody) -> do
     noteUlid <- getULID
     pure $ TaskToNote
-      (fromMaybe
-        (toLower $ show noteUlid)
-        (fmap (toLower . show . setDateTime noteUlid) createdUtc))
+      ((toLower . show . maybe noteUlid (setDateTime noteUlid))
+        createdUtc)
       taskUlid
       noteBody
 
@@ -152,7 +151,7 @@ insertNoteTuples connection taskUlid notes = do
 
 formatElapsedP :: IO ElapsedP -> IO Text
 formatElapsedP =
-  fmap (pack . (timePrint $ utcFormat conf))
+  fmap (pack . timePrint (utcFormat conf))
 
 
 formatUlid :: IO ULID -> IO Text
@@ -184,16 +183,23 @@ parseTaskBody bodyWords =
       <&> T.replace "due:" ""
       & P.lastMay
       >>= parseUtc
-      <&> pack . (timePrint $ utcFormat conf)
+      <&> pack . timePrint (utcFormat conf)
   in
     (body, tags, dueUtc)
 
 
+getTriple :: IO (Text, Text, [Char])
+getTriple = do
+  ulid <- formatUlid getULID
+  modified_utc <- formatElapsedP timeCurrentP -- TODO: Set via a SQL trigger
+  effectiveUserName <- getEffectiveUserName
+
+  pure (ulid, modified_utc, effectiveUserName)
+
+
 addTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
 addTask connection bodyWords = do
-  ulid <- formatUlid getULID
-  modified_utc <- formatElapsedP timeCurrentP
-  effectiveUserName <- getEffectiveUserName
+  (ulid, modified_utc, effectiveUserName) <- getTriple
   let
     (body, tags, due_utc) = parseTaskBody bodyWords
     task = zeroTask
@@ -207,16 +213,13 @@ addTask connection bodyWords = do
   insertTask connection task
   insertTags connection (primaryKey task) tags
   pure $
-    "🆕 Added task" <+> (dquotes $ pretty $ Task.body task)
-    <+> "with ulid" <+> (dquotes $ pretty $ Task.ulid task)
+    "🆕 Added task" <+> dquotes (pretty $ Task.body task)
+    <+> "with ulid" <+> dquotes (pretty $ Task.ulid task)
 
 
 logTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
 logTask connection bodyWords = do
-  ulid <- formatUlid getULID
-  -- TODO: Set via a SQL trigger
-  modified_utc <- formatElapsedP timeCurrentP
-  effectiveUserName <- getEffectiveUserName
+  (ulid, modified_utc, effectiveUserName) <- getTriple
   let
     (body, extractedTags, due_utc) = parseTaskBody bodyWords
     tags = extractedTags <> ["log"]
@@ -233,8 +236,8 @@ logTask connection bodyWords = do
   insertTask connection task
   insertTags connection (primaryKey task) tags
   pure $
-    "📝 Logged task" <+> (dquotes $ pretty $ Task.body task)
-    <+> "with ulid" <+> (dquotes $ pretty $ Task.ulid task)
+    "📝 Logged task" <+> dquotes (pretty $ Task.body task)
+    <+> "with ulid" <+> dquotes (pretty $ Task.ulid task)
 
 
 execWithId ::
@@ -255,7 +258,7 @@ execWithId connection idSubstr callback = do
 
   if
     | numOfTasks == 0 -> pure $
-        "⚠️  Task" <+> (quote $ prefix <> idSubstr) <+> "does not exist"
+        "⚠️  Task" <+> quote (prefix <> idSubstr) <+> "does not exist"
     | numOfTasks == 1 ->
         callback $ primaryKey $ unsafeHead tasks
     | numOfTasks > 1 -> pure $
@@ -276,7 +279,7 @@ setStateAndClosed connection taskUlid theTaskState = do
 doTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
 doTasks connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
       setStateAndClosed connection taskUlid $ Just Done
 
       numOfChanges <- changes connection
@@ -284,14 +287,14 @@ doTasks connection ids = do
       pure $ pretty $ if numOfChanges == 0
         then "⚠️  Task \"" <> idText <> "\" is already done"
         else "✅ Finished task \"" <> idText <> "\""
-    pure doc
+
   pure $ vsep docs
 
 
 endTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
 endTasks connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
       setStateAndClosed connection taskUlid $ Just Obsolete
 
       numOfChanges <- changes connection
@@ -299,14 +302,14 @@ endTasks connection ids = do
       pure $ pretty $ if numOfChanges == 0
         then "⚠️  Task \"" <> idText <> "\" is already marked as obsolete"
         else "⏹  Marked task \"" <> idText <> "\" as obsolete"
-    pure doc
+
   pure $ vsep docs
 
 
 deleteTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
 deleteTasks connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
       runBeamSqlite connection $ do
         runDelete $ delete
           (_tldbTasks taskLiteDb)
@@ -321,7 +324,7 @@ deleteTasks connection ids = do
           (\noteValue -> TaskToNote.task_ulid noteValue ==. val_ taskUlid)
 
         pure $ pretty ("❌ Deleted task \"" <> idText <> "\"" :: Text)
-    pure doc
+
   pure $ vsep docs
 
 
@@ -330,7 +333,7 @@ adjustPriority adjustment ids  = do
   dbPath <- getDbPath
   withConnection dbPath $ \connection -> do
     docs <- forM ids $ \idSubstr -> do
-      doc <- execWithId connection idSubstr $ \(TaskUlid idText) -> do
+      execWithId connection idSubstr $ \(TaskUlid idText) -> do
         -- TODO: Figure out why this doesn't work
         -- runBeamSqliteDebug writeToLog connection $ runUpdate $
         --   update (_tldbTasks taskLiteDb)
@@ -340,7 +343,7 @@ adjustPriority adjustment ids  = do
         --     (\task -> primaryKey task ==. val_ taskUlid)
 
         execute connection
-          (Query $ "update `tasks` \
+          (Query "update `tasks` \
             \set `priority_adjustment` = ifnull(`priority_adjustment`, 0) + ? \
             \where `ulid` == ?")
           (adjustment, idText :: Text)
@@ -354,10 +357,9 @@ adjustPriority adjustment ids  = do
           else (
             (if adjustment > 0 then "⬆️  Increased" else "⬇️  Decreased")
             <> " priority of task \""
-            <> idText <> "\" by " <> (show $ abs adjustment)
+            <> idText <> "\" by " <> show (abs adjustment)
           )
 
-      pure doc
     pure $ vsep docs
 
 
@@ -434,15 +436,15 @@ nextTask connection = do
 
 
 findTask :: Connection -> Text -> IO (Doc AnsiStyle)
-findTask connection pattern = do
-  tasks <- query_ connection $ Query $
+findTask connection aPattern = do
+  tasks <- query_ connection $ Query
     "select ulid, body, tags, notes, metadata from tasks_view"
 
   let
     scoreWidth = 5
     numOfResults = 8
     results = Fuzzy.filter
-      pattern
+      aPattern
       (tasks :: [(Text, Text, Maybe [Text], Maybe [Text], Maybe Text)])
       "\x1b[4m\x1b[32m" -- Set underline and color to green
       "\x1b[0m"
@@ -450,15 +452,15 @@ findTask connection pattern = do
         [ ulid
         , "\n"
         , theBody
-        , fromMaybe "" (unwords <$> tags)
-        , fromMaybe "" (unwords <$> notes)
+        , maybe "" unwords tags
+        , maybe "" unwords notes
         , T.replace "\",\"" "\", \"" $ fromMaybe "" metadata
         ])
       False -- Case insensitive
     moreResults = (P.length results) - numOfResults
     header =
-      (annotate (underlined <> color Red) $ fill scoreWidth "Score") <++>
-      (annotate (underlined) $ fill 10 "Task") <>
+      annotate (underlined <> color Red) (fill scoreWidth "Score") <++>
+      annotate (underlined) (fill 10 "Task") <>
       hardline
     body =
       results
@@ -490,7 +492,7 @@ addTag :: Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
 addTag connection tag ids = do
   docs <- forM ids $ \idSubstr ->
     execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
-      now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrentP
+      now <- fmap (pack . timePrint (utcFormat conf)) timeCurrentP
       ulid <- fmap (toLower . show) getULID
 
       let taskToTag = TaskToTag ulid taskUlid tag
@@ -504,8 +506,8 @@ addTag connection tag ids = do
           (\task -> [(Task.modified_utc task) <-. val_ now])
           (\task -> primaryKey task ==. val_ taskUlid)
 
-      pure $ "🏷  Added tag" <+> (dquotes $ pretty tag)
-        <+> "to task" <+> (dquotes $ pretty idText)
+      pure $ "🏷  Added tag" <+> dquotes (pretty tag)
+        <+> "to task" <+> dquotes (pretty idText)
 
   pure $ vsep docs
 
@@ -514,7 +516,7 @@ addNote :: Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
 addNote connection noteBody ids = do
   docs <- forM ids $ \idSubstr ->
     execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
-      now <- fmap (pack . (timePrint $ utcFormat conf)) timeCurrentP
+      now <- fmap (pack . timePrint (utcFormat conf)) timeCurrentP
       ulid <- fmap (toLower . show) getULID
 
       let taskToNote = TaskToNote ulid taskUlid noteBody
@@ -528,7 +530,7 @@ addNote connection noteBody ids = do
           (\task -> [(Task.modified_utc task) <-. val_ now])
           (\task -> primaryKey task ==. val_ taskUlid)
 
-      pure $ "🗒  Added a note to task" <+> (dquotes $ pretty idText)
+      pure $ "🗒  Added a note to task" <+> dquotes (pretty idText)
 
   pure $ vsep docs
 
@@ -543,13 +545,13 @@ setDueUtc connection datetime ids = do
     execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
       runBeamSqliteDebug writeToLog connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
-          (\task -> [(Task.due_utc task) <-. (val_ $ Just utcText)])
+          (\task -> [(Task.due_utc task) <-. val_ (Just utcText)])
           (\task -> primaryKey task ==. val_ taskUlid)
 
         -- TODO: Update modified_utc via SQL trigger
 
-      pure $ "📅 Set due UTC to" <+> (dquotes $ pretty utcText)
-        <+> "of task" <+> (dquotes $ pretty idText)
+      pure $ "📅 Set due UTC to" <+> dquotes (pretty utcText)
+        <+> "of task" <+> dquotes (pretty idText)
 
   pure $ vsep docs
 
@@ -677,7 +679,7 @@ formatTaskLine taskUlidWidth task =
         [])
   in
     fromMaybe
-      ("Id" <+> (dquotes $ pretty $ FullTask.ulid task) <+>
+      ("Id" <+> dquotes (pretty $ FullTask.ulid task) <+>
         "is an invalid ulid and could not be converted to a datetime")
       taskLine
 
@@ -689,8 +691,7 @@ getIdLength numOfItems =
     targetCollisionChance = 0.01  -- Targeted likelihood of id collisions
     sizeOfAlphabet = 32  -- Crockford's base 32 alphabet
   in
-    (ceiling $ log
-      (numOfItems / targetCollisionChance) / log sizeOfAlphabet) + 1
+    ceiling (logBase sizeOfAlphabet (numOfItems / targetCollisionChance)) + 1
 
 
 countTasks :: Filter TaskState -> IO (Doc AnsiStyle)
@@ -730,7 +731,7 @@ newTasks connection = do
 
 openTasks :: Connection -> IO (Doc AnsiStyle)
 openTasks connection = do
-  tasks <- query_ connection $ Query $
+  tasks <- query_ connection $ Query
     "select * from `tasks_view` \
     \where closed_utc is null \
     \order by `ulid` desc"
@@ -739,7 +740,7 @@ openTasks connection = do
 
 overdueTasks :: Connection -> IO (Doc AnsiStyle)
 overdueTasks connection = do
-  tasks <- query_ connection $ Query $
+  tasks <- query_ connection $ Query
     "select * from `tasks_view` \
     \where closed_utc is null and due_utc < datetime('now') \
     \order by `priority` desc"
@@ -802,7 +803,7 @@ listWithTag connection tags = do
       \left join task_to_tag on tasks.ulid is task_to_tag.task_ulid \
       \where " <> (getTagQuery tags) <> " \
       \group by tasks.ulid \
-      \having count(tag) = " <> (show $ P.length tags)
+      \having count(tag) = " <> show (P.length tags)
 
     mainQuery = "\
       \select\n\
@@ -880,7 +881,7 @@ filterExpParser = do
   <++ notTagParser
   <++ dueParser
   <++ stateParser
-  <++ ((InvalidFilter . pack) <$> (munch1 $ not . isSpace))
+  <++ ((InvalidFilter . pack) <$> munch1 (not . isSpace))
 
 
 filterExpsParser :: ReadP [FilterExp]
@@ -924,17 +925,14 @@ runFilter connection exps = do
         errors = P.filter (not . isValid) filterExps
         errorsDoc = if (P.length errors) > 0
           then Just $
-            (vsep $ fmap (annotate (color Red) . ppInvalidFilter) errors)
+            vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
             <> hardline <> hardline
           else Nothing
         sqlQuery = getFilterQuery filterExps
 
       tasks <- query_ connection sqlQuery
 
-      pure $
-        case errorsDoc of
-          Nothing -> formatTasks tasks
-          Just doc -> doc
+      pure $ fromMaybe (formatTasks tasks) errorsDoc
 
 
 -- TODO: Increase performance of this query
@@ -942,7 +940,7 @@ getFilterQuery :: [FilterExp] -> Query
 getFilterQuery filterExps =
   let
     isValid = \case InvalidFilter _ -> False; _ -> True
-    filterTuple = fmap filterToSql $ P.filter isValid filterExps
+    filterTuple = filterToSql <$> P.filter isValid filterExps
 
     queries = filterTuple <&> \(operator, whereQuery) ->
       operator <> "\n\
@@ -976,18 +974,18 @@ formatTasks tasks =
       strong = bold <> underlined
       taskUlidWidth = getIdLength $ fromIntegral $ P.length tasks
       docHeader =
-             (annotate (idStyle conf <> strong) $
-                fill taskUlidWidth "Id")
-        <++> (annotate (priorityStyle conf <> strong) $
-                fill (prioWidth conf) "Prio")
-        <++> (annotate (dateStyle conf <> strong) $
-                fill (dateWidth conf) "Opened UTC")
-        <++> (annotate (bodyStyle conf <> strong) $
-                fill (bodyWidth conf) "Body")
+             annotate (idStyle conf <> strong)
+                (fill taskUlidWidth "Id")
+        <++> annotate (priorityStyle conf <> strong)
+                (fill (prioWidth conf) "Prio")
+        <++> annotate (dateStyle conf <> strong)
+                (fill (dateWidth conf) "Opened UTC")
+        <++> annotate (bodyStyle conf <> strong)
+                (fill (bodyWidth conf) "Body")
         <++> line
     in
       docHeader <>
-      (vsep $ fmap (formatTaskLine taskUlidWidth) tasks) <>
+      vsep (fmap (formatTaskLine taskUlidWidth) tasks) <>
       line
 
 
@@ -997,10 +995,10 @@ getProgressBar maxWidthInChars progress =
     barWidth = floor (progress * (fromInteger maxWidthInChars))
     remainingWidth = fromIntegral $ maxWidthInChars - barWidth
   in
-    (annotate (bgColorDull Green <> colorDull Green) $ pretty $
-      P.take (fromIntegral barWidth) $ P.repeat '#') <>
+    annotate (bgColorDull Green <> colorDull Green)
+      (pretty $ P.take (fromIntegral barWidth) $ P.repeat '#') <>
     -- (annotate (bgColorDull Green) $ fill (fromIntegral barWidth) "" <>
-    (annotate (bgColorDull Black) $ fill remainingWidth "")
+    annotate (bgColorDull Black) (fill remainingWidth "")
 
 
 formatTagLine :: Int -> (Text, Integer, Integer, Double) -> Doc AnsiStyle
@@ -1011,13 +1009,13 @@ formatTagLine maxTagLength (tag, open_count, closed_count, progress) =
       if progress == 0
       then "     "
       else
-        (pretty $ justifyRight 3 ' ' $ T.pack $
+        pretty (justifyRight 3 ' ' $ T.pack $
           showFFloat (Just 0) (progress * 100) "")
         <+> "%"
   in
-    (fill maxTagLength $ pretty tag)
-    <++> (pretty $ justifyRight (T.length "open") ' ' $ show open_count)
-    <++> (pretty $ justifyRight (T.length "closed") ' ' $ show closed_count)
+    fill maxTagLength (pretty tag)
+    <++> pretty (justifyRight (T.length "open") ' ' $ show open_count)
+    <++> pretty (justifyRight (T.length "closed") ' ' $ show closed_count)
     <++> progressPercentage <+> (getProgressBar barWidth progress)
 
 
@@ -1029,16 +1027,16 @@ listTags connection = do
   let
     percWidth = 6  -- Width of e.g. 100 %
     progressWith = (progressBarWidth conf) + percWidth
-    firstOf4 = \(a, _, _, _) -> a
+    firstOf4 (a, _, _, _) = a
     maxTagLength = tags
       <&> (T.length . firstOf4)
       & P.maximum
 
   pure $
-         (annotate (bold <> underlined) $ fill maxTagLength "Tag")
-    <++> (annotate (bold <> underlined) $ "Open")
-    <++> (annotate (bold <> underlined) $ "Closed")
-    <++> (annotate (bold <> underlined) $ fill progressWith "Progress")
+         annotate (bold <> underlined) (fill maxTagLength "Tag")
+    <++> (annotate (bold <> underlined)  "Open")
+    <++> (annotate (bold <> underlined)  "Closed")
+    <++> annotate (bold <> underlined) (fill progressWith "Progress")
     <> line
-    <> (vsep $ fmap (formatTagLine maxTagLength) tags)
+    <> vsep (fmap (formatTagLine maxTagLength) tags)
 

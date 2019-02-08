@@ -137,7 +137,7 @@ nameToAliasList = (
 aliasWarning :: Text -> Doc AnsiStyle
 aliasWarning alias =
   "Invalid command."
-    <+> "Use" <+> (dquotes $ pretty alias) <+> "instead."
+    <+> "Use" <+> dquotes (pretty alias) <+> "instead."
     <> hardline
 
 
@@ -178,7 +178,7 @@ utils_sec    = ("{{utils_sec}}", "Utils:")
 
 commandParser :: Parser Command
 commandParser =
-  (pure $ ListHead)
+  (pure ListHead)
   <|>
   (   subparser ( commandGroup (T.unpack $ fst basic_sec)
 
@@ -302,14 +302,14 @@ commandParser =
 
   <|> subparser ( commandGroup (T.unpack $ fst list_sec)
 
-    <> command "head" (toParserInfo (pure $ ListHead)
+    <> command "head" (toParserInfo (pure ListHead)
         ("List " <> show (headCount conf)
           <> " most important open tasks by priority desc"))
 
-    <> command "all" (toParserInfo (pure $ ListAll)
+    <> command "all" (toParserInfo (pure ListAll)
         "List all tasks by priority")
 
-    <> command "open" (toParserInfo (pure $ ListOpen)
+    <> command "open" (toParserInfo (pure ListOpen)
         "List all open tasks by creation UTC desc")
 
     -- All tasks due to no later than
@@ -329,25 +329,25 @@ commandParser =
     -- <> command "quarter"  -- … last day of the quarter
     -- <> command "year"  -- … last day of the year
 
-    <> command "overdue" (toParserInfo (pure $ ListOverdue)
+    <> command "overdue" (toParserInfo (pure ListOverdue)
         "List all overdue tasks by priority desc")
 
-    <> command "new" (toParserInfo (pure $ ListNew)
+    <> command "new" (toParserInfo (pure ListNew)
         ("List " <> show (headCount conf)
           <> " newest open tasks by creation UTC desc"))
 
-    <> command "waiting" (toParserInfo (pure $ ListWaiting)
+    <> command "waiting" (toParserInfo (pure ListWaiting)
         "List all waiting tasks by priority")
 
     -- <> command "scheduled"
     --     "List tasks which have an earliest day to work on"
 
 
-    <> command "done" (toParserInfo (pure $ ListDone)
+    <> command "done" (toParserInfo (pure ListDone)
         ("List " <> show (headCount conf)
           <> "  done tasks by closing UTC desc"))
 
-    <> command "obsolete" (toParserInfo (pure $ ListObsolete)
+    <> command "obsolete" (toParserInfo (pure ListObsolete)
         "List all obsolete tasks by closing UTC")
 
     -- <> command "expired"
@@ -357,7 +357,7 @@ commandParser =
     -- <> command "tagged" (toParserInfo (pure $ ListTagged)
     --     "List all tasks with a tag")
 
-    <> command "notag" (toParserInfo (pure $ ListNoTag)
+    <> command "notag" (toParserInfo (pure ListNoTag)
         "List tasks without any tags")
 
     <> command "withtag"
@@ -398,7 +398,7 @@ commandParser =
     -- <> command "stats" -- "Statistics of all tasks"
     -- <> command "ulids" -- "List all ULIDs"
 
-    <> command "tags" (toParserInfo (pure $ Tags)
+    <> command "tags" (toParserInfo (pure Tags)
         "List all used tags and their progress")
 
     -- <> command "active-tags" (toParserInfo (pure $ Tags)
@@ -505,9 +505,9 @@ commandParserInfo =
     (helper <*> commandParser)
     (noIntersperse
       <> briefDesc
-      <> (headerDoc $ Just "{{header}}")
-      <> (progDescDoc $ Just "{{examples}}")
-      <> (footerDoc $ Just $ fromString $
+      <> headerDoc (Just "{{header}}")
+      <> progDescDoc (Just "{{examples}}")
+      <> footerDoc (Just $ fromString $
             "Version " <> (showVersion version)
             <> ", developed by <adriansieber.com> at <feram.io>\n")
     )
@@ -533,8 +533,7 @@ spliceDocsIntoText :: [(Text, Doc AnsiStyle)] -> Text -> [Doc AnsiStyle]
 spliceDocsIntoText replacements renderedDoc =
   let
     docElems = groupBySpace renderedDoc
-    replaceDocs (txt, doc) accum =
-      replaceDoc (pretty txt) doc accum
+    replaceDocs (txt, doc) = replaceDoc (pretty txt) doc
   in
     foldr replaceDocs docElems replacements
 
@@ -572,7 +571,7 @@ helpReplacements =
   in (
     -- ("add", annotate (colorDull Green) "add BODY") :
     ("{{header}}",
-        (annotate (bold <> color Blue) $ "TaskLite") <+> prettyVersion
+        (annotate (bold <> color Blue) "TaskLite") <+> prettyVersion
         <> hardline <> hardline
         <> annotate (color Blue)
             "Task-list manager powered by Haskell and SQLite") :
@@ -588,6 +587,7 @@ helpReplacements =
         advanced_sec :
         alias_sec :
         utils_sec :
+        unset_sec :
       []))
 
 
@@ -659,7 +659,7 @@ main = do
     Prioritize val ids -> adjustPriority val ids
     InfoTask idSubstr -> infoTask connection idSubstr
     NextTask -> nextTask connection
-    FindTask pattern -> findTask connection pattern
+    FindTask aPattern -> findTask connection aPattern
     AddTag tagText ids -> addTag connection tagText ids
     AddNote noteText ids -> addNote connection noteText ids
     SetDueUtc datetime ids -> setDueUtc connection datetime ids
@@ -669,7 +669,7 @@ main = do
     {- Unset -}
     UnDueTasks ids -> undueTasks connection ids
 
-    Version -> pure $ (pretty $ showVersion version) <> hardline
+    Version -> pure $ pretty (showVersion version) <> hardline
     Help -> pure helpText
     Alias alias -> pure $ aliasWarning alias
     UlidToUtc ulid -> pure $ prettyUlid ulid

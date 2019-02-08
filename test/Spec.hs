@@ -33,7 +33,7 @@ testSuite connection = do
 
     it "creates necessary tables on initial run" $ do
       tableStatus <- createTables connection
-      (unpack $ show tableStatus) `shouldBe`
+      unpack (show tableStatus) `shouldBe`
         -- TODO: Improve formatting "create trigger"
         "🆕 Create table \"tasks\"\n\
         \🆕 Create table \"task_to_tag\"\n\
@@ -48,18 +48,18 @@ testSuite connection = do
 
     it "migrates tables to latest version" $ do
       migrationStatus <- runMigrations connection
-      (unpack $ show migrationStatus) `shouldStartWith`
+      unpack (show migrationStatus) `shouldStartWith`
         "Replaced views and triggers:"
 
 
     it "initially contains no tasks" $ do
       tasks <- headTasks connection
-      (unpack $ show tasks) `shouldStartWith` "No tasks available"
+      unpack (show tasks) `shouldStartWith` "No tasks available"
 
 
     it "adds a task" $ do
       result <- addTask connection ["Just a test"]
-      (unpack $ show result) `shouldStartWith`
+      unpack (show result) `shouldStartWith`
         "🆕 Added task \"Just a test\" with ulid"
 
 
@@ -73,7 +73,7 @@ testSuite connection = do
     context "When a task exists" $ do
       it "lists next task" $ do
         result <- nextTask connection
-        (unpack $ show result) `shouldStartWith` taskStart
+        unpack (show result) `shouldStartWith` taskStart
 
 
       it "adds a tag" $ do
@@ -81,7 +81,7 @@ testSuite connection = do
         let ulidText = getUlidFromBody result
 
         tagResult <- addTag connection "test" [ulidText]
-        (unpack $ show tagResult) `shouldStartWith`
+        unpack (show tagResult) `shouldStartWith`
           "🏷  Added tag \"test\" to task"
 
 
@@ -90,7 +90,7 @@ testSuite connection = do
         let ulidText = getUlidFromBody result
 
         tagResult <- addNote connection "Just a test note" [ulidText]
-        (unpack $ show tagResult) `shouldStartWith`
+        unpack (show tagResult) `shouldStartWith`
           "🗒  Added a note to task"
 
 
@@ -102,7 +102,7 @@ testSuite connection = do
           Nothing -> throwIO $ userError "Invalid UTC string"
           Just utcStamp -> do
             result <- setDueUtc connection utcStamp [ulidText]
-            (unpack $ show result) `shouldStartWith`
+            unpack (show result) `shouldStartWith`
               "📅 Set due UTC to \"2087-03-21 17:43:00\" of task"
 
 
@@ -111,7 +111,7 @@ testSuite connection = do
         let ulidText = getUlidFromBody result
 
         doResult <- doTasks connection [ulidText]
-        (unpack $ show doResult) `shouldStartWith` "✅ Finished task"
+        unpack (show doResult) `shouldStartWith` "✅ Finished task"
 
 
     it "adds a task with metadata and deletes it" $ do
@@ -120,14 +120,13 @@ testSuite connection = do
       let ulidText = getUlidFromBody result
 
       deleteResult <- deleteTasks connection [ulidText]
-      (unpack $ show deleteResult) `shouldStartWith` "❌ Deleted task"
+      unpack (show deleteResult) `shouldStartWith` "❌ Deleted task"
 
 
     context "When a task was logged" $ do
-
       it "logs a task" $ do
         result <- logTask connection ["Just a test"]
-        (unpack $ show result) `shouldStartWith`
+        unpack (show result) `shouldStartWith`
           "📝 Logged task \"Just a test\" with ulid"
 
 

@@ -4,9 +4,9 @@ import Protolude as P
 
 import Database.Beam
 
-import Task as Task
-import TaskToNote as TaskToNote
-import TaskToTag as TaskToTag
+import Task
+import TaskToNote
+import TaskToTag
 
 -- | Record for storing entries of the `tasks_view` table
 -- TODO: Use Beam instead of SQLite.Simple

@@ -77,8 +77,7 @@ parseUlidText ulidText = do
     mkUlidTimeMaybe text = fmap toUlidTime (ulidTextToDateTime text)
 
     mkUlidRandomMaybe :: Text -> Maybe ULIDRandom
-    mkUlidRandomMaybe text =
-      (readMaybe . T.unpack . T.drop 10) text
+    mkUlidRandomMaybe = readMaybe . T.unpack . T.drop 10
 
   ulidTime   <- mkUlidTimeMaybe ulidText
   ulidRandom <- mkUlidRandomMaybe ulidText

@@ -203,7 +203,7 @@ Additional secondary states:
 
 *Implicit State*  | Blocked | Repeating | Recurring | Waiting | Review |
 ------------------|---------|-----------|-----------|---------|--------|
-blocking_tasks    |   ✅    |    ❔    |    ❔     |   ❔    |   ❔   |
+blockers          |   ✅    |    ❔    |    ❔     |   ❔    |   ❔   |
 repetition_period |   ?     |    ✅    |    ❌     |   ❔    |   ❔   |
 recurrence_period |   ?     |    ❌    |    ✅     |   ❔    |   ❔   |
 review_utc        |   ❌    |   ❌     |     ❌    | > now   | < now  |
@@ -223,6 +223,26 @@ curl --location http://127.0.0.1:8001/main/tasks_view.json
 
 
 ## Development
+
+### Process
+
+Ghcid with color output for GHC 8.4
+
+```sh
+ghcid \
+  --command="stack ghci --ghci-options=-fdiagnostics-color=always"
+```
+
+```sh
+hlint \
+  --ignore="Redundant do" \
+  --ignore="Use list literal" \
+  --ignore="Use String" \
+  --ignore="Redundant bracket" \
+  --ignore="Use camelCase" \
+  .
+```
+
 
 ### Build Images
 

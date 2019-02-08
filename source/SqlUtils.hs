@@ -18,8 +18,7 @@ id columnName =
 
 
 ids :: [Name] -> ScalarExpr
-ids segments =
-  Iden $ segments
+ids = Iden
 
 
 tableCol :: Name -> Name -> ScalarExpr
@@ -54,11 +53,8 @@ dot item subItem =
 
 
 is :: ScalarExpr -> ScalarExpr -> ScalarExpr
-is exprA exprB =
-  BinOp
-    exprA
-    [ Name Nothing "is" ]
-    exprB
+is exprA =
+  BinOp exprA [ Name Nothing "is" ]
 
 
 isNotNull :: Name -> ScalarExpr
@@ -120,8 +116,8 @@ castTo scalarExpr castType =
 
 
 div :: ScalarExpr -> ScalarExpr -> ScalarExpr
-div valueA valueB =
-  BinOp valueA [Name Nothing "/"] valueB
+div valueA =
+  BinOp valueA [Name Nothing "/"]
 
 
 roundTo :: Integer -> ScalarExpr -> ScalarExpr
@@ -159,7 +155,7 @@ getTable tableName columns = Query $ T.unlines (
 
 
 getColumns :: Text -> [Text] -> Query
-getColumns tableName columns  = Query $ unlines $ (
+getColumns tableName columns  = Query $ unlines (
   "select" :
   "  " <> T.intercalate ",\n  " columns <> "\n" :
   "from `" <> tableName <> "`;" :
@@ -190,11 +186,11 @@ createWithQuery connection theQuery = do
   let
     output = case result :: Either SQLError () of
       Left errorMessage ->
-        if isSuffixOf "already exists" (sqlErrorDetails errorMessage)
+        if "already exists" `isSuffixOf` (sqlErrorDetails errorMessage)
         then ""
         else T.pack $ (show errorMessage) <> "\n"
       Right _ ->
-        "🆕 " <> (unwords $ P.take 3 $ words $ show theQuery) <> "… \n"
+        "🆕 " <> unwords (P.take 3 $ words $ show theQuery) <> "… \n"
 
   pure $ pretty output
 
@@ -206,7 +202,7 @@ createTableWithQuery connection aTableName theQuery = do
   let
     output = case result :: Either SQLError () of
       Left errorMessage ->
-        if isSuffixOf "already exists" (sqlErrorDetails errorMessage)
+        if "already exists" `isSuffixOf` (sqlErrorDetails errorMessage)
         then ""
         else T.pack $ (show errorMessage) <> "\n"
       Right _ -> "🆕 Create table \"" <> aTableName <> "\"\n"
@@ -233,9 +229,9 @@ getCase fieldNameMaybe valueMap =
   <> case fieldNameMaybe of
       Nothing -> ""
       Just fName -> "`" <> fName <> "`"
-  <> (P.fold $ fmap
-        (\(key, val) -> "  when " <> key <> " then " <> show val <> "\n")
-        valueMap)
+  <> P.fold (fmap
+      (\(key, val) -> "  when " <> key <> " then " <> show val <> "\n")
+      valueMap)
   <> " end "
 
 

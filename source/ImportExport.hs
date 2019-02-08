@@ -192,8 +192,8 @@ importTask = do
       insertNotes connection (primaryKey theTask) (notes importTaskRecord)
       insertTask connection theTask
       pure $
-        "📥 Imported task" <+> (dquotes $ pretty $ Task.body theTask)
-        <+> "with ulid" <+> (dquotes $ pretty $ Task.ulid theTask)
+        "📥 Imported task" <+> dquotes (pretty $ Task.body theTask)
+        <+> "with ulid" <+> dquotes (pretty $ Task.ulid theTask)
         <+> hardline
 
 
@@ -248,6 +248,6 @@ backupDatabase = do
 
   pure $ result
     <> hardline
-    <> (pretty $
+    <> pretty (
           "✅ Backed up database \"" <> (dbName conf)
           <> "\" to \"" <> backupFilePath <> "\"")

@@ -140,9 +140,9 @@ wrapMigration migration =
 
 
 lintQuery :: Query -> Either Text Query
-lintQuery sqlQuery =
-  Right sqlQuery
+lintQuery = Right
   -- TODO: Reactivate after
+  --   https://github.com/JakeWheat/simple-sql-parser/issues/20 is fixed
   -- let
   --   queryStr = T.unpack $ fromQuery sqlQuery
   --   result = parseStatements ansi2011 "migration" Nothing queryStr
@@ -154,20 +154,17 @@ lintQuery sqlQuery =
 lintMigration :: Migration -> Either Text Migration
 lintMigration migration =
   either
-    (\leftVal -> Left leftVal)
+    Left
     (\_ -> Right migration)
-    (sequence $ fmap lintQuery (Migrations.querySet migration))
+    (mapM lintQuery (Migrations.querySet migration))
 
 
 runMigration :: Connection -> [Query] -> IO (Either SQLError [()])
 runMigration connection querySet = do
   withTransaction connection $ do
-    result <- try $ sequence $ fmap (execute_ connection) querySet
-
     -- | For debuging: Print querySet of migrations
     -- putText $ "Result: " <> show querySet
-
-    pure result
+    try $ mapM (execute_ connection) querySet
 
 
 runMigrations :: Connection -> IO (Doc ann)
@@ -193,11 +190,9 @@ runMigrations connection = do
         (P.head currentVersionList)
 
       -- | Check if duplicate user versions are defined
-      _ <- case migrationsUp
-        <&> Migrations.id
-        & hasDuplicates of
-          True -> Left "Your migrations contain duplicate user versions"
-          False -> Right []
+      _ <- if migrationsUp <&> Migrations.id & hasDuplicates
+          then Left "Your migrations contain duplicate user versions"
+          else Right []
 
       -- | Get new migrations, lint and wrap them
       migrationsUp
@@ -216,7 +211,7 @@ runMigrations connection = do
         & sequence
 
       case sequence result of
-        Left error -> pure $ pretty $ (show error :: Text)
+        Left error -> pure $ pretty (show error :: Text)
         _ -> do
           execute_ connection $
             Query $ "pragma user_version = " <> (show userVersionMax)

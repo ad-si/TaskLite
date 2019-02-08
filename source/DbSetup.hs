@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-incomplete-record-updates #-}
+
 {-|
 Creates all tables and views
 -}
@@ -9,7 +11,7 @@ import Protolude as P
 import Data.Text as T
 import Database.SQLite.Simple as Sql
 import qualified SqlUtils as S
-import Task as Task
+import Task
 import Language.SQL.SimpleSQL.Syntax
 import Language.SQL.SimpleSQL.Pretty
 import Data.Text.Prettyprint.Doc hiding ((<>))
@@ -40,7 +42,7 @@ createTaskTable connection = do
 
 
 createTriggerModified :: Connection -> IO (Doc ann)
-createTriggerModified connection = do
+createTriggerModified connection =
   -- Update modified_utc whenever a task is updated
   -- (and modified_utc itself isn't changed)
   S.createWithQuery connection $
@@ -54,7 +56,7 @@ createTriggerModified connection = do
 
 
 createTriggerClosed :: Connection -> IO (Doc ann)
-createTriggerClosed connection = do
+createTriggerClosed connection =
   S.createWithQuery connection $
     S.createTriggerAfterUpdate "set_closed_utc" "tasks"
       "(new.state is 'Done' or new.state is 'Obsolete') \
@@ -286,10 +288,10 @@ createViewsAndTriggers connection = do
 
 replaceViewsAndTriggers :: Connection -> IO (Doc ann)
 replaceViewsAndTriggers connection = do
-  execute_ connection $ "drop trigger if exists `set_modified_utc_after_update`"
+  execute_ connection "drop trigger if exists `set_modified_utc_after_update`"
   tr1 <- createTriggerModified connection
 
-  execute_ connection $ "drop trigger if exists `set_closed_utc_after_update`"
+  execute_ connection "drop trigger if exists `set_closed_utc_after_update`"
   tr2 <- createTriggerClosed connection
 
   v1 <- replaceTaskView connection
