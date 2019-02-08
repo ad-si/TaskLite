@@ -24,7 +24,7 @@ testSuite connection = do
   describe "TaskLite" $ do
     let
       taskStart =
-        "state: Open\n\
+        "state: null\n\
         \priority: 0\n\
         \body: Just a test\n\
         \user: "

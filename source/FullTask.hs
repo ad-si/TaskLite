@@ -25,8 +25,9 @@ import Note (Note(..))
 data FullTask = FullTask
   { ulid :: Text -- Ulid
   , body :: Text
-  , state :: TaskState
+  , state :: Maybe TaskState
   , due_utc :: Maybe Text
+  , sleep_utc :: Maybe Text
   , closed_utc :: Maybe Text
   , modified_utc :: Text
   , tags :: Maybe [Text]
@@ -43,7 +44,7 @@ instance FromRow FullTask where
     <$> field <*> field <*> field
     <*> field <*> field <*> field
     <*> field <*> field <*> field
-    <*> field <*> field
+    <*> field <*> field <*> field
 
 instance Sql.FromField.FromField [Text] where
   fromField (Field (SQLText txt) _) = Ok $ split (== ',') txt

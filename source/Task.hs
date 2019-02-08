@@ -25,10 +25,9 @@ import Database.SQLite.Simple.Ok
 
 
 data TaskState
-  = Open
-  | Waiting
-  | Done
+  = Done
   | Obsolete
+  | Deleted
   deriving (Eq, Enum, Generic, Ord, Read, Show)
 
 instance Sql.FromField.FromField TaskState where
@@ -70,8 +69,6 @@ textToTaskState :: Text -> Maybe TaskState
 textToTaskState txt =
   let
     func t
-      | t `elem` ["open", "pending", "recurring"] = Just Open
-      | t == "waiting" = Just Waiting
       | t `elem` ["done", "completed", "finished", "fixed"] = Just Done
       | t `elem` ["obsolete", "deleted"] = Just Obsolete
       | otherwise = Nothing
@@ -87,8 +84,9 @@ newtype Ulid = Ulid Text
 data TaskT f = Task
   { ulid :: Columnar f Text -- Ulid
   , body :: Columnar f Text
-  , state :: Columnar f TaskState
+  , state :: Columnar f (Maybe TaskState)
   , due_utc :: Columnar f (Maybe Text)
+  , sleep_utc :: Columnar f (Maybe Text)
   , closed_utc :: Columnar f (Maybe Text)
   , modified_utc :: Columnar f Text
   , priority_adjustment :: Columnar f (Maybe Float)
@@ -124,6 +122,7 @@ instance FromRow Task where
     <$> field <*> field <*> field
     <*> field <*> field <*> field
     <*> field <*> field <*> field
+    <*> field
 
 instance Hashable Task
 
@@ -143,3 +142,18 @@ instance Pretty Task where
     . T.dropEnd 1 -- Drop trailing newline to maybe add it later
     . decodeUtf8
     . Yaml.encode
+
+
+zeroTask :: Task
+zeroTask = Task
+  { ulid = ""
+  , body = ""
+  , state = Nothing
+  , due_utc = Nothing
+  , sleep_utc = Nothing
+  , closed_utc = Nothing
+  , modified_utc = ""
+  , priority_adjustment = Nothing
+  , metadata = Nothing
+  , user = ""
+  }

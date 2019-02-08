@@ -196,13 +196,12 @@ addTask connection bodyWords = do
   effectiveUserName <- getEffectiveUserName
   let
     (body, tags, due_utc) = parseTaskBody bodyWords
-    task = Task
-      { state = Open
-      , closed_utc = Nothing
-      , priority_adjustment = Nothing
-      , metadata = Nothing
-      , user = T.pack effectiveUserName
-      , ..
+    task = zeroTask
+      { Task.ulid = ulid
+      , Task.body = body
+      , Task.due_utc = due_utc
+      , Task.modified_utc = modified_utc
+      , Task.user = T.pack effectiveUserName
       }
 
   insertTask connection task
@@ -221,13 +220,14 @@ logTask connection bodyWords = do
   let
     (body, extractedTags, due_utc) = parseTaskBody bodyWords
     tags = extractedTags <> ["log"]
-    task = Task
-      { state = Done
-      , closed_utc = Just modified_utc
-      , priority_adjustment = Nothing
-      , metadata = Nothing
-      , user = T.pack effectiveUserName
-      , ..
+    task = zeroTask
+      { Task.ulid = ulid
+      , Task.body = body
+      , Task.state = Just Done
+      , Task.due_utc = due_utc
+      , Task.closed_utc = Just modified_utc
+      , Task.user = T.pack effectiveUserName
+      , Task.modified_utc = modified_utc
       }
 
   insertTask connection task
@@ -261,13 +261,14 @@ execWithId connection idSubstr callback = do
     | numOfTasks > 1 -> pure $
         "⚠️  Id slice" <+> (quote idSubstr) <+> "is not unique."
         <+> "Please use a longer slice!"
+    | otherwise -> pure "This case should not be possible"
 
 
-setStateAndClosed :: Connection -> TaskUlid -> TaskState -> IO ()
+setStateAndClosed :: Connection -> TaskUlid -> Maybe TaskState -> IO ()
 setStateAndClosed connection taskUlid theTaskState = do
   runBeamSqliteDebug writeToLog connection $ runUpdate $
     update (_tldbTasks taskLiteDb)
-      (\task -> [ (Task.state task) <-. val_  theTaskState])
+      (\task -> [(Task.state task) <-. val_ theTaskState])
       (\task -> primaryKey task ==. val_ taskUlid &&.
                 (Task.state task) /=. val_ theTaskState)
 
@@ -276,7 +277,7 @@ doTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
 doTasks connection ids = do
   docs <- forM ids $ \idSubstr -> do
     doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
-      setStateAndClosed connection taskUlid Done
+      setStateAndClosed connection taskUlid $ Just Done
 
       numOfChanges <- changes connection
 
@@ -291,7 +292,7 @@ endTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
 endTasks connection ids = do
   docs <- forM ids $ \idSubstr -> do
     doc <- execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
-      setStateAndClosed connection taskUlid Obsolete
+      setStateAndClosed connection taskUlid $ Just Obsolete
 
       numOfChanges <- changes connection
 
@@ -423,8 +424,7 @@ infoTask connection idSubstr = do
 nextTask :: Connection -> IO (Doc AnsiStyle)
 nextTask connection = do
   let
-    -- TODO: Add "state is 'Waiting' and `wait_utc` < datetime('now')"
-    selectQuery = "select * from `tasks_view` where state is 'Open'"
+    selectQuery = "select * from `tasks_view` where state is NULL "
     orderByAndLimit = "order by `priority` desc limit 1"
   tasks <- query_ connection $ Query $ selectQuery <> orderByAndLimit
 
@@ -586,6 +586,7 @@ duplicateTasks connection ids = do
           pure task
             { Task.ulid = val_ dupeUlid
             , Task.due_utc = val_ Nothing
+            , Task.sleep_utc = val_ Nothing
             , Task.closed_utc = val_ Nothing
             , Task.modified_utc = val_ modified_utc
             }
@@ -805,7 +806,7 @@ listWithTag connection tags = do
 
     mainQuery = "\
       \select\n\
-        \tasks_view.ulid as ulid, body, state, due_utc, closed_utc,\n\
+        \tasks_view.ulid as ulid, body, state, due_utc, sleep_utc, closed_utc,\n\
         \modified_utc, tags, notes, priority, metadata, user\n\
       \from (" <> ulidsQuery <> ") tasks1\n\
       \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
@@ -841,7 +842,7 @@ data FilterExp
   = HasTag Text
   | NotTag Text
   | HasDue Text
-  | HasStatus TaskState
+  | HasStatus (Maybe TaskState)
   | InvalidFilter Text
   deriving Show
 
@@ -870,7 +871,7 @@ stateParser :: ReadP FilterExp
 stateParser = do
   _ <- string "state:"
   utcStr <- munch (not . isSpace)
-  pure $ HasStatus $ fromMaybe Open (textToTaskState $ pack utcStr)
+  pure $ HasStatus $ textToTaskState $ pack utcStr
 
 
 filterExpParser :: ReadP FilterExp
@@ -900,7 +901,8 @@ filterToSql = \case
   HasTag tag          -> ("intersect", "tag like '" <> tag <> "'")
   NotTag tag          -> ("except", "tag like '" <> tag <> "'")
   HasDue utc          -> ("intersect", "due_utc < datetime('" <> utc <>"')")
-  HasStatus taskState -> ("intersect", "state is '" <> (show taskState) <> "'")
+  HasStatus (Just taskState) -> ("intersect", "state is '" <> (show taskState) <> "'")
+  HasStatus Nothing   -> ("", "")
   InvalidFilter _     -> ("", "") -- Should never be called
 
 
@@ -917,16 +919,22 @@ runFilter connection exps = do
         isValid = \case InvalidFilter _ -> False; _ -> True
         ppInvalidFilter (InvalidFilter error) =
           pretty $ "\"" <> error <> "\" is an invalid filter"
+        ppInvalidFilter _ =
+          "The functions should not be called with a valid function"
         errors = P.filter (not . isValid) filterExps
         errorsDoc = if (P.length errors) > 0
-          then (vsep $ fmap (annotate (color Red) . ppInvalidFilter) errors)
-                <> hardline <> hardline
-          else emptyDoc
+          then Just $
+            (vsep $ fmap (annotate (color Red) . ppInvalidFilter) errors)
+            <> hardline <> hardline
+          else Nothing
         sqlQuery = getFilterQuery filterExps
 
       tasks <- query_ connection sqlQuery
 
-      pure $ errorsDoc <> (formatTasks tasks)
+      pure $
+        case errorsDoc of
+          Nothing -> formatTasks tasks
+          Just doc -> doc
 
 
 -- TODO: Increase performance of this query
@@ -950,7 +958,7 @@ getFilterQuery filterExps =
 
     mainQuery = "\
       \select\n\
-      \  tasks_view.ulid as ulid, body, state, due_utc, closed_utc,\n\
+      \  tasks_view.ulid as ulid, body, state, due_utc, sleep_utc, closed_utc,\n\
       \  modified_utc, tags, notes, priority, metadata, user\n\
       \from (" <> ulidsQuery <> ") tasks1\n\
       \left join tasks_view on tasks1.ulid is tasks_view.ulid"

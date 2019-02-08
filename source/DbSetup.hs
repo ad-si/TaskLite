@@ -69,28 +69,35 @@ createTriggerClosed connection = do
 taskViewQuery :: Query
 taskViewQuery =
   let
-    caseStateSql = S.getCase (Just "state") $ [stateDefault ..]
-      & fmap (\tState -> (S.getValue tState, case tState of
-          Open     ->  0
-          Waiting  -> -3
-          Done     ->  0
-          Obsolete ->  0
-        ))
-    caseOverdueSql = S.getCase Nothing
-      [ ("`due_utc` is null", 0)
-      , ("`due_utc` >= datetime('now', '+24 days')",  0)
-      , ("`due_utc` >= datetime('now',  '+6 days')",  3)
-      , ("`due_utc` >= datetime('now'            )",  6)
-      , ("`due_utc` >= datetime('now',  '-6 days')",  9)
-      , ("`due_utc` >= datetime('now', '-24 days')", 12)
-      , ("`due_utc` <  datetime('now', '-24 days')", 15)
-      ]
+    caseStateSql = S.getCase Nothing (
+      ("state is null", 0) :
+      ("state == 'Done'", 0) :
+      ("state == 'Obsolete'", 0) :
+      ("state == 'Deleted'", -10) :
+      [])
+
+    caseSleepSql = S.getCase Nothing (
+      ("`due_utc` is null", 0) :
+      ("`due_utc` >= datetime('now', '+24 days')",  0) :
+      ("`due_utc` >= datetime('now',  '+6 days')",  3) :
+      ("`due_utc` >= datetime('now'            )",  6) :
+      ("`due_utc` >= datetime('now',  '-6 days')",  9) :
+      ("`due_utc` >= datetime('now', '-24 days')", 12) :
+      ("`due_utc` <  datetime('now', '-24 days')", 15) :
+      [])
+
+    caseOverdueSql = S.getCase Nothing (
+      ("`sleep_utc` is null", 0) :
+      -- TODO
+      [])
+
     selectQuery = S.getSelect
       (
         "`tasks`.`ulid` as `ulid`" :
         "`tasks`.`body` as `body`" :
         "`tasks`.`state` as `state`" :
         "`tasks`.`due_utc` as `due_utc`" :
+        "`tasks`.`sleep_utc` as `sleep_utc`" :
         "`tasks`.`closed_utc` as `closed_utc`" :
         "`tasks`.`modified_utc`as `modified_utc`" :
         "group_concat(distinct `task_to_tag`.`tag`) as `tags`" :
@@ -98,6 +105,7 @@ taskViewQuery =
         "ifnull(`tasks`.`priority_adjustment`, 0.0)\n\
         \  + " <> caseStateSql <> "\n\
         \  + " <> caseOverdueSql <> "\n\
+        \  + " <> caseSleepSql <> "\n\
         \  + case count(`task_to_note`.`note`)\n\
         \      when 0 then 0.0\n\
         \      else 1.0\n\
@@ -111,10 +119,12 @@ taskViewQuery =
         "`tasks`.`user`as `user`" :
         []
       )
-      ("`" <> tableName conf <> "` \n\
+      (
+        "`" <> tableName conf <> "` \n\
         \left join task_to_tag on tasks.ulid = task_to_tag.task_ulid \n\
         \left join task_to_note on tasks.ulid = task_to_note.task_ulid \n\
-        \")
+        \"
+      )
       "`tasks`.`ulid`"
   in
     selectQuery

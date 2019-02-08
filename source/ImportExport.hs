@@ -79,7 +79,7 @@ instance FromJSON ImportTask where
 
     o_state      <- o .:? "state"
     status       <- o .:? "status"
-    let state = fromMaybe Open (textToTaskState =<< (o_state <|> status))
+    let state = textToTaskState =<< (o_state <|> status)
 
     o_priority_adjustment <- o .:? "priority_adjustment"
     urgency           <- o .:? "urgency"
@@ -111,6 +111,18 @@ instance FromJSON ImportTask where
       due_utc = fmap
         (T.pack . (timePrint ISO8601_DateAndTime))
         (parseUtc =<< maybeDue)
+
+    wait_val    <- o .:? "wait"
+    wait_until  <- o .:? "wait_until"
+    sleep       <- o .:? "sleep"
+    o_sleep_utc <- o .:? "sleep_utc"
+    sleep_until <- o .:? "sleep_until"
+    let
+      maybeSleep = wait_val <|> wait_until <|> sleep
+        <|> o_sleep_utc <|> sleep_until
+      sleep_utc = fmap
+        (T.pack . (timePrint ISO8601_DateAndTime))
+        (parseUtc =<< maybeSleep)
 
     closed       <- o .:? "closed"
     o_closed_utc <- o .:? "closed_utc"
