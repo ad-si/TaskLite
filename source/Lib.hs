@@ -637,8 +637,8 @@ showAtPrecision number =
   in fst tuple <> (T.replace ".0" "  " . T.take 2 . snd) tuple
 
 
-formatTaskLine :: Int -> FullTask -> Doc AnsiStyle
-formatTaskLine taskUlidWidth task =
+formatTaskLine :: DateTime -> Int -> FullTask -> Doc AnsiStyle
+formatTaskLine now taskUlidWidth task =
   let
     id = pretty $ T.takeEnd taskUlidWidth $ FullTask.ulid task
     createdUtc = fmap
@@ -673,10 +673,14 @@ formatTaskLine taskUlidWidth task =
           $ fromMaybe 0 (FullTask.priority task)) :
         annotate (dateStyle conf) (pretty taskDate) :
         grayOut (isNothing $ FullTask.closed_utc task) (reflow body) :
-        annotate (dueStyle conf) (pretty dueUtcMaybe) :
+        annotate
+          (if ((FullTask.due_utc task) >>= parseUtc) > Just now
+            then dueStyle conf
+            else overdueStyle conf)
+          (pretty dueUtcMaybe) :
         annotate (closedStyle conf) (pretty closedUtcMaybe) :
         hsep (tags <$$> formatTag) :
-        [])
+      [])
   in
     fromMaybe
       ("Id" <+> dquotes (pretty $ FullTask.ulid task) <+>
@@ -709,90 +713,90 @@ countTasks taskStateFilter = do
 
 
 -- TODO: Print number of remaining tasks and how to display them at the bottom
-headTasks :: Connection -> IO (Doc AnsiStyle)
-headTasks connection = do
+headTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
+headTasks now connection = do
   tasks <- query_ connection $ Query $
     -- TODO: Add `wait_utc` < datetime('now')"
     "select * from tasks_view \
     \where closed_utc is null \
     \order by `priority` desc limit " <> show (headCount conf)
-  pure $ formatTasks tasks
+  pure $ formatTasks now tasks
 
 
-newTasks :: Connection -> IO (Doc AnsiStyle)
-newTasks connection = do
+newTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
+newTasks now connection = do
   tasks <- query_ connection $ Query $
     -- TODO: Add `wait_utc` < datetime('now')"
     "select * from `tasks_view` \
     \where closed_utc is null \
     \order by `ulid` desc limit " <> show (headCount conf)
-  pure $ formatTasks tasks
+  pure $ formatTasks now tasks
 
 
-openTasks :: Connection -> IO (Doc AnsiStyle)
-openTasks connection = do
+openTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
+openTasks now connection = do
   tasks <- query_ connection $ Query
     "select * from `tasks_view` \
     \where closed_utc is null \
     \order by `ulid` desc"
-  pure $ formatTasks tasks
+  pure $ formatTasks now tasks
 
 
-overdueTasks :: Connection -> IO (Doc AnsiStyle)
-overdueTasks connection = do
+overdueTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
+overdueTasks now connection = do
   tasks <- query_ connection $ Query
     "select * from `tasks_view` \
     \where closed_utc is null and due_utc < datetime('now') \
     \order by `priority` desc"
-  pure $ formatTasks tasks
+  pure $ formatTasks now tasks
 
 
-doneTasks :: Connection -> IO (Doc AnsiStyle)
-doneTasks connection = do
+doneTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
+doneTasks now connection = do
   tasks <- query_ connection $ Query $
     "select * from tasks_view \
     \where closed_utc is not null and state is 'Done' \
     \order by closed_utc desc limit " <> show (headCount conf)
-  pure $ formatTasks tasks
+  pure $ formatTasks now tasks
 
 
-obsoleteTasks :: Connection -> IO (Doc AnsiStyle)
-obsoleteTasks connection = do
+obsoleteTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
+obsoleteTasks now connection = do
   tasks <- query_ connection $ Query $
     "select * from tasks_view \
     \where closed_utc is not null and state is 'Obsolete' \
     \order by ulid desc limit " <> show (headCount conf)
-  pure $ formatTasks tasks
+  pure $ formatTasks now tasks
 
 
-listWaiting :: Connection -> IO (Doc AnsiStyle)
-listWaiting connection = do
+listWaiting :: DateTime -> Connection -> IO (Doc AnsiStyle)
+listWaiting now connection = do
   tasks <- query_ connection
     "select * from tasks_view \
     \where state == 'Waiting' \
     \order by priority desc"
 
-  pure $ formatTasks tasks
+  pure $ formatTasks now tasks
 
 
-listAll :: Connection -> IO (Doc AnsiStyle)
-listAll connection = do
+listAll :: DateTime -> Connection -> IO (Doc AnsiStyle)
+listAll now connection = do
   tasks <-  query_ connection
     "select * from tasks_view order by priority desc"
-  pure $ formatTasks tasks
+  pure $ formatTasks now tasks
 
 
-listNoTag :: Connection -> IO (Doc AnsiStyle)
-listNoTag connection = do
+listNoTag :: DateTime -> Connection -> IO (Doc AnsiStyle)
+listNoTag now connection = do
   tasks <-  query_ connection
     "select * from tasks_view \
     \where closed_utc is null and tags is null \
     \order by priority desc"
-  pure $ formatTasks tasks
+  pure $ formatTasks now tasks
 
 
-listWithTag :: Connection -> [Text] -> IO (Doc AnsiStyle)
-listWithTag connection tags = do
+listWithTag :: DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
+listWithTag now connection tags = do
   let
     getTagQuery =
       (T.intercalate " or ") . (fmap (("tag like '" <>) . (<> "'")))
@@ -814,14 +818,14 @@ listWithTag connection tags = do
       \order by priority desc"
 
   tasks <- query_ connection $ Query mainQuery
-  pure $ formatTasks tasks
+  pure $ formatTasks now tasks
 
 
-queryTasks :: Connection -> Text -> IO (Doc AnsiStyle)
-queryTasks connection sqlQuery = do
+queryTasks :: DateTime -> Connection -> Text -> IO (Doc AnsiStyle)
+queryTasks now connection sqlQuery = do
   tasks <- query_ connection $ Query $
     "select * from `tasks_view` where " <> sqlQuery
-  pure $ formatTasks tasks
+  pure $ formatTasks now tasks
 
 
 runSql :: Text -> IO (Doc AnsiStyle)
@@ -907,8 +911,8 @@ filterToSql = \case
   InvalidFilter _     -> ("", "") -- Should never be called
 
 
-runFilter :: Connection -> [Text] -> IO (Doc AnsiStyle)
-runFilter connection exps = do
+runFilter :: DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
+runFilter now connection exps = do
   let
     parserResults = readP_to_S filterExpsParser $ T.unpack (unwords exps)
     filterMay = listToMaybe parserResults
@@ -932,7 +936,7 @@ runFilter connection exps = do
 
       tasks <- query_ connection sqlQuery
 
-      pure $ fromMaybe (formatTasks tasks) errorsDoc
+      pure $ fromMaybe (formatTasks now tasks) errorsDoc
 
 
 -- TODO: Increase performance of this query
@@ -965,8 +969,8 @@ getFilterQuery filterExps =
 
 
 
-formatTasks :: [FullTask] -> Doc AnsiStyle
-formatTasks tasks =
+formatTasks :: DateTime -> [FullTask] -> Doc AnsiStyle
+formatTasks now tasks  =
   if P.length tasks == 0
   then pretty noTasksWarning
   else
@@ -985,7 +989,7 @@ formatTasks tasks =
         <++> line
     in
       docHeader <>
-      vsep (fmap (formatTaskLine taskUlidWidth) tasks) <>
+      vsep (fmap (formatTaskLine now taskUlidWidth) tasks) <>
       line
 
 

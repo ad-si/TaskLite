@@ -15,6 +15,7 @@ import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.Version (showVersion)
 import Options.Applicative
+import Time.System
 import Database.SQLite.Simple (close)
 
 import Config
@@ -611,8 +612,10 @@ main = do
   connection <- setupConnection
   tableStatus <- createTables connection  -- TODO: Integrate into migrations
   migrationsStatus <- runMigrations connection
+  nowElapsed <- timeCurrentP
 
   let
+    now = timeFromElapsedP nowElapsed :: DateTime
     addTaskC = addTask connection
     prettyUlid ulid = pretty $ fmap
       (T.pack . timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])))
@@ -620,19 +623,19 @@ main = do
 
 
   doc <- case cliCommand of
-    ListAll -> listAll connection
-    ListHead -> headTasks connection
-    ListNew -> newTasks connection
-    ListOpen -> openTasks connection
-    ListOverdue -> overdueTasks connection
-    ListWaiting -> listWaiting connection
-    ListDone -> doneTasks connection
-    ListObsolete -> obsoleteTasks connection
-    ListNoTag -> listNoTag connection
-    ListWithTag tags -> listWithTag connection tags
-    QueryTasks query -> queryTasks connection query
+    ListAll -> listAll now connection
+    ListHead -> headTasks now connection
+    ListNew -> newTasks now connection
+    ListOpen -> openTasks now connection
+    ListOverdue -> overdueTasks now connection
+    ListWaiting -> listWaiting now connection
+    ListDone -> doneTasks now connection
+    ListObsolete -> obsoleteTasks now connection
+    ListNoTag -> listNoTag now connection
+    ListWithTag tags -> listWithTag now connection tags
+    QueryTasks query -> queryTasks now connection query
     RunSql query -> runSql query
-    RunFilter expressions -> runFilter connection expressions
+    RunFilter expressions -> runFilter now connection expressions
     Tags -> listTags connection
     Import -> importTask
     Csv -> dumpCsv

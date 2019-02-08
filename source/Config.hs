@@ -20,6 +20,7 @@ data Config = Config
   , bodyClosedStyle :: AnsiStyle
   , closedStyle :: AnsiStyle
   , dueStyle :: AnsiStyle
+  , overdueStyle :: AnsiStyle
   , tagStyle :: AnsiStyle
   , utcFormat :: TimeFormatString
   , mainDir :: FilePath
@@ -39,11 +40,12 @@ conf = Config
   , idWidth = 4
   , idStyle = color Green
   , priorityStyle = color Magenta
-  , dateStyle = color Yellow
+  , dateStyle = colorDull Black
   , bodyStyle = color White
   , bodyClosedStyle = color Black
   , closedStyle = colorDull Black
-  , dueStyle = color Red
+  , dueStyle = color Yellow
+  , overdueStyle = color Red
   , tagStyle = color Blue
   , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
   , mainDir = "tasklite"
