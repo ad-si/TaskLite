@@ -609,7 +609,7 @@ main = do
   cliCommand <- execParser commandParserInfo
 
   connection <- setupConnection
-  tableStatus <- createTables connection
+  tableStatus <- createTables connection  -- TODO: Integrate into migrations
   migrationsStatus <- runMigrations connection
 
   let

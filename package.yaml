@@ -58,6 +58,13 @@ default-extensions:
   - TypeSynonymInstances
   - UndecidableInstances
 
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wredundant-constraints
+  - -fno-warn-orphans
 
 library:
   source-dirs: source
@@ -66,13 +73,6 @@ executables:
   tasklite:
     main: Main.hs
     source-dirs: app
-    ghc-options:
-      - -Wall
-      - -Wcompat
-      - -Wincomplete-record-updates
-      - -Wincomplete-uni-patterns
-      - -Wredundant-constraints
-      - -fno-warn-orphans
     dependencies:
       - tasklite
 
@@ -80,13 +80,6 @@ tests:
   tasklite-test:
     main: Spec.hs
     source-dirs: test
-    ghc-options:
-      - -Wall
-      - -Wcompat
-      - -Wincomplete-record-updates
-      - -Wincomplete-uni-patterns
-      - -Wredundant-constraints
-      - -fno-warn-orphans
     dependencies:
       - tasklite
       - hspec
@@ -96,12 +89,6 @@ benchmarks:
   tasklite-bench:
     main: Main.hs
     source-dirs: benchmarks
-    ghc-options:
-      - -Wall
-      - -Wcompat
-      - -Wincomplete-record-updates
-      - -Wincomplete-uni-patterns
-      - -Wredundant-constraints
     dependencies:
       - criterion
       - tasklite

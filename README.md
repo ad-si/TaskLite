@@ -55,12 +55,12 @@ docker run \
 
 Attention: Make sure that the IP address matches with your host's.
 
-
-Generate custom view by appending the SQL query to the URL:
-[http://0.0.0.0:8001/main?sql=](http://0.0.0.0:8001/main?sql=)
-(e.g. [http://0.0.0.0:8001/main?sql=select%20*%20from%20tasks][select-tasks])
-
-[select-tasks]: http://0.0.0.0:8001/main?sql=select%20*%20from%20tasks
+Generate custom view by appending the SQL query to [0.0.0.0:8001/main?sql=]
+(e.g. [0.0.0.0:8001/main?sql=select%20*%20from%20tasks])
+<!-- Fixes syntax highlighting -->
+[0.0.0.0:8001/main?sql=]: http://0.0.0.0:8001/main?sql=
+[0.0.0.0:8001/main?sql=select%20*%20from%20tasks]:
+  http://0.0.0.0:8001/main?sql=select%20*%20from%20tasks
 
 Some example views:
 
@@ -339,6 +339,7 @@ For example as a queue for processing tasks.
 [VisiData]: http://visidata.org
 [LiteCLI]: https://litecli.com
 
+
 ## Related
 
 - [Buku] -Store and manage your bookmarks from the command line
@@ -356,11 +357,6 @@ For example as a queue for processing tasks.
 [Taskbook]: https://github.com/klauscfhq/taskbook
 [Taskwarrior]: https://github.com/GothenburgBitFactory/taskwarrior
 [Toodles]: https://github.com/aviaviavi/toodles
-
-
-## TODO
-
-- Burndown Chart
 
 
 [Haskell]: https://haskell.org
