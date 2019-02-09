@@ -306,6 +306,21 @@ endTasks connection ids = do
   pure $ vsep docs
 
 
+trashTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
+trashTasks connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+      setStateAndClosed connection taskUlid $ Just Deletable
+
+      numOfChanges <- changes connection
+
+      pure $ pretty $ if numOfChanges == 0
+        then "⚠️  Task \"" <> idText <> "\" is already marked as deletable"
+        else "🚮  Marked task \"" <> idText <> "\" as deletable"
+
+  pure $ vsep docs
+
+
 deleteTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
 deleteTasks connection ids = do
   docs <- forM ids $ \idSubstr -> do
@@ -765,6 +780,15 @@ obsoleteTasks now connection = do
   tasks <- query_ connection $ Query $
     "select * from tasks_view \
     \where closed_utc is not null and state is 'Obsolete' \
+    \order by ulid desc limit " <> show (headCount conf)
+  pure $ formatTasks now tasks
+
+
+deletableTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
+deletableTasks now connection = do
+  tasks <- query_ connection $ Query $
+    "select * from tasks_view \
+    \where closed_utc is not null and state is 'Deletable' \
     \order by ulid desc limit " <> show (headCount conf)
   pure $ formatTasks now tasks
 

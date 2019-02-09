@@ -43,6 +43,7 @@ data Command
   {- Modify -}
   | DoTasks [IdText]
   | EndTasks [IdText]
+  | TrashTasks [IdText]
   | DeleteTasks [IdText]
   | BoostTasks [IdText]
   | HushTasks [IdText]
@@ -80,6 +81,7 @@ data Command
   | ListOpen
   | ListDone
   | ListObsolete
+  | ListDeletable
   | ListWaiting
   | ListOverdue
   | ListNoTag
@@ -199,6 +201,9 @@ commandParser =
 
     <> command "end" (toParserInfo (EndTasks <$> some (strArgument idVar))
         "Mark a task as obsolete")
+
+    <> command "trash" (toParserInfo (TrashTasks <$> some (strArgument idVar))
+        "Mark a task as deletable")
 
     <> command "delete" (toParserInfo (DeleteTasks <$> some (strArgument idVar))
         "Delete a task from the database (Attention: Irreversible)")
@@ -350,6 +355,9 @@ commandParser =
 
     <> command "obsolete" (toParserInfo (pure ListObsolete)
         "List all obsolete tasks by closing UTC")
+
+    <> command "deletable" (toParserInfo (pure ListDeletable)
+        "List all deletable tasks by closing UTC")
 
     -- <> command "expired"
     -- "List tasks which are obsolete, \
@@ -631,6 +639,7 @@ main = do
     ListWaiting -> listWaiting now connection
     ListDone -> doneTasks now connection
     ListObsolete -> obsoleteTasks now connection
+    ListDeletable -> deletableTasks now connection
     ListNoTag -> listNoTag now connection
     ListWithTag tags -> listWithTag now connection tags
     QueryTasks query -> queryTasks now connection query
@@ -654,6 +663,7 @@ main = do
     LogTask bodyWords -> logTask connection bodyWords
     DoTasks ids -> doTasks connection ids
     EndTasks ids -> endTasks connection ids
+    TrashTasks ids -> trashTasks connection ids
     DeleteTasks ids -> deleteTasks connection ids
     BoostTasks ids -> adjustPriority 1 ids
     HushTasks ids -> adjustPriority (-1) ids
