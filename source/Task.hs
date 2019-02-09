@@ -27,7 +27,7 @@ import Database.SQLite.Simple.Ok
 data TaskState
   = Done
   | Obsolete
-  | Deleted
+  | Deletable
   deriving (Eq, Enum, Generic, Ord, Read, Show)
 
 instance Sql.FromField.FromField TaskState where
@@ -70,7 +70,9 @@ textToTaskState txt =
   let
     func t
       | t `elem` ["done", "completed", "finished", "fixed"] = Just Done
-      | t `elem` ["obsolete", "deleted"] = Just Obsolete
+      | t `elem` ["obsolete"] = Just Obsolete
+      | t `elem` [ "deletable", "deleted"
+                 , "removable", "removed"] = Just Deletable
       | otherwise = Nothing
     txtLower = T.toLower txt
   in
@@ -84,14 +86,20 @@ newtype Ulid = Ulid Text
 data TaskT f = Task
   { ulid :: Columnar f Text -- Ulid
   , body :: Columnar f Text
-  , state :: Columnar f (Maybe TaskState)
-  , due_utc :: Columnar f (Maybe Text)
-  , sleep_utc :: Columnar f (Maybe Text)
-  , closed_utc :: Columnar f (Maybe Text)
   , modified_utc :: Columnar f Text
+  , awake_utc :: Columnar f (Maybe Text)
+  , ready_utc :: Columnar f (Maybe Text)
+  , waiting_utc :: Columnar f (Maybe Text)
+  , review_utc :: Columnar f (Maybe Text)
+  , due_utc :: Columnar f (Maybe Text)
+  , closed_utc :: Columnar f (Maybe Text)
+  , state :: Columnar f (Maybe TaskState)
+  , group_ulid :: Columnar f (Maybe Text)
+  , repetition_duration :: Columnar f (Maybe Text)
+  , recurrence_duration :: Columnar f (Maybe Text)
   , priority_adjustment :: Columnar f (Maybe Float)
-  , metadata :: Columnar f (Maybe Aeson.Value)
   , user :: Columnar f Text
+  , metadata :: Columnar f (Maybe Aeson.Value)
   } deriving Generic
 
 
@@ -122,6 +130,8 @@ instance FromRow Task where
     <$> field <*> field <*> field
     <*> field <*> field <*> field
     <*> field <*> field <*> field
+    <*> field <*> field <*> field
+    <*> field <*> field <*> field
     <*> field
 
 instance Hashable Task
@@ -148,12 +158,18 @@ zeroTask :: Task
 zeroTask = Task
   { ulid = ""
   , body = ""
-  , state = Nothing
-  , due_utc = Nothing
-  , sleep_utc = Nothing
-  , closed_utc = Nothing
   , modified_utc = ""
+  , awake_utc = Nothing
+  , ready_utc = Nothing
+  , waiting_utc = Nothing
+  , review_utc = Nothing
+  , due_utc = Nothing
+  , closed_utc = Nothing
+  , state = Nothing
+  , group_ulid = Nothing
+  , repetition_duration = Nothing
+  , recurrence_duration = Nothing
   , priority_adjustment = Nothing
-  , metadata = Nothing
   , user = ""
+  , metadata = Nothing
   }

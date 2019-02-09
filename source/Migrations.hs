@@ -104,18 +104,61 @@ _2_ =
       }
 
 
--- _?_add_deleted :: MigrateDirection -> Migration
--- _?_add_deleted =
---   let
---     base = Migration
---       { id = UserVersion 2
---       , querySet = []
---       }
---   in \case
---     MigrateUp -> base { Migrations.querySet =
---         ["alter table tasks add column deleted boolean"]
---       }
---     MigrateDown -> base { Migrations.querySet = [] }
+-- | Add fields awake_utc, ready_utc, waiting_utc, review_utc, closed_utc,
+-- | group_ulid, repetition_duration, recurrence_duration,
+_3_ :: MigrateDirection -> Migration
+_3_ =
+  let
+    base = Migration
+      { id = UserVersion 3
+      , querySet = []
+      }
+    createTempTableQueryUp = Query "\
+      \create table tasks_temp ( \n\
+      \  ulid text not null primary key, \n\
+      \  body text not null, \n\
+      \  modified_utc text not null, \n\
+      \  awake_utc text, \n\
+      \  ready_utc text, \n\
+      \  waiting_utc text, \n\
+      \  review_utc text, \n\
+      \  due_utc text, \n\
+      \  closed_utc text, \n\
+      \  state text check(state in (NULL, 'Done', 'Obsolete', 'Deletable')), \n\
+      \  group_ulid text, \n\
+      \  repetition_duration text, \n\
+      \  recurrence_duration text, \n\
+      \  priority_adjustment float, \n\
+      \  user text, \n\
+      \  metadata text \n\
+      \) \n\
+      \"
+
+    -- TODO: Finish query
+    createTempTableQueryDown = Query "create table tasks_temp"
+
+  in \case
+    MigrateUp -> base { Migrations.querySet = (
+        createTempTableQueryUp :
+        "insert into tasks_temp \
+          \select ulid, body, modified_utc, sleep_utc, NULL, NULL, NULL, \
+          \due_utc, closed_utc, state, NULL, NULL, NULL, \
+          \priority_adjustment, user, metadata \
+          \from tasks" :
+        "drop table tasks" :
+        "alter table tasks_temp rename to tasks" :
+        [])
+      }
+
+    MigrateDown -> base { Migrations.querySet = (
+        createTempTableQueryDown :
+        "insert into tasks_temp \
+          \select ulid, body, state, due_utc, closed_utc, \
+          \  modified_utc, priority_adjustment, metadata, user from tasks" :
+        "drop table tasks" :
+        "alter table tasks_temp rename to tasks" :
+        [])
+      }
 
 
 hasDuplicates :: Eq a => [a] -> Bool
@@ -176,6 +219,7 @@ runMigrations connection = do
     migrations = (
         _1_ :
         _2_ :
+        _3_ :
       [])
 
     migrationsUp = fmap ($ MigrateUp) migrations

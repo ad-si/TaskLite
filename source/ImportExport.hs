@@ -65,6 +65,7 @@ data ImportTask = ImportTask
   } deriving Show
 
 
+-- | Values a suffixed with a prime (') to avoid name collisions
 instance FromJSON ImportTask where
   parseJSON = withObject "task" $ \o -> do
     entry        <- o .:? "entry"
@@ -112,17 +113,48 @@ instance FromJSON ImportTask where
         (T.pack . (timePrint ISO8601_DateAndTime))
         (parseUtc =<< maybeDue)
 
-    wait_val    <- o .:? "wait"
-    wait_until  <- o .:? "wait_until"
-    sleep       <- o .:? "sleep"
-    o_sleep_utc <- o .:? "sleep_utc"
-    sleep_until <- o .:? "sleep_until"
+    awake'       <- o .:? "awake"
+    awake_at'    <- o .:? "awake_at"
+    sleep'       <- o .:? "sleep"
+    sleep_utc'   <- o .:? "sleep_utc"
+    sleep_until' <- o .:? "sleep_until"
+    wait'        <- o .:? "wait"
+    wait_until'  <- o .:? "wait_until"
     let
-      maybeSleep = wait_val <|> wait_until <|> sleep
-        <|> o_sleep_utc <|> sleep_until
-      sleep_utc = fmap
+      maybeAwake = awake' <|> awake_at'
+        <|> sleep' <|> sleep_utc' <|> sleep_until'
+        <|> wait' <|> wait_until'
+      awake_utc = fmap
         (T.pack . (timePrint ISO8601_DateAndTime))
-        (parseUtc =<< maybeSleep)
+        (parseUtc =<< maybeAwake)
+
+    ready'       <- o .:? "ready"
+    ready_since' <- o .:? "ready_since"
+    ready_utc'   <- o .:? "ready_utc"
+    let
+      maybeReady = ready' <|> ready_since' <|> ready_utc'
+      ready_utc = fmap
+        (T.pack . (timePrint ISO8601_DateAndTime))
+        (parseUtc =<< maybeReady)
+
+    review'       <- o .:? "review"
+    review_at'    <- o .:? "review_at"
+    review_since' <- o .:? "review_since"
+    review_utc'   <- o .:? "review_utc"
+    let
+      maybeReview = review' <|> review_at' <|> review_since' <|> review_utc'
+      review_utc = fmap
+        (T.pack . (timePrint ISO8601_DateAndTime))
+        (parseUtc =<< maybeReview)
+
+    waiting'       <- o .:? "waiting"
+    waiting_since' <- o .:? "waiting_since"
+    waiting_utc'   <- o .:? "waiting_utc"
+    let
+      maybewaiting = waiting' <|> waiting_since' <|> waiting_utc'
+      waiting_utc = fmap
+        (T.pack . (timePrint ISO8601_DateAndTime))
+        (parseUtc =<< maybewaiting)
 
     closed       <- o .:? "closed"
     o_closed_utc <- o .:? "closed_utc"
@@ -136,6 +168,30 @@ instance FromJSON ImportTask where
       closed_utc = fmap
         (T.pack . (timePrint ISO8601_DateAndTime))
         (parseUtc =<< maybeClosed)
+
+    group_ulid' <- o .:? "group_ulid"
+    group_id'   <- o .:? "group_id"
+    let
+      maybeGroupUlid = group_ulid' <|> group_id'
+      group_ulid = fmap
+        (T.pack . (timePrint ISO8601_DateAndTime))
+        (parseUtc =<< maybeGroupUlid)
+
+    repetition_duration' <- o .:? "repetition_duration"
+    repeat_duration'     <- o .:? "repeat_duration"
+    let
+      maybeRepetition = repetition_duration' <|> repeat_duration'
+      repetition_duration = fmap
+        (T.pack . (timePrint ISO8601_DateAndTime))
+        (parseUtc =<< maybeRepetition)
+
+    recurrence_duration' <- o .:? "recurrence_duration"
+    recur_duration'      <- o .:? "recur_duration"
+    let
+      maybeRecurrence = recurrence_duration' <|> recur_duration'
+      recurrence_duration = fmap
+        (T.pack . (timePrint ISO8601_DateAndTime))
+        (parseUtc =<< maybeRecurrence)
 
     o_notes     <- optional (o .: "notes") :: Parser (Maybe [Note])
     annotations <- o .:? "annotations" :: Parser (Maybe [Annotation])

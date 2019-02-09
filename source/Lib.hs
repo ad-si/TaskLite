@@ -426,9 +426,9 @@ infoTask connection idSubstr = do
 nextTask :: Connection -> IO (Doc AnsiStyle)
 nextTask connection = do
   let
-    selectQuery = "select * from `tasks_view` where state is NULL "
+    stateNullQuery = "select * from `tasks_view` where state is NULL "
     orderByAndLimit = "order by `priority` desc limit 1"
-  tasks <- query_ connection $ Query $ selectQuery <> orderByAndLimit
+  tasks <- query_ connection $ Query $ stateNullQuery <> orderByAndLimit
 
   pure $ case P.head (tasks :: [FullTask]) of
     Nothing -> pretty noTasksWarning
@@ -588,7 +588,7 @@ duplicateTasks connection ids = do
           pure task
             { Task.ulid = val_ dupeUlid
             , Task.due_utc = val_ Nothing
-            , Task.sleep_utc = val_ Nothing
+            , Task.awake_utc = val_ Nothing
             , Task.closed_utc = val_ Nothing
             , Task.modified_utc = val_ modified_utc
             }
@@ -809,14 +809,12 @@ listWithTag now connection tags = do
       \group by tasks.ulid \
       \having count(tag) = " <> show (P.length tags)
 
-    mainQuery = "\
-      \select\n\
-        \tasks_view.ulid as ulid, body, state, due_utc, sleep_utc, closed_utc,\n\
-        \modified_utc, tags, notes, priority, metadata, user\n\
+    mainQuery = FullTask.selectQuery <> "\
       \from (" <> ulidsQuery <> ") tasks1\n\
       \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
       \order by priority desc"
 
+  -- TODO: Use beam to execute query
   tasks <- query_ connection $ Query mainQuery
   pure $ formatTasks now tasks
 
@@ -958,10 +956,7 @@ getFilterQuery filterExps =
       =  "select tasks.ulid from tasks\n"
       <> unlines queries
 
-    mainQuery = "\
-      \select\n\
-      \  tasks_view.ulid as ulid, body, state, due_utc, sleep_utc, closed_utc,\n\
-      \  modified_utc, tags, notes, priority, metadata, user\n\
+    mainQuery = FullTask.selectQuery <> "\
       \from (" <> ulidsQuery <> ") tasks1\n\
       \left join tasks_view on tasks1.ulid is tasks_view.ulid"
   in

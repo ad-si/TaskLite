@@ -6,9 +6,11 @@ import Protolude as P
 
 import Test.Hspec
 import qualified Database.SQLite.Simple as Sql
+import Data.Hourglass
 import Data.Text as T
 import System.IO.Temp
 import System.IO.Error
+import Time.System
 import Data.List ((!!))
 
 import Lib
@@ -19,16 +21,12 @@ import Migrations
 
 -- | The tests build up upon each other
 -- | and therefore the order must not be changed
-testSuite :: Sql.Connection -> SpecWith ()
-testSuite connection = do
+testSuite :: DateTime -> Sql.Connection -> SpecWith ()
+testSuite now connection = do
   describe "TaskLite" $ do
     let
-      taskStart =
-        "state: null\n\
-        \priority: 0\n\
-        \body: Just a test\n\
-        \user: "
-      getUlidFromBody = (!! 11) . T.words . pack . show
+      -- TODO: Make function more generic
+      getUlidFromBody = (!! 19) . T.words . pack . show
 
 
     it "creates necessary tables on initial run" $ do
@@ -53,7 +51,7 @@ testSuite connection = do
 
 
     it "initially contains no tasks" $ do
-      tasks <- headTasks connection
+      tasks <- headTasks now connection
       unpack (show tasks) `shouldStartWith` "No tasks available"
 
 
@@ -63,17 +61,28 @@ testSuite connection = do
         "🆕 Added task \"Just a test\" with ulid"
 
 
-    it "debug" $ do
-      result <- nextTask connection
-      let ulidText = getUlidFromBody result
-
-      print ulidText
-
-
     context "When a task exists" $ do
       it "lists next task" $ do
         result <- nextTask connection
-        unpack (show result) `shouldStartWith` taskStart
+        unpack (show result) `shouldStartWith` "\
+          \awake_utc: null\n\
+          \review_utc: null\n\
+          \state: null\n\
+          \repetition_duration: null\n\
+          \priority: 0\n\
+          \recurrence_duration: null\n\
+          \body: Just a test\n\
+          \user: adrian\n\
+          \"
+        unpack (show result) `shouldEndWith` "\
+          \group_ulid: null\n\
+          \closed_utc: null\n\
+          \metadata: null\n\
+          \notes: null\n\
+          \waiting_utc: null\n\
+          \ready_utc: null\n\
+          \tags: null\n\
+          \due_utc: null"
 
 
       it "adds a tag" $ do
@@ -134,10 +143,14 @@ main :: IO ()
 main = do
   withSystemTempFile "main.db" $ \filePath _ -> do
     connection <- Sql.open filePath
-    hspec $ testSuite connection
+    nowElapsed <- timeCurrentP
+    let now = timeFromElapsedP nowElapsed :: DateTime
+    hspec $ testSuite now connection
 
   -- | Does not delete database after tests for debugging
   -- filePath <- emptySystemTempFile "main.db"
   -- putStrLn $ "\nFilepath: " <> filePath
   -- connection <- Sql.open filePath
-  -- hspec $ testSuite connection
+  -- nowElapsed <- timeCurrentP
+  -- let now = timeFromElapsedP nowElapsed :: DateTime
+  -- hspec $ testSuite now connection

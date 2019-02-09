@@ -25,16 +25,22 @@ import Note (Note(..))
 data FullTask = FullTask
   { ulid :: Text -- Ulid
   , body :: Text
-  , state :: Maybe TaskState
-  , due_utc :: Maybe Text
-  , sleep_utc :: Maybe Text
-  , closed_utc :: Maybe Text
   , modified_utc :: Text
+  , awake_utc :: Maybe Text
+  , ready_utc :: Maybe Text
+  , waiting_utc :: Maybe Text
+  , review_utc :: Maybe Text
+  , due_utc :: Maybe Text
+  , closed_utc :: Maybe Text
+  , state :: Maybe TaskState
+  , group_ulid :: Maybe Text
+  , repetition_duration :: Maybe Text
+  , recurrence_duration :: Maybe Text
   , tags :: Maybe [Text]
   , notes :: Maybe [Note]
   , priority :: Maybe Float
-  , metadata :: Maybe Aeson.Value
   , user :: Text
+  , metadata :: Maybe Aeson.Value
   } deriving (Generic, Show)
 
 
@@ -42,6 +48,8 @@ data FullTask = FullTask
 instance FromRow FullTask where
   fromRow = FullTask
     <$> field <*> field <*> field
+    <*> field <*> field <*> field
+    <*> field <*> field <*> field
     <*> field <*> field <*> field
     <*> field <*> field <*> field
     <*> field <*> field <*> field
@@ -78,3 +86,13 @@ instance Pretty FullTask where
     . T.dropEnd 1 -- Drop trailing newline to maybe add it later
     . decodeUtf8
     . Yaml.encode
+
+
+selectQuery :: Text
+selectQuery = "\
+  \select\n\
+  \  tasks_view.ulid as ulid, body, modified_utc, awake_utc, ready_utc,\n\
+  \  waiting_utc, review_utc, due_utc, closed_utc, state,\n\
+  \  group_ulid, repetition_duration, recurrence_duration,\n\
+  \  tags, notes, priority, user, metadata\n\
+  \"

@@ -59,26 +59,29 @@ createTriggerClosed :: Connection -> IO (Doc ann)
 createTriggerClosed connection =
   S.createWithQuery connection $
     S.createTriggerAfterUpdate "set_closed_utc" "tasks"
-      "(new.state is 'Done' or new.state is 'Obsolete') \
-        \and old.state is not 'Done' and old.state is not 'Obsolete'"
+      "(new.state is 'Done'\n\
+        \or new.state is 'Obsolete'\n\
+        \or new.state is 'Deletable')"
       "\
-        \update `tasks`\n\
-        \set `closed_utc` = datetime('now')\n\
-        \where `ulid` = `new`.`ulid`\n\
+        \update tasks\n\
+        \set closed_utc = datetime('now')\n\
+        \where ulid = new.ulid\n\
         \"
 
 
 taskViewQuery :: Query
 taskViewQuery =
   let
-    caseStateSql = S.getCase Nothing (
-      ("state is null", 0) :
-      ("state == 'Done'", 0) :
-      ("state == 'Obsolete'", 0) :
-      ("state == 'Deleted'", -10) :
+    caseAwakeSql = S.getCase Nothing (
+      ("`awake_utc` is null", 0) :
+      ("`awake_utc` >= datetime('now'           )", -5) :
+      ("`awake_utc` >= datetime('now', '-1 days')",  1) :
+      ("`awake_utc` >= datetime('now', '-2 days')",  2) :
+      ("`awake_utc` >= datetime('now', '-5 days')",  5) :
+      ("`awake_utc` <  datetime('now', '-5 days')",  9) :
       [])
 
-    caseSleepSql = S.getCase Nothing (
+    caseDueSql = S.getCase Nothing (
       ("`due_utc` is null", 0) :
       ("`due_utc` >= datetime('now', '+24 days')",  0) :
       ("`due_utc` >= datetime('now',  '+6 days')",  3) :
@@ -88,26 +91,34 @@ taskViewQuery =
       ("`due_utc` <  datetime('now', '-24 days')", 15) :
       [])
 
-    caseOverdueSql = S.getCase Nothing (
-      ("`sleep_utc` is null", 0) :
-      -- TODO
+    caseStateSql = S.getCase Nothing (
+      ("state is null", 0) :
+      ("state == 'Done'", 0) :
+      ("state == 'Obsolete'", -1) :
+      ("state == 'Deletable'", -10) :
       [])
 
     selectQuery = S.getSelect
       (
         "`tasks`.`ulid` as `ulid`" :
         "`tasks`.`body` as `body`" :
-        "`tasks`.`state` as `state`" :
-        "`tasks`.`due_utc` as `due_utc`" :
-        "`tasks`.`sleep_utc` as `sleep_utc`" :
-        "`tasks`.`closed_utc` as `closed_utc`" :
         "`tasks`.`modified_utc`as `modified_utc`" :
+        "`tasks`.`awake_utc` as `awake_utc`" :
+        "`tasks`.`ready_utc` as `ready_utc`" :
+        "`tasks`.`waiting_utc` as `waiting_utc`" :
+        "`tasks`.`review_utc` as `review_utc`" :
+        "`tasks`.`due_utc` as `due_utc`" :
+        "`tasks`.`closed_utc` as `closed_utc`" :
+        "`tasks`.`state` as `state`" :
+        "`tasks`.`group_ulid` as `group_ulid`" :
+        "`tasks`.`repetition_duration` as `repetition_duration`" :
+        "`tasks`.`recurrence_duration` as `recurrence_duration`" :
         "group_concat(distinct `task_to_tag`.`tag`) as `tags`" :
         "group_concat(distinct `task_to_note`.`note`) as `notes`" :
         "ifnull(`tasks`.`priority_adjustment`, 0.0)\n\
+        \  + " <> caseAwakeSql <> "\n\
+        \  + " <> caseDueSql <> "\n\
         \  + " <> caseStateSql <> "\n\
-        \  + " <> caseOverdueSql <> "\n\
-        \  + " <> caseSleepSql <> "\n\
         \  + case count(`task_to_note`.`note`)\n\
         \      when 0 then 0.0\n\
         \      else 1.0\n\
@@ -117,8 +128,8 @@ taskViewQuery =
         \      else 2.0\n\
         \    end\n\
         \as `priority`" :
-        "`tasks`.`metadata`as `metadata`" :
         "`tasks`.`user`as `user`" :
+        "`tasks`.`metadata`as `metadata`" :
         []
       )
       (
