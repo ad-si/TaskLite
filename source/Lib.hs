@@ -9,6 +9,7 @@ import Protolude as P
 import Data.Hourglass
 import Data.Text as T
 import Data.ULID
+import Data.Coerce
 import Database.Beam
 import Database.Beam.Sqlite
 import Database.Beam.Schema.Tables
@@ -22,6 +23,7 @@ import qualified Text.Fuzzy as Fuzzy
 import Text.ParserCombinators.ReadP as ReadP
 import GHC.Unicode (isSpace)
 import Time.System
+import Text.Read (readMaybe)
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Util
 import Data.Text.Prettyprint.Doc.Render.Terminal
@@ -241,6 +243,32 @@ logTask connection bodyWords = do
     <+> "with ulid" <+> dquotes (pretty $ Task.ulid task)
 
 
+execWithTask ::
+  Connection -> Text -> (Task -> IO (Doc AnsiStyle)) -> IO (Doc AnsiStyle)
+execWithTask connection idSubstr callback = do
+  tasks <- (query connection
+      (Query $ "select * from " <> tableName conf <> " where `ulid` like ?")
+      ["%"  <> idSubstr :: Text]
+    ) :: IO [Task]
+
+  let
+    numOfTasks = P.length tasks
+    ulidLength = 26
+    prefix = if (T.length idSubstr) == ulidLength then "" else "…"
+    quote = dquotes . pretty
+
+  if
+    | numOfTasks == 0 -> pure $
+        "⚠️  Task" <+> quote (prefix <> idSubstr) <+> "does not exist"
+    | numOfTasks == 1 ->
+        callback $ unsafeHead tasks
+    | numOfTasks > 1 -> pure $
+        "⚠️  Id slice" <+> (quote idSubstr) <+> "is not unique."
+        <+> "Please use a longer slice!"
+    | otherwise -> pure "This case should not be possible"
+
+
+-- | Deprecated. Use `execWithTask` instead
 execWithId ::
   Connection -> Text -> (TaskUlid -> IO (Doc AnsiStyle)) -> IO (Doc AnsiStyle)
 execWithId connection idSubstr callback = do
@@ -329,17 +357,71 @@ reviewTasks connection ids = do
   pure $ vsep docs
 
 
+-- TODO: Replace with proper IS08601 duration parser
+parseIsoDuration :: Text -> Maybe Duration
+parseIsoDuration isoDuration =
+  if "PT" `T.isPrefixOf` isoDuration && "M" `T.isSuffixOf` isoDuration
+  then
+    let
+      minutes :: Maybe Int64
+      minutes = readMaybe $ unpack $ (T.drop 2 . T.dropEnd 1) isoDuration
+    in
+      fmap
+        (\mins -> mempty { durationMinutes = Minutes mins })
+        minutes
+  else Nothing
+
+
 doTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
 doTasks connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
-      setStateAndClosed connection taskUlid $ Just Done
+    execWithTask connection idSubstr $ \task -> do
+      let
+        taskUlid@(TaskUlid idText) = primaryKey task
 
-      numOfChanges <- changes connection
+      if Task.closed_utc task /= Nothing
+      then pure $ "⚠️  Task" <+> dquotes (pretty idText) <+> "is already done"
+      else do
+        logMessage <-
+          if Task.repetition_duration task == Nothing
+          then pure ""
+          else do
+            newUlid <- formatUlid getULID
+            let nowMaybe = ulidTextToDateTime newUlid
 
-      pure $ pretty $ if numOfChanges == 0
-        then "⚠️  Task \"" <> idText <> "\" is already done"
-        else "✅ Finished task \"" <> idText <> "\""
+            -- TODO: Investigate why this isn't working and replace afterwards
+            -- runBeamSqlite connection $ runInsert $
+            --   insert (_tldbTasks taskLiteDb) $
+            --   insertValues [ task
+            --     { Task.ulid = val_ newUlid
+            --     , Task.due_utc = nowMaybe + (Task.repetition_duration task)
+            --     }
+            --   ]
+
+            runBeamSqlite connection $ do
+              runInsert $ insert (_tldbTasks taskLiteDb) $ insertFrom $ do
+                originalTask <- filter_
+                  (\theTask -> primaryKey theTask ==. val_ taskUlid)
+                  (all_ $ _tldbTasks taskLiteDb)
+
+                pure originalTask
+                  { Task.ulid = val_ newUlid
+                  , Task.due_utc = val_ $
+                      fmap (pack . timePrint (utcFormat conf)) $
+                        liftA2 timeAdd nowMaybe
+                          ((Task.repetition_duration task) >>= parseIsoDuration)
+                  }
+
+            liftIO $ pure $ "➡️  Created next task"
+              <+> dquotes (pretty $ Task.body task)
+              <+> "in repetition series"
+              <+> dquotes (pretty $ Task.group_ulid task)
+
+        setStateAndClosed connection taskUlid $ Just Done
+
+        pure $ "✅ Finished task" <+> dquotes (pretty $ Task.body task)
+          <+> "with id" <+> dquotes (pretty idText) <> hardline
+          <> logMessage
 
   pure $ vsep docs
 
@@ -392,6 +474,33 @@ deleteTasks connection ids = do
           (\noteValue -> TaskToNote.task_ulid noteValue ==. val_ taskUlid)
 
         pure $ pretty ("❌ Deleted task \"" <> idText <> "\"" :: Text)
+
+  pure $ vsep docs
+
+
+durationToIso :: Duration -> Text
+durationToIso dur =
+  "PT" <> (show $ (coerce (durationMinutes dur) :: Int64)) <> "M"
+
+
+repeatTasks :: Connection -> Duration -> [IdText] -> IO (Doc AnsiStyle)
+repeatTasks connection duration ids = do
+  let durIso = durationToIso duration
+
+  docs <- forM ids $ \idSubstr ->
+    execWithId connection idSubstr $ \taskUlid@(TaskUlid idText) -> do
+      groupUlid <- formatUlid getULID
+
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task -> [ (Task.repetition_duration task) <-. val_ (Just durIso)
+                    , (Task.group_ulid task) <-. val_ (Just groupUlid)
+                    ])
+          (\task -> primaryKey task ==. val_ taskUlid)
+
+      pure $ "📅 Set repeat duration"
+        <+> "of task" <+> dquotes (pretty idText) <+> "to"
+        <+> dquotes (pretty $ durIso)
 
   pure $ vsep docs
 

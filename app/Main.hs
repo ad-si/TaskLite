@@ -47,6 +47,7 @@ data Command
   | EndTasks [IdText]
   | TrashTasks [IdText]
   | DeleteTasks [IdText]
+  | RepeatTasks Duration [IdText]
   | BoostTasks [IdText]
   | HushTasks [IdText]
 
@@ -75,6 +76,7 @@ data Command
   | Ndjson
   | Sql
   | Backup
+  -- | Fork -- Create a new SQLite database with the tasks of the specified query
 
   {- List -}
   | ListAll
@@ -213,6 +215,17 @@ commandParser =
 
     <> command "delete" (toParserInfo (DeleteTasks <$> some (strArgument idVar))
         "Delete a task from the database (Attention: Irreversible)")
+
+    <> command "repeat" (toParserInfo (RepeatTasks
+      <$> argument
+            (maybeReader $
+              (fmap (\days -> mempty
+                { durationMinutes = Minutes $ round ((days :: Float) * 1440)}))
+              . readMaybe)
+            (metavar "DAYS" <> help "Repeats after this number of dates \
+              \(supports fractional values)")
+      <*> some (strArgument idVar))
+        "Repeat a task x days after it gets closed")
 
     <> command "duplicate" (toParserInfo
         (Duplicate <$> some (strArgument idVar))
@@ -679,6 +692,7 @@ main = do
     EndTasks ids -> endTasks connection ids
     TrashTasks ids -> trashTasks connection ids
     DeleteTasks ids -> deleteTasks connection ids
+    RepeatTasks duration ids -> repeatTasks connection duration ids
     BoostTasks ids -> adjustPriority 1 ids
     HushTasks ids -> adjustPriority (-1) ids
     Start ids -> startTasks connection ids
