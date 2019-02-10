@@ -41,6 +41,8 @@ data Command
   | LogTask   [IdText]
 
   {- Modify -}
+  | WaitTasks [IdText]
+  | ReviewTasks [IdText]
   | DoTasks [IdText]
   | EndTasks [IdText]
   | TrashTasks [IdText]
@@ -129,9 +131,7 @@ nameToAliasList = (
   ("search", "find") :
   -- ("week", "sunday") :
   -- ("latest", "newest") :
-  -- ("snooze", "wait") :
-  -- ("sleep", "wait") :
-  -- ("schedule", "wait") :
+  -- ("schedule", "activate") :
   -- ("blocking", "blockers") :
   -- ("denotate", "denote") :
   [])
@@ -196,6 +196,12 @@ commandParser =
         (metavar "BODY" <> help "Body of the task")))
         "Log an already completed task")
 
+    <> command "wait" (toParserInfo (WaitTasks <$> some (strArgument idVar))
+        "Mark a task as waiting (e.g. waiting for feedback)")
+
+    <> command "review" (toParserInfo (ReviewTasks <$> some (strArgument idVar))
+        "Finish review of task and set new review date in 3 days")
+
     <> command "do" (toParserInfo (DoTasks <$> some (strArgument idVar))
         "Mark a task as done")
 
@@ -223,6 +229,10 @@ commandParser =
             <> help "Value to adjust priority by")
           <*> some (strArgument idVar))
           "Adjust priority of specified tasks")
+
+    -- <> command "snooze" (toParserInfo
+    --     (SnoozeTasks <$> some (strArgument idVar))
+    --     "Add 1 day to awakening datetime")
 
     <> command "info" (toParserInfo (InfoTask <$> strArgument idVar)
         "Show detailed information and metadata of task")
@@ -313,10 +323,10 @@ commandParser =
           <> " most important open tasks by priority desc"))
 
     <> command "all" (toParserInfo (pure ListAll)
-        "List all tasks by priority")
+        "List all tasks by creation UTC asc")
 
     <> command "open" (toParserInfo (pure ListOpen)
-        "List all open tasks by creation UTC desc")
+        "List all open tasks by priority desc")
 
     -- All tasks due to no later than
     -- <> command "yesterday"
@@ -375,6 +385,12 @@ commandParser =
             (strArgument $ metavar "TAGS" <> help "The tags"))
           "List tasks which have all of the specified tags")
 
+    <> command "get"
+        (toParserInfo
+          (RunFilter <$> some
+            (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions"))
+          "Get all tasks filtered by the specified expressions")
+
     -- TODO: Replace with tasks and tags commands
     <> command "query" (toParserInfo (QueryTasks <$> strArgument
         (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
@@ -401,6 +417,7 @@ commandParser =
     )
 
   <|> subparser ( commandGroup (T.unpack $ fst vis_sec)
+    -- <> command "kanban" -- "List tasks columnized by state"
     -- <> command "burndown" -- "Burndown chart by week"
     -- <> command "calendar" -- "Calendar view of all open tasks"
     -- <> command "history" -- "History of tasks"
@@ -412,13 +429,8 @@ commandParser =
 
     -- <> command "active-tags" (toParserInfo (pure $ Tags)
     --     "List all active tags (a.k.a projects) and their progress")
+    )
 
-    <> command "get"
-        (toParserInfo
-          (RunFilter <$> some
-            (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions"))
-          "Get all tasks filtered by the specified expressions")
-  )
   <|> subparser ( commandGroup (T.unpack $ fst i_o_sec)
 
     <> command "import" (toParserInfo (pure Import)
@@ -661,6 +673,8 @@ main = do
     AddPay bodyWords -> addTaskC $ ["Pay"] <> bodyWords <> ["+pay"]
     AddShip bodyWords -> addTaskC $ ["Ship"] <> bodyWords <> ["+ship"]
     LogTask bodyWords -> logTask connection bodyWords
+    WaitTasks ids -> waitTasks connection ids
+    ReviewTasks ids -> reviewTasks connection ids
     DoTasks ids -> doTasks connection ids
     EndTasks ids -> endTasks connection ids
     TrashTasks ids -> trashTasks connection ids

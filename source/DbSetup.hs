@@ -73,28 +73,40 @@ taskViewQuery :: Query
 taskViewQuery =
   let
     caseAwakeSql = S.getCase Nothing (
-      ("`awake_utc` is null", 0) :
-      ("`awake_utc` >= datetime('now'           )", -5) :
+      ("`awake_utc` is null",                        0) :
+      ("`awake_utc` >= datetime('now')",            -5) :
       ("`awake_utc` >= datetime('now', '-1 days')",  1) :
       ("`awake_utc` >= datetime('now', '-2 days')",  2) :
       ("`awake_utc` >= datetime('now', '-5 days')",  5) :
       ("`awake_utc` <  datetime('now', '-5 days')",  9) :
       [])
 
+    caseWaitingSql = S.getCase Nothing (
+      ("waiting_utc is null",             0) :
+      ("waiting_utc >= datetime('now')",  0) :
+      ("waiting_utc <  datetime('now')", -5) :
+      [])
+
+    caseReviewSql = S.getCase Nothing (
+      ("review_utc is null",             0) :
+      ("review_utc >= datetime('now')",  0) :
+      ("review_utc <  datetime('now')", 10) :
+      [])
+
     caseDueSql = S.getCase Nothing (
-      ("`due_utc` is null", 0) :
+      ("due_utc is null",                           0) :
       ("`due_utc` >= datetime('now', '+24 days')",  0) :
       ("`due_utc` >= datetime('now',  '+6 days')",  3) :
-      ("`due_utc` >= datetime('now'            )",  6) :
+      ("`due_utc` >= datetime('now')",              6) :
       ("`due_utc` >= datetime('now',  '-6 days')",  9) :
       ("`due_utc` >= datetime('now', '-24 days')", 12) :
       ("`due_utc` <  datetime('now', '-24 days')", 15) :
       [])
 
     caseStateSql = S.getCase Nothing (
-      ("state is null", 0) :
-      ("state == 'Done'", 0) :
-      ("state == 'Obsolete'", -1) :
+      ("state is null",          0) :
+      ("state == 'Done'",        0) :
+      ("state == 'Obsolete'",   -1) :
       ("state == 'Deletable'", -10) :
       [])
 
@@ -117,6 +129,8 @@ taskViewQuery =
         "group_concat(distinct `task_to_note`.`note`) as `notes`" :
         "ifnull(`tasks`.`priority_adjustment`, 0.0)\n\
         \  + " <> caseAwakeSql <> "\n\
+        \  + " <> caseWaitingSql <> "\n\
+        \  + " <> caseReviewSql <> "\n\
         \  + " <> caseDueSql <> "\n\
         \  + " <> caseStateSql <> "\n\
         \  + case count(`task_to_note`.`note`)\n\
