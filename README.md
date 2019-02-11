@@ -376,11 +376,12 @@ For example as a queue for processing tasks.
 
 ## Related
 
-- [Buku] -Store and manage your bookmarks from the command line
-- [CommitTasks]
+- [Buku] - Store and manage your bookmarks from the command line
+- [CommitTasks] - Combination between git commit and todo list.
 - [Eureka] - CLI tool to input and store ideas without leaving the terminal
 - [Ff] - A distributed note taker and task manager.
-- [Taskbook]
+- [Smos] - Purely functional semantic tree-based editor (similar to Org mode).
+- [Taskbook] - Tasks, boards & notes for the command-line habitat.
 - [Taskwarrior] - Commandline Task Management.
 - [Toodles] - Project management from the TODO's in your codebase
 
@@ -388,6 +389,7 @@ For example as a queue for processing tasks.
 [CommitTasks]: https://github.com/ZeroX-DG/CommitTasks
 [Eureka]: https://github.com/simeg/eureka
 [Ff]: https://github.com/ff-notes/ff
+[Smos]: https://smos.cs-syd.eu
 [Taskbook]: https://github.com/klauscfhq/taskbook
 [Taskwarrior]: https://github.com/GothenburgBitFactory/taskwarrior
 [Toodles]: https://github.com/aviaviavi/toodles
