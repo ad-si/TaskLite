@@ -992,6 +992,16 @@ deletableTasks now connection = do
   pure $ formatTasks now tasks
 
 
+listRepeating :: DateTime -> Connection -> IO (Doc AnsiStyle)
+listRepeating now connection = do
+  tasks <- query_ connection
+    "select * from tasks_view \
+    \where repetition_duration is not null \
+    \order by repetition_duration desc"
+
+  pure $ formatTasks now tasks
+
+
 listWaiting :: DateTime -> Connection -> IO (Doc AnsiStyle)
 listWaiting now connection = do
   tasks <- query_ connection

@@ -88,6 +88,7 @@ data Command
   | ListDeletable
   | ListWaiting
   | ListOverdue
+  | ListRepeating
   | ListNoTag
   | ListWithTag [Text]
   | Count (Filter TaskState)
@@ -360,6 +361,9 @@ commandParser =
 
     <> command "overdue" (toParserInfo (pure ListOverdue)
         "List all overdue tasks by priority desc")
+
+    <> command "repeating" (toParserInfo (pure ListRepeating)
+        "List all repeating tasks by priority desc")
 
     <> command "new" (toParserInfo (pure ListNew)
         ("List " <> show (headCount conf)
@@ -661,6 +665,7 @@ main = do
     ListNew -> newTasks now connection
     ListOpen -> openTasks now connection
     ListOverdue -> overdueTasks now connection
+    ListRepeating -> listRepeating now connection
     ListWaiting -> listWaiting now connection
     ListDone -> doneTasks now connection
     ListObsolete -> obsoleteTasks now connection
