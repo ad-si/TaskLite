@@ -10,15 +10,38 @@ import Pux.Renderer.React (renderToDOM)
 import Text.Smolder.HTML (button, div, span)
 import Text.Smolder.Markup (text, (#!))
 
-data Event = Increment | Decrement
 
-type State = Int
+data Event
+  = RequestTasks
+  | ReceiveTasks (Either String Tasks)
+
+newtype Task = Task
+  { ulid :: String
+  , title :: String
+  }
+
+type Tasks = Array Task
+
+type State =
+  { tasks :: Tasks
+  , status :: String
+  }
 
 
--- | Return a new state (and effects) from each event
-foldp :: Event -> State -> EffModel State Event
-foldp Increment n = { state: n + 1, effects: [] }
-foldp Decrement n = { state: n - 1, effects: [] }
+initialState :: State
+initialState =
+  { tasks: []
+  , status: "Nothing loaded from server yet"
+  }
+
+
+-- | Decode the JSON containing the tasks received from the server
+instance decodeJsonTask :: DecodeJson Task where
+  decodeJson json = do
+    obj <- decodeJson json
+    id <- obj .? "id"
+    title <- obj .? "title"
+    pure $ Task { id: id, title: title }
 
 
 -- | Return markup from the state
