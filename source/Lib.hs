@@ -277,16 +277,15 @@ setStateAndClosed connection taskUlid theTaskState = do
                 (Task.state task) /=. val_ theTaskState)
 
 
-waitTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
-waitTasks connection ids = do
+waitFor :: Connection -> Duration -> [Text] -> IO (Doc AnsiStyle)
+waitFor connection duration ids = do
   docs <- forM ids $ \idSubstr ->
     execWithTask connection idSubstr $ \task -> do
       now <- timeCurrentP
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         nowAsText = (pack . timePrint (utcFormat conf)) now
-        threeDays = (pack . timePrint (utcFormat conf))
-          (now `timeAdd` mempty { durationHours = 72 })
+        threeDays = (pack . timePrint (utcFormat conf)) (now `timeAdd` duration)
         prettyBody = dquotes (pretty $ Task.body task)
         prettyId = dquotes (pretty idText)
 
@@ -308,6 +307,11 @@ waitTasks connection ids = do
               <+> prettyBody <+> "with id" <+> prettyId
 
   pure $ vsep docs
+
+
+waitTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
+waitTasks connection =
+  waitFor connection $ mempty { durationHours = 72 }
 
 
 reviewTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)

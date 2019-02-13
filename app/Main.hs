@@ -42,6 +42,7 @@ data Command
 
   {- Modify -}
   | WaitTasks [IdText]
+  | WaitFor Duration [IdText]
   | ReviewTasks [IdText]
   | DoTasks [IdText]
   | EndTasks [IdText]
@@ -163,6 +164,10 @@ idVar :: Mod ArgumentFields a
 idVar =
   metavar "TASK_ID" <> help "Id of the task (Ulid)"
 
+idsVar :: Mod ArgumentFields a
+idsVar =
+  metavar "TASK_ID ..." <> help "Ids of the tasks (Ulid)"
+
 
 -- | Help Sections
 basic_sec, shortcut_sec, list_sec,
@@ -180,6 +185,12 @@ alias_sec    = ("{{alias_sec}}", "Aliases:")
 unset_sec    = ("{{unset_sec}}", "Unset:")
 utils_sec    = ("{{utils_sec}}", "Utils:")
 
+
+parseDurationInDays :: [Char] -> Maybe Duration
+parseDurationInDays =
+  (fmap (\days -> mempty
+    { durationMinutes = Minutes $ round ((days :: Float) * 1440)}))
+  . readMaybe
 
 
 commandParser :: Parser Command
@@ -199,53 +210,58 @@ commandParser =
         (metavar "BODY" <> help "Body of the task")))
         "Log an already completed task")
 
-    <> command "wait" (toParserInfo (WaitTasks <$> some (strArgument idVar))
+    <> command "wait" (toParserInfo (WaitTasks <$> some (strArgument idsVar))
         "Mark a task as waiting (e.g. waiting for feedback)")
 
-    <> command "review" (toParserInfo (ReviewTasks <$> some (strArgument idVar))
+    <> command "waitfor" (toParserInfo (WaitFor
+      <$> argument (maybeReader parseDurationInDays)
+            (metavar "NUM_OF_DAYS" <> help "Duration in days \
+              \(supports fractional values)")
+      <*> some (strArgument idsVar))
+        "Wait specified number of days until it's ready for review")
+
+    <> command "review" (toParserInfo (ReviewTasks
+        <$> some (strArgument idsVar))
         "Finish review of task and set new review date in 3 days")
 
-    <> command "do" (toParserInfo (DoTasks <$> some (strArgument idVar))
+    <> command "do" (toParserInfo (DoTasks <$> some (strArgument idsVar))
         "Mark a task as done")
 
-    <> command "end" (toParserInfo (EndTasks <$> some (strArgument idVar))
+    <> command "end" (toParserInfo (EndTasks <$> some (strArgument idsVar))
         "Mark a task as obsolete")
 
-    <> command "trash" (toParserInfo (TrashTasks <$> some (strArgument idVar))
+    <> command "trash" (toParserInfo (TrashTasks <$> some (strArgument idsVar))
         "Mark a task as deletable")
 
-    <> command "delete" (toParserInfo (DeleteTasks <$> some (strArgument idVar))
+    <> command "delete" (toParserInfo (DeleteTasks
+        <$> some (strArgument idsVar))
         "Delete a task from the database (Attention: Irreversible)")
 
     <> command "repeat" (toParserInfo (RepeatTasks
-      <$> argument
-            (maybeReader $
-              (fmap (\days -> mempty
-                { durationMinutes = Minutes $ round ((days :: Float) * 1440)}))
-              . readMaybe)
-            (metavar "DAYS" <> help "Repeats after this number of dates \
+      <$> argument (maybeReader parseDurationInDays)
+            (metavar "NUM_OF_DAYS" <> help "Number of days \
               \(supports fractional values)")
-      <*> some (strArgument idVar))
+      <*> some (strArgument idsVar))
         "Repeat a task x days after it gets closed")
 
     <> command "duplicate" (toParserInfo
-        (Duplicate <$> some (strArgument idVar))
+        (Duplicate <$> some (strArgument idsVar))
         "Duplicates a task (and resets the closed and due UTC fields)")
 
-    <> command "boost" (toParserInfo (BoostTasks <$> some (strArgument idVar))
+    <> command "boost" (toParserInfo (BoostTasks <$> some (strArgument idsVar))
           "Increase priority of specified tasks by 1")
 
-    <> command "hush" (toParserInfo (HushTasks <$> some (strArgument idVar))
+    <> command "hush" (toParserInfo (HushTasks <$> some (strArgument idsVar))
           "Decrease priority of specified tasks by 1")
 
     <> command "prioritize" (toParserInfo (Prioritize
           <$> argument auto (metavar "VALUE"
             <> help "Value to adjust priority by")
-          <*> some (strArgument idVar))
+          <*> some (strArgument idsVar))
           "Adjust priority of specified tasks")
 
     -- <> command "snooze" (toParserInfo
-    --     (SnoozeTasks <$> some (strArgument idVar))
+    --     (SnoozeTasks <$> some (strArgument idsVar))
     --     "Add 1 day to awakening datetime")
 
     <> command "info" (toParserInfo (InfoTask <$> strArgument idVar)
@@ -260,30 +276,30 @@ commandParser =
 
     <> command "tag" (toParserInfo (AddTag
       <$> strArgument (metavar "TAG" <> help "The tag")
-      <*> some (strArgument idVar))
+      <*> some (strArgument idsVar))
       "Add a tag to specified tasks")
 
     <> command "note" (toParserInfo (AddNote
       <$> strArgument (metavar "NOTE" <> help "The note")
-      <*> some (strArgument idVar))
+      <*> some (strArgument idsVar))
       "Add a note to specified tasks")
 
     <> command "due" (toParserInfo (SetDueUtc
       <$> argument (maybeReader (parseUtc . T.pack))
             (metavar "DUE_UTC" <> help "Due timestamp in UTC")
-      <*> some (strArgument idVar))
+      <*> some (strArgument idsVar))
       "Set due UTC of specified tasks")
 
     <> command "start" (toParserInfo
-        (Start <$> some (strArgument idVar))
+        (Start <$> some (strArgument idsVar))
         "Add a note that work on task was started")
 
     <> command "stop" (toParserInfo
-        (Stop <$> some (strArgument idVar))
+        (Stop <$> some (strArgument idsVar))
         "Add a note that work on task was stopped")
 
     -- <> command "active" (toParserInfo
-    --     (Active <$> some (strArgument idVar))
+    --     (Active <$> some (strArgument idsVar))
     --     "List all currently worked on tasks")
 
     -- <> command "touch" (toParserInfo (TouchTask <$> strArgument idVar)
@@ -368,6 +384,12 @@ commandParser =
     <> command "new" (toParserInfo (pure ListNew)
         ("List " <> show (headCount conf)
           <> " newest open tasks by creation UTC desc"))
+
+    <> command "awake" (toParserInfo (pure ListWaiting)
+        "List all awake tasks by priority")
+
+    <> command "ready" (toParserInfo (pure ListWaiting)
+        "List all ready tasks by priority")
 
     <> command "waiting" (toParserInfo (pure ListWaiting)
         "List all waiting tasks by priority")
@@ -494,7 +516,7 @@ commandParser =
   --   <> command "unnote"
   --       "Delete all notes"
 
-    <> command "undue" (toParserInfo (UnDueTasks <$> some (strArgument idVar))
+    <> command "undue" (toParserInfo (UnDueTasks <$> some (strArgument idsVar))
         "Delete due UTC")
 
   --   <> command "unwait"
@@ -692,6 +714,7 @@ main = do
     AddShip bodyWords -> addTaskC $ ["Ship"] <> bodyWords <> ["+ship"]
     LogTask bodyWords -> logTask connection bodyWords
     WaitTasks ids -> waitTasks connection ids
+    WaitFor duration ids -> waitFor connection duration ids
     ReviewTasks ids -> reviewTasks connection ids
     DoTasks ids -> doTasks connection ids
     EndTasks ids -> endTasks connection ids
