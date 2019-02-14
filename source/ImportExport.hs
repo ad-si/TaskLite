@@ -272,9 +272,8 @@ dumpNdjson conf = do
 
 dumpSql :: Config -> IO (Doc AnsiStyle)
 dumpSql conf = do
-  homeDir <- getHomeDirectory
   result <- readProcess "sqlite3"
-    [ (getMainDir conf homeDir) <> "/" <> (dbName conf)
+    [ (dataDir conf) <> "/" <> (dbName conf)
     , ".dump"
     ]
     []
@@ -284,12 +283,11 @@ dumpSql conf = do
 backupDatabase :: Config -> IO (Doc AnsiStyle)
 backupDatabase conf = do
   now <- timeCurrent
-  homeDir <- getHomeDirectory
 
   let
     fileUtcFormat = toFormat ("YYYY-MM-DDtHMI" :: [Char])
     backupDirName = "backups"
-    backupDirPath = (getMainDir conf homeDir) <> "/" <> backupDirName
+    backupDirPath = (dataDir conf) <> "/" <> backupDirName
     backupFilePath = backupDirPath <> "/"
       <> (timePrint fileUtcFormat now) <> ".db"
 
@@ -297,7 +295,7 @@ backupDatabase conf = do
   createDirectoryIfMissing True backupDirPath
 
   result <- pretty <$> readProcess "sqlite3"
-    [ (getMainDir conf homeDir) <> "/" <> (dbName conf)
+    [ (dataDir conf) <> "/" <> (dbName conf)
     , ".backup '" <> backupFilePath <> "'"
     ]
     []

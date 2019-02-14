@@ -16,7 +16,6 @@ import Database.Beam.Schema.Tables
 import Database.SQLite.Simple as Sql
 import Numeric
 import System.Directory
-import System.FilePath ((</>))
 import System.IO as SIO
 import System.Process (readProcess)
 import System.Posix.User (getEffectiveUserName)
@@ -38,10 +37,6 @@ import Note
 import TaskToNote
 import TaskToTag
 import Config
-
-
-getMainDir :: Config -> FilePath -> FilePath
-getMainDir conf = (</> (mainDir conf) )
 
 
 noTasksWarning :: Text
@@ -80,31 +75,27 @@ taskLiteDb = defaultDbSettings `withDbModification`
 
 getDbPath :: Config -> IO FilePath
 getDbPath conf = do
-  homeDir <- getHomeDirectory
-  pure $ (getMainDir conf homeDir) <> "/" <> (dbName conf)
+  pure $ (dataDir conf) <> "/" <> (dbName conf)
 
 
 setupConnection :: Config -> IO Connection
 setupConnection conf = do
-  homeDir <- getHomeDirectory
-  createDirectoryIfMissing True $ getMainDir conf homeDir
-  open $ (getMainDir conf homeDir) <> "/" <> (dbName conf)
+  createDirectoryIfMissing True $ dataDir conf
+  open $ (dataDir conf) <> "/" <> (dbName conf)
 
 
 execWithConn :: Config -> (Connection -> IO a) -> IO a
 execWithConn conf func = do
-  homeDir <- getHomeDirectory
-  createDirectoryIfMissing True $ getMainDir conf homeDir
+  createDirectoryIfMissing True $ dataDir conf
   withConnection
-    ((getMainDir conf homeDir) <> "/" <> (dbName conf))
+    ((dataDir conf) <> "/" <> (dbName conf))
     func
 
 
 -- | For use with `runBeamSqliteDebug`
 writeToLog :: Config -> [Char] -> IO ()
 writeToLog conf message = do
-  homeDir <- getHomeDirectory
-  let logFile = (getMainDir conf homeDir) <> "/log.sql"
+  let logFile = (dataDir conf) <> "/log.sql"
   -- Use System.IO so it doesn't have to be converted to Text first
   SIO.appendFile logFile $ message <> "\n"
 
@@ -1068,9 +1059,8 @@ queryTasks conf now connection sqlQuery = do
 
 runSql :: Config -> Text -> IO (Doc AnsiStyle)
 runSql conf sqlQuery = do
-  homeDir <- getHomeDirectory
   result <- readProcess "sqlite3"
-    [ (getMainDir conf homeDir) <> "/" <> (dbName conf)
+    [ (dataDir conf) <> "/" <> (dbName conf)
     , ".headers on"
     , ".mode csv"
     , ".separator , '\n'"

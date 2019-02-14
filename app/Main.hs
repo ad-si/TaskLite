@@ -14,7 +14,7 @@ import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.Version (showVersion)
-import Data.Yaml (decodeFileThrow)
+import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import Options.Applicative
 import System.Directory (XdgDirectory(..), getXdgDirectory, getHomeDirectory)
 import System.FilePath ((</>))
@@ -748,30 +748,34 @@ main = do
   configDirectory <- getXdgDirectory XdgConfig "tasklite"
   let configPath = configDirectory </> "config.yaml"
 
+  configUserEither <- decodeFileEither configPath
 
-  configUser <- decodeFileThrow configPath
-  config <- case (T.stripPrefix "~/" $ T.pack $ mainDir configUser) of
-              Nothing -> pure configUser
-              Just rest -> do
-                homeDir <- getHomeDirectory
-                pure $ configUser { mainDir = homeDir </> T.unpack rest }
+  case configUserEither of
+    Left error -> die $ T.pack $ prettyPrintParseException error
+    Right configUser -> do
+      config <- case (T.stripPrefix "~/" $ T.pack $ dataDir configUser) of
+                  Nothing -> pure configUser
+                  Just rest -> do
+                    homeDir <- getHomeDirectory
+                    pure $ configUser { dataDir = homeDir </> T.unpack rest }
 
-  cliCommand <- execParser $ commandParserInfo config
+      cliCommand <- execParser $ commandParserInfo config
 
-  connection <- setupConnection config
-  tableStatus <- createTables config connection  -- TODO: Integrate into migrations
-  migrationsStatus <- runMigrations config connection
-  nowElapsed <- timeCurrentP
+      connection <- setupConnection config
+      -- TODO: Integrate into migrations
+      tableStatus <- createTables config connection
+      migrationsStatus <- runMigrations config connection
+      nowElapsed <- timeCurrentP
 
-  let
-    now = timeFromElapsedP nowElapsed :: DateTime
+      let
+        now = timeFromElapsedP nowElapsed :: DateTime
 
 
-  doc <- executeCLiCommand config now connection cliCommand
+      doc <- executeCLiCommand config now connection cliCommand
 
-  -- TODO: Use withConnection instead
-  close connection
+      -- TODO: Use withConnection instead
+      close connection
 
-  -- TODO: Remove color when piping into other command
-  putDoc $ tableStatus <> migrationsStatus <> doc <> hardline
+      -- TODO: Remove color when piping into other command
+      putDoc $ tableStatus <> migrationsStatus <> doc <> hardline
 

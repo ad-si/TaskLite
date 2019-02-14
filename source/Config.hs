@@ -28,7 +28,7 @@ data Config = Config
   , overdueStyle :: AnsiStyle
   , tagStyle :: AnsiStyle
   , utcFormat :: TimeFormatString
-  , mainDir :: FilePath
+  , dataDir :: FilePath
   , dbName :: FilePath
   , dateWidth :: Int
   , bodyWidth :: Int
@@ -52,7 +52,7 @@ instance FromJSON Config where
     overdueStyle    <- o .:? "overdueStyle" .!= overdueStyle defaultConfig
     tagStyle        <- o .:? "tagStyle" .!= tagStyle defaultConfig
     utcFormat       <- o .:? "utcFormat" .!= utcFormat defaultConfig
-    mainDir         <- o .:? "mainDir" .!= mainDir defaultConfig
+    dataDir         <- o .:? "dataDir" .!= dataDir defaultConfig
     dbName          <- o .:? "dbName" .!= dbName defaultConfig
     dateWidth       <- o .:? "dateWidth" .!= dateWidth defaultConfig
     bodyWidth       <- o .:? "bodyWidth" .!= bodyWidth defaultConfig
@@ -134,7 +134,7 @@ defaultConfig = Config
   , overdueStyle = color Red
   , tagStyle = color Blue
   , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
-  , mainDir = "tasklite"
+  , dataDir = "~/TaskLite"
   , dbName = "main.db"
   , dateWidth = 10
   , bodyWidth = 10
