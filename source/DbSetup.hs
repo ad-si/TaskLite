@@ -18,8 +18,8 @@ import Data.Text.Prettyprint.Doc hiding ((<>))
 import Config
 
 
-createTaskTable :: Connection -> IO (Doc ann)
-createTaskTable connection = do
+createTaskTable :: Config -> Connection -> IO (Doc ann)
+createTaskTable conf connection = do
   let
     theTableName = tableName conf
     -- TODO: Replace with beam-migrate based table creation
@@ -69,8 +69,8 @@ createTriggerClosed connection =
         \"
 
 
-taskViewQuery :: Query
-taskViewQuery =
+taskViewQuery :: Config -> Query
+taskViewQuery conf =
   let
     caseAwakeSql = S.getCase Nothing (
       ("`awake_utc` is null",                        0) :
@@ -157,19 +157,19 @@ taskViewQuery =
     selectQuery
 
 
-createTaskView :: Connection -> IO (Doc ann)
-createTaskView connection = do
+createTaskView :: Config -> Connection -> IO (Doc ann)
+createTaskView conf connection = do
   let
     viewName = "tasks_view"
 
   S.createTableWithQuery
     connection
     viewName
-    (S.getView viewName taskViewQuery)
+    (S.getView viewName $ taskViewQuery conf)
 
 
-replaceTaskView :: Connection -> IO (Doc ann)
-replaceTaskView connection = do
+replaceTaskView :: Config -> Connection -> IO (Doc ann)
+replaceTaskView conf connection = do
   let
     viewName = "tasks_view"
 
@@ -178,11 +178,11 @@ replaceTaskView connection = do
   S.createTableWithQuery
     connection
     viewName
-    (S.getView viewName taskViewQuery)
+    (S.getView viewName $ taskViewQuery conf)
 
 
-createTagsTable :: Connection -> IO (Doc ann)
-createTagsTable connection = do
+createTagsTable :: Config ->  Connection -> IO (Doc ann)
+createTagsTable conf connection = do
   let
     theTableName = "task_to_tag"
     createTableQuery = S.getTable theTableName (
@@ -283,8 +283,8 @@ replaceTagsView connection = do
     (S.getView viewName tagsViewQuery)
 
 
-createNotesTable :: Connection -> IO (Doc ann)
-createNotesTable connection = do
+createNotesTable :: Config -> Connection -> IO (Doc ann)
+createNotesTable conf connection = do
   let
     theTableName = "task_to_note"
     createTableQuery = S.getTable theTableName (
@@ -300,37 +300,37 @@ createNotesTable connection = do
     createTableQuery
 
 
-createViewsAndTriggers :: Connection -> IO (Doc ann)
-createViewsAndTriggers connection = do
+createViewsAndTriggers :: Config -> Connection -> IO (Doc ann)
+createViewsAndTriggers conf connection = do
   tr1 <- createTriggerModified connection
   tr2 <- createTriggerClosed connection
 
-  v1 <- createTaskView connection
+  v1 <- createTaskView conf connection
   v2 <- createTagsView connection
 
   pure $ tr1 <> tr2 <> v1 <> v2
 
 
-replaceViewsAndTriggers :: Connection -> IO (Doc ann)
-replaceViewsAndTriggers connection = do
+replaceViewsAndTriggers :: Config -> Connection -> IO (Doc ann)
+replaceViewsAndTriggers conf connection = do
   execute_ connection "drop trigger if exists `set_modified_utc_after_update`"
   tr1 <- createTriggerModified connection
 
   execute_ connection "drop trigger if exists `set_closed_utc_after_update`"
   tr2 <- createTriggerClosed connection
 
-  v1 <- replaceTaskView connection
+  v1 <- replaceTaskView conf connection
   v2 <- replaceTagsView connection
 
   pure $ tr1 <> tr2 <> v1 <> v2
 
 
-createTables :: Connection -> IO (Doc ann)
-createTables connection = do
-  t1 <- createTaskTable connection
-  t2 <- createTagsTable connection
-  t3 <- createNotesTable connection
+createTables :: Config -> Connection -> IO (Doc ann)
+createTables conf connection = do
+  t1 <- createTaskTable conf connection
+  t2 <- createTagsTable conf connection
+  t3 <- createNotesTable conf connection
 
-  viewsTriggers <- createViewsAndTriggers connection
+  viewsTriggers <- createViewsAndTriggers conf connection
 
   pure $ t1 <> t2 <> t3 <> viewsTriggers

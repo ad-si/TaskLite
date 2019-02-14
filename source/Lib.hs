@@ -16,6 +16,7 @@ import Database.Beam.Schema.Tables
 import Database.SQLite.Simple as Sql
 import Numeric
 import System.Directory
+import System.FilePath ((</>))
 import System.IO as SIO
 import System.Process (readProcess)
 import System.Posix.User (getEffectiveUserName)
@@ -39,8 +40,8 @@ import TaskToTag
 import Config
 
 
-getMainDir :: FilePath -> FilePath
-getMainDir = (<> "/" <> (mainDir conf) )
+getMainDir :: Config -> FilePath -> FilePath
+getMainDir conf = (</> (mainDir conf) )
 
 
 noTasksWarning :: Text
@@ -77,33 +78,33 @@ taskLiteDb = defaultDbSettings `withDbModification`
     }
 
 
-getDbPath :: IO FilePath
-getDbPath = do
+getDbPath :: Config -> IO FilePath
+getDbPath conf = do
   homeDir <- getHomeDirectory
-  pure $ (getMainDir homeDir) <> "/" <> (dbName conf)
+  pure $ (getMainDir conf homeDir) <> "/" <> (dbName conf)
 
 
-setupConnection :: IO Connection
-setupConnection = do
+setupConnection :: Config -> IO Connection
+setupConnection conf = do
   homeDir <- getHomeDirectory
-  createDirectoryIfMissing True $ getMainDir homeDir
-  open $ (getMainDir homeDir) <> "/" <> (dbName conf)
+  createDirectoryIfMissing True $ getMainDir conf homeDir
+  open $ (getMainDir conf homeDir) <> "/" <> (dbName conf)
 
 
-execWithConn :: (Connection -> IO a) -> IO a
-execWithConn func = do
+execWithConn :: Config -> (Connection -> IO a) -> IO a
+execWithConn conf func = do
   homeDir <- getHomeDirectory
-  createDirectoryIfMissing True $ getMainDir homeDir
+  createDirectoryIfMissing True $ getMainDir conf homeDir
   withConnection
-    ((getMainDir homeDir) <> "/" <> (dbName conf))
+    ((getMainDir conf homeDir) <> "/" <> (dbName conf))
     func
 
 
 -- | For use with `runBeamSqliteDebug`
-writeToLog :: [Char] -> IO ()
-writeToLog message = do
+writeToLog :: Config -> [Char] -> IO ()
+writeToLog conf message = do
   homeDir <- getHomeDirectory
-  let logFile = (getMainDir homeDir) <> "/log.sql"
+  let logFile = (getMainDir conf homeDir) <> "/log.sql"
   -- Use System.IO so it doesn't have to be converted to Text first
   SIO.appendFile logFile $ message <> "\n"
 
@@ -152,8 +153,8 @@ insertNoteTuples connection taskUlid notes = do
     insertValues taskToNotes
 
 
-formatElapsedP :: IO ElapsedP -> IO Text
-formatElapsedP =
+formatElapsedP :: Config -> IO ElapsedP -> IO Text
+formatElapsedP conf =
   fmap (pack . timePrint (utcFormat conf))
 
 
@@ -165,8 +166,8 @@ formatUlid =
 -- | Parses the body of the tasks and extracts all meta data
 -- | Returns a tuple (body, tags, due_utc)
 -- TODO: Replace with parsec implementation
-parseTaskBody :: [Text] -> (Text, [Text], Maybe Text)
-parseTaskBody bodyWords =
+parseTaskBody :: Config -> [Text] -> (Text, [Text], Maybe Text)
+parseTaskBody conf bodyWords =
   let
     isTag = ("+" `T.isPrefixOf`)
     isDueUtc = ("due:" `T.isPrefixOf`)
@@ -191,20 +192,20 @@ parseTaskBody bodyWords =
     (body, tags, dueUtc)
 
 
-getTriple :: IO (Text, Text, [Char])
-getTriple = do
+getTriple :: Config -> IO (Text, Text, [Char])
+getTriple conf = do
   ulid <- formatUlid getULID
-  modified_utc <- formatElapsedP timeCurrentP -- TODO: Set via a SQL trigger
+  modified_utc <- formatElapsedP conf timeCurrentP -- TODO: Set via a SQL trigger
   effectiveUserName <- getEffectiveUserName
 
   pure (ulid, modified_utc, effectiveUserName)
 
 
-addTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
-addTask connection bodyWords = do
-  (ulid, modified_utc, effectiveUserName) <- getTriple
+addTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
+addTask conf connection bodyWords = do
+  (ulid, modified_utc, effectiveUserName) <- getTriple conf
   let
-    (body, tags, due_utc) = parseTaskBody bodyWords
+    (body, tags, due_utc) = parseTaskBody conf bodyWords
     task = zeroTask
       { Task.ulid = ulid
       , Task.body = body
@@ -220,11 +221,11 @@ addTask connection bodyWords = do
     <+> "with id" <+> dquotes (pretty $ Task.ulid task)
 
 
-logTask :: Connection -> [Text] -> IO (Doc AnsiStyle)
-logTask connection bodyWords = do
-  (ulid, modified_utc, effectiveUserName) <- getTriple
+logTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
+logTask conf connection bodyWords = do
+  (ulid, modified_utc, effectiveUserName) <- getTriple conf
   let
-    (body, extractedTags, due_utc) = parseTaskBody bodyWords
+    (body, extractedTags, due_utc) = parseTaskBody conf bodyWords
     tags = extractedTags <> ["log"]
     task = zeroTask
       { Task.ulid = ulid
@@ -244,8 +245,9 @@ logTask connection bodyWords = do
 
 
 execWithTask ::
-  Connection -> Text -> (Task -> IO (Doc AnsiStyle)) -> IO (Doc AnsiStyle)
-execWithTask connection idSubstr callback = do
+  Config -> Connection -> Text
+  -> (Task -> IO (Doc AnsiStyle)) -> IO (Doc AnsiStyle)
+execWithTask conf connection idSubstr callback = do
   tasks <- (query connection
       (Query $ "select * from " <> tableName conf <> " where `ulid` like ?")
       ["%"  <> idSubstr :: Text]
@@ -277,10 +279,10 @@ setStateAndClosed connection taskUlid theTaskState = do
                 (Task.state task) /=. val_ theTaskState)
 
 
-waitFor :: Connection -> Duration -> [Text] -> IO (Doc AnsiStyle)
-waitFor connection duration ids = do
+waitFor :: Config -> Connection -> Duration -> [Text] -> IO (Doc AnsiStyle)
+waitFor conf connection duration ids = do
   docs <- forM ids $ \idSubstr ->
-    execWithTask connection idSubstr $ \task -> do
+    execWithTask conf connection idSubstr $ \task -> do
       now <- timeCurrentP
       let
         taskUlid@(TaskUlid idText) = primaryKey task
@@ -309,15 +311,15 @@ waitFor connection duration ids = do
   pure $ vsep docs
 
 
-waitTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
-waitTasks connection =
-  waitFor connection $ mempty { durationHours = 72 }
+waitTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
+waitTasks conf connection =
+  waitFor conf connection $ mempty { durationHours = 72 }
 
 
-reviewTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
-reviewTasks connection ids = do
+reviewTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
+reviewTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask connection idSubstr $ \task -> do
+    execWithTask conf connection idSubstr $ \task -> do
       now <- timeCurrentP
       let
         taskUlid@(TaskUlid idText) = primaryKey task
@@ -357,10 +359,10 @@ parseIsoDuration isoDuration =
   else Nothing
 
 
-doTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
-doTasks connection ids = do
+doTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
+doTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask connection idSubstr $ \task -> do
+    execWithTask conf connection idSubstr $ \task -> do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
 
@@ -411,10 +413,10 @@ doTasks connection ids = do
   pure $ vsep docs
 
 
-endTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
-endTasks connection ids = do
+endTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
+endTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask connection idSubstr $ \task -> do
+    execWithTask conf connection idSubstr $ \task -> do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         prettyBody = dquotes (pretty $ Task.body task)
@@ -433,10 +435,10 @@ endTasks connection ids = do
   pure $ vsep docs
 
 
-trashTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
-trashTasks connection ids = do
+trashTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
+trashTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask connection idSubstr $ \task -> do
+    execWithTask conf connection idSubstr $ \task -> do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         prettyBody = dquotes (pretty $ Task.body task)
@@ -455,10 +457,10 @@ trashTasks connection ids = do
   pure $ vsep docs
 
 
-deleteTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
-deleteTasks connection ids = do
+deleteTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
+deleteTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask connection idSubstr $ \task -> do
+    execWithTask conf connection idSubstr $ \task -> do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         prettyBody = dquotes (pretty $ Task.body task)
@@ -487,12 +489,13 @@ durationToIso dur =
   "PT" <> (show $ (coerce (durationMinutes dur) :: Int64)) <> "M"
 
 
-repeatTasks :: Connection -> Duration -> [IdText] -> IO (Doc AnsiStyle)
-repeatTasks connection duration ids = do
+repeatTasks ::
+  Config -> Connection -> Duration -> [IdText] -> IO (Doc AnsiStyle)
+repeatTasks conf connection duration ids = do
   let durIso = durationToIso duration
 
   docs <- forM ids $ \idSubstr ->
-    execWithTask connection idSubstr $ \task -> do
+    execWithTask conf connection idSubstr $ \task -> do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         prettyBody = dquotes (pretty $ Task.body task)
@@ -514,12 +517,12 @@ repeatTasks connection duration ids = do
   pure $ vsep docs
 
 
-adjustPriority :: Float -> [IdText] -> IO (Doc AnsiStyle)
-adjustPriority adjustment ids  = do
-  dbPath <- getDbPath
+adjustPriority :: Config -> Float -> [IdText] -> IO (Doc AnsiStyle)
+adjustPriority conf adjustment ids  = do
+  dbPath <- getDbPath conf
   withConnection dbPath $ \connection -> do
     docs <- forM ids $ \idSubstr -> do
-      execWithTask connection idSubstr $ \task -> do
+      execWithTask conf connection idSubstr $ \task -> do
         let
           (TaskUlid idText) = primaryKey task
           prettyBody = dquotes (pretty $ Task.body task)
@@ -551,9 +554,9 @@ adjustPriority adjustment ids  = do
     pure $ vsep docs
 
 
-startTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
-startTasks connection ids = do
-  logMessage <- addNote connection "start" ids
+startTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
+startTasks conf connection ids = do
+  logMessage <- addNote conf connection "start" ids
 
   pure $ pretty $ T.replace
     "🗒  Added a note to"
@@ -561,9 +564,9 @@ startTasks connection ids = do
     (show logMessage)
 
 
-stopTasks :: Connection -> [Text] -> IO (Doc AnsiStyle)
-stopTasks connection ids = do
-  logMessages <- addNote connection "stop" ids
+stopTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
+stopTasks conf connection ids = do
+  logMessages <- addNote conf connection "stop" ids
 
   pure $ pretty $ T.replace
     "🗒  Added a note to"
@@ -571,9 +574,9 @@ stopTasks connection ids = do
     (show logMessages)
 
 
-infoTask :: Connection -> Text -> IO (Doc AnsiStyle)
-infoTask connection idSubstr = do
-  execWithTask connection idSubstr $ \task -> do
+infoTask :: Config -> Connection -> Text -> IO (Doc AnsiStyle)
+infoTask conf connection idSubstr = do
+  execWithTask conf connection idSubstr $ \task -> do
     let
       taskUlid@(TaskUlid idText) = primaryKey task
 
@@ -676,10 +679,10 @@ findTask connection aPattern = do
 --     ContT $ withConnection dbPath
 
 
-addTag :: Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
-addTag connection tag ids = do
+addTag :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
+addTag conf connection tag ids = do
   docs <- forM ids $ \idSubstr ->
-    execWithTask connection idSubstr $ \task -> do
+    execWithTask conf connection idSubstr $ \task -> do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         prettyBody = dquotes (pretty $ Task.body task)
@@ -705,10 +708,10 @@ addTag connection tag ids = do
   pure $ vsep docs
 
 
-addNote :: Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
-addNote connection noteBody ids = do
+addNote :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
+addNote conf connection noteBody ids = do
   docs <- forM ids $ \idSubstr ->
-    execWithTask connection idSubstr $ \task -> do
+    execWithTask conf connection idSubstr $ \task -> do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         prettyBody = dquotes (pretty $ Task.body task)
@@ -734,14 +737,14 @@ addNote connection noteBody ids = do
   pure $ vsep docs
 
 
-setDueUtc :: Connection -> DateTime -> [IdText] -> IO (Doc AnsiStyle)
-setDueUtc connection datetime ids = do
+setDueUtc :: Config -> Connection -> DateTime -> [IdText] -> IO (Doc AnsiStyle)
+setDueUtc conf connection datetime ids = do
   let
     utcText :: Text
     utcText = pack $ timePrint (utcFormat conf) datetime
 
   docs <- forM ids $ \idSubstr ->
-    execWithTask connection idSubstr $ \task -> do
+    execWithTask conf connection idSubstr $ \task -> do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         prettyBody = dquotes (pretty $ Task.body task)
@@ -760,10 +763,10 @@ setDueUtc connection datetime ids = do
   pure $ vsep docs
 
 
-undueTasks :: Connection -> [IdText] -> IO (Doc AnsiStyle)
-undueTasks connection ids = do
+undueTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+undueTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask connection idSubstr $ \task -> do
+    execWithTask conf connection idSubstr $ \task -> do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         prettyBody = dquotes (pretty $ Task.body task)
@@ -780,10 +783,10 @@ undueTasks connection ids = do
   pure $ vsep docs
 
 
-duplicateTasks :: Connection -> [IdText] -> IO (Doc AnsiStyle)
-duplicateTasks connection ids = do
+duplicateTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+duplicateTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask connection idSubstr $ \task -> do
+    execWithTask conf connection idSubstr $ \task -> do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         prettyBody = dquotes (pretty $ Task.body task)
@@ -791,7 +794,7 @@ duplicateTasks connection ids = do
 
       dupeUlid <- formatUlid getULID
       -- TODO: Check if modified_utc can be set via an SQL trigger
-      modified_utc <- formatElapsedP timeCurrentP
+      modified_utc <- formatElapsedP conf timeCurrentP
 
       -- Duplicate task
       runBeamSqlite connection $ do
@@ -855,8 +858,8 @@ showAtPrecision number =
   in fst tuple <> (T.replace ".0" "  " . T.take 2 . snd) tuple
 
 
-formatTaskLine :: DateTime -> Int -> FullTask -> Doc AnsiStyle
-formatTaskLine now taskUlidWidth task =
+formatTaskLine :: Config -> DateTime -> Int -> FullTask -> Doc AnsiStyle
+formatTaskLine conf now taskUlidWidth task =
   let
     id = pretty $ T.takeEnd taskUlidWidth $ FullTask.ulid task
     createdUtc = fmap
@@ -916,9 +919,9 @@ getIdLength numOfItems =
     ceiling (logBase sizeOfAlphabet (numOfItems / targetCollisionChance)) + 1
 
 
-countTasks :: Filter TaskState -> IO (Doc AnsiStyle)
-countTasks taskStateFilter = do
-  execWithConn $ \connection -> do
+countTasks :: Config -> Filter TaskState -> IO (Doc AnsiStyle)
+countTasks conf taskStateFilter = do
+  execWithConn conf $ \connection -> do
     [NumRows taskCount] <- case taskStateFilter of
       NoFilter -> query_ connection $ Query $
         "select count(*) from `" <> tableName conf <> "`"
@@ -931,109 +934,109 @@ countTasks taskStateFilter = do
 
 
 -- TODO: Print number of remaining tasks and how to display them at the bottom
-headTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
-headTasks now connection = do
+headTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+headTasks conf now connection = do
   tasks <- query_ connection $ Query $
     -- TODO: Add `wait_utc` < datetime('now')"
     "select * from tasks_view \
     \where closed_utc is null \
     \order by `priority` desc limit " <> show (headCount conf)
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-newTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
-newTasks now connection = do
+newTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+newTasks conf now connection = do
   tasks <- query_ connection $ Query $
     -- TODO: Add `wait_utc` < datetime('now')"
     "select * from `tasks_view` \
     \where closed_utc is null \
     \order by `ulid` desc limit " <> show (headCount conf)
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-openTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
-openTasks now connection = do
+openTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+openTasks conf now connection = do
   tasks <- query_ connection $ Query
     "select * from `tasks_view` \
     \where closed_utc is null \
     \order by `priority` desc"
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-overdueTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
-overdueTasks now connection = do
+overdueTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+overdueTasks conf now connection = do
   tasks <- query_ connection $ Query
     "select * from `tasks_view` \
     \where closed_utc is null and due_utc < datetime('now') \
     \order by `priority` desc"
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-doneTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
-doneTasks now connection = do
+doneTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+doneTasks conf now connection = do
   tasks <- query_ connection $ Query $
     "select * from tasks_view \
     \where closed_utc is not null and state is 'Done' \
     \order by closed_utc desc limit " <> show (headCount conf)
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-obsoleteTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
-obsoleteTasks now connection = do
+obsoleteTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+obsoleteTasks conf now connection = do
   tasks <- query_ connection $ Query $
     "select * from tasks_view \
     \where closed_utc is not null and state is 'Obsolete' \
     \order by ulid desc limit " <> show (headCount conf)
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-deletableTasks :: DateTime -> Connection -> IO (Doc AnsiStyle)
-deletableTasks now connection = do
+deletableTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+deletableTasks conf now connection = do
   tasks <- query_ connection $ Query $
     "select * from tasks_view \
     \where closed_utc is not null and state is 'Deletable' \
     \order by ulid desc limit " <> show (headCount conf)
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-listRepeating :: DateTime -> Connection -> IO (Doc AnsiStyle)
-listRepeating now connection = do
+listRepeating :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+listRepeating conf now connection = do
   tasks <- query_ connection
     "select * from tasks_view \
     \where repetition_duration is not null \
     \order by repetition_duration desc"
 
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-listWaiting :: DateTime -> Connection -> IO (Doc AnsiStyle)
-listWaiting now connection = do
+listWaiting :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+listWaiting conf now connection = do
   tasks <- query_ connection
     "select * from tasks_view \
     \where waiting_utc is not null \
     \order by waiting_utc desc"
 
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-listAll :: DateTime -> Connection -> IO (Doc AnsiStyle)
-listAll now connection = do
+listAll :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+listAll conf now connection = do
   tasks <-  query_ connection
     "select * from tasks_view order by ulid asc"
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-listNoTag :: DateTime -> Connection -> IO (Doc AnsiStyle)
-listNoTag now connection = do
+listNoTag :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+listNoTag conf now connection = do
   tasks <-  query_ connection
     "select * from tasks_view \
     \where closed_utc is null and tags is null \
     \order by priority desc"
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-listWithTag :: DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
-listWithTag now connection tags = do
+listWithTag :: Config -> DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
+listWithTag conf now connection tags = do
   let
     getTagQuery =
       (T.intercalate " or ") . (fmap (("tag like '" <>) . (<> "'")))
@@ -1053,21 +1056,21 @@ listWithTag now connection tags = do
 
   -- TODO: Use beam to execute query
   tasks <- query_ connection $ Query mainQuery
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-queryTasks :: DateTime -> Connection -> Text -> IO (Doc AnsiStyle)
-queryTasks now connection sqlQuery = do
+queryTasks :: Config -> DateTime -> Connection -> Text -> IO (Doc AnsiStyle)
+queryTasks conf now connection sqlQuery = do
   tasks <- query_ connection $ Query $
     "select * from `tasks_view` where " <> sqlQuery
-  pure $ formatTasks now tasks
+  pure $ formatTasks conf now tasks
 
 
-runSql :: Text -> IO (Doc AnsiStyle)
-runSql sqlQuery = do
+runSql :: Config -> Text -> IO (Doc AnsiStyle)
+runSql conf sqlQuery = do
   homeDir <- getHomeDirectory
   result <- readProcess "sqlite3"
-    [ (getMainDir homeDir) <> "/" <> (dbName conf)
+    [ (getMainDir conf homeDir) <> "/" <> (dbName conf)
     , ".headers on"
     , ".mode csv"
     , ".separator , '\n'"
@@ -1146,8 +1149,8 @@ filterToSql = \case
   InvalidFilter _     -> ("", "") -- Should never be called
 
 
-runFilter :: DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
-runFilter now connection exps = do
+runFilter :: Config -> DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
+runFilter conf now connection exps = do
   let
     parserResults = readP_to_S filterExpsParser $ T.unpack (unwords exps)
     filterMay = listToMaybe parserResults
@@ -1171,7 +1174,7 @@ runFilter now connection exps = do
 
       tasks <- query_ connection sqlQuery
 
-      pure $ fromMaybe (formatTasks now tasks) errorsDoc
+      pure $ fromMaybe (formatTasks conf now tasks) errorsDoc
 
 
 -- TODO: Increase performance of this query
@@ -1201,8 +1204,8 @@ getFilterQuery filterExps =
 
 
 
-formatTasks :: DateTime -> [FullTask] -> Doc AnsiStyle
-formatTasks now tasks  =
+formatTasks :: Config -> DateTime -> [FullTask] -> Doc AnsiStyle
+formatTasks conf now tasks  =
   if P.length tasks == 0
   then pretty noTasksWarning
   else
@@ -1221,7 +1224,7 @@ formatTasks now tasks  =
         <++> line
     in
       docHeader <>
-      vsep (fmap (formatTaskLine now taskUlidWidth) tasks) <>
+      vsep (fmap (formatTaskLine conf now taskUlidWidth) tasks) <>
       line
 
 
@@ -1237,8 +1240,9 @@ getProgressBar maxWidthInChars progress =
     annotate (bgColorDull Black) (fill remainingWidth "")
 
 
-formatTagLine :: Int -> (Text, Integer, Integer, Double) -> Doc AnsiStyle
-formatTagLine maxTagLength (tag, open_count, closed_count, progress) =
+formatTagLine ::
+  Config -> Int -> (Text, Integer, Integer, Double) -> Doc AnsiStyle
+formatTagLine conf maxTagLength (tag, open_count, closed_count, progress) =
   let
     barWidth = toInteger $ progressBarWidth conf
     progressPercentage =
@@ -1256,8 +1260,8 @@ formatTagLine maxTagLength (tag, open_count, closed_count, progress) =
 
 
 
-listTags :: Connection -> IO (Doc AnsiStyle)
-listTags connection = do
+listTags :: Config -> Connection -> IO (Doc AnsiStyle)
+listTags conf connection = do
   tags <- query_ connection $ Query "select * from tags"
 
   let
@@ -1274,5 +1278,5 @@ listTags connection = do
     <++> (annotate (bold <> underlined)  "Closed")
     <++> annotate (bold <> underlined) (fill progressWith "Progress")
     <> line
-    <> vsep (fmap (formatTagLine maxTagLength) tags)
+    <> vsep (fmap (formatTagLine conf maxTagLength) tags)
 

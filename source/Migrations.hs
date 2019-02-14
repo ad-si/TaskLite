@@ -9,6 +9,7 @@ import Protolude as P
 import Database.SQLite.Simple
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import DbSetup
+import Config
 
 
 newtype UserVersion = UserVersion Int
@@ -210,8 +211,8 @@ runMigration connection querySet = do
     try $ mapM (execute_ connection) querySet
 
 
-runMigrations :: Connection -> IO (Doc ann)
-runMigrations connection = do
+runMigrations :: Config -> Connection -> IO (Doc ann)
+runMigrations conf connection = do
   currentVersionList <- (query_ connection
     "pragma user_version" :: IO [UserVersion])
 
@@ -259,7 +260,7 @@ runMigrations connection = do
         _ -> do
           execute_ connection $
             Query $ "pragma user_version = " <> (show userVersionMax)
-          status <- replaceViewsAndTriggers connection
+          status <- replaceViewsAndTriggers conf connection
           pure $ (
             "Replaced views and triggers: "
             <> status

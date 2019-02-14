@@ -14,11 +14,14 @@ import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.Version (showVersion)
+import Data.Yaml (decodeFileThrow)
 import Options.Applicative
+import System.Directory (XdgDirectory(..), getXdgDirectory, getHomeDirectory)
+import System.FilePath ((</>))
 import Time.System
-import Database.SQLite.Simple (close)
+import Database.SQLite.Simple (close, Connection(..))
 
-import Config
+import Config (Config(..))
 import DbSetup
 import ImportExport
 import Migrations
@@ -112,6 +115,7 @@ data Command
   -- | License -- Show license
   | Alias Text
   | Help
+  | PrintConfig
   | UlidToUtc Text
 
   deriving (Show, Eq)
@@ -193,8 +197,8 @@ parseDurationInDays =
   . readMaybe
 
 
-commandParser :: Parser Command
-commandParser =
+commandParser :: Config -> Parser Command
+commandParser conf =
   (pure ListHead)
   <|>
   (   subparser ( commandGroup (T.unpack $ fst basic_sec)
@@ -497,6 +501,9 @@ commandParser =
     <> command "count" (toParserInfo (pure $ Count NoFilter)
         "Output total number of tasks")
 
+    <> command "config" (toParserInfo (pure PrintConfig)
+        "Print current configuration of TaskLite")
+
     -- <> command "verify" (toParserInfo (pure Verify)
     --     "Verify the integrity of the database")
 
@@ -559,10 +566,10 @@ commandParser =
   )
 
 
-commandParserInfo :: ParserInfo Command
-commandParserInfo =
+commandParserInfo :: Config -> ParserInfo Command
+commandParserInfo conf =
   info
-    (helper <*> commandParser)
+    (helper <*> commandParser conf)
     (noIntersperse
       <> briefDesc
       <> headerDoc (Just "{{header}}")
@@ -651,58 +658,49 @@ helpReplacements =
       []))
 
 
-helpText :: Doc AnsiStyle
-helpText =
+helpText :: Config -> Doc AnsiStyle
+helpText conf =
   let
     extendHelp theHelp = theHelp
       & show
       & spliceDocsIntoText helpReplacements
       & hcat
   in
-    case (parserFailure defaultPrefs commandParserInfo ShowHelpText mempty) of
+    case (parserFailure defaultPrefs (commandParserInfo conf) ShowHelpText mempty) of
       ParserFailure a -> case a "tasklite" of
         (theHelp, _, _) -> extendHelp theHelp
 
 
-main :: IO ()
-main = do
-  cliCommand <- execParser commandParserInfo
-
-  connection <- setupConnection
-  tableStatus <- createTables connection  -- TODO: Integrate into migrations
-  migrationsStatus <- runMigrations connection
-  nowElapsed <- timeCurrentP
-
+executeCLiCommand ::
+  Config -> DateTime -> Connection -> Command -> IO (Doc AnsiStyle)
+executeCLiCommand conf now connection cmd =
   let
-    now = timeFromElapsedP nowElapsed :: DateTime
-    addTaskC = addTask connection
+    addTaskC = addTask conf connection
     prettyUlid ulid = pretty $ fmap
       (T.pack . timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])))
       (ulidTextToDateTime ulid)
-
-
-  doc <- case cliCommand of
-    ListAll -> listAll now connection
-    ListHead -> headTasks now connection
-    ListNew -> newTasks now connection
-    ListOpen -> openTasks now connection
-    ListOverdue -> overdueTasks now connection
-    ListRepeating -> listRepeating now connection
-    ListWaiting -> listWaiting now connection
-    ListDone -> doneTasks now connection
-    ListObsolete -> obsoleteTasks now connection
-    ListDeletable -> deletableTasks now connection
-    ListNoTag -> listNoTag now connection
-    ListWithTag tags -> listWithTag now connection tags
-    QueryTasks query -> queryTasks now connection query
-    RunSql query -> runSql query
-    RunFilter expressions -> runFilter now connection expressions
-    Tags -> listTags connection
-    Import -> importTask
-    Csv -> dumpCsv
-    Ndjson -> dumpNdjson
-    Sql -> dumpSql
-    Backup -> backupDatabase
+  in case cmd of
+    ListAll -> listAll conf now connection
+    ListHead -> headTasks conf now connection
+    ListNew -> newTasks conf now connection
+    ListOpen -> openTasks conf now connection
+    ListOverdue -> overdueTasks conf now connection
+    ListRepeating -> listRepeating conf now connection
+    ListWaiting -> listWaiting conf now connection
+    ListDone -> doneTasks conf now connection
+    ListObsolete -> obsoleteTasks conf now connection
+    ListDeletable -> deletableTasks conf now connection
+    ListNoTag -> listNoTag conf now connection
+    ListWithTag tags -> listWithTag conf now connection tags
+    QueryTasks query -> queryTasks conf now connection query
+    RunSql query -> runSql conf query
+    RunFilter expressions -> runFilter conf now connection expressions
+    Tags -> listTags conf connection
+    Import -> importTask conf
+    Csv -> dumpCsv conf
+    Ndjson -> dumpNdjson conf
+    Sql -> dumpSql conf
+    Backup -> backupDatabase conf
     AddTask bodyWords -> addTaskC bodyWords
     AddWrite bodyWords -> addTaskC $ ["Write"] <> bodyWords <> ["+write"]
     AddRead bodyWords -> addTaskC $ ["Read"] <> bodyWords <> ["+read"]
@@ -712,36 +710,64 @@ main = do
     AddSell bodyWords -> addTaskC $ ["Sell"] <> bodyWords <> ["+sell"]
     AddPay bodyWords -> addTaskC $ ["Pay"] <> bodyWords <> ["+pay"]
     AddShip bodyWords -> addTaskC $ ["Ship"] <> bodyWords <> ["+ship"]
-    LogTask bodyWords -> logTask connection bodyWords
-    WaitTasks ids -> waitTasks connection ids
-    WaitFor duration ids -> waitFor connection duration ids
-    ReviewTasks ids -> reviewTasks connection ids
-    DoTasks ids -> doTasks connection ids
-    EndTasks ids -> endTasks connection ids
-    TrashTasks ids -> trashTasks connection ids
-    DeleteTasks ids -> deleteTasks connection ids
-    RepeatTasks duration ids -> repeatTasks connection duration ids
-    BoostTasks ids -> adjustPriority 1 ids
-    HushTasks ids -> adjustPriority (-1) ids
-    Start ids -> startTasks connection ids
-    Stop ids -> stopTasks connection ids
-    Prioritize val ids -> adjustPriority val ids
-    InfoTask idSubstr -> infoTask connection idSubstr
+    LogTask bodyWords -> logTask conf connection bodyWords
+    WaitTasks ids -> waitTasks conf connection ids
+    WaitFor duration ids -> waitFor conf connection duration ids
+    ReviewTasks ids -> reviewTasks conf connection ids
+    DoTasks ids -> doTasks conf connection ids
+    EndTasks ids -> endTasks conf connection ids
+    TrashTasks ids -> trashTasks conf connection ids
+    DeleteTasks ids -> deleteTasks conf connection ids
+    RepeatTasks duration ids -> repeatTasks conf connection duration ids
+    BoostTasks ids -> adjustPriority conf 1 ids
+    HushTasks ids -> adjustPriority conf (-1) ids
+    Start ids -> startTasks conf connection ids
+    Stop ids -> stopTasks conf connection ids
+    Prioritize val ids -> adjustPriority conf val ids
+    InfoTask idSubstr -> infoTask conf connection idSubstr
     NextTask -> nextTask connection
     FindTask aPattern -> findTask connection aPattern
-    AddTag tagText ids -> addTag connection tagText ids
-    AddNote noteText ids -> addNote connection noteText ids
-    SetDueUtc datetime ids -> setDueUtc connection datetime ids
-    Duplicate ids -> duplicateTasks connection ids
-    Count taskFilter -> countTasks taskFilter
+    AddTag tagText ids -> addTag conf connection tagText ids
+    AddNote noteText ids -> addNote conf connection noteText ids
+    SetDueUtc datetime ids -> setDueUtc conf connection datetime ids
+    Duplicate ids -> duplicateTasks conf connection ids
+    Count taskFilter -> countTasks conf taskFilter
 
     {- Unset -}
-    UnDueTasks ids -> undueTasks connection ids
+    UnDueTasks ids -> undueTasks conf connection ids
 
     Version -> pure $ pretty (showVersion version) <> hardline
-    Help -> pure helpText
+    Help -> pure $ helpText conf
+    PrintConfig -> pure $ pretty conf
     Alias alias -> pure $ aliasWarning alias
     UlidToUtc ulid -> pure $ prettyUlid ulid
+
+
+main :: IO ()
+main = do
+  configDirectory <- getXdgDirectory XdgConfig "tasklite"
+  let configPath = configDirectory </> "config.yaml"
+
+
+  configUser <- decodeFileThrow configPath
+  config <- case (T.stripPrefix "~/" $ T.pack $ mainDir configUser) of
+              Nothing -> pure configUser
+              Just rest -> do
+                homeDir <- getHomeDirectory
+                pure $ configUser { mainDir = homeDir </> T.unpack rest }
+
+  cliCommand <- execParser $ commandParserInfo config
+
+  connection <- setupConnection config
+  tableStatus <- createTables config connection  -- TODO: Integrate into migrations
+  migrationsStatus <- runMigrations config connection
+  nowElapsed <- timeCurrentP
+
+  let
+    now = timeFromElapsedP nowElapsed :: DateTime
+
+
+  doc <- executeCLiCommand config now connection cliCommand
 
   -- TODO: Use withConnection instead
   close connection

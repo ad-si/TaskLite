@@ -226,9 +226,9 @@ instance FromJSON ImportTask where
     pure $ ImportTask finalTask notes tags
 
 
-importTask :: IO (Doc AnsiStyle)
-importTask = do
-  connection <- setupConnection
+importTask :: Config -> IO (Doc AnsiStyle)
+importTask conf = do
+  connection <- setupConnection conf
   content <- BL.getContents
 
   let
@@ -254,42 +254,42 @@ importTask = do
 
 
 -- TODO: Use Task instead of FullTask to fix broken notes export
-dumpCsv :: IO (Doc AnsiStyle)
-dumpCsv = do
-  execWithConn $ \connection -> do
+dumpCsv :: Config -> IO (Doc AnsiStyle)
+dumpCsv conf = do
+  execWithConn conf $ \connection -> do
     rows <- (query_ connection "select * from tasks_view") :: IO [FullTask]
     pure $ pretty $ TL.decodeUtf8 $ Csv.encodeDefaultOrderedByName rows
 
 
-dumpNdjson :: IO (Doc AnsiStyle)
-dumpNdjson = do
+dumpNdjson :: Config -> IO (Doc AnsiStyle)
+dumpNdjson conf = do
   -- TODO: Use Task instead of FullTask to fix broken notes export
-  execWithConn $ \connection -> do
+  execWithConn conf $ \connection -> do
     tasks <- (query_ connection "select * from tasks_view") :: IO [FullTask]
     pure $ vsep $
       fmap (pretty . TL.decodeUtf8 . Aeson.encode) tasks
 
 
-dumpSql :: IO (Doc AnsiStyle)
-dumpSql = do
+dumpSql :: Config -> IO (Doc AnsiStyle)
+dumpSql conf = do
   homeDir <- getHomeDirectory
   result <- readProcess "sqlite3"
-    [ (getMainDir homeDir) <> "/" <> (dbName conf)
+    [ (getMainDir conf homeDir) <> "/" <> (dbName conf)
     , ".dump"
     ]
     []
   pure $ pretty result
 
 
-backupDatabase :: IO (Doc AnsiStyle)
-backupDatabase = do
+backupDatabase :: Config -> IO (Doc AnsiStyle)
+backupDatabase conf = do
   now <- timeCurrent
   homeDir <- getHomeDirectory
 
   let
     fileUtcFormat = toFormat ("YYYY-MM-DDtHMI" :: [Char])
     backupDirName = "backups"
-    backupDirPath = (getMainDir homeDir) <> "/" <> backupDirName
+    backupDirPath = (getMainDir conf homeDir) <> "/" <> backupDirName
     backupFilePath = backupDirPath <> "/"
       <> (timePrint fileUtcFormat now) <> ".db"
 
@@ -297,7 +297,7 @@ backupDatabase = do
   createDirectoryIfMissing True backupDirPath
 
   result <- pretty <$> readProcess "sqlite3"
-    [ (getMainDir homeDir) <> "/" <> (dbName conf)
+    [ (getMainDir conf homeDir) <> "/" <> (dbName conf)
     , ".backup '" <> backupFilePath <> "'"
     ]
     []

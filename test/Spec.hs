@@ -13,6 +13,7 @@ import System.IO.Error
 import Time.System
 import Data.List ((!!))
 
+import Config (Config(..), defaultConfig)
 import Lib
 import Utils
 import DbSetup
@@ -21,8 +22,8 @@ import Migrations
 
 -- | The tests build up upon each other
 -- | and therefore the order must not be changed
-testSuite :: DateTime -> Sql.Connection -> SpecWith ()
-testSuite now connection = do
+testSuite :: Config -> DateTime -> Sql.Connection -> SpecWith ()
+testSuite conf now connection = do
   describe "TaskLite" $ do
     let
       -- TODO: Make function more generic
@@ -30,7 +31,7 @@ testSuite now connection = do
 
 
     it "creates necessary tables on initial run" $ do
-      tableStatus <- createTables connection
+      tableStatus <- createTables conf connection
       unpack (show tableStatus) `shouldBe`
         -- TODO: Improve formatting "create trigger"
         "🆕 Create table \"tasks\"\n\
@@ -45,20 +46,20 @@ testSuite now connection = do
 
 
     it "migrates tables to latest version" $ do
-      migrationStatus <- runMigrations connection
+      migrationStatus <- runMigrations conf connection
       unpack (show migrationStatus) `shouldStartWith`
         "Replaced views and triggers:"
 
 
     it "initially contains no tasks" $ do
-      tasks <- headTasks now connection
+      tasks <- headTasks conf now connection
       unpack (show tasks) `shouldStartWith` "No tasks available"
 
 
     it "adds a task" $ do
-      result <- addTask connection ["Just a test"]
+      result <- addTask conf connection ["Just a test"]
       unpack (show result) `shouldStartWith`
-        "🆕 Added task \"Just a test\" with ulid"
+        "🆕 Added task \"Just a test\" with id"
 
 
     context "When a task exists" $ do
@@ -89,7 +90,7 @@ testSuite now connection = do
         result <- nextTask connection
         let ulidText = getUlidFromBody result
 
-        tagResult <- addTag connection "test" [ulidText]
+        tagResult <- addTag conf connection "test" [ulidText]
         unpack (show tagResult) `shouldStartWith`
           "🏷  Added tag \"test\" to task"
 
@@ -98,7 +99,8 @@ testSuite now connection = do
         result <- nextTask connection
         let ulidText = getUlidFromBody result
 
-        tagResult <- addNote connection "Just a test note" [ulidText]
+        tagResult <- addNote conf connection
+                      "Just a test note" [ulidText]
         unpack (show tagResult) `shouldStartWith`
           "🗒  Added a note to task"
 
@@ -110,33 +112,34 @@ testSuite now connection = do
         case (parseUtc "2087-03-21 17:43") of
           Nothing -> throwIO $ userError "Invalid UTC string"
           Just utcStamp -> do
-            result <- setDueUtc connection utcStamp [ulidText]
+            result <- setDueUtc conf connection utcStamp [ulidText]
             unpack (show result) `shouldStartWith`
-              "📅 Set due UTC to \"2087-03-21 17:43:00\" of task"
+              "📅 Set due UTC of task \"Just a test\" with id"
 
 
       it "completes it" $ do
         result <- nextTask connection
         let ulidText = getUlidFromBody result
 
-        doResult <- doTasks connection [ulidText]
+        doResult <- doTasks conf connection [ulidText]
         unpack (show doResult) `shouldStartWith` "✅ Finished task"
 
 
     it "adds a task with metadata and deletes it" $ do
-      _ <- addTask connection ["Just a test +tag due:2082-10-03 +what"]
+      _ <- addTask conf connection
+            ["Just a test +tag due:2082-10-03 +what"]
       result <- nextTask connection
       let ulidText = getUlidFromBody result
 
-      deleteResult <- deleteTasks connection [ulidText]
+      deleteResult <- deleteTasks conf connection [ulidText]
       unpack (show deleteResult) `shouldStartWith` "❌ Deleted task"
 
 
     context "When a task was logged" $ do
       it "logs a task" $ do
-        result <- logTask connection ["Just a test"]
+        result <- logTask conf connection ["Just a test"]
         unpack (show result) `shouldStartWith`
-          "📝 Logged task \"Just a test\" with ulid"
+          "📝 Logged task \"Just a test\" with id"
 
 
 main :: IO ()
@@ -145,12 +148,12 @@ main = do
     connection <- Sql.open filePath
     nowElapsed <- timeCurrentP
     let now = timeFromElapsedP nowElapsed :: DateTime
-    hspec $ testSuite now connection
+    hspec $ testSuite defaultConfig now connection
 
   -- | Does not delete database after tests for debugging
   -- filePath <- emptySystemTempFile "main.db"
   -- putStrLn $ "\nFilepath: " <> filePath
-  -- connection <- Sql.open filePath
+  -- conf connection <- Sql.open filePath
   -- nowElapsed <- timeCurrentP
   -- let now = timeFromElapsedP nowElapsed :: DateTime
-  -- hspec $ testSuite now connection
+  -- hspec $ testSuite now conf connection
