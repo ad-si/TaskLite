@@ -745,7 +745,9 @@ executeCLiCommand conf now connection cmd =
 
 main :: IO ()
 main = do
-  configDirectory <- getXdgDirectory XdgConfig "tasklite"
+  let appName = "tasklite"
+
+  configDirectory <- getXdgDirectory XdgConfig appName
   let configPath = configDirectory </> "config.yaml"
 
   configUserEither <- decodeFileEither configPath
@@ -753,8 +755,16 @@ main = do
   case configUserEither of
     Left error -> die $ T.pack $ prettyPrintParseException error
     Right configUser -> do
-      config <- case (T.stripPrefix "~/" $ T.pack $ dataDir configUser) of
-                  Nothing -> pure configUser
+      configUserNorm <-
+        if (dataDir configUser /= "")
+        then pure $ configUser
+        else do
+         xdgDataDir <- getXdgDirectory XdgData appName
+         pure $ configUser {dataDir = xdgDataDir}
+
+      config <- case (T.stripPrefix "~/" $ T.pack $ dataDir configUserNorm) of
+                  Nothing ->
+                    pure $ configUser {dataDir = dataDir configUserNorm}
                   Just rest -> do
                     homeDir <- getHomeDirectory
                     pure $ configUser { dataDir = homeDir </> T.unpack rest }
