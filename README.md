@@ -89,20 +89,31 @@ Make sure to bookmark the views for easy access.
   Taskwarrior is plagued by [numerous bugs][TW Issues] due to its
   unnecessary complexity and non-optimal choice of programming languages.
   TaskLite's simple structure and [Haskell]'s excellent correctness guarantees,
-  however, yield to a very stable and robust piece of software.
+  however, yield to a stable and robust piece of software.
 
 - **Faster** \
   [Haskell] plus [SQLite] yields to an outstanding performance.
+  See section [Performance] for a simple benchmark.
 
 - **More Powerful** \
-  As all tasks are stored in a [SQLite] database, you can use all the available
-  tooling for it to supercharge your TaskLite installation.
-  For example [Datasette] for an instant REST API, or [DB Browser for SQLite]
-  to manipulate and view your data in a GUI.
+  As all tasks are stored in a [SQLite] database, you can use the most
+  daring SQL queries to extract hidden insights.
+  E.g. What is your average completion time for a task created on Monday tagged
+  *sprint7* created by user *john-evil*
+
+  Furthermore, extensive tooling is available for SQLite
+  to supercharge your TaskLite installation.
+  For example [Datasette] for an instant REST APIs, or [DB Browser for SQLite]
+  to view, manipulate, and plot your tasks in a GUI.
 
 [TW Issues]: https://github.com/GothenburgBitFactory/taskwarrior/issues
 [Datasette]: https://github.com/simonw/datasette
 [DB Browser for SQLite]: https://sqlitebrowser.org
+
+
+## Performance
+
+TODO: Benchmark against competitors
 
 
 ## Manual
@@ -166,35 +177,40 @@ curl https://api.github.com/repos/$OWNER/$REPO/issues/$NUM | tl import
 Instead of allowing one to explicitly set a state, TaskLite infers the
 current state from several other fields.
 
-Each task can only be in one of the 10 exclusive main states at any given time.
+There are 2 primary states:
 
-- Open - Waits to be done
-- Asleep - Is hidden because it's not relevant yet
-- Awake - Has become relevant or will become soon
-- Ready - Is ready to be done (similar to Open)
-- Waiting - It's still unclear if the task needs to be done or really has been
+- `Open` - Waits to be done
+- `Closed` - Nothing left to be done
+
+And 9 exclusive secondary states.
+
+- `Asleep` - Is hidden because it's not relevant yet
+- `Awake` - Has become relevant or will become soon
+- `Ready` - Is ready to be done (similar to Open)
+- `Waiting` - It's still unclear if the task needs to be done or really has been
     done. Regular checks are necessary until situation clears up.
-- Review - It's necessary to check if the task can finally be started or
+- `Review` - It's necessary to check if the task can finally be started or
     if it has finally been completed.
-- Done - Has been done
-- Obsolete - Has become obsolete or impossible to finish
-- Deletable - Not needed anymore and can be deleted
-- Blocked - Some other task(s) must be done first.
+- `Done` - Has been done
+- `Obsolete` - Has become obsolete or impossible to finish
+- `Deletable` - Not needed anymore and can be deleted
+- `Blocked` - Some other task(s) must be done first.
     Blockers are stored in a separate table.
 
 
-State\Field| state   | awake_utc| ready_utc| waiting_utc| review_utc| closed_utc
------------|---------|----------|----------|------------|-----------|-----------
-Open       | ❌      | ❌       | ❌      |     ❌     | ❌        | ❌
-Asleep     | ❌      | > now    | > now    |     ❌     | ❌       | ❌
-Awake      | ❌      | < now    | > now    |     ❌     | ❌       | ❌
-Ready      | ❌      | > now    | > now    |     ❌     | ❌       | ❌
-Waiting    | ❌      |   ❔     |   ❔    |     ✅     | > now     | ❌
-Review     | ❌      |   ❔     |   ❔    |     ✅     | < now     | ❌
-Done       | Done     |   ❔    |   ❔     |     ❔     | ❔       | ❔
-Obsolete   | Obsolete |   ❔    |   ❔     |     ❔     | ❔       | ❔
-Deletable  | Deletable|   ❔    |   ❔     |     ❔     | ❔       | ❔
-Blocked    | ❌      |    ❔    |   ❔     |     ❔     | ❔       | ❌
+State\Field| awake_utc| ready_utc| waiting_utc| review_utc| closed_utc| state
+-----------|----------|----------|------------|-----------|-----------|--------
+`Open`     | ❌       | ❌      |     ❌     | ❌        | ❌        | ❌
+`Closed`   | ❌       | ❌      |     ❌     | ❌        | ✅        | ❌
+`Asleep`   | > now    | > now    |     ❌     | ❌       | ❌         | ❌
+`Awake`    | < now    | > now    |     ❌     | ❌       | ❌         | ❌
+`Ready`    | < now    | < now    |     ❌     | ❌       | ❌         | ❌
+`Waiting`  |   ❔     |   ❔    |     ✅     | > now     | ❌        | ❌
+`Review`   |   ❔     |   ❔    |     ✅     | < now     | ❌        | ❌
+`Done`     |   ❔    |   ❔     |     ❔     | ❔       | ✅         | Done
+`Obsolete` |   ❔    |   ❔     |     ❔     | ❔       | ✅        |Obsolete
+`Deletable`|   ❔    |   ❔     |     ❔     | ❔       | ✅        |Deletable
+`Blocked`  |   ❔    |   ❔     |     ❔     | ❔       | ❌         | ❌
 
 Legend:
 - ❌ = Not allowed
