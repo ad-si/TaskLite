@@ -86,6 +86,7 @@ data Command
   | ListAll
   | ListHead
   | ListNew
+  | ListOld
   | ListOpen
   | ListDone
   | ListObsolete
@@ -389,6 +390,10 @@ commandParser conf =
         ("List " <> show (headCount conf)
           <> " newest open tasks by creation UTC desc"))
 
+    <> command "old" (toParserInfo (pure ListOld)
+        ("List " <> show (headCount conf)
+          <> " oldest open tasks by creation UTC asc"))
+
     <> command "awake" (toParserInfo (pure ListWaiting)
         "List all awake tasks by priority")
 
@@ -683,6 +688,7 @@ executeCLiCommand conf now connection cmd =
     ListAll -> listAll conf now connection
     ListHead -> headTasks conf now connection
     ListNew -> newTasks conf now connection
+    ListOld -> listOldTasks conf now connection
     ListOpen -> openTasks conf now connection
     ListOverdue -> overdueTasks conf now connection
     ListRepeating -> listRepeating conf now connection

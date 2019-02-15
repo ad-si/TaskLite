@@ -945,6 +945,15 @@ newTasks conf now connection = do
   pure $ formatTasks conf now tasks
 
 
+listOldTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+listOldTasks conf now connection = do
+  tasks <- query_ connection $ Query $
+    "select * from `tasks_view` \
+    \where closed_utc is null \
+    \order by `ulid` asc limit " <> show (headCount conf)
+  pure $ formatTasks conf now tasks
+
+
 openTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 openTasks conf now connection = do
   tasks <- query_ connection $ Query
