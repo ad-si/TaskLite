@@ -82,15 +82,15 @@ taskViewQuery conf =
       [])
 
     caseWaitingSql = S.getCase Nothing (
-      ("waiting_utc is null",             0) :
-      ("waiting_utc >= datetime('now')",  0) :
-      ("waiting_utc <  datetime('now')", -5) :
+      ("waiting_utc is null",              0) :
+      ("waiting_utc >= datetime('now')",   0) :
+      ("waiting_utc <  datetime('now')", -10) :
       [])
 
     caseReviewSql = S.getCase Nothing (
       ("review_utc is null",             0) :
       ("review_utc >= datetime('now')",  0) :
-      ("review_utc <  datetime('now')", 10) :
+      ("review_utc <  datetime('now')", 15) :
       [])
 
     caseDueSql = S.getCase Nothing (
