@@ -90,7 +90,7 @@ taskViewQuery conf =
     caseReviewSql = S.getCase Nothing (
       ("review_utc is null",             0) :
       ("review_utc >= datetime('now')",  0) :
-      ("review_utc <  datetime('now')", 15) :
+      ("review_utc <  datetime('now')", 20) :
       [])
 
     caseDueSql = S.getCase Nothing (
