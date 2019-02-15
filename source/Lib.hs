@@ -941,7 +941,6 @@ headTasks conf now connection = do
 newTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 newTasks conf now connection = do
   tasks <- query_ connection $ Query $
-    -- TODO: Add `wait_utc` < datetime('now')"
     "select * from `tasks_view` \
     \where closed_utc is null \
     \order by `ulid` desc limit " <> show (headCount conf)
@@ -1087,7 +1086,7 @@ data FilterExp
   = HasTag Text
   | NotTag Text
   | HasDue Text
-  | HasStatus (Maybe TaskState)
+  | HasStatus (Maybe DerivedState) -- Should be `Either`
   | InvalidFilter Text
   deriving Show
 
@@ -1115,8 +1114,8 @@ dueParser = do
 stateParser :: ReadP FilterExp
 stateParser = do
   _ <- string "state:"
-  utcStr <- munch (not . isSpace)
-  pure $ HasStatus $ textToTaskState $ pack utcStr
+  stateStr <- munch (not . isSpace)
+  pure $ HasStatus $ textToDerivedState $ pack stateStr
 
 
 filterExpParser :: ReadP FilterExp
@@ -1141,14 +1140,23 @@ parseFilterExps input =
 
 
 -- | Returns (operator, where-query) tuple
+-- TODO: Should be `FilterExp -> Maybe (Text, Text)`
 filterToSql :: FilterExp -> (Text, Text)
 filterToSql = \case
   HasTag tag          -> ("intersect", "tag like '" <> tag <> "'")
   NotTag tag          -> ("except", "tag like '" <> tag <> "'")
   HasDue utc          -> ("intersect", "due_utc < datetime('" <> utc <>"')")
-  HasStatus (Just taskState) -> ("intersect", "state is '" <> (show taskState) <> "'")
+  HasStatus (Just taskState) -> ("intersect", derivedStateToQuery taskState)
+  -- Following cases should never be called, as they are filtered out
   HasStatus Nothing   -> ("", "")
-  InvalidFilter _     -> ("", "") -- Should never be called
+  InvalidFilter _     -> ("", "")
+
+
+isValidFilter :: FilterExp -> Bool
+isValidFilter = \case
+  InvalidFilter _ -> False
+  HasStatus Nothing -> False
+  _ -> True
 
 
 runFilter :: Config -> DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
@@ -1161,12 +1169,12 @@ runFilter conf now connection exps = do
     Nothing -> pure "This case should be impossible as the parser doesn't fail"
     Just (filterExps, _) -> do
       let
-        isValid = \case InvalidFilter _ -> False; _ -> True
-        ppInvalidFilter (InvalidFilter error) =
-          pretty $ "\"" <> error <> "\" is an invalid filter"
-        ppInvalidFilter _ =
-          "The functions should not be called with a valid function"
-        errors = P.filter (not . isValid) filterExps
+        ppInvalidFilter = \case
+          (InvalidFilter error) ->
+              (dquotes $ pretty error) <+> "is an invalid filter"
+          (HasStatus Nothing) -> "Filter contains an invalid state value"
+          _ -> "The functions should not be called with a valid function"
+        errors = P.filter (not . isValidFilter) filterExps
         errorsDoc = if (P.length errors) > 0
           then Just $
             vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
@@ -1183,8 +1191,7 @@ runFilter conf now connection exps = do
 getFilterQuery :: [FilterExp] -> Query
 getFilterQuery filterExps =
   let
-    isValid = \case InvalidFilter _ -> False; _ -> True
-    filterTuple = filterToSql <$> P.filter isValid filterExps
+    filterTuple = filterToSql <$> P.filter isValidFilter filterExps
 
     queries = filterTuple <&> \(operator, whereQuery) ->
       operator <> "\n\

@@ -79,6 +79,57 @@ textToTaskState txt =
     func txtLower
 
 
+data DerivedState
+  = IsOpen
+  | IsClosed
+  | IsAsleep
+  | IsAwake
+  | IsReady
+  | IsWaiting
+  | IsReview
+  | IsDone
+  | IsObsolete
+  | IsDeletable
+  | IsBlocked
+  deriving (Eq, Show)
+
+
+textToDerivedState :: Text -> Maybe DerivedState
+textToDerivedState = \case
+  "open"      -> Just IsOpen
+  "closed"    -> Just IsClosed
+  "asleep"    -> Just IsAsleep
+  "awake"     -> Just IsAwake
+  "ready"     -> Just IsReady
+  "waiting"   -> Just IsWaiting
+  "review"    -> Just IsReview
+  "done"      -> Just IsDone
+  "obsolete"  -> Just IsObsolete
+  "deletable" -> Just IsDeletable
+  "blocked"   -> Just IsBlocked
+  _ -> Nothing
+
+
+derivedStateToQuery :: DerivedState -> Text
+derivedStateToQuery = \case
+  IsOpen      -> "closed_utc is null"
+  IsClosed    -> "closed_utc is not null"
+  IsAsleep    -> "awake_utc > datetime('now') and ready_utc > datetime('now') \
+                  \and closed_utc is null"
+  IsAwake     -> "awake_utc < datetime('now') and ready_utc > datetime('now') \
+                  \and closed_utc is null"
+  IsReady     -> "awake_utc < datetime('now') and ready_utc < datetime('now') \
+                  \and closed_utc is null"
+  IsWaiting   -> "waiting_utc is not null and review_utc > datetime('now') \
+                  \and closed_utc is null"
+  IsReview    -> "waiting_utc is not null and review_utc < datetime('now') \
+                  \and closed_utc is null"
+  IsDone      -> "closed_utc is not null and state is 'Done'"
+  IsObsolete  -> "closed_utc is not null and state is 'Obsolete'"
+  IsDeletable -> "closed_utc is not null and state is 'Deletable'"
+  IsBlocked   -> "" -- TODO
+
+
 newtype Ulid = Ulid Text
 
 -- | Uses _ to match Beam's defaults
