@@ -265,7 +265,10 @@ setStateAndClosed :: Connection -> TaskUlid -> Maybe TaskState -> IO ()
 setStateAndClosed connection taskUlid theTaskState = do
   runBeamSqlite connection $ runUpdate $
     update (_tldbTasks taskLiteDb)
-      (\task -> [(Task.state task) <-. val_ theTaskState])
+      (\task -> [ (Task.state task) <-. val_ theTaskState
+                , (Task.review_utc task) <-. val_ Nothing
+                -- closed_utc is set via an SQL trigger
+                ])
       (\task -> primaryKey task ==. val_ taskUlid &&.
                 (Task.state task) /=. val_ theTaskState)
 
