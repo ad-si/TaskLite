@@ -887,6 +887,9 @@ formatTaskLine conf now taskUlidWidth task =
           $ showAtPrecision $ realToFrac
           $ fromMaybe 0 (FullTask.priority task)) :
         annotate (dateStyle conf) (pretty taskDate) :
+        (pretty $ case FullTask.review_utc task >>= parseUtc of
+          Nothing -> "" :: Text
+          Just date -> if date < now then "🔎" else "") :
         grayOut (isNothing $ FullTask.closed_utc task) (reflow body) :
         annotate
           (if ((FullTask.due_utc task) >>= parseUtc) > Just now
