@@ -102,6 +102,7 @@ data Command
   | RunFilter [Text]
   -- | Views -- List all available views
   | Tags -- List all used tags
+  | Stats -- List statistics about tasks
   -- | Active -- Started tasks
   -- | Blocked -- Tasks that are blocked by other tasks (newest first)
   -- | Blockers -- Tasks that block other tasks (newest first)
@@ -477,6 +478,10 @@ commandParser conf =
 
     -- <> command "active-tags" (toParserInfo (pure $ Tags)
     --     "List all active tags (a.k.a projects) and their progress")
+
+    <> command "stats" (toParserInfo (pure Stats)
+        "Show statistics about tasks")
+
     )
 
   <|> subparser ( commandGroup (T.unpack $ fst i_o_sec)
@@ -702,6 +707,7 @@ executeCLiCommand conf now connection cmd =
     RunSql query -> runSql conf query
     RunFilter expressions -> runFilter conf now connection expressions
     Tags -> listTags conf connection
+    Stats -> getStats conf connection
     Import -> importTask conf
     Csv -> dumpCsv conf
     Ndjson -> dumpNdjson conf

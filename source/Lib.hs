@@ -847,10 +847,17 @@ duplicateTasks conf connection ids = do
   pure $ vsep docs
 
 
-showAtPrecision :: Double -> Text
-showAtPrecision number =
-  let tuple = breakOn "." (show number)
-  in fst tuple <> (T.replace ".0" "  " . T.take 2 . snd) tuple
+showAtPrecision :: Int -> Double -> Text
+showAtPrecision numOfDigits number =
+  let
+    tuple = breakOn "." (show number)
+    clipDecimalPart = if snd tuple == ".0"
+      then T.replace ".0" (T.replicate (1 + numOfDigits) " ")
+      else T.take (1 + numOfDigits)
+  in
+    fst tuple <> if numOfDigits /= 0
+      then (clipDecimalPart . snd) tuple
+      else ""
 
 
 formatTaskLine :: Config -> DateTime -> Int -> FullTask -> Doc AnsiStyle
@@ -885,7 +892,7 @@ formatTaskLine conf now taskUlidWidth task =
       hang hangWidth $ hhsep $ P.filter isEmptyDoc (
         annotate (idStyle conf) id :
         annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
-          $ showAtPrecision $ realToFrac
+          $ showAtPrecision 1 $ realToFrac
           $ fromMaybe 0 (FullTask.priority task)) :
         annotate (dateStyle conf) (pretty taskDate) :
         (pretty $ case FullTask.review_utc task >>= parseUtc of
@@ -922,9 +929,9 @@ countTasks conf taskStateFilter = do
   execWithConn conf $ \connection -> do
     [NumRows taskCount] <- case taskStateFilter of
       NoFilter -> query_ connection $ Query $
-        "select count(*) from `" <> tableName conf <> "`"
+        "select count(1) from `" <> tableName conf <> "`"
       Utils.Only taskState -> query connection
-        (Query $ "select count(*) from `" <> tableName conf
+        (Query $ "select count(1) from `" <> tableName conf
           <> "` where `state` == ?")
         [(show taskState) :: Text]
 
@@ -1272,7 +1279,6 @@ formatTagLine conf maxTagLength (tag, open_count, closed_count, progress) =
     <++> progressPercentage <+> (getProgressBar barWidth progress)
 
 
-
 listTags :: Config -> Connection -> IO (Doc AnsiStyle)
 listTags conf connection = do
   tags <- query_ connection $ Query "select * from tags"
@@ -1287,9 +1293,43 @@ listTags conf connection = do
 
   pure $
          annotate (bold <> underlined) (fill maxTagLength "Tag")
-    <++> (annotate (bold <> underlined)  "Open")
-    <++> (annotate (bold <> underlined)  "Closed")
+    <++> (annotate (bold <> underlined) "Open")
+    <++> (annotate (bold <> underlined) "Closed")
     <++> annotate (bold <> underlined) (fill progressWith "Progress")
     <> line
     <> vsep (fmap (formatTagLine conf maxTagLength) tags)
 
+
+getStats :: Config -> Connection -> IO (Doc AnsiStyle)
+getStats _ connection = do
+  [NumRows numOfTasks] <- query_ connection $
+    Query "select count(1) from tasks"
+  [NumRows numOfTasksOpen] <- query_ connection $
+    Query "select count(1) from tasks where closed_utc is null"
+  [NumRows numOfTasksClosed] <- query_ connection $
+    Query "select count(1) from tasks where closed_utc is not null"
+
+  let
+    lengthOfKey = 10
+    lengthOfValue = 10
+
+  pure $
+         annotate (bold <> underlined) (fill lengthOfKey "Metric")
+    <++> annotate (bold <> underlined) (fill lengthOfValue "Value")
+    <++> annotate (bold <> underlined) "Share"
+    <> line
+    <> vsep (
+      fill lengthOfKey (pretty ("Tasks" :: Text))
+        <++> fill lengthOfValue (pretty (numOfTasks :: Integer))
+        <++> pretty ("1.0" :: Text) :
+      fill lengthOfKey (pretty ("Open" :: Text))
+        <++> fill lengthOfValue (pretty (numOfTasksOpen :: Integer))
+        <++> pretty (showAtPrecision 3 $
+            (fromIntegral numOfTasksOpen) / (fromIntegral numOfTasks)
+          ) :
+      fill lengthOfKey (pretty ("Closed" :: Text))
+        <++> fill lengthOfValue (pretty (numOfTasksClosed :: Integer))
+        <++> pretty (showAtPrecision 3 $
+            (fromIntegral numOfTasksClosed) / (fromIntegral numOfTasks)
+          ) :
+    [])
