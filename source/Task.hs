@@ -114,15 +114,20 @@ derivedStateToQuery :: DerivedState -> Text
 derivedStateToQuery = \case
   IsOpen      -> "closed_utc is null"
   IsClosed    -> "closed_utc is not null"
-  IsAsleep    -> "awake_utc > datetime('now') and ready_utc > datetime('now') \
+  IsAsleep    -> "awake_utc > datetime('now') and \
+                  \(ready_utc is null or ready_utc > datetime('now')) \
                   \and closed_utc is null"
-  IsAwake     -> "awake_utc < datetime('now') and ready_utc > datetime('now') \
+  IsAwake     -> "awake_utc < datetime('now') and \
+                  \(ready_utc is null or ready_utc > datetime('now')) \
                   \and closed_utc is null"
-  IsReady     -> "awake_utc < datetime('now') and ready_utc < datetime('now') \
+  IsReady     -> "(awake_utc is null or awake_utc < datetime('now')) \
+                  \and ready_utc < datetime('now') \
                   \and closed_utc is null"
-  IsWaiting   -> "waiting_utc is not null and review_utc > datetime('now') \
+  IsWaiting   -> "waiting_utc is not null and \
+                  \(review_utc is null or review_utc > datetime('now')) \
                   \and closed_utc is null"
-  IsReview    -> "waiting_utc is not null and review_utc < datetime('now') \
+  IsReview    -> "waiting_utc is not null and \
+                  \(review_utc is null or review_utc < datetime('now')) \
                   \and closed_utc is null"
   IsDone      -> "closed_utc is not null and state is 'Done'"
   IsObsolete  -> "closed_utc is not null and state is 'Obsolete'"
