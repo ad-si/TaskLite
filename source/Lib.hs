@@ -906,6 +906,9 @@ formatTaskLine conf now taskUlidWidth task =
     dueUtcMaybe = (FullTask.due_utc task)
       >>= parseUtc
       <&> T.replace " 00:00:00" "" . T.pack . timePrint (utcFormat conf)
+    dueIn offset = let dateMaybe = (FullTask.due_utc task) >>= parseUtc
+      in isJust dateMaybe && dateMaybe
+          < Just (now `timeAdd` offset)
     multilineIndent = 2
     hangWidth = taskUlidWidth + 2
       + (dateWidth conf) + 2
@@ -916,6 +919,9 @@ formatTaskLine conf now taskUlidWidth task =
     grayOut isDone doc = if isDone
       then annotate (bodyStyle conf) doc
       else annotate (bodyClosedStyle conf) doc
+    -- redOut onTime doc = if onTime
+    --   then annotate (bodyStyle conf) doc
+    --   else annotate (color Red) doc
     taskLine = createdUtc <$$> \taskDate ->
       hang hangWidth $ hhsep $ P.filter isEmptyDoc (
         annotate (idStyle conf) id :
@@ -926,12 +932,11 @@ formatTaskLine conf now taskUlidWidth task =
         (pretty $ case FullTask.review_utc task >>= parseUtc of
           Nothing -> "" :: Text
           Just date -> if date < now then "🔎" else "") :
-        grayOut (isNothing $ FullTask.closed_utc task) (reflow body) :
-        annotate
-          (if ((FullTask.due_utc task) >>= parseUtc) > Just now
-            then dueStyle conf
-            else overdueStyle conf)
-          (pretty dueUtcMaybe) :
+        (if dueIn mempty { durationHours = 24 } then "⚠️️  " else "") <>
+          (if dueIn mempty
+            then annotate (color Red) (reflow body)
+            else grayOut (isNothing $ FullTask.closed_utc task) (reflow body)) :
+        annotate (dueStyle conf) (pretty dueUtcMaybe) :
         annotate (closedStyle conf) (pretty closedUtcMaybe) :
         hsep (tags <$$> formatTag) :
       [])
