@@ -205,7 +205,7 @@ commandParser conf =
   let
     numTasks = show (headCount conf)
   in
-  (pure ListHead)
+  (pure ListReady)
   <|>
   (   subparser ( commandGroup (T.unpack $ fst basic_sec)
 
