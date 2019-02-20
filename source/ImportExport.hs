@@ -20,6 +20,7 @@ import Database.Beam
 import Database.SQLite.Simple as Sql
 import Lib
 import System.Directory
+import System.FilePath ((</>))
 import System.Process
 import System.Posix.User (getEffectiveUserName)
 import Time.System
@@ -273,7 +274,7 @@ dumpNdjson conf = do
 dumpSql :: Config -> IO (Doc AnsiStyle)
 dumpSql conf = do
   result <- readProcess "sqlite3"
-    [ (dataDir conf) <> "/" <> (dbName conf)
+    [ (dataDir conf) </> (dbName conf)
     , ".dump"
     ]
     []
@@ -287,15 +288,14 @@ backupDatabase conf = do
   let
     fileUtcFormat = toFormat ("YYYY-MM-DDtHMI" :: [Char])
     backupDirName = "backups"
-    backupDirPath = (dataDir conf) <> "/" <> backupDirName
-    backupFilePath = backupDirPath <> "/"
-      <> (timePrint fileUtcFormat now) <> ".db"
+    backupDirPath = (dataDir conf) </> backupDirName
+    backupFilePath = backupDirPath </> (timePrint fileUtcFormat now) <> ".db"
 
   -- Create directory (and parents because of True)
   createDirectoryIfMissing True backupDirPath
 
   result <- pretty <$> readProcess "sqlite3"
-    [ (dataDir conf) <> "/" <> (dbName conf)
+    [ (dataDir conf) </> (dbName conf)
     , ".backup '" <> backupFilePath <> "'"
     ]
     []

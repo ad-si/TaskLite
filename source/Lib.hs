@@ -16,6 +16,7 @@ import Database.Beam.Schema.Tables
 import Database.SQLite.Simple as Sql
 import Numeric
 import System.Directory
+import System.FilePath ((</>))
 import System.IO as SIO
 import System.Process (readProcess)
 import System.Posix.User (getEffectiveUserName)
@@ -75,27 +76,27 @@ taskLiteDb = defaultDbSettings `withDbModification`
 
 getDbPath :: Config -> IO FilePath
 getDbPath conf = do
-  pure $ (dataDir conf) <> "/" <> (dbName conf)
+  pure $ (dataDir conf) </> (dbName conf)
 
 
 setupConnection :: Config -> IO Connection
 setupConnection conf = do
   createDirectoryIfMissing True $ dataDir conf
-  open $ (dataDir conf) <> "/" <> (dbName conf)
+  open $ (dataDir conf) </> (dbName conf)
 
 
 execWithConn :: Config -> (Connection -> IO a) -> IO a
 execWithConn conf func = do
   createDirectoryIfMissing True $ dataDir conf
   withConnection
-    ((dataDir conf) <> "/" <> (dbName conf))
+    ((dataDir conf) </> (dbName conf))
     func
 
 
 -- | For use with `runBeamSqliteDebug`
 writeToLog :: Config -> [Char] -> IO ()
 writeToLog conf message = do
-  let logFile = (dataDir conf) <> "/log.sql"
+  let logFile = (dataDir conf) </> "log.sql"
   -- Use System.IO so it doesn't have to be converted to Text first
   SIO.appendFile logFile $ message <> "\n"
 
@@ -1074,7 +1075,7 @@ queryTasks conf now connection sqlQuery = do
 runSql :: Config -> Text -> IO (Doc AnsiStyle)
 runSql conf sqlQuery = do
   result <- readProcess "sqlite3"
-    [ (dataDir conf) <> "/" <> (dbName conf)
+    [ (dataDir conf) </> (dbName conf)
     , ".headers on"
     , ".mode csv"
     , ".separator , '\n'"
