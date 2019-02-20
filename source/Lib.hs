@@ -274,6 +274,34 @@ setStateAndClosed connection taskUlid theTaskState = do
                 (Task.state task) /=. val_ theTaskState)
 
 
+setReadyUtc ::
+  Config -> Connection -> DateTime -> [IdText] -> IO (Doc AnsiStyle)
+setReadyUtc conf connection datetime ids = do
+  let
+    utcText :: Text
+    utcText = pack $ timePrint (utcFormat conf) datetime
+
+  docs <- forM ids $ \idSubstr ->
+    execWithTask conf connection idSubstr $ \task -> do
+      let
+        taskUlid@(TaskUlid idText) = primaryKey task
+        prettyBody = dquotes (pretty $ Task.body task)
+        prettyId = dquotes (pretty idText)
+
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task_ -> [(Task.ready_utc task_) <-. val_ (Just utcText)])
+          (\task_ -> primaryKey task_ ==. val_ taskUlid)
+
+        -- TODO: Update modified_utc via SQL trigger
+
+      pure $ "📅 Set ready UTC of task" <+> prettyBody
+            <+> "with id" <+> prettyId
+            <+> "to" <+> dquotes (pretty utcText)
+
+  pure $ vsep docs
+
+
 waitFor :: Config -> Connection -> Duration -> [Text] -> IO (Doc AnsiStyle)
 waitFor conf connection duration ids = do
   docs <- forM ids $ \idSubstr ->
@@ -945,7 +973,8 @@ headTasks conf now connection = do
     -- TODO: Add `wait_utc` < datetime('now')"
     "select * from tasks_view \
     \where closed_utc is null \
-    \order by `priority` desc limit " <> show (headCount conf)
+    \order by `priority` desc \
+    \limit " <> show (headCount conf)
   pure $ formatTasks conf now tasks
 
 
@@ -1014,10 +1043,23 @@ deletableTasks conf now connection = do
 
 listRepeating :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listRepeating conf now connection = do
-  tasks <- query_ connection
+  tasks <- query_ connection $ Query $
     "select * from tasks_view \
     \where repetition_duration is not null \
-    \order by repetition_duration desc"
+    \order by repetition_duration desc \
+    \limit " <> show (headCount conf)
+
+  pure $ formatTasks conf now tasks
+
+
+listReady :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+listReady conf now connection = do
+  tasks <- query_ connection $ Query $
+    "select * from tasks_view \
+    \where (ready_utc is null and closed_utc is null) \
+    \or (ready_utc is not null and ready_utc < datetime('now')) \
+    \order by priority desc \
+    \limit " <> show (headCount conf)
 
   pure $ formatTasks conf now tasks
 

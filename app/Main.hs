@@ -44,6 +44,7 @@ data Command
   | LogTask   [IdText]
 
   {- Modify -}
+  | ReadyOn DateTime [IdText]
   | WaitTasks [IdText]
   | WaitFor Duration [IdText]
   | ReviewTasks [IdText]
@@ -67,7 +68,6 @@ data Command
   -- | Append -- Append words to a task description
   -- | Prepend -- Prepend words to a task description
   -- | Undo -- Revert last change
-  -- | Repeat -- Set repeating interval for a task
 
   {- Show -}
   | InfoTask IdText
@@ -91,6 +91,7 @@ data Command
   | ListDone
   | ListObsolete
   | ListDeletable
+  | ListReady
   | ListWaiting
   | ListOverdue
   | ListRepeating
@@ -201,6 +202,9 @@ parseDurationInDays =
 
 commandParser :: Config -> Parser Command
 commandParser conf =
+  let
+    numTasks = show (headCount conf)
+  in
   (pure ListHead)
   <|>
   (   subparser ( commandGroup (T.unpack $ fst basic_sec)
@@ -215,6 +219,12 @@ commandParser conf =
     <> command "log" (toParserInfo (LogTask <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
         "Log an already completed task")
+
+    <> command "readyon" (toParserInfo (ReadyOn
+      <$> argument (maybeReader (parseUtc . T.pack))
+            (metavar "READY_UTC" <> help "Timestamp when task is ready")
+      <*> some (strArgument idsVar))
+        "Wait specified number of days until it's ready for review")
 
     <> command "wait" (toParserInfo (WaitTasks <$> some (strArgument idsVar))
         "Mark a task as waiting (e.g. waiting for feedback)")
@@ -355,8 +365,7 @@ commandParser conf =
   <|> subparser ( commandGroup (T.unpack $ fst list_sec)
 
     <> command "head" (toParserInfo (pure ListHead)
-        ("List " <> show (headCount conf)
-          <> " most important open tasks by priority desc"))
+        ("List " <> numTasks <> " most important open tasks by priority desc"))
 
     <> command "all" (toParserInfo (pure ListAll)
         "List all tasks by creation UTC asc")
@@ -388,18 +397,21 @@ commandParser conf =
         "List all repeating tasks by priority desc")
 
     <> command "new" (toParserInfo (pure ListNew)
-        ("List " <> show (headCount conf)
+        ("List " <> numTasks
           <> " newest open tasks by creation UTC desc"))
 
     <> command "old" (toParserInfo (pure ListOld)
-        ("List " <> show (headCount conf)
+        ("List " <> numTasks
           <> " oldest open tasks by creation UTC asc"))
 
-    <> command "awake" (toParserInfo (pure ListWaiting)
-        "List all awake tasks by priority")
+    -- <> command "asleep" (toParserInfo (pure ListAwake)
+    --     "List all sleeping tasks by priority")
 
-    <> command "ready" (toParserInfo (pure ListWaiting)
-        "List all ready tasks by priority")
+    -- <> command "awake" (toParserInfo (pure ListAwake)
+    --     "List all awake tasks by priority")
+
+    <> command "ready" (toParserInfo (pure ListReady)
+       ( "List " <> numTasks <> " most important ready tasks by priority desc"))
 
     <> command "waiting" (toParserInfo (pure ListWaiting)
         "List all waiting tasks by priority")
@@ -409,7 +421,7 @@ commandParser conf =
 
 
     <> command "done" (toParserInfo (pure ListDone)
-        ("List " <> show (headCount conf)
+        ("List " <> numTasks
           <> "  done tasks by closing UTC desc"))
 
     <> command "obsolete" (toParserInfo (pure ListObsolete)
@@ -634,7 +646,7 @@ examples =
 
       <> mkBold "List most important tasks:"
         <+> hiLite "tl"
-        <+> parens ("same as" <+> hiLite "tl head")
+        <+> parens ("same as" <+> hiLite "tl ready")
       <> hardline
 
       <> mkBold "Complete it:" <+> hiLite "tl do <id>"
@@ -697,6 +709,7 @@ executeCLiCommand conf now connection cmd =
     ListOpen -> openTasks conf now connection
     ListOverdue -> overdueTasks conf now connection
     ListRepeating -> listRepeating conf now connection
+    ListReady -> listReady conf now connection
     ListWaiting -> listWaiting conf now connection
     ListDone -> doneTasks conf now connection
     ListObsolete -> obsoleteTasks conf now connection
@@ -723,6 +736,7 @@ executeCLiCommand conf now connection cmd =
     AddPay bodyWords -> addTaskC $ ["Pay"] <> bodyWords <> ["+pay"]
     AddShip bodyWords -> addTaskC $ ["Ship"] <> bodyWords <> ["+ship"]
     LogTask bodyWords -> logTask conf connection bodyWords
+    ReadyOn datetime ids -> setReadyUtc conf connection datetime ids
     WaitTasks ids -> waitTasks conf connection ids
     WaitFor duration ids -> waitFor conf connection duration ids
     ReviewTasks ids -> reviewTasks conf connection ids
