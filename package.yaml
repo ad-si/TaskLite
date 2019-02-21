@@ -1,0 +1,29 @@
+name: my-idea-pool
+version: 0.1.0.0
+synopsis: Solution to CodementorX's small back end project assignment
+description: |
+  My Idea Pool is a service that records your ideas!
+  After signing up for an account,
+  users can log their ideas and assign them scores.
+  Every idea contains 3 scores: Impact, Ease and Confidence.
+  Each idea can be added, edited and deleted.
+  All the ideas will be sorted by the average of all three scores.
+  Every API call will return 10 ideas.
+  When not using the service, users can log out of the system.
+homepage: https://github.com/ad-si/my-idea-pool#readme
+license: AGPL-3.0-or-later
+author: Adrian Sieber
+maintainer: mail@adriansieber.com
+copyright: Adrian Sieber
+category: Web
+
+extra-source-files:
+  - readme.md
+
+dependencies:
+  - base >= 4.7 && < 5
+
+executables:
+  my-idea-pool:
+    source-dirs:      source
+    main:             Main.hs
