@@ -16,7 +16,7 @@ import User
 import SignupUser
 
 
-data Config = Config { ideasPerPage :: Int }
+newtype Config = Config { ideasPerPage :: Int }
 
 defaultConfig :: Config
 defaultConfig = Config
@@ -24,7 +24,7 @@ defaultConfig = Config
   }
 
 
-data RefreshToken = RefreshToken { refresh_token :: Text }
+newtype RefreshToken = RefreshToken { refresh_token :: Text }
   deriving (Show, Generic)
 
 instance FromJSON RefreshToken
@@ -32,13 +32,13 @@ instance Parsable RefreshToken where
   parseParam txt = Right $ RefreshToken $ show txt
 
 
-data WebToken = WebToken { jwt :: Text }
+newtype WebToken = WebToken { jwt :: Text }
   deriving (Show, Generic)
 
 instance ToJSON WebToken
 
 
-data PageRecord = PageRecord { page :: Text }
+newtype PageRecord = PageRecord { page :: Text }
   deriving (Show, Generic)
 
 instance ToJSON PageRecord
@@ -96,7 +96,7 @@ app = do
   -- Ideas
   get    "/ideas" $ do
     (page :: Int) <- param "page"
-    json $ ([] :: [Idea])  -- TODO
+    json ([] :: [Idea])  -- TODO
 
 
   post   "/ideas" $ do
