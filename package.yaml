@@ -17,11 +17,34 @@ maintainer: mail@adriansieber.com
 copyright: Adrian Sieber
 category: Web
 
+default-extensions:
+  - DeriveGeneric
+  - FlexibleContexts
+  - FlexibleInstances
+  - GADTs
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - RecordWildCards
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - TypeApplications
+  - TypeFamilies
+  - TypeSynonymInstances
+  - UndecidableInstances
+
 extra-source-files:
   - readme.md
 
 dependencies:
+  - aeson
   - base >= 4.7 && < 5
+  - http-types
+  - protolude
+  - scotty
+  - text
 
 executables:
   my-idea-pool:
