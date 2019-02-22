@@ -39,12 +39,19 @@ extra-source-files:
   - readme.md
 
 dependencies:
+  - acid-state
   - aeson
   - base >= 4.7 && < 5
   - http-types
+  - jose
+  - lens
+  - mtl
   - protolude
+  - safecopy
   - scotty
   - text
+  - time
+  - QuickCheck
 
 executables:
   my-idea-pool:

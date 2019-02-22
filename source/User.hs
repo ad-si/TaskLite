@@ -15,6 +15,6 @@ data User = User
   { email :: Text
   , name :: Text
   , avatar_url :: Text
-  } deriving (Generic)
+  } deriving (Show, Generic)
 
 instance ToJSON User
