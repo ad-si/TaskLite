@@ -2,16 +2,13 @@ module AccessToken where
 
 import Protolude hiding (get, put)
 
-import Data.Aeson (ToJSON, Value(..))
-import Data.Monoid (mconcat)
-import Data.Text as T
-import GHC.Generics
-import Web.Scotty
+import Data.Aeson (ToJSON)
 
+import Types
 
 data AccessToken = AccessToken
   { jwt :: Text
-  , refresh_token :: Text
+  , refresh_token :: RefreshToken
   }
   deriving (Show, Generic)
 

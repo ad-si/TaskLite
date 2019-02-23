@@ -35,6 +35,14 @@ default-extensions:
   - TypeSynonymInstances
   - UndecidableInstances
 
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wredundant-constraints
+  - -fno-warn-orphans
+
 extra-source-files:
   - readme.md
 
@@ -42,6 +50,9 @@ dependencies:
   - acid-state
   - aeson
   - base >= 4.7 && < 5
+  - bcrypt
+  - bytestring
+  - extra
   - http-types
   - jose
   - lens

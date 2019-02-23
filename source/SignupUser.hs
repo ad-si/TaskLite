@@ -6,15 +6,11 @@ module SignupUser where
 
 import Protolude hiding (get, put)
 
-import Data.Aeson (FromJSON, ToJSON, Value(..))
-import Data.Monoid (mconcat)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.SafeCopy
-import Data.Text as T
-import GHC.Generics
-import Network.HTTP.Types.Status
-import Web.Scotty
-import AccessToken
-import User
+
+import DbUser
+import Helpers
 
 
 data SignupUser = SignupUser
@@ -27,3 +23,8 @@ instance ToJSON SignupUser
 instance FromJSON SignupUser
 
 $(deriveSafeCopy 0 'base ''SignupUser)
+
+
+toDbUser :: SignupUser -> IO DbUser
+toDbUser (SignupUser name email password) =
+  credentialsToDbUser name email password

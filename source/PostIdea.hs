@@ -2,12 +2,8 @@ module PostIdea where
 
 import Protolude hiding (get, put)
 
-import Data.Aeson (ToJSON, FromJSON, Value(..))
-import Data.Monoid (mconcat)
+import Data.Aeson (ToJSON, FromJSON)
 import Data.Text as T
-import GHC.Generics
-import Network.HTTP.Types.Status
-import Web.Scotty
 
 
 data PostIdea = PostIdea
@@ -19,3 +15,25 @@ data PostIdea = PostIdea
 
 instance FromJSON PostIdea
 instance ToJSON PostIdea
+
+
+verifyIdea :: PostIdea -> Either Text PostIdea
+verifyIdea idea =
+  if
+    | T.length (content idea) > 255 ->
+        Left "Content must be less than 256 characters long"
+
+    | impact idea < 1 -> Left "Impact must be greater than 0"
+    | impact idea > 10 -> Left "Impact must be lower than 11"
+
+    | ease idea < 1 -> Left "Ease must be greater than 0"
+    | ease idea > 10 -> Left "Ease must be lower than 11"
+
+    | confidence idea < 1 -> Left "Confidence must be greater than 0"
+    | confidence idea > 10 -> Left "Confidence must be lower than 11"
+
+    | otherwise -> Right idea
+
+
+getAverageScore :: PostIdea -> Float
+getAverageScore idea = 1.337
