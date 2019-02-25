@@ -8,14 +8,28 @@ import Crypto.JOSE.JWS (CompactJWS)
 import Crypto.JWT as Crypto hiding (param)
 import Crypto.BCrypt
 import Control.Lens
-import Data.Aeson as Aeson (Value(..), toJSON, decode)
+import Data.Aeson as Aeson (Value(..), toJSON, decode, object)
 import Data.Text.Encoding as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
 import Data.HashMap.Lazy (lookup)
 
-import Types
+import Data.Acid as Acid
+import Data.Time
+import Data.Time.Clock.POSIX
+import Network.HTTP.Types.Status
+import Web.Scotty as Scotty
+
+import Database
 import DbUser
+import DbIdea
+import PostIdea
+import Types
+
+
+toJsonError :: Text -> Value
+toJsonError reason =
+  object [("reason", String reason)]
 
 
 loginToPartialDbUser :: LoginUser -> IO DbUser
@@ -71,3 +85,80 @@ getAudienceFromJWT jwtBS =
             _ -> Left $ "JWT does not contain a payload"
 
       _ -> Left "JWT payload is not an object"
+
+
+validateAndAddIdea
+  :: AcidState Database
+  -> Text
+  -> Either JWTError ClaimsSet
+  -> Either Text PostIdea
+  -> ActionM ()
+validateAndAddIdea database emailAddress claimsResult ideaResult =
+  case (claimsResult, ideaResult) of
+    (Left error, _) -> do
+      status status400
+      json $ toJsonError $ show error
+
+    (_, Left error) -> do
+      status status400
+      json $ toJsonError $ show error
+
+    (Right _, Right verifiedIdea) -> do
+      newId <- liftIO getId
+      now <- liftIO getCurrentTime
+
+      let
+        dbIdea = DbIdea
+          { id = newId
+          , content = PostIdea.content verifiedIdea
+          , impact = PostIdea.impact verifiedIdea
+          , ease = PostIdea.ease verifiedIdea
+          , confidence = PostIdea.confidence verifiedIdea
+          , average_score = getAverageScore verifiedIdea
+          , created_at = floor $ utcTimeToPOSIXSeconds now
+          , created_by = emailAddress
+
+          }
+
+      _ <- liftIO $ update database $ AddIdea dbIdea
+
+      status created201
+      json $ DbIdea.toIdea dbIdea
+
+
+-- TODO: Remove duplications with `validateAndAddIdea`
+validateAndReplaceIdea
+  :: AcidState Database
+  -> Text
+  -> Text
+  -> Either JWTError ClaimsSet
+  -> Either Text PostIdea
+  -> ActionM ()
+validateAndReplaceIdea database emailAddress id claimsResult ideaResult =
+  case (claimsResult, ideaResult) of
+    (Left error, _) -> do
+      status status400
+      json $ toJsonError $ show error
+
+    (_, Left error) -> do
+      status status400
+      json $ toJsonError $ show error
+
+    (Right _, Right verifiedIdea) -> do
+      now <- liftIO getCurrentTime
+      let
+        dbIdea = DbIdea
+          { id = id
+          , content = PostIdea.content verifiedIdea
+          , impact = PostIdea.impact verifiedIdea
+          , ease = PostIdea.ease verifiedIdea
+          , confidence = PostIdea.confidence verifiedIdea
+          , average_score = getAverageScore verifiedIdea
+          , created_at = floor $ utcTimeToPOSIXSeconds now
+          , created_by = emailAddress
+          }
+
+      _ <- liftIO $ update database $ UpdateIdea id dbIdea
+
+      status created201
+      json $ DbIdea.toIdea dbIdea

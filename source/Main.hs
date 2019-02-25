@@ -8,31 +8,26 @@ import Protolude as P hiding (get, put)
 import Crypto.JWT as Crypto hiding (param)
 import Control.Lens
 import Data.Acid as Acid
-import Data.Aeson as Aeson (Value(..), toJSON, object)
+import Data.Aeson as Aeson (Value(..), object)
+import Data.List.Extra as List (chunksOf)
 import Data.String (fromString)
 import Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
 -- import Data.ByteString.Lazy.Internal as BL
 import Data.Time
-import Data.Time.Clock.POSIX
 import Network.HTTP.Types.Status
+import Network.Gravatar
 import Web.Scotty as Scotty
 
 import AccessToken
 import Database
 import DbUser
 import DbIdea
-import Idea
 import PostIdea
 import SignupUser
 import Types
 import Helpers
-
-
-toJsonError :: Text -> Value
-toJsonError reason =
-  object [("reason", String reason)]
 
 
 makeClaims :: DbUser -> IO ClaimsSet
@@ -67,45 +62,7 @@ unauthorizedError = do
   json $ toJsonError "An access token must be provided"
 
 
-processValidationResults
-  :: AcidState Database
-  -> Text
-  -> Either JWTError ClaimsSet
-  -> Either Text PostIdea
-  -> ActionM ()
-processValidationResults database emailAddress claimsResult ideaResult =
-  case (claimsResult, ideaResult) of
-    (Left error, _) -> do
-      status status400
-      json $ toJsonError $ show error
-
-    (_, Left error) -> do
-      status status400
-      json $ toJsonError $ show error
-
-    (Right _, Right verifiedIdea) -> do
-      newId <- liftIO getId
-      now <- liftIO getCurrentTime
-
-      let
-        dbIdea = DbIdea
-          { id = newId
-          , content = PostIdea.content verifiedIdea
-          , impact = PostIdea.impact verifiedIdea
-          , ease = PostIdea.ease verifiedIdea
-          , confidence = PostIdea.confidence verifiedIdea
-          , average_score = getAverageScore verifiedIdea
-          , created_at = floor $ utcTimeToPOSIXSeconds now
-          , created_by = emailAddress
-
-          }
-
-      _ <- liftIO $ update database $ AddIdea dbIdea
-
-      status created201
-      json dbIdea
-
-
+-- TODO: Use EitherT stack to void pyramid of doom
 runIfRegisteredUser
   :: AcidState Database
   -> Maybe TL.Text
@@ -148,8 +105,42 @@ runIfRegisteredUser database jwtBSMaybe callback =
                       callback emailAddress jwkValue jwtValue
 
 
+-- TODO: Remove duplication with `refreshTokenToAccessToken`
+refreshTokenToWebToken :: DbUser -> RefreshToken -> ActionM ()
+refreshTokenToWebToken dbUser refreshToken = do
+  let jwkValue = refreshTokenToJwk refreshToken
+  claims <- liftIO $ makeClaims dbUser
+  signedJwtEither <- liftIO $ doJwtSign jwkValue claims
+
+  case signedJwtEither of
+    Left error -> liftIO $ die $ show error
+    Right jwt -> do
+      status created201
+      json $ WebToken { jwt = TL.toStrict $ TL.decodeUtf8 $ encodeCompact jwt }
+
+
+refreshTokenToAccessToken :: DbUser -> RefreshToken -> ActionM ()
+refreshTokenToAccessToken dbUser refreshToken = do
+  let jwkValue = refreshTokenToJwk refreshToken
+  claims <- liftIO $ makeClaims dbUser
+  signedJwtEither <- liftIO $ doJwtSign jwkValue claims
+
+  case signedJwtEither of
+    Left error -> liftIO $ die $ show error
+    Right jwt -> do
+      status created201
+      json $ AccessToken
+        { jwt = TL.toStrict $ TL.decodeUtf8 $ encodeCompact jwt
+        , refresh_token = refreshToken
+        }
+
+
 app :: AcidState Database -> ScottyM ()
 app database = do
+  defaultHandler (\error -> do
+      json $ toJsonError $ toStrict $ error
+    )
+
   -- Refresh JWT
   post   "/access-tokens/refresh" $ do
     refreshToken <- jsonData
@@ -160,10 +151,8 @@ app database = do
         status notFound404
         json $ toJsonError
           "A user with the provided refresh token does not exist"
-      Just _ -> do
-        newToken <- liftIO getRefreshToken
-        liftIO $ update database $ SetTokenWhere refreshToken newToken
-        json $ object [("refresh_token", toJSON newToken)]
+      Just dbUser -> do
+        refreshTokenToWebToken dbUser refreshToken
 
 
   -- User Login
@@ -181,21 +170,7 @@ app database = do
         json $ toJsonError errorMessage
       Right dbUser -> do
         (DbUser.refresh_token dbUser)
-        <&> (\refreshToken -> do
-              let jwkValue = refreshTokenToJwk refreshToken
-              claims <- liftIO $ makeClaims dbUser
-
-              signedJwtEither <- liftIO $ doJwtSign jwkValue claims
-
-              case signedJwtEither of
-                Left error -> liftIO $ die $ show error
-                Right jwt -> do
-                  status created201
-                  json $ AccessToken
-                    { jwt = TL.toStrict $ TL.decodeUtf8 $ encodeCompact jwt
-                    , refresh_token = refreshToken
-                    }
-            )
+        <&> refreshTokenToAccessToken dbUser
         & fromMaybe (status internalServerError500)
 
 
@@ -231,7 +206,7 @@ app database = do
         status created201
         json $ AccessToken
           { jwt = TL.toStrict $ TL.decodeUtf8 $ encodeCompact jwt
-          , refresh_token = RefreshToken ""  -- TODO
+          , refresh_token = refreshToken
           }
 
 
@@ -243,24 +218,28 @@ app database = do
 
   -- Get Current User's Info
   get    "/me" $ do
-    accessTokenMaybe <- Scotty.header "x-access-token"
+    jwtBSMaybe <- Scotty.header "x-access-token"
 
-    case accessTokenMaybe of
-      Nothing -> unauthorizedError
-      Just accessToken -> do
-        userMaybe <- liftIO $ query database $
-          GetUserByToken (RefreshToken $ toStrict accessToken)
+    runIfRegisteredUser database jwtBSMaybe
+      (\emailAddress jwkValue jwtValue -> do
+        claimsResult <- liftIO $
+          doJwtVerify emailAddress jwkValue jwtValue
 
-        case userMaybe of
-          Nothing -> do
-            status notFound404
-            json $ toJsonError
-              "A user with the provided refresh-token does not exist"
-          Just user -> json $ object
-            [ ("email", String $ DbUser.email user)
-            , ("name", String $ DbUser.name user)
-            , ("avatar_url", String $ DbUser.email user) -- TODO
-            ]
+        case claimsResult of
+          Left errorMessage -> do
+            status status400
+            json $ toJsonError $ show errorMessage
+
+          Right _ -> do
+            userMaybe <- liftIO $ query database $ GetUserByEmail emailAddress
+            json $ userMaybe <&> (\user -> object
+                [ ("email", String $ DbUser.email user)
+                , ("name", String $ DbUser.name user)
+                , ("avatar_url", String $ T.pack $
+                    gravatar (def :: GravatarOptions) $ DbUser.email user)
+                ]
+              )
+      )
 
 
   -- Add Idea
@@ -273,7 +252,7 @@ app database = do
         claimsResult <- liftIO $
           doJwtVerify emailAddress jwkValue jwtValue
         let verifiedIdea = verifyIdea postIdea
-        processValidationResults
+        validateAndAddIdea
           database
           emailAddress
           claimsResult
@@ -282,24 +261,60 @@ app database = do
 
 
   -- Get all Ideas
-  get    "/ideas" $ do
+  get    "/admin/ideas" $ do
     ideas <- liftIO $ query database GetIdeas
     json ideas
 
 
+  -- Get all ideas of current user
+  get    "/ideas" $ do
+    jwtBSMaybe <- Scotty.header "x-access-token"
+    page <- param "page"
+
+    runIfRegisteredUser database jwtBSMaybe
+      (\emailAddress jwkValue jwtValue -> do
+        claimsResult <- liftIO $
+          doJwtVerify emailAddress jwkValue jwtValue
+
+        case claimsResult of
+          Left error -> do
+            status status400
+            json $ toJsonError $ show error
+
+          Right _ -> do
+            ideas <- liftIO $
+              query database $ GetIdeasByEmail emailAddress
+            let ideasPerPage = 10
+
+            if (page :: Int) < 1
+            then do
+              status status400
+              json $ toJsonError "Page number must be > 0"
+            else do
+              json $ (List.chunksOf ideasPerPage ideas)
+                ^? element (page - 1)
+                <&> (<&> DbIdea.toIdea)
+      )
+
+
   -- Update Idea
   put    "/ideas/:id" $ do
-    (idea :: PostIdea) <- jsonData
+    jwtBSMaybe <- Scotty.header "x-access-token"
+    id <- param "id"
+    postIdea <- jsonData
 
-    json $ Idea
-      { id = ""  -- TODO
-      , content = PostIdea.content idea
-      , impact = PostIdea.impact idea
-      , ease = PostIdea.ease idea
-      , confidence = PostIdea.confidence idea
-      , average_score = 0  -- TODO
-      , created_at = 0  -- TODO
-      }
+    runIfRegisteredUser database jwtBSMaybe
+      (\emailAddress jwkValue jwtValue -> do
+        claimsResult <- liftIO $
+          doJwtVerify emailAddress jwkValue jwtValue
+        let verifiedIdea = verifyIdea postIdea
+        validateAndReplaceIdea
+          database
+          emailAddress
+          id
+          claimsResult
+          verifiedIdea
+      )
 
 
   -- Delete an Idea
@@ -326,6 +341,11 @@ app database = do
                 status noContent204
                 json $ Object mempty
       )
+
+
+  notFound $
+    json $ toJsonError "This endpoint does not exist"
+
 
 
 main :: IO ()

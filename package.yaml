@@ -54,6 +54,7 @@ dependencies:
   - bytestring
   - unordered-containers
   - extra
+  - gravatar
   - http-types
   - jose
   - lens

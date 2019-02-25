@@ -129,10 +129,33 @@ addIdea idea = do
   State.put $ Database users (idea : ideas)
 
 
+updateIdea :: Text -> DbIdea -> Update Database (Maybe ())
+updateIdea id idea = do
+  Database users ideas <- State.get
+  let otherIdeas = P.filter
+        (\idea_ -> DbIdea.id idea_ /= id)
+        ideas
+
+  if length ideas /= length otherIdeas
+  then do
+    State.put $ Database users (idea : ideas)
+    pure $ Just ()
+  else
+    pure Nothing
+
+
 getIdeas :: Query Database [DbIdea]
 getIdeas = do
   Database _ ideas <- ask
   pure ideas
+
+
+getIdeasByEmail :: Text -> Query Database [DbIdea]
+getIdeasByEmail emailAddress = do
+  Database _ ideas <- ask
+  pure $ P.filter
+    (\idea_ -> DbIdea.created_by idea_ == emailAddress)
+    ideas
 
 
 deleteIdea :: Text -> Update Database (Either Text ())
@@ -161,6 +184,8 @@ $(makeAcidic ''Database
   , 'getUserByEmail
   , 'getUsers
   , 'addIdea
+  , 'updateIdea
   , 'getIdeas
+  , 'getIdeasByEmail
   , 'deleteIdea
   ])
