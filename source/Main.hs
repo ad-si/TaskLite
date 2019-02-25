@@ -37,8 +37,7 @@ makeClaims user = do
     & (claimIss ?~ fromString "my-idea-pool")
     & (claimAud ?~ Audience [fromString $ T.unpack $ DbUser.email user])
     & (claimIat ?~ NumericDate now)
-    & addClaim "id" "123"
-    -- TODO: Add expire utc
+    & (claimExp ?~ (NumericDate $ (fromRational 600 {-sec-}) `addUTCTime` now))
 
 
 doJwtSign :: JWK -> ClaimsSet -> IO (Either JWTError SignedJWT)
@@ -62,7 +61,7 @@ unauthorizedError = do
   json $ toJsonError "An access token must be provided"
 
 
--- TODO: Use EitherT stack to void pyramid of doom
+-- TODO: Use EitherT stack to avoid pyramid of doom
 runIfRegisteredUser
   :: AcidState Database
   -> Maybe TL.Text
