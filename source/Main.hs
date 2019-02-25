@@ -18,6 +18,7 @@ import qualified Data.Text.Lazy.Encoding as TL
 import Data.Time
 import Network.HTTP.Types.Status
 import Network.Gravatar
+import System.Environment (getEnv)
 import Web.Scotty as Scotty
 
 import AccessToken
@@ -349,5 +350,10 @@ app database = do
 
 main :: IO ()
 main = do
-  database <- openLocalStateFrom "my-idea-pool-db/" (Database [] [])
-  scotty 3000 $ app database
+  portMaybe <- getEnv "PORT" <&> readMaybe
+
+  case portMaybe of
+    Nothing -> die "Port must be a number"
+    Just port -> do
+      database <- openLocalStateFrom "my-idea-pool-db/" (Database [] [])
+      scotty port $ app database
