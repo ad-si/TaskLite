@@ -37,6 +37,24 @@ instance Parsable RefreshToken where
 $(deriveSafeCopy 0 'base ''RefreshToken)
 
 
+refreshTokenToJwk :: RefreshToken -> JWK
+refreshTokenToJwk (RefreshToken refreshToken) =
+  let
+    bytes = fromMaybe "Can't encode as base64 URL" $
+      preview base64url $ P.encodeUtf8 refreshToken
+  in
+    fromKeyMaterial $ OctKeyMaterial $ OctKeyParameters $ Base64Octets bytes
+
+
+textToJwt :: RefreshToken -> JWK
+textToJwt (RefreshToken refreshToken) =
+  let
+    bytes = fromMaybe "Can't encode as base64 URL" $
+      preview base64url $ P.encodeUtf8 refreshToken
+  in
+    fromKeyMaterial $ OctKeyMaterial $ OctKeyParameters $ Base64Octets bytes
+
+
 getRefreshToken :: IO RefreshToken
 getRefreshToken = do
   OctKeyMaterial (OctKeyParameters (Base64Octets bytes)) <-

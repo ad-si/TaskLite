@@ -36,4 +36,9 @@ verifyIdea idea =
 
 
 getAverageScore :: PostIdea -> Float
-getAverageScore idea = 1.337
+getAverageScore idea =
+    (
+        (fromIntegral $ impact idea)
+      + (fromIntegral $ ease idea)
+      + (fromIntegral $ confidence idea)
+    ) / 3

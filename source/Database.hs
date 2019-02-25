@@ -135,6 +135,22 @@ getIdeas = do
   pure ideas
 
 
+deleteIdea :: Text -> Update Database (Either Text ())
+deleteIdea id = do
+  Database users ideas <- State.get
+  let
+    newIdeas = P.filter
+      (\idea -> DbIdea.id idea /= id)
+      ideas
+
+  if length ideas /= length newIdeas
+  then do
+    State.put $ Database users newIdeas
+    pure $ Right ()
+  else
+    pure $ Left "Idea with the provided id is not available"
+
+
 $(makeAcidic ''Database
   [ 'addUser
   , 'setTokenWhere
@@ -146,4 +162,5 @@ $(makeAcidic ''Database
   , 'getUsers
   , 'addIdea
   , 'getIdeas
+  , 'deleteIdea
   ])
