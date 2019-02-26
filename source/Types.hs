@@ -77,13 +77,6 @@ newtype WebToken = WebToken
 instance ToJSON WebToken
 
 
-newtype PageRecord = PageRecord
-  { page :: Text
-  } deriving (Show, Generic)
-
-instance ToJSON PageRecord
-
-
 data LoginUser = LoginUser
   { email :: Text
   , password :: Text

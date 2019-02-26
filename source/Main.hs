@@ -211,7 +211,7 @@ app database = do
 
 
   -- Get All Registered Users
-  get    "/users" $ do
+  get    "/admin/users" $ do
     users <- liftIO $ query database GetUsers
     json users
 
