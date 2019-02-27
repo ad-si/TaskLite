@@ -209,9 +209,9 @@ app database = do
 
 
   -- Get All Registered Users
-  get "/admin/users" $ do
-    users <- liftIO $ query database GetUsers
-    json users
+  -- get "/admin/users" $ do
+  --   users <- liftIO $ query database GetUsers
+  --   json users
 
 
   -- Get Current User's Info
@@ -257,9 +257,9 @@ app database = do
 
 
   -- Get all Ideas
-  get "/admin/ideas" $ do
-    ideas <- liftIO $ query database GetIdeas
-    json ideas
+  -- get "/admin/ideas" $ do
+  --   ideas <- liftIO $ query database GetIdeas
+  --   json ideas
 
 
   -- Get all ideas of current user
