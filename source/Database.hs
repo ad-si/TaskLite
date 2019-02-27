@@ -14,6 +14,10 @@ import Data.SafeCopy
 import DbIdea
 import DbUser
 import Types
+import Network.HTTP.Types.Status
+
+
+$(deriveSafeCopy 0 'base ''Status)
 
 
 data Database = Database [DbUser] [DbIdea]
@@ -40,12 +44,14 @@ setTokenWhere searchForToken replacementToken = do
     ideas
 
 
-getUserByToken :: RefreshToken -> Query Database (Maybe DbUser)
+getUserByToken :: RefreshToken -> Query Database (Either Text DbUser)
 getUserByToken refreshToken = do
   Database users _ <- ask
-  pure $ P.find
-    (\u -> DbUser.refresh_token u == Just refreshToken)
-    users
+  pure $ note
+    "A user with the provided refresh token does not exist"
+    (P.find
+      (\u -> DbUser.refresh_token u == Just refreshToken)
+      users)
 
 
 deleteUserByToken :: RefreshToken -> Update Database (Maybe ())
@@ -158,20 +164,23 @@ getIdeasByEmail emailAddress = do
     ideas
 
 
-deleteIdea :: Text -> Update Database (Either Text ())
-deleteIdea id = do
+deleteIdeaIfBy :: Text -> Text -> Update Database (Either (Status, Text) ())
+deleteIdeaIfBy emailAddress id = do
   Database users ideas <- State.get
   let
-    newIdeas = P.filter
-      (\idea -> DbIdea.id idea /= id)
-      ideas
+    ideaMaybe = P.find (\idea -> DbIdea.id idea == id) ideas
+    otherIdeas = P.filter (\idea -> DbIdea.id idea /= id) ideas
 
-  if length ideas /= length newIdeas
-  then do
-    State.put $ Database users newIdeas
-    pure $ Right ()
-  else
-    pure $ Left "Idea with the provided id is not available"
+  case ideaMaybe of
+    Nothing ->
+      pure $ Left (notFound404, "Idea with the provided id is not available")
+    Just idea ->
+      if DbIdea.created_by idea /= emailAddress
+      then do
+        pure $ Left (forbidden403, "No rights to delete this idea")
+      else do
+        State.put $ Database users otherIdeas
+        pure $ Right ()
 
 
 $(makeAcidic ''Database
@@ -187,5 +196,5 @@ $(makeAcidic ''Database
   , 'updateIdea
   , 'getIdeas
   , 'getIdeasByEmail
-  , 'deleteIdea
+  , 'deleteIdeaIfBy
   ])

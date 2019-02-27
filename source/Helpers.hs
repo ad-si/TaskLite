@@ -32,6 +32,12 @@ toJsonError reason =
   object [("reason", String reason)]
 
 
+badRequest :: Text -> ActionM ()
+badRequest errorMessage = do
+  status badRequest400
+  json $ toJsonError errorMessage
+
+
 loginToPartialDbUser :: LoginUser -> IO DbUser
 loginToPartialDbUser (LoginUser email password) =
   credentialsToDbUser "" email password
@@ -87,6 +93,47 @@ getAudienceFromJWT jwtBS =
       _ -> Left "JWT payload is not an object"
 
 
+unauthorizedError :: ActionM ()
+unauthorizedError = do
+  status unauthorized401
+  json $ toJsonError "An access token must be provided"
+
+
+-- TODO: Use EitherT stack to avoid pyramid of doom
+runIfRegisteredUser
+  :: AcidState Database
+  -> Maybe TL.Text
+  -> (Text -> JWK -> CompactJWS JWSHeader -> ActionM ())
+  -> ActionM ()
+runIfRegisteredUser database jwtBSMaybe callback =
+  case jwtBSMaybe of
+    Nothing -> unauthorizedError
+    Just jwtBS -> do
+      case getAudienceFromJWT jwtBS of
+        Left errorMessage -> badRequest errorMessage
+        Right emailAddress -> do
+          userMaybe <- liftIO $ query database $ GetUserByEmail emailAddress
+
+          case userMaybe of
+            Nothing -> badRequest "User does not exist"
+            Just user -> do
+              let refreshToken = DbUser.refresh_token user
+
+              case refreshToken of
+                Nothing -> badRequest "User is not logged in"
+                Just refToken -> do
+                  let
+                    jwkValue = refreshTokenToJwk refToken
+
+                    jwtResult :: Either Error (CompactJWS JWSHeader)
+                    jwtResult = decodeCompact $ TL.encodeUtf8 jwtBS
+
+                  case jwtResult of
+                    Left error -> badRequest $ show error
+                    Right jwtValue -> do
+                      callback emailAddress jwkValue jwtValue
+
+
 validateAndAddIdea
   :: AcidState Database
   -> Text
@@ -101,7 +148,7 @@ validateAndAddIdea database emailAddress claimsResult ideaResult =
 
     (_, Left error) -> do
       status status400
-      json $ toJsonError $ show error
+      json $ toJsonError error
 
     (Right _, Right verifiedIdea) -> do
       newId <- liftIO getId
@@ -142,7 +189,7 @@ validateAndReplaceIdea database emailAddress id claimsResult ideaResult =
 
     (_, Left error) -> do
       status status400
-      json $ toJsonError $ show error
+      json $ toJsonError error
 
     (Right _, Right verifiedIdea) -> do
       now <- liftIO getCurrentTime
