@@ -24,10 +24,19 @@ data Database = Database [DbUser] [DbIdea]
 
 $(deriveSafeCopy 0 'base ''Database)
 
-addUser :: DbUser -> Update Database ()
-addUser user = do
+addUser :: DbUser -> Update Database (Either (Status, Text) ())
+addUser newUser = do
   Database users ideas <- State.get
-  State.put $ Database (user : users) ideas
+  let
+    userMaybe = P.find
+      (\existingUser -> DbUser.email existingUser == DbUser.email newUser)
+      users
+
+  case userMaybe of
+    Just _ -> pure $ Left (badRequest400, "User does already exist")
+    Nothing -> do
+      State.put $ Database (newUser : users) ideas
+      pure $ Right ()
 
 
 setTokenWhere :: RefreshToken -> RefreshToken -> Update Database ()

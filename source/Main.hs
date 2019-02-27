@@ -171,24 +171,41 @@ app database = do
     case (eitherDecode fullBody & over _Left T.pack) of
       Left errorMessage -> badRequest errorMessage
       Right signupUser -> do
-        dbUser <- liftIO $ toDbUser signupUser
-        _ <- liftIO $ update database $ AddUser dbUser
         let
-          refreshToken = fromMaybe (RefreshToken "Not possible")
-            $ DbUser.refresh_token dbUser
-          jwkValue = refreshTokenToJwk refreshToken
+          minPasswordLength = 6
+          checkPassword pwd = if T.length pwd < minPasswordLength
+            then Left (badRequest400, "Password is too short")
+            else Right ()
 
-        claims <- liftIO $ makeClaims dbUser
-        signedJwtEither <- liftIO $ doJwtSign jwkValue claims
+        dbUser <- liftIO $ toDbUser signupUser
+        additionResult <- liftIO $ update database $ AddUser dbUser
 
-        case signedJwtEither of
-          Left error -> liftIO $ die $ show error
-          Right jwt -> do
-            status created201
-            json $ AccessToken
-              { jwt = TL.toStrict $ TL.decodeUtf8 $ encodeCompact jwt
-              , refresh_token = refreshToken
-              }
+        let
+          validationResult =
+            (checkPassword $ SignupUser.password signupUser)
+            >>= (\_ -> additionResult)
+
+        case validationResult of
+          Left (statusCode, errorMesage) -> do
+            status statusCode
+            json $ toJsonError errorMesage
+          Right _ -> do
+            let
+              refreshToken = fromMaybe (RefreshToken "Not possible")
+                $ DbUser.refresh_token dbUser
+              jwkValue = refreshTokenToJwk refreshToken
+
+            claims <- liftIO $ makeClaims dbUser
+            signedJwtEither <- liftIO $ doJwtSign jwkValue claims
+
+            case signedJwtEither of
+              Left error -> liftIO $ die $ show error
+              Right jwt -> do
+                status created201
+                json $ AccessToken
+                  { jwt = TL.toStrict $ TL.decodeUtf8 $ encodeCompact jwt
+                  , refresh_token = refreshToken
+                  }
 
 
   -- Get All Registered Users
