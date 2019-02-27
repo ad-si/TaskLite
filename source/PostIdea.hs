@@ -4,6 +4,9 @@ import Protolude hiding (get, put)
 
 import Data.Aeson (ToJSON, FromJSON)
 import Data.Text as T
+import qualified DbIdea as DbIdea
+import Data.Time (UTCTime)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 
 
 data PostIdea = PostIdea
@@ -15,6 +18,20 @@ data PostIdea = PostIdea
 
 instance FromJSON PostIdea
 instance ToJSON PostIdea
+
+
+toDbIdea :: Text -> Text -> UTCTime -> PostIdea -> DbIdea.DbIdea
+toDbIdea id emailAddress now postIdea =
+  DbIdea.DbIdea
+    { DbIdea.id = id
+    , DbIdea.content = PostIdea.content postIdea
+    , DbIdea.impact = PostIdea.impact postIdea
+    , DbIdea.ease = PostIdea.ease postIdea
+    , DbIdea.confidence = PostIdea.confidence postIdea
+    , DbIdea.average_score = getAverageScore postIdea
+    , DbIdea.created_at = floor $ utcTimeToPOSIXSeconds now
+    , DbIdea.created_by = emailAddress
+    }
 
 
 verifyIdea :: PostIdea -> Either Text PostIdea

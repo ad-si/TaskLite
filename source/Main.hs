@@ -278,26 +278,23 @@ app database = do
 
 
   -- Update Idea
-  put    "/ideas/:id" $ do
+  put "/ideas/:id" $ do
     jwtBSMaybe <- Scotty.header "x-access-token"
     id <- param "id"
-    fullBody <- body
 
-    case (eitherDecode fullBody & over _Left T.pack) of
-      Left errorMessage -> badRequest errorMessage
-      Right postIdea ->
-        runIfRegisteredUser database jwtBSMaybe
-          (\emailAddress jwkValue jwtValue -> do
-            claimsResult <- liftIO $
-              doJwtVerify emailAddress jwkValue jwtValue
+    runIfRegisteredUser database jwtBSMaybe
+      (\emailAddress jwkValue jwtValue -> do
+        claimsResult <- liftIO $
+          doJwtVerify emailAddress jwkValue jwtValue
+        fullBody <- body
+
+        case (eitherDecode fullBody & over _Left T.pack) of
+          Left errorMessage -> badRequest errorMessage
+          Right postIdea -> do
             let verifiedIdea = verifyIdea postIdea
             validateAndReplaceIdea
-              database
-              emailAddress
-              id
-              claimsResult
-              verifiedIdea
-          )
+              database emailAddress id claimsResult verifiedIdea
+      )
 
 
   -- Delete an Idea

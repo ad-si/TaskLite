@@ -145,19 +145,24 @@ addIdea idea = do
   State.put $ Database users (idea : ideas)
 
 
-updateIdea :: Text -> DbIdea -> Update Database (Maybe ())
-updateIdea id idea = do
+updateIdeaIfBy ::
+  Text -> Text -> DbIdea -> Update Database (Either (Status, Text) ())
+updateIdeaIfBy emailAddress id newIdea = do
   Database users ideas <- State.get
-  let otherIdeas = P.filter
-        (\idea_ -> DbIdea.id idea_ /= id)
-        ideas
+  let
+    ideaMaybe = P.find (\idea_ -> DbIdea.id idea_ == id) ideas
+    otherIdeas = P.filter (\idea_ -> DbIdea.id idea_ /= id) ideas
 
-  if length ideas /= length otherIdeas
-  then do
-    State.put $ Database users (idea : ideas)
-    pure $ Just ()
-  else
-    pure Nothing
+  case ideaMaybe of
+    Nothing ->
+      pure $ Left (notFound404, "Idea with the provided id is not available")
+    Just existingIdea ->
+      if DbIdea.created_by existingIdea /= emailAddress
+      then do
+        pure $ Left (unauthorized401, "No rights to update this idea")
+      else do
+        State.put $ Database users (newIdea : otherIdeas)
+        pure $ Right ()
 
 
 getIdeas :: Query Database [DbIdea]
@@ -203,7 +208,7 @@ $(makeAcidic ''Database
   , 'getUserByEmail
   , 'getUsers
   , 'addIdea
-  , 'updateIdea
+  , 'updateIdeaIfBy
   , 'getIdeas
   , 'getIdeasByEmail
   , 'deleteIdeaIfBy

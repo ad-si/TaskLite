@@ -16,7 +16,6 @@ import Data.HashMap.Lazy (lookup)
 
 import Data.Acid as Acid
 import Data.Time
-import Data.Time.Clock.POSIX
 import Network.HTTP.Types.Status
 import Web.Scotty as Scotty
 
@@ -161,17 +160,7 @@ validateAndAddIdea database emailAddress claimsResult ideaResult =
       now <- liftIO getCurrentTime
 
       let
-        dbIdea = DbIdea
-          { id = newId
-          , content = PostIdea.content verifiedIdea
-          , impact = PostIdea.impact verifiedIdea
-          , ease = PostIdea.ease verifiedIdea
-          , confidence = PostIdea.confidence verifiedIdea
-          , average_score = getAverageScore verifiedIdea
-          , created_at = floor $ utcTimeToPOSIXSeconds now
-          , created_by = emailAddress
-
-          }
+        dbIdea = PostIdea.toDbIdea newId emailAddress now verifiedIdea
 
       _ <- liftIO $ update database $ AddIdea dbIdea
 
@@ -200,18 +189,16 @@ validateAndReplaceIdea database emailAddress id claimsResult ideaResult =
     (Right _, Right verifiedIdea) -> do
       now <- liftIO getCurrentTime
       let
-        dbIdea = DbIdea
-          { id = id
-          , content = PostIdea.content verifiedIdea
-          , impact = PostIdea.impact verifiedIdea
-          , ease = PostIdea.ease verifiedIdea
-          , confidence = PostIdea.confidence verifiedIdea
-          , average_score = getAverageScore verifiedIdea
-          , created_at = floor $ utcTimeToPOSIXSeconds now
-          , created_by = emailAddress
-          }
+        newDbIdea = PostIdea.toDbIdea id emailAddress now verifiedIdea
 
-      _ <- liftIO $ update database $ UpdateIdea id dbIdea
+      updateResult <- liftIO
+        $ update database $ UpdateIdeaIfBy emailAddress id newDbIdea
 
-      status created201
-      json $ DbIdea.toIdea dbIdea
+      case updateResult of
+        Left (statusCode, errorMesage) -> do
+          status statusCode
+          json $ toJsonError errorMesage
+        Right _ -> do
+          status ok200
+          json $ DbIdea.toIdea newDbIdea
+
