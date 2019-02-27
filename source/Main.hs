@@ -92,7 +92,7 @@ app database = do
     )
 
   -- Refresh JWT
-  post   "/access-tokens/refresh" $ do
+  post "/access-tokens/refresh" $ do
     fullBody <- body
 
     case (eitherDecode fullBody & over _Left T.pack) of
@@ -106,7 +106,7 @@ app database = do
 
 
   -- User Login
-  post   "/access-tokens" $ do
+  post "/access-tokens" $ do
     fullBody <- body
 
     case (eitherDecode fullBody & over _Left T.pack) of
@@ -128,23 +128,42 @@ app database = do
 
   -- User Logout
   delete "/access-tokens" $ do
-    fullBody <- body
+    jwtBSMaybe <- Scotty.header "x-access-token"
 
-    case (eitherDecode fullBody & over _Left T.pack) of
-      Left errorMessage -> badRequest errorMessage
-      Right refreshToken -> do
-        userResult <- liftIO $ query database $ GetUserByToken refreshToken
+    runIfRegisteredUser database jwtBSMaybe
+      (\emailAddress jwkValue jwtValue -> do
+        claimsResult <- liftIO $
+          doJwtVerify emailAddress jwkValue jwtValue
 
-        case userResult of
-          Left errorMessage -> notFoundAction errorMessage
+        case claimsResult of
+          Left error -> badRequest $ show error
           Right _ -> do
-            _ <- liftIO $ update database $ LogoutUserByToken refreshToken
-            status noContent204
-            json $ Object mempty
+            fullBody <- body
+
+            case (eitherDecode fullBody & over _Left T.pack) of
+              Left errorMessage -> badRequest errorMessage
+              Right refreshToken -> do
+                userResult <- liftIO $ query database
+                  $ GetUserByToken refreshToken
+
+                case userResult of
+                  Left errorMessage -> notFoundAction errorMessage
+                  Right _ -> do
+                    logoutResult <- liftIO $ update database
+                          $ LogoutByEmailAndToken emailAddress refreshToken
+
+                    case logoutResult of
+                      Left (statusCode, errorMesage) -> do
+                        status statusCode
+                        json $ toJsonError errorMesage
+                      Right _ -> do
+                        status noContent204
+                        json $ Object mempty
+      )
 
 
   -- User Signup
-  post   "/users" $ do
+  post "/users" $ do
     fullBody <- body
 
     case (eitherDecode fullBody & over _Left T.pack) of
@@ -171,13 +190,13 @@ app database = do
 
 
   -- Get All Registered Users
-  get    "/admin/users" $ do
+  get "/admin/users" $ do
     users <- liftIO $ query database GetUsers
     json users
 
 
   -- Get Current User's Info
-  get    "/me" $ do
+  get "/me" $ do
     jwtBSMaybe <- Scotty.header "x-access-token"
 
     runIfRegisteredUser database jwtBSMaybe
@@ -200,7 +219,7 @@ app database = do
 
 
   -- Add Idea
-  post   "/ideas" $ do
+  post "/ideas" $ do
     jwtBSMaybe <- Scotty.header "x-access-token"
     fullBody <- body
     let postIdeaResult = eitherDecode fullBody & over _Left T.pack
@@ -219,13 +238,13 @@ app database = do
 
 
   -- Get all Ideas
-  get    "/admin/ideas" $ do
+  get "/admin/ideas" $ do
     ideas <- liftIO $ query database GetIdeas
     json ideas
 
 
   -- Get all ideas of current user
-  get    "/ideas" $ do
+  get "/ideas" $ do
     jwtBSMaybe <- Scotty.header "x-access-token"
     page <- (param "page" `rescue` (\_ -> pure 1))
 

@@ -69,24 +69,34 @@ deleteUserByToken refreshToken = do
     pure Nothing
 
 
-logoutUserByToken :: RefreshToken -> Update Database (Maybe ())
-logoutUserByToken searchForToken = do
+logoutByEmailAndToken ::
+  Text -> RefreshToken -> Update Database (Either (Status, Text) DbUser)
+logoutByEmailAndToken emailAddress searchForToken = do
   Database users ideas <- State.get
 
   let
-    userMaybe = P.find
-      (\u -> DbUser.refresh_token u == Just searchForToken)
-      users
+    userResult = note
+      (notFound404, "A user with the provided refresh token does not exist")
+      (P.find
+        (\u -> DbUser.refresh_token u == Just searchForToken)
+        users)
+
     otherUsers = P.filter
         (\u -> DbUser.refresh_token u /= Just searchForToken)
         users
 
-  case userMaybe of
-    Nothing -> pure Nothing
-    Just user -> do
-      let updatedUser = user {DbUser.refresh_token = Nothing}
+    finalResult = userResult >>= (\dbUser ->
+      if DbUser.email dbUser /= emailAddress
+      then Left (forbidden403, "No rights to log this user out")
+      else Right dbUser
+      )
+
+  case finalResult of
+    Left error -> pure $ Left error
+    Right dbUser -> do
+      let updatedUser = dbUser {DbUser.refresh_token = Nothing}
       State.put $ Database (updatedUser : otherUsers) ideas
-      pure $ Just ()
+      pure $ Right dbUser
 
 
 logUserIn ::
@@ -187,7 +197,7 @@ $(makeAcidic ''Database
   [ 'addUser
   , 'setTokenWhere
   , 'getUserByToken
-  , 'logoutUserByToken
+  , 'logoutByEmailAndToken
   , 'deleteUserByToken
   , 'logUserIn
   , 'getUserByEmail
