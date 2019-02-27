@@ -248,7 +248,7 @@ app database = do
   -- Get all ideas of current user
   get "/ideas" $ do
     jwtBSMaybe <- Scotty.header "x-access-token"
-    page <- (param "page" `rescue` (\_ -> pure 1))
+    (page :: Int) <- (param "page" `rescue` (\_ -> pure 1))
 
     runIfRegisteredUser database jwtBSMaybe
       (\emailAddress jwkValue jwtValue -> do
@@ -267,7 +267,7 @@ app database = do
                           (DbIdea.average_score b)
                           (DbIdea.average_score a))
 
-            if (page :: Int) < 1
+            if page < 1
             then badRequest "Page number must be > 0"
             else do
               json $ fromMaybe [] $

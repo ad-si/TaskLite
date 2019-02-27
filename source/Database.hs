@@ -87,7 +87,7 @@ logoutByEmailAndToken emailAddress searchForToken = do
 
     finalResult = userResult >>= (\dbUser ->
       if DbUser.email dbUser /= emailAddress
-      then Left (forbidden403, "No rights to log this user out")
+      then Left (unauthorized401, "No rights to log this user out")
       else Right dbUser
       )
 
@@ -187,7 +187,7 @@ deleteIdeaIfBy emailAddress id = do
     Just idea ->
       if DbIdea.created_by idea /= emailAddress
       then do
-        pure $ Left (forbidden403, "No rights to delete this idea")
+        pure $ Left (unauthorized401, "No rights to delete this idea")
       else do
         State.put $ Database users otherIdeas
         pure $ Right ()
