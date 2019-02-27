@@ -101,12 +101,8 @@ app database = do
         userResult <- liftIO $ query database $ GetUserByToken refreshToken
 
         case userResult of
-          Left errorMessage -> do
-            status notFound404
-            json $ toJsonError errorMessage
-
-          Right dbUser -> do
-            refreshTokenToWebToken dbUser refreshToken
+          Left errorMessage -> notFoundAction errorMessage
+          Right dbUser -> refreshTokenToWebToken dbUser refreshToken
 
 
   -- User Login
@@ -123,9 +119,7 @@ app database = do
           newToken
 
         case (result :: Either Text DbUser) of
-          Left errorMessage -> do
-            status notFound404
-            json $ toJsonError errorMessage
+          Left errorMessage -> notFoundAction errorMessage
           Right dbUser -> do
             (DbUser.refresh_token dbUser)
             <&> refreshTokenToAccessToken dbUser
@@ -142,10 +136,7 @@ app database = do
         userResult <- liftIO $ query database $ GetUserByToken refreshToken
 
         case userResult of
-          Left errorMessage -> do
-            status notFound404
-            json $ toJsonError errorMessage
-
+          Left errorMessage -> notFoundAction errorMessage
           Right _ -> do
             _ <- liftIO $ update database $ LogoutUserByToken refreshToken
             status noContent204
@@ -248,12 +239,18 @@ app database = do
           Right _ -> do
             ideas <- liftIO $
               query database $ GetIdeasByEmail emailAddress
-            let ideasPerPage = 10
+            let
+              ideasPerPage = 10
+              ideasByScoreDesc = ideas & sortBy
+                (\a b -> compare
+                          (DbIdea.average_score b)
+                          (DbIdea.average_score a))
 
             if (page :: Int) < 1
             then badRequest "Page number must be > 0"
             else do
-              json $ fromMaybe [] $ (List.chunksOf ideasPerPage ideas)
+              json $ fromMaybe [] $
+                (List.chunksOf ideasPerPage ideasByScoreDesc)
                 ^? element (page - 1)
                 <&> (<&> DbIdea.toIdea)
       )

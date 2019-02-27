@@ -38,6 +38,12 @@ badRequest errorMessage = do
   json $ toJsonError errorMessage
 
 
+notFoundAction :: Text -> ActionM ()
+notFoundAction errorMessage = do
+  status notFound404
+  json $ toJsonError errorMessage
+
+
 loginToPartialDbUser :: LoginUser -> IO DbUser
 loginToPartialDbUser (LoginUser email password) =
   credentialsToDbUser "" email password
