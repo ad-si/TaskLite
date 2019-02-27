@@ -100,7 +100,7 @@ logoutByEmailAndToken emailAddress searchForToken = do
 
 
 logUserIn ::
-  Text -> Text -> RefreshToken -> Update Database (Either Text DbUser)
+  Text -> Text -> RefreshToken -> Update Database (Either (Status, Text) DbUser)
 logUserIn email password newToken = do
   Database users ideas <- State.get
   let
@@ -108,14 +108,14 @@ logUserIn email password newToken = do
     otherUsers = P.filter (\u -> DbUser.email u /= email) users
 
   case userMaybe of
-    Nothing -> pure $ Left "User does not exist"
+    Nothing -> pure $ Left (notFound404, "User does not exist")
     Just dbUser -> do
       let
         hash_ = P.encodeUtf8 $ DbUser.password_hash dbUser
         password_ = P.encodeUtf8 password
 
       if not $ validatePassword hash_ password_
-      then pure $ Left "Invalid password"
+      then pure $ Left (unauthorized401, "Invalid password")
       else
         if isJust $ DbUser.refresh_token dbUser
         then pure $ Right dbUser

@@ -113,13 +113,15 @@ app database = do
       Left errorMessage -> badRequest errorMessage
       Right loginUser -> do
         newToken <- liftIO getRefreshToken
-        result <- liftIO $ update database $ LogUserIn
+        loginResult <- liftIO $ update database $ LogUserIn
           (Types.email loginUser)
           (Types.password loginUser)
           newToken
 
-        case (result :: Either Text DbUser) of
-          Left errorMessage -> notFoundAction errorMessage
+        case loginResult of
+          Left (statusCode, errorMessage) -> do
+            status statusCode
+            json $ toJsonError errorMessage
           Right dbUser -> do
             (DbUser.refresh_token dbUser)
             <&> refreshTokenToAccessToken dbUser
@@ -153,9 +155,9 @@ app database = do
                           $ LogoutByEmailAndToken emailAddress refreshToken
 
                     case logoutResult of
-                      Left (statusCode, errorMesage) -> do
+                      Left (statusCode, errorMessage) -> do
                         status statusCode
-                        json $ toJsonError errorMesage
+                        json $ toJsonError errorMessage
                       Right _ -> do
                         status noContent204
                         json $ Object mempty
