@@ -906,9 +906,9 @@ formatTaskLine conf now taskUlidWidth task =
     dueUtcMaybe = (FullTask.due_utc task)
       >>= parseUtc
       <&> T.replace " 00:00:00" "" . T.pack . timePrint (utcFormat conf)
-    dueIn offset = let dateMaybe = (FullTask.due_utc task) >>= parseUtc
-      in isJust dateMaybe && dateMaybe
-          < Just (now `timeAdd` offset)
+    dueIn offset =
+      let dateMaybe = (FullTask.due_utc task) >>= parseUtc
+      in isJust dateMaybe && dateMaybe < Just (now `timeAdd` offset)
     multilineIndent = 2
     hangWidth = taskUlidWidth + 2
       + (dateWidth conf) + 2
@@ -1061,8 +1061,9 @@ listReady :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listReady conf now connection = do
   tasks <- query_ connection $ Query $
     "select * from tasks_view \
-    \where (ready_utc is null and closed_utc is null) \
-    \or (ready_utc is not null and ready_utc < datetime('now')) \
+    \where (ready_utc is null \
+    \or (ready_utc is not null and ready_utc < datetime('now'))) \
+    \and closed_utc is null \
     \order by priority desc \
     \limit " <> show (headCount conf)
 

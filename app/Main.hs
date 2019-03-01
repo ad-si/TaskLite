@@ -258,7 +258,8 @@ commandParser conf =
             (metavar "NUM_OF_DAYS" <> help "Number of days \
               \(supports fractional values)")
       <*> some (strArgument idsVar))
-        "Repeat a task x days after it gets closed")
+        "Repeat a task x days after its due UTC or after it gets closed \
+        \(whichever occurs later)")
 
     <> command "duplicate" (toParserInfo
         (Duplicate <$> some (strArgument idsVar))
