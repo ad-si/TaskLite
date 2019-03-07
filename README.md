@@ -45,15 +45,19 @@ docker run \
   --rm \
   --entrypoint datasette \
   --publish 8001:8001 \
-  --volume ~/tasklite:/root/tasklite \
-  --volume web:/root/web \
+  --volume ~/Dropbox\ \(Personal\)/TaskLite:/root/tasklite \
+  --volume "$PWD"/datasette:/root/datasette \
   adius/tasklite-tasklite \
   serve \
     --host 0.0.0.0 \
+    --metadata /root/datasette/metadata.json \
     /root/tasklite/main.db
 ```
 
 Attention: Make sure that the IP address matches with your host's.
+
+There is a predefined query for a `tl head` like overview:
+http://0.0.0.0:8001/main/tasks_pretty
 
 Generate custom view by appending the SQL query to [0.0.0.0:8001/main?sql=]
 (e.g. [0.0.0.0:8001/main?sql=select%20*%20from%20tasks])

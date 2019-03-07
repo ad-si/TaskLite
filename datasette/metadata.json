@@ -1,0 +1,13 @@
+{
+  "title": "Tasklite",
+  "description": "Manage your tasks like it's the 90s",
+  "databases": {
+    "main": {
+      "queries": {
+        "tasks_pretty": {
+          "sql": "select substr(ulid,22) as ulid, priority, body, due_utc, replace(tags,',',', ') as tags from tasks_view where closed_utc is null order by priority desc limit 50"
+        }
+      }
+    }
+  }
+}
