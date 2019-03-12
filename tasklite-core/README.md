@@ -51,6 +51,7 @@ docker run \
   serve \
     --host 0.0.0.0 \
     --metadata /root/datasette/metadata.json \
+    --reload \
     /root/tasklite/main.db
 ```
 

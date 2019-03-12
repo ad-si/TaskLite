@@ -1,0 +1,95 @@
+name: tasklite-core
+version: 0.1.0.0
+github: "ad-si/tasklite"
+license: AGPL-3.0-or-later
+author: Adrian Sieber
+maintainer: mail@adriansieber.com
+copyright: Adrian Sieber
+
+extra-source-files:
+  - README.md
+  - ChangeLog.md
+
+synopsis: CLI task / todo list manager with SQLite backend
+category: Cli
+
+description: |
+  Please see the README on GitHub
+  at <https://github.com/ad-si/tasklite#readme>
+
+dependencies:
+  - aeson
+  - base >= 4.7 && < 5
+  - beam-core
+  - beam-sqlite
+  - beam-migrate
+  - bytestring
+  - cassava
+  - crockford
+  - directory
+  - filepath
+  - fuzzy
+  - hourglass
+  - optparse-applicative
+  - prettyprinter
+  - prettyprinter-ansi-terminal
+  - process
+  - protolude
+  - simple-sql-parser
+  - sqlite-simple
+  - text
+  - ulid
+  - unix
+  - yaml
+
+default-extensions:
+  - DeriveGeneric
+  - FlexibleContexts
+  - FlexibleInstances
+  - GADTs
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - RecordWildCards
+  - StandaloneDeriving
+  - TypeApplications
+  - TypeFamilies
+  - TypeSynonymInstances
+  - UndecidableInstances
+
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wredundant-constraints
+  - -fno-warn-orphans
+
+library:
+  source-dirs: source
+
+executables:
+  tasklite:
+    main: Main.hs
+    source-dirs: app
+    dependencies:
+      - tasklite-core
+
+tests:
+  tasklite-test:
+    main: Spec.hs
+    source-dirs: test
+    dependencies:
+      - tasklite-core
+      - hspec
+      - temporary
+
+benchmarks:
+  tasklite-bench:
+    main: Main.hs
+    source-dirs: benchmarks
+    dependencies:
+      - criterion
+      - tasklite-core

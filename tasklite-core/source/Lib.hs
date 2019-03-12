@@ -1082,7 +1082,7 @@ listWaiting conf now connection = do
 
 listAll :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listAll conf now connection = do
-  tasks <-  query_ connection
+  tasks <- query_ connection
     "select * from tasks_view order by ulid asc"
   pure $ formatTasks conf now tasks
 
