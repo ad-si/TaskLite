@@ -422,6 +422,16 @@ doTasks conf connection ids = do
                           ((Task.repetition_duration task) >>= parseIsoDuration)
                   }
 
+              -- Duplicate tags
+              tags <- runSelectReturningList $ select $
+                filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
+                all_ (_tldbTaskToTag taskLiteDb)
+
+              liftIO $ insertTags
+                connection
+                (TaskUlid newUlid)
+                (fmap TaskToTag.tag tags)
+
             liftIO $ pure $ "➡️  Created next task"
               <+> dquotes (pretty $ Task.body task)
               <+> "in repetition series"
