@@ -1,0 +1,8 @@
+[book]
+authors = ["Adrian Sieber"]
+multilingual = false
+src = "docs-source"
+title = "TaskLite Documentation"
+
+[build]
+build-dir = "docs"
