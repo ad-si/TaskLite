@@ -258,7 +258,13 @@ execWithTask conf connection idSubstr callback = do
         callback $ unsafeHead tasks
     | numOfTasks > 1 -> pure $
         "⚠️  Id slice" <+> (quote idSubstr) <+> "is not unique."
-        <+> "Please use a longer slice!"
+        <+> "It could refer to one of the following tasks:"
+        <++> (P.foldMap
+            (\task ->
+              (annotate (idStyle conf) (pretty $ Task.ulid task))
+              <++> (pretty $ Task.body task) <> hardline)
+            tasks
+          )
     | otherwise -> pure "This case should not be possible"
 
 
