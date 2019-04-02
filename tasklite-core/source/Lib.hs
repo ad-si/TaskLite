@@ -403,7 +403,9 @@ doTasks conf connection ids = do
           then pure ""
           else do
             newUlid <- formatUlid getULID
-            let nowMaybe = ulidTextToDateTime newUlid
+            let
+              nowMaybe = ulidTextToDateTime newUlid
+              showDateTime = pack . timePrint (utcFormat conf)
 
             -- TODO: Investigate why this isn't working and replace afterwards
             -- runBeamSqlite connection $ runInsert $
@@ -423,9 +425,16 @@ doTasks conf connection ids = do
                 pure originalTask
                   { Task.ulid = val_ newUlid
                   , Task.due_utc = val_ $
-                      fmap (pack . timePrint (utcFormat conf)) $
-                        liftA2 timeAdd nowMaybe
-                          ((Task.repetition_duration task) >>= parseIsoDuration)
+                      fmap showDateTime $ liftA2 timeAdd nowMaybe
+                        ((Task.repetition_duration task) >>= parseIsoDuration)
+                  , Task.awake_utc = val_ $
+                      fmap showDateTime $ liftA2 timeAdd
+                        ((Task.awake_utc task) >>= parseUtc)
+                        ((Task.repetition_duration task) >>= parseIsoDuration)
+                  , Task.ready_utc = val_ $
+                      fmap showDateTime $ liftA2 timeAdd
+                        ((Task.ready_utc task) >>= parseUtc)
+                        ((Task.repetition_duration task) >>= parseIsoDuration)
                   }
 
               -- Duplicate tags
