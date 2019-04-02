@@ -1357,25 +1357,37 @@ formatTagLine conf maxTagLength (tag, open_count, closed_count, progress) =
     <++> progressPercentage <+> (getProgressBar barWidth progress)
 
 
-listTags :: Config -> Connection -> IO (Doc AnsiStyle)
-listTags conf connection = do
-  tags <- query_ connection $ Query "select * from tags"
-
+formatTags :: Config -> [(Text, Integer, Integer, Double)] -> Doc AnsiStyle
+formatTags conf tagTuples =
   let
     percWidth = 6  -- Width of e.g. 100 %
     progressWith = (progressBarWidth conf) + percWidth
     firstOf4 (a, _, _, _) = a
-    maxTagLength = tags
+    maxTagLength = tagTuples
       <&> (T.length . firstOf4)
       & P.maximum
-
-  pure $
-         annotate (bold <> underlined) (fill maxTagLength "Tag")
+  in
+    annotate (bold <> underlined) (fill maxTagLength "Tag")
     <++> (annotate (bold <> underlined) "Open")
     <++> (annotate (bold <> underlined) "Closed")
     <++> annotate (bold <> underlined) (fill progressWith "Progress")
     <> line
-    <> vsep (fmap (formatTagLine conf maxTagLength) tags)
+    <> vsep (fmap (formatTagLine conf maxTagLength) tagTuples)
+
+
+listTags :: Config -> Connection -> IO (Doc AnsiStyle)
+listTags conf connection = do
+  tags <- query_ connection $ Query "select * from tags"
+
+  pure $ formatTags conf tags
+
+
+listProjects :: Config -> Connection -> IO (Doc AnsiStyle)
+listProjects conf connection = do
+  tags <- query_ connection $
+    Query "select * from tags where open > 0 and closed > 0"
+
+  pure $ formatTags conf tags
 
 
 getStats :: Config -> Connection -> IO (Doc AnsiStyle)
