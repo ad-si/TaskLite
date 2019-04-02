@@ -220,8 +220,9 @@ tagsViewQuery =
 
     t1Tag = S.tableCol task_to_tag_1_t tag_c
     t2Tag = S.tableCol task_to_tag_2_t tag_c
-    closedCount = S.ifNull closed_count_c "0"
     t1TagCount = S.count t1Tag
+    closedCount = S.ifNull closed_count_c "0"
+    openCount = Parens $ t1TagCount `S.sub` closedCount
 
     subQueryAst = makeSelect
       { qeSelectList = (
@@ -239,7 +240,7 @@ tagsViewQuery =
     selectQueryAst = makeSelect
       { qeSelectList = (
           t1Tag `S.as` (Name Nothing "") :
-          t1TagCount `S.as` open_c :
+          openCount `S.as` open_c :
           closedCount `S.as` closed_c :
           (S.roundTo 6 (closedCount `S.castTo` "float" `S.div` t1TagCount))
             `S.as` progress_c :

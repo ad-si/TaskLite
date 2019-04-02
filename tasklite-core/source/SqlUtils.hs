@@ -115,6 +115,16 @@ castTo scalarExpr castType =
     (TypeName [Name Nothing $ T.unpack castType])
 
 
+add :: ScalarExpr -> ScalarExpr -> ScalarExpr
+add valueA =
+  BinOp valueA [Name Nothing "+"]
+
+
+sub :: ScalarExpr -> ScalarExpr -> ScalarExpr
+sub valueA =
+  BinOp valueA [Name Nothing "-"]
+
+
 div :: ScalarExpr -> ScalarExpr -> ScalarExpr
 div valueA =
   BinOp valueA [Name Nothing "/"]
