@@ -932,7 +932,8 @@ formatTaskLine conf now taskUlidWidth task =
       + multilineIndent
     hhsep = concatWith (<++>)
     isEmptyDoc doc = (show doc) /= ("" :: Text)
-    grayOut isDone doc = if isDone
+    isOpen = isNothing $ FullTask.closed_utc task
+    grayOutIfDone doc = if isOpen
       then annotate (bodyStyle conf) doc
       else annotate (bodyClosedStyle conf) doc
     -- redOut onTime doc = if onTime
@@ -948,10 +949,12 @@ formatTaskLine conf now taskUlidWidth task =
         (pretty $ case FullTask.review_utc task >>= parseUtc of
           Nothing -> "" :: Text
           Just date -> if date < now then "🔎" else "") :
-        (if dueIn mempty { durationHours = 24 } then "⚠️️  " else "") <>
-          (if dueIn mempty
+        (if dueIn mempty { durationHours = 24 } && isOpen
+          then "⚠️️  "
+          else "") <>
+          (if dueIn mempty && isOpen
             then annotate (color Red) (reflow body)
-            else grayOut (isNothing $ FullTask.closed_utc task) (reflow body)) :
+            else grayOutIfDone (reflow body)) :
         annotate (dueStyle conf) (pretty dueUtcMaybe) :
         annotate (closedStyle conf) (pretty closedUtcMaybe) :
         hsep (tags <$$> formatTag) :
