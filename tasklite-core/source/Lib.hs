@@ -405,7 +405,11 @@ doTasks conf connection ids = do
             newUlid <- formatUlid getULID
             let
               nowMaybe = ulidTextToDateTime newUlid
+              dueUtc = (Task.due_utc task) >>= parseUtc
               showDateTime = pack . timePrint (utcFormat conf)
+              nextDue = liftA2 timeAdd
+                (if nowMaybe < dueUtc then dueUtc else nowMaybe)
+                ((Task.repetition_duration task) >>= parseIsoDuration)
 
             -- TODO: Investigate why this isn't working and replace afterwards
             -- runBeamSqlite connection $ runInsert $
@@ -424,9 +428,7 @@ doTasks conf connection ids = do
 
                 pure originalTask
                   { Task.ulid = val_ newUlid
-                  , Task.due_utc = val_ $
-                      fmap showDateTime $ liftA2 timeAdd nowMaybe
-                        ((Task.repetition_duration task) >>= parseIsoDuration)
+                  , Task.due_utc = val_ $ fmap showDateTime nextDue
                   , Task.awake_utc = val_ $
                       fmap showDateTime $ liftA2 timeAdd
                         ((Task.awake_utc task) >>= parseUtc)
@@ -1079,8 +1081,7 @@ listRepeating conf now connection = do
   tasks <- query_ connection $ Query $
     "select * from tasks_view \
     \where repetition_duration is not null \
-    \order by repetition_duration desc \
-    \limit " <> show (headCount conf)
+    \order by repetition_duration desc"
 
   pure $ formatTasks conf now tasks
 
