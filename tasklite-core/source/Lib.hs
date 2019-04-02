@@ -1294,7 +1294,8 @@ getFilterQuery filterExps =
 
     mainQuery = FullTask.selectQuery <> "\
       \from (" <> ulidsQuery <> ") tasks1\n\
-      \left join tasks_view on tasks1.ulid is tasks_view.ulid"
+      \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
+      \order by priority desc, due_utc asc"
   in
     Query mainQuery
 
