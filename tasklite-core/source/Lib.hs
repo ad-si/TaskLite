@@ -388,8 +388,8 @@ parseIsoDuration isoDuration =
   else Nothing
 
 
-doTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
-doTasks conf connection ids = do
+doTasks :: Config -> Connection -> Maybe [Text] -> [Text] -> IO (Doc AnsiStyle)
+doTasks conf connection noteWordsMaybe ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
       let
@@ -454,9 +454,16 @@ doTasks conf connection ids = do
               <+> "in repetition series"
               <+> dquotes (pretty $ Task.group_ulid task)
 
+        noteMessage <- case noteWordsMaybe of
+          Nothing -> pure mempty
+          Just noteWords -> liftIO $
+            addNote conf connection (unwords noteWords) ids
+
         setStateAndClosed connection taskUlid $ Just Done
 
-        pure $ "✅ Finished task" <+> dquotes (pretty $ Task.body task)
+        pure $
+          noteMessage <> hardline
+          <> "✅ Finished task" <+> dquotes (pretty $ Task.body task)
           <+> "with id" <+> dquotes (pretty idText) <> hardline
           <> logMessage
 
@@ -609,7 +616,7 @@ startTasks conf connection ids = do
   logMessage <- addNote conf connection "start" ids
 
   pure $ pretty $ T.replace
-    "🗒  Added a note to"
+    "📝  Added a note to"
     "⏳ Started"
     (show logMessage)
 
@@ -619,7 +626,7 @@ stopTasks conf connection ids = do
   logMessages <- addNote conf connection "stop" ids
 
   pure $ pretty $ T.replace
-    "🗒  Added a note to"
+    "📝  Added a note to"
     "⌛️ Stopped"
     (show logMessages)
 

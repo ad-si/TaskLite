@@ -32,16 +32,16 @@ import Utils
 
 data Command
   {- Add -}
-  = AddTask   [IdText]
-  | AddWrite  [IdText]
-  | AddRead   [IdText]
-  | AddWatch  [IdText]
-  | AddListen [IdText]
-  | AddBuy    [IdText]
-  | AddSell   [IdText]
-  | AddPay    [IdText]
-  | AddShip   [IdText]
-  | LogTask   [IdText]
+  = AddTask   [Text]
+  | AddWrite  [Text]
+  | AddRead   [Text]
+  | AddWatch  [Text]
+  | AddListen [Text]
+  | AddBuy    [Text]
+  | AddSell   [Text]
+  | AddPay    [Text]
+  | AddShip   [Text]
+  | LogTask   [Text]
 
   {- Modify -}
   | ReadyOn DateTime [IdText]
@@ -49,6 +49,7 @@ data Command
   | WaitFor Duration [IdText]
   | ReviewTasks [IdText]
   | DoTasks [IdText]
+  | DoOneTask IdText (Maybe [Text])
   | EndTasks [IdText]
   | TrashTasks [IdText]
   | DeleteTasks [IdText]
@@ -225,7 +226,7 @@ commandParser conf =
       <$> argument (maybeReader (parseUtc . T.pack))
             (metavar "READY_UTC" <> help "Timestamp when task is ready")
       <*> some (strArgument idsVar))
-        "Wait specified number of days until it's ready for review")
+        "Set ready UTC of tasks")
 
     <> command "wait" (toParserInfo (WaitTasks <$> some (strArgument idsVar))
         "Mark a task as waiting (e.g. waiting for feedback)")
@@ -241,8 +242,18 @@ commandParser conf =
         <$> some (strArgument idsVar))
         "Finish review of task and set new review date in 3 days")
 
-    <> command "do" (toParserInfo (DoTasks <$> some (strArgument idsVar))
-        "Mark a task as done")
+    <> command "do" (toParserInfo (DoOneTask
+        <$> strArgument idsVar
+        <*> (optional $ some (strArgument (metavar "CLOSING_NOTE"
+              <> help "Final note to explain why and how it was done"))))
+        "Mark a task as done and add optional closing note")
+
+    <> command "doonly" (toParserInfo
+        (DoOneTask <$> strArgument idsVar <*> pure Nothing)
+        "Mark only one task as done")
+
+    <> command "doall" (toParserInfo (DoTasks <$> some (strArgument idsVar))
+        "Mark one or more tasks as done")
 
     <> command "end" (toParserInfo (EndTasks <$> some (strArgument idsVar))
         "Mark a task as obsolete")
@@ -744,7 +755,8 @@ executeCLiCommand conf now connection cmd =
     WaitTasks ids -> waitTasks conf connection ids
     WaitFor duration ids -> waitFor conf connection duration ids
     ReviewTasks ids -> reviewTasks conf connection ids
-    DoTasks ids -> doTasks conf connection ids
+    DoTasks ids -> doTasks conf connection Nothing ids
+    DoOneTask id noteWords -> doTasks conf connection noteWords [id]
     EndTasks ids -> endTasks conf connection ids
     TrashTasks ids -> trashTasks conf connection ids
     DeleteTasks ids -> deleteTasks conf connection ids
