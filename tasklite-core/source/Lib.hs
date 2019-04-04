@@ -969,7 +969,8 @@ formatTaskLine conf now taskUlidWidth task =
         annotate (dueStyle conf) (pretty dueUtcMaybe) :
         annotate (closedStyle conf) (pretty closedUtcMaybe) :
         hsep (tags <$$> formatTag) :
-      [])
+        (if (not $ P.null $ FullTask.notes task) then "📝" else "") :
+        [])
   in
     fromMaybe
       ("Id" <+> dquotes (pretty $ FullTask.ulid task) <+>
