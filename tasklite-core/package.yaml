@@ -21,25 +21,30 @@ dependencies:
   - aeson
   - base >= 4.7 && < 5
   - beam-core
-  - beam-sqlite
   - beam-migrate
+  - beam-sqlite
   - bytestring
   - cassava
   - crockford
   - directory
   - filepath
   - fuzzy
+  - generic-random
   - hourglass
   - optparse-applicative
   - prettyprinter
   - prettyprinter-ansi-terminal
   - process
   - protolude
+  - QuickCheck
+  - quickcheck-instances
   - simple-sql-parser
   - sqlite-simple
   - text
   - ulid
   - unix
+  - unordered-containers
+  - vector
   - yaml
 
 default-extensions:

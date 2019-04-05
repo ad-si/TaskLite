@@ -4,15 +4,17 @@ Datatype to represent a task as stored in the `tasks` table
 
 module Task where
 
-import Protolude as P
+import Protolude as P hiding ((%))
 
 import Data.Aeson as Aeson
 import Data.Aeson.Text as Aeson
+import qualified Data.HashMap.Lazy as HM
 import Data.Yaml as Yaml
 import qualified Data.ByteString.Lazy as BSL
 import Data.Csv as Csv
 import Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
+import qualified Data.Vector as V
 import Database.Beam
 import Database.Beam.Backend.SQL
 import Database.Beam.Sqlite.Connection
@@ -22,6 +24,32 @@ import Database.SQLite.Simple.FromField as Sql.FromField
 import Database.SQLite.Simple.ToField as Sql.ToField
 import Database.SQLite.Simple.Internal hiding (result)
 import Database.SQLite.Simple.Ok
+import Test.QuickCheck
+import Test.QuickCheck.Instances.Text ()
+import Generic.Random
+
+
+-- From https://gist.github.com/chrisdone/7b0c4ebb5b9b94514959206df8992076
+instance Arbitrary Aeson.Value where
+  arbitrary = sized sizedArbitraryValue
+
+sizedArbitraryValue :: Int -> Gen Aeson.Value
+sizedArbitraryValue n
+  | n <= 0 = oneof [pure Aeson.Null, jsonBool, jsonNumber, jsonString]
+  | otherwise = resize nHalf $
+      oneof [ pure Aeson.Null, jsonBool, jsonNumber
+            , jsonString, jsonArray, jsonObject]
+  where
+    nHalf = n `div` 2
+    jsonBool = Aeson.Bool <$> arbitrary
+    jsonNumber =
+      (Aeson.Number . fromRational . toRational :: Double -> Aeson.Value)
+      <$> arbitrary
+    jsonString = (Aeson.String . T.pack) <$> arbitrary
+    jsonArray = (Aeson.Array . V.fromList) <$> arbitrary
+    jsonObject =
+      (Aeson.Object . HM.fromList . P.map (first T.pack))
+      <$> arbitrary
 
 
 data TaskState
@@ -29,6 +57,9 @@ data TaskState
   | Obsolete
   | Deletable
   deriving (Eq, Enum, Generic, Ord, Read, Show)
+
+instance Arbitrary TaskState where
+  arbitrary = genericArbitrary (4 % 2 % 1 % ())
 
 instance Sql.FromField.FromField TaskState where
   fromField f@(Field (SQLText txt) _) = case (textToTaskState txt) of
@@ -91,7 +122,10 @@ data DerivedState
   | IsObsolete
   | IsDeletable
   | IsBlocked
-  deriving (Eq, Show)
+  deriving (Eq, Generic, Show)
+
+instance Arbitrary DerivedState where
+  arbitrary = genericArbitraryU
 
 
 textToDerivedState :: Text -> Maybe DerivedState
@@ -208,6 +242,9 @@ instance Pretty Task where
     . T.dropEnd 1 -- Drop trailing newline to maybe add it later
     . decodeUtf8
     . Yaml.encode
+
+instance Arbitrary Task where
+  arbitrary = genericArbitraryU
 
 
 zeroTask :: Task
