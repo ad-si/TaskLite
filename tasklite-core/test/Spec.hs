@@ -121,7 +121,7 @@ testSuite conf now connection = do
         result <- nextTask connection
         let ulidText = getUlidFromBody result
 
-        doResult <- doTasks conf connection [ulidText]
+        doResult <- doTasks conf connection Nothing [ulidText]
         unpack (show doResult) `shouldStartWith` "✅ Finished task"
 
 

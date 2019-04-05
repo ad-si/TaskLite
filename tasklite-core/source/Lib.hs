@@ -398,9 +398,9 @@ doTasks conf connection noteWordsMaybe ids = do
       if Task.closed_utc task /= Nothing
       then pure $ "⚠️  Task" <+> dquotes (pretty idText) <+> "is already done"
       else do
-        logMessage <-
+        logMessageMaybe <-
           if Task.repetition_duration task == Nothing
-          then pure ""
+          then pure Nothing
           else do
             newUlid <- formatUlid getULID
             let
@@ -449,23 +449,24 @@ doTasks conf connection noteWordsMaybe ids = do
                 (TaskUlid newUlid)
                 (fmap TaskToTag.tag tags)
 
-            liftIO $ pure $ "➡️  Created next task"
+            liftIO $ pure $ Just $ "➡️  Created next task"
               <+> dquotes (pretty $ Task.body task)
               <+> "in repetition series"
               <+> dquotes (pretty $ Task.group_ulid task)
 
-        noteMessage <- case noteWordsMaybe of
-          Nothing -> pure mempty
+        noteMessageMaybe <- case noteWordsMaybe of
+          Nothing -> pure Nothing
           Just noteWords -> liftIO $
             addNote conf connection (unwords noteWords) ids
+            >>= pure . Just
 
         setStateAndClosed connection taskUlid $ Just Done
 
         pure $
-          noteMessage <> hardline
+          (fromMaybe "" $ noteMessageMaybe <&> (<> hardline))
           <> "✅ Finished task" <+> dquotes (pretty $ Task.body task)
-          <+> "with id" <+> dquotes (pretty idText) <> hardline
-          <> logMessage
+          <+> "with id" <+> dquotes (pretty idText)
+          <> (fromMaybe "" $ logMessageMaybe <&> (hardline <>))
 
   pure $ vsep docs
 
