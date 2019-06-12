@@ -25,7 +25,7 @@ import Config (Config(..))
 import DbSetup
 import ImportExport
 import Migrations
-import Paths_tasklite (version)
+import Paths_tasklite_core (version)  -- Special module provided by Cabal
 import Task (TaskState(..))
 import Utils
 

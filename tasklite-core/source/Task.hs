@@ -18,7 +18,7 @@ import qualified Data.Vector as V
 import Database.Beam
 import Database.Beam.Backend.SQL
 import Database.Beam.Sqlite.Connection
-import Database.Beam.Sqlite.Syntax (SqliteExpressionSyntax, SqliteValueSyntax)
+import Database.Beam.Sqlite.Syntax (SqliteValueSyntax)
 import Database.SQLite.Simple as Sql
 import Database.SQLite.Simple.FromField as Sql.FromField
 import Database.SQLite.Simple.ToField as Sql.ToField
@@ -76,7 +76,7 @@ instance HasSqlValueSyntax be [Char] => HasSqlValueSyntax be TaskState where
 
 instance FromBackendRow Sqlite TaskState
 
-instance HasSqlEqualityCheck SqliteExpressionSyntax TaskState
+instance HasSqlEqualityCheck Sqlite TaskState
 
 instance FromJSON TaskState
 instance ToJSON TaskState

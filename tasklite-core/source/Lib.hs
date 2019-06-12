@@ -10,7 +10,7 @@ import Data.Hourglass
 import Data.Text as T
 import Data.ULID
 import Data.Coerce
-import Database.Beam
+import Database.Beam hiding (char)
 import Database.Beam.Sqlite
 import Database.Beam.Schema.Tables
 import Database.SQLite.Simple as Sql
@@ -272,7 +272,7 @@ setStateAndClosed :: Connection -> TaskUlid -> Maybe TaskState -> IO ()
 setStateAndClosed connection taskUlid theTaskState = do
   runBeamSqlite connection $ runUpdate $
     update (_tldbTasks taskLiteDb)
-      (\task -> [ (Task.state task) <-. val_ theTaskState
+      (\task -> mconcat [ (Task.state task) <-. val_ theTaskState
                 , (Task.review_utc task) <-. val_ Nothing
                 -- closed_utc is set via an SQL trigger
                 ])
@@ -296,7 +296,7 @@ setReadyUtc conf connection datetime ids = do
 
       runBeamSqlite connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
-          (\task_ -> [(Task.ready_utc task_) <-. val_ (Just utcText)])
+          (\task_ -> mconcat [(Task.ready_utc task_) <-. val_ (Just utcText)])
           (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
         -- TODO: Update modified_utc via SQL trigger
@@ -323,7 +323,7 @@ waitFor conf connection duration ids = do
       runBeamSqlite connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
           (\theTask ->
-            [ (Task.waiting_utc theTask) <-. val_ (Just nowAsText)
+            mconcat [ (Task.waiting_utc theTask) <-. val_ (Just nowAsText)
             , (Task.review_utc theTask) <-. val_ (Just threeDays)
             ]
           )
@@ -359,7 +359,8 @@ reviewTasks conf connection ids = do
 
       runBeamSqlite connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
-          (\theTask -> [(Task.review_utc theTask) <-. val_ (Just threeDays)])
+          (\theTask -> mconcat
+            [(Task.review_utc theTask) <-. val_ (Just threeDays)])
           (\theTask -> primaryKey theTask ==. val_ taskUlid)
 
       numOfChanges <- changes connection
@@ -563,9 +564,10 @@ repeatTasks conf connection duration ids = do
 
       runBeamSqlite connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
-          (\task_ -> [ (Task.repetition_duration task_) <-. val_ (Just durIso)
-                    , (Task.group_ulid task_) <-. val_ (Just groupUlid)
-                    ])
+          (\task_ -> mconcat
+            [ (Task.repetition_duration task_) <-. val_ (Just durIso)
+            , (Task.group_ulid task_) <-. val_ (Just groupUlid)
+            ])
           (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
       pure $ "📅 Set repeat duration of task" <+> prettyBody
@@ -757,7 +759,7 @@ addTag conf connection tag ids = do
 
       runBeamSqlite connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
-          (\task_ -> [(Task.modified_utc task_) <-. val_ now])
+          (\task_ -> mconcat [(Task.modified_utc task_) <-. val_ now])
           (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
       pure $ "🏷  Added tag" <+> dquotes (pretty tag)
@@ -786,7 +788,7 @@ addNote conf connection noteBody ids = do
 
       runBeamSqlite connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
-          (\task_ -> [(Task.modified_utc task_) <-. val_ now])
+          (\task_ -> mconcat [(Task.modified_utc task_) <-. val_ now])
           (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
       pure $ "🗒  Added a note to task" <+> prettyBody
@@ -810,7 +812,7 @@ setDueUtc conf connection datetime ids = do
 
       runBeamSqlite connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
-          (\task_ -> [(Task.due_utc task_) <-. val_ (Just utcText)])
+          (\task_ -> mconcat [(Task.due_utc task_) <-. val_ (Just utcText)])
           (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
         -- TODO: Update modified_utc via SQL trigger
@@ -832,7 +834,7 @@ undueTasks conf connection ids = do
 
       runBeamSqlite connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
-          (\task_ -> [(Task.due_utc task_) <-. (val_ Nothing)])
+          (\task_ -> mconcat [(Task.due_utc task_) <-. (val_ Nothing)])
           (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
       pure $ "💥 Removed due UTC of task" <+> prettyBody
@@ -967,7 +969,7 @@ formatTaskLine conf now taskUlidWidth task =
         annotate (dateStyle conf) (pretty taskDate) :
         (pretty $ case FullTask.review_utc task >>= parseUtc of
           Nothing -> "" :: Text
-          Just date -> if date < now then "🔎" else "") :
+          Just date_ -> if date_ < now then "🔎" else "") :
         (if dueIn mempty { durationHours = 24 } && isOpen
           then "⚠️️  "
           else "") <>
