@@ -1,0 +1,9 @@
+*
+
+!/tasklite-core
+/tasklite-core/.stack-work
+
+!/tasklite-app
+/tasklite-app/.stack-work
+
+!/stack.yaml
