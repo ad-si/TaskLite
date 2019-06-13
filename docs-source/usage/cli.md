@@ -2,7 +2,7 @@
 
 ## Add
 
-To add a task run
+To add a task run:
 
 ```shell
 tl add Improve the TaskLite manual
@@ -125,13 +125,22 @@ tl ndjson | grep 'music' | jq
 ```
 
 
-## Import / Export
+## Import
 
 Import a GitHub issue:
 
 ```
 curl https://api.github.com/repos/$OWNER/$REPO/issues/$NUM | tl import
 ```
+
+
+## Export
+
+Use one of following commands:
+
+- `tl csv`
+- `tl ndjson`
+- `tl backup` - Creates a backup at `$TaskLiteDir/backups/YYYY-MM-DDtHHMM.db`
 
 
 [GTD]: https://en.wikipedia.org/wiki/Getting_Things_Done

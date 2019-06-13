@@ -9,7 +9,7 @@ To build TaskLite from source, you need [Stack].
 [Stack]: https://docs.haskellstack.org/en/stable/install_and_upgrade/
 
 ```shell
-git clone https://github.com/ad-si/tasklite
+git clone https://github.com/ad-si/TaskLite
 cd tasklite
 stack install tasklite-core
 ```
@@ -57,7 +57,7 @@ brew install \
 ```
 
 ```shell
-git clone https://github.com/ad-si/tasklite
+git clone https://github.com/ad-si/TaskLite
 cd tasklite
 stack install tasklite-app
 ```
@@ -87,11 +87,11 @@ to view and modify your tasks directly in the SQLite database.
 
 ### Web Interface
 
-The web interface currently is based on [Datasette] and can
+The web interface is currently based on [Datasette] and can
 only be used to view tasks, but not to create new ones.
 
-Use [Datasette] and the docker container
-to serve the web frontend for the SQLite database:
+In combination with the Docker container
+the web frontend for the SQLite database can be served in following way:
 
 [Datasette]: https://github.com/simonw/datasette
 

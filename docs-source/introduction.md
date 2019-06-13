@@ -23,9 +23,9 @@ $ tl do pb
 ✅ Finished task "Buy milk" with id "01dd62xryn5fnzjgynkcy06spb"
 ```
 
-[Code on GitHub]
+The Code is available on [GitHub].
 
-[Code on GitHub]: https://github.com/ad-si/tasklite
+[GitHub]: https://github.com/ad-si/tasklite
 
 
 ## Why Another CLI Task Manager?

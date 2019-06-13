@@ -13,21 +13,21 @@
   however, yield a stable and robust piece of software.
 
 - **Faster** \
-  [Haskell] plus [SQLite] delivers an excellent performance.
-  See section about [performance] for a simple benchmark.
+  [Haskell] plus [SQLite] delivers excellent performance.
+  Check out the  section about [performance] for a simple benchmark.
 
 - **More Powerful** \
   As all tasks are stored in an [SQLite] database, so you can use the most
   daring SQL queries to extract hidden insights.
   E.g. What is the average completion time for a task created on Monday tagged
-  *sprint7* created by user *john-evil*?
+  "sprint7" created by user "john-evil"?
 
   Furthermore, extensive tooling is available for SQLite
   to supercharge your TaskLite installation.
-  For example [Datasette] for an instant REST APIs, or [DB Browser for SQLite]
+  For example [Datasette] as an instant REST API, or [DB Browser for SQLite]
   to view, manipulate, and plot your tasks in a GUI.
 
-  Other 3rd Party Tools to Edit Tables are
+  Other 3rd party tools to edit SQLite databases are:
 
   - [VisiData] - Interactive CLI multitool for tabular data.
   - [LiteCLI] - CLI SQLite browser with auto-completion and syntax highlighting.

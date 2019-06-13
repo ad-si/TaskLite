@@ -1,6 +1,6 @@
-# Webapp
+# Web App
 
-The webapp is currently provided by [Datasette].
+The web app is currently provided by [Datasette].
 
 ![Screenshot of web app](../images/web-ui.png)
 
