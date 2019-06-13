@@ -40,20 +40,20 @@ to a C++ project.
 I had been working with C++ at university and it wasn't pleasant.
 
 To sum it up: I finally wanted something which I could fully own
-and use until I die.
+and use until the end of days.
 That means:
 
-- Which does not suddenly get bought by a bigger fish and closed down
+- Does not suddenly get bought by a bigger fish and get closed down
     or made unusable (looking at you [Wunderlist])
-- Which is written in a high-performance programming language,
+- Is written in a high-performance programming language,
     yet gives me lot's of guarantees about the code's stability
     and makes it easy for other developers to contribute
 - Free software
-- With a stable, future proof, and fast backend
+- With a stable, future proof, powerful, and fast backend
     (currently [SQLite], but support for plain files and Git is planned)
 
-
-[Wunderlist]: https://www.theverge.com/2018/3/21/17146308/microsoft-wunderlist-to-do-app-acquisition-complicated
+[Wunderlist]:
+  https://www.theverge.com/2018/3/21/17146308/microsoft-wunderlist-to-do-app-acquisition-complicated
 [Taskwarrior]: https://taskwarrior.org
 [weird bugs]: https://github.com/GothenburgBitFactory/taskwarrior/issues/1831
 
@@ -61,8 +61,7 @@ That means:
 ## Why Not [Org-mode]?
 
 I don't like the unstructured combination of outlining, notes and tasks.
-Furthermore I don't like interactive document editing user interfaces
-in the terminal.
+Furthermore I don't like interactive document editing UIs in the terminal.
 I prefer REPL style apps which adhere to UNIX conventions and let
 me compose them easily with other CLI tools.
 

@@ -1,4 +1,4 @@
-# TaskLite App
+# TaskLite REST API
 
 Check out [tasklite.ad-si.com] for extensive documentation.
 

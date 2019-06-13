@@ -1,6 +1,6 @@
 # TaskLite
 
-CLI task-list manager built with [Haskell] and [SQLite].
+CLI task manager built with [Haskell] and [SQLite].
 
 <img
   src='tasklite-core/screenshots/withtag.svg'
@@ -11,26 +11,6 @@ CLI task-list manager built with [Haskell] and [SQLite].
 
 ## Installation
 
-In order to install the CLI tool, run:
+Check out [tasklite.ad-si.com/installation] for installation instructions.
 
-```shell
-stack install tasklite
-```
-
-or
-
-```shell
-docker pull adius/tasklite
-```
-
-For installation instructions for the app, API, and website,
-please check out the corresponding directory.
-
-
-## Usage
-
-To run TaskLite in a container:
-
-```sh
-docker run --rm --volume ~/tasklite:/root/tasklite adius/tasklite
-```
+[tasklite.ad-si.com/installation]: http://tasklite.ad-si.com/installation

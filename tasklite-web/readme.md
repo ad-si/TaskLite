@@ -1,4 +1,4 @@
-# TaskLite App
+# Tasklite Webapp
 
 Check out [tasklite.ad-si.com] for extensive documentation.
 
