@@ -4,6 +4,10 @@
 
 ### From Source
 
+To build TaskLite from source, you need [Stack].
+
+[Stack]: https://docs.haskellstack.org/en/stable/install_and_upgrade/
+
 ```shell
 git clone https://github.com/ad-si/tasklite
 cd tasklite

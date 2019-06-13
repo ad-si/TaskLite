@@ -1,3 +1,5 @@
+![Banner of TaskLite](./docs-source/images/banner@2.png)
+
 # TaskLite
 
 CLI task manager built with [Haskell] and [SQLite].

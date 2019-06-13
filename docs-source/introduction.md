@@ -15,11 +15,11 @@ $ tl add Go running
 🆕 Added task "Go running" with id "01dd62yjtrtmaph23knff6mbsj"
 
 $ tl
-Id    Prio  Opened UTC  Body
-6spb   2    2019-06-12  Buy milk  +groceries
-mbsj   0    2019-06-12  Go running
+Id  Prio  Opened UTC  Body
+pb   2    2019-06-12  Buy milk  +groceries
+sj   0    2019-06-12  Go running
 
-$ tl do 6spb
+$ tl do pb
 ✅ Finished task "Buy milk" with id "01dd62xryn5fnzjgynkcy06spb"
 ```
 
