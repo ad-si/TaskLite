@@ -1,0 +1,20 @@
+tableName: tasks
+idWidth: 4
+idStyle: green
+priorityStyle: magenta
+dateStyle: dull black
+bodyStyle: white
+bodyClosedStyle: black
+closedStyle: dull black
+dueStyle: yellow
+overdueStyle: red
+tagStyle: blue
+utcFormat: YYYY-MM-DD H:MI:S
+dataDir: /root/.local/share/tasklite
+dbName: main.db
+dateWidth: 10
+bodyWidth: 10
+prioWidth: 4
+headCount: 20
+maxWidth: 120
+progressBarWidth: 24

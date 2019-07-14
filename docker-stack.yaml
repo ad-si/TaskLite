@@ -1,0 +1,13 @@
+resolver: lts-13.27
+packages:
+  - tasklite-core
+
+extra-deps:
+  - beam-sqlite-0.4.0.0
+  - beam-core-0.8.0.0
+  - beam-migrate-0.4.0.1
+  - crockford-0.2
+  - fuzzy-0.1.0.0
+  - ulid-0.2.0.0
+  - github: JakeWheat/simple-sql-parser
+    commit: 00433a26e8303c9e61359f406da5a2dbf1293fc8

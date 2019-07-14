@@ -15,6 +15,7 @@ import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.Version (showVersion)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
+import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Options.Applicative
 import System.Directory (XdgDirectory(..), getXdgDirectory, getHomeDirectory)
 import System.FilePath ((</>))
@@ -787,6 +788,9 @@ executeCLiCommand conf now connection cmd =
 
 main :: IO ()
 main = do
+  -- Necessary for Docker image
+  setLocaleEncoding utf8
+
   let appName = "tasklite"
 
   configDirectory <- getXdgDirectory XdgConfig appName

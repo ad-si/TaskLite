@@ -1,10 +1,17 @@
 from haskell:8.6.5 as builder
 
-add tasklite-core tasklite-core
-add tasklite-app tasklite-app
+copy docker-stack.yaml stack.yaml
 
-add stack.yaml stack.yaml
-run stack install tasklite-core
+copy tasklite-core/package.yaml tasklite-core/package.yaml
+run stack install --only-dependencies tasklite-core
 
-# from alpine:3.9.4
-# copy --from=builder /usr/root/.local/bin/tasklite .
+copy tasklite-core tasklite-core
+run stack install
+
+
+from debian:9.9
+run apt-get update && \
+    apt-get install -y libgmp10
+copy --from=builder /tasklite-core/example-config.yaml /root/.config/tasklite/config.yaml
+copy --from=builder /root/.local/bin/tasklite /usr/local/bin/tasklite
+cmd ["tasklite"]

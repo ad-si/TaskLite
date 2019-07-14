@@ -23,7 +23,12 @@ Main technologies:
 [ULID]: https://github.com/ulid/spec
 
 
-### Generate Screenshot
+**Check out the [makefile] for all development tasks**
+
+[makefile]: https://github.com/ad-si/TaskLite/blob/master/makefile
+
+
+## Generate Screenshots
 
 Use asciinema to generate the terminal recording:
 
@@ -66,20 +71,7 @@ svg-term \
 [svg-term]: https://github.com/marionebl/svg-term-cli
 
 
-## Documentation
-
-Build the documentation with following command:
-
-```sh
-docker run \
-  --rm \
-  --volume "$PWD":/data \
-  hrektts/mdbook \
-  mdbook build
-```
-
-
-### Ghcid
+## Ghcid
 
 Ghcid with color output for GHC 8.4 (probably obsolete in 8.6):
 
@@ -89,7 +81,7 @@ ghcid \
 ```
 
 
-### Hlint
+## Hlint
 
 ```sh
 hlint \
