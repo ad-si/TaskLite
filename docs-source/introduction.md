@@ -28,6 +28,12 @@ The Code is available on [GitHub].
 [GitHub]: https://github.com/ad-si/tasklite
 
 
+For help please come visit us on one of the following sites:
+
+- [Reddit](https://www.reddit.com/r/TaskLite/)
+- [IRC](irc://chat.freenode.net:6697/TaskLite)
+
+
 ## Why Another CLI Task Manager?
 
 [Taskwarrior] has been the gold standard for CLI task managers so far.
