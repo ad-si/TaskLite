@@ -17,7 +17,13 @@ import Data.Version (showVersion)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Options.Applicative
-import System.Directory (XdgDirectory(..), getXdgDirectory, getHomeDirectory)
+import Paths_tasklite_core
+import System.Directory
+  ( copyFile
+  , getHomeDirectory
+  , getXdgDirectory
+  , XdgDirectory(..)
+  )
 import System.FilePath ((</>))
 import Time.System
 import Database.SQLite.Simple (close, Connection(..))
@@ -786,6 +792,42 @@ executeCLiCommand conf now connection cmd =
     UlidToUtc ulid -> pure $ prettyUlid ulid
 
 
+printOutput :: [Char] -> Config -> IO ()
+printOutput appName configUser = do
+  configUserNorm <-
+    if (dataDir configUser /= "")
+    then pure $ configUser
+    else do
+     xdgDataDir <- getXdgDirectory XdgData appName
+     pure $ configUser {dataDir = xdgDataDir}
+
+  config <- case (T.stripPrefix "~/" $ T.pack $ dataDir configUserNorm) of
+              Nothing ->
+                pure $ configUser {dataDir = dataDir configUserNorm}
+              Just rest -> do
+                homeDir <- getHomeDirectory
+                pure $ configUser { dataDir = homeDir </> T.unpack rest }
+
+  cliCommand <- execParser $ commandParserInfo config
+
+  connection <- setupConnection config
+  -- TODO: Integrate into migrations
+  tableStatus <- createTables config connection
+  migrationsStatus <- runMigrations config connection
+  nowElapsed <- timeCurrentP
+
+  let
+    now = timeFromElapsedP nowElapsed :: DateTime
+
+  doc <- executeCLiCommand config now connection cliCommand
+
+  -- TODO: Use withConnection instead
+  close connection
+
+  -- TODO: Remove color when piping into other command
+  putDoc $ tableStatus <> migrationsStatus <> doc <> hardline
+
+
 main :: IO ()
 main = do
   -- Necessary for Docker image
@@ -796,42 +838,21 @@ main = do
   configDirectory <- getXdgDirectory XdgConfig appName
   let configPath = configDirectory </> "config.yaml"
 
-  configUserEither <- decodeFileEither configPath
+  configResult <- decodeFileEither configPath
 
-  case configUserEither of
-    Left error -> die $ T.pack $ prettyPrintParseException error
-    Right configUser -> do
-      configUserNorm <-
-        if (dataDir configUser /= "")
-        then pure $ configUser
-        else do
-         xdgDataDir <- getXdgDirectory XdgData appName
-         pure $ configUser {dataDir = xdgDataDir}
+  case configResult of
+    Left error -> do
+      if "not found" `T.isInfixOf` (T.pack $ prettyPrintParseException error)
+      then do
+        exampleConfigPath <- getDataFileName "example-config.yaml"
+        copyFile exampleConfigPath configPath
+        configResult2 <- decodeFileEither configPath
 
-      config <- case (T.stripPrefix "~/" $ T.pack $ dataDir configUserNorm) of
-                  Nothing ->
-                    pure $ configUser {dataDir = dataDir configUserNorm}
-                  Just rest -> do
-                    homeDir <- getHomeDirectory
-                    pure $ configUser { dataDir = homeDir </> T.unpack rest }
+        case configResult2 of
+          Left error2 -> die $ T.pack $ prettyPrintParseException error2
+          Right configUser -> printOutput appName configUser
+      else
+        die $ T.pack $ prettyPrintParseException error
 
-      cliCommand <- execParser $ commandParserInfo config
-
-      connection <- setupConnection config
-      -- TODO: Integrate into migrations
-      tableStatus <- createTables config connection
-      migrationsStatus <- runMigrations config connection
-      nowElapsed <- timeCurrentP
-
-      let
-        now = timeFromElapsedP nowElapsed :: DateTime
-
-
-      doc <- executeCLiCommand config now connection cliCommand
-
-      -- TODO: Use withConnection instead
-      close connection
-
-      -- TODO: Remove color when piping into other command
-      putDoc $ tableStatus <> migrationsStatus <> doc <> hardline
-
+    Right configUser ->
+      printOutput appName configUser

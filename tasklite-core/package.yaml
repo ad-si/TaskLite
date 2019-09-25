@@ -10,6 +10,9 @@ extra-source-files:
   - README.md
   - ChangeLog.md
 
+data-files:
+  - example-config.yaml
+
 synopsis: CLI task / todo list manager with SQLite backend
 category: Cli
 
@@ -58,6 +61,7 @@ default-extensions:
   - NoImplicitPrelude
   - OverloadedStrings
   - RecordWildCards
+  - ScopedTypeVariables
   - StandaloneDeriving
   - TypeApplications
   - TypeFamilies
