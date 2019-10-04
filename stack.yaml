@@ -1,4 +1,4 @@
-resolver: lts-13.27
+resolver: lts-14.7
 packages:
   # - tasklite-api
   - tasklite-app
@@ -6,9 +6,9 @@ packages:
   # - tasklite-web
 
 extra-deps:
-  - beam-sqlite-0.4.0.0
   - beam-core-0.8.0.0
   - beam-migrate-0.4.0.1
+  - beam-sqlite-0.4.0.0
   - crockford-0.2
   - fuzzy-0.1.0.0
   - gi-gtk-declarative-0.4.2

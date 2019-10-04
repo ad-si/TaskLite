@@ -5,13 +5,6 @@
 
 packages:
 - completed:
-    hackage: beam-sqlite-0.4.0.0@sha256:00504aa701bd000eb2a9df2214c46bc81a8244b41fb2bee16433adf16b89a94f,2750
-    pantry-tree:
-      size: 618
-      sha256: 182b944bdc2c787f0c4069125508357440c04261251b2581038b60b6481a901a
-  original:
-    hackage: beam-sqlite-0.4.0.0
-- completed:
     hackage: beam-core-0.8.0.0@sha256:7514a7b9cc092d7e890adf2ad08c1ea3c66ea5900e263b32ff0c55c31e01bac0,5044
     pantry-tree:
       size: 2553
@@ -25,6 +18,13 @@ packages:
       sha256: 7ab124f3ac3c74bf5b342d2ef73c9ef3c13ddd7b0804aea340423ceb1baf72a1
   original:
     hackage: beam-migrate-0.4.0.1
+- completed:
+    hackage: beam-sqlite-0.4.0.0@sha256:00504aa701bd000eb2a9df2214c46bc81a8244b41fb2bee16433adf16b89a94f,2750
+    pantry-tree:
+      size: 618
+      sha256: 182b944bdc2c787f0c4069125508357440c04261251b2581038b60b6481a901a
+  original:
+    hackage: beam-sqlite-0.4.0.0
 - completed:
     hackage: crockford-0.2@sha256:6ec593711a20bd4b81a0fc13f3d850d2d890690941d777230fbf980c483e434a,553
     pantry-tree:
@@ -76,7 +76,7 @@ packages:
     url: https://github.com/JakeWheat/simple-sql-parser/archive/00433a26e8303c9e61359f406da5a2dbf1293fc8.tar.gz
 snapshots:
 - completed:
-    size: 500539
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/13/27.yaml
-    sha256: 690db832392afe55733b4c7023fd29b1b1c660ee42f1fb505b86b07394ca994e
-  original: lts-13.27
+    size: 523700
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/7.yaml
+    sha256: 8e3f3c894be74d71fa4bf085e0a8baae7e4d7622d07ea31a52736b80f8b9bb1a
+  original: lts-14.7
