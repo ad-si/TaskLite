@@ -15,9 +15,9 @@ deploy: docs
 
 .PHONY: docker-build
 docker-build:
-	# Make sure to have at least 2 GB RAM allocated for the Docker Engine
+	# Make sure to have at least 8 GB RAM allocated for the Docker Engine
 	# as the compilation is quite resource intensive.
-	# Otherwise you'll get an 137 error.
+	# Otherwise you'll get an 137 or -9 error.
 
 	docker build \
 		--tag adius/tasklite \
