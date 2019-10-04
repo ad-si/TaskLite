@@ -20,7 +20,8 @@ docker-build:
 	# Otherwise you'll get an 137 or -9 error.
 
 	docker build \
-		--tag adius/tasklite \
+		--tag adius/tasklite:$$(git describe --tags --dirty) \
+		--tag adius/tasklite:latest \
 		.
 
 
