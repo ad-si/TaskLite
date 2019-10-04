@@ -998,18 +998,38 @@ getIdLength numOfItems =
     ceiling (logBase sizeOfAlphabet (numOfItems / targetCollisionChance)) + 1
 
 
-countTasks :: Config -> Filter TaskState -> IO (Doc AnsiStyle)
-countTasks conf taskStateFilter = do
-  execWithConn conf $ \connection -> do
-    [NumRows taskCount] <- case taskStateFilter of
-      NoFilter -> query_ connection $ Query $
-        "select count(1) from `" <> tableName conf <> "`"
-      Utils.Only taskState -> query connection
-        (Query $ "select count(1) from `" <> tableName conf
-          <> "` where `state` == ?")
-        [(show taskState) :: Text]
+countTasks :: Config -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
+countTasks conf connection filterExpression = do
+  let
+    parserResults = readP_to_S filterExpsParser $
+      T.unpack (unwords $ fromMaybe [""] filterExpression)
+    filterMay = listToMaybe parserResults
 
-    pure $ pretty taskCount
+  case filterMay of
+    Nothing -> do
+      [NumRows taskCount] <- query_ connection $ Query $
+        "select count(1) from `" <> tableName conf <> "`"
+
+      pure $ pretty taskCount
+
+    Just (filterExps, _) -> do
+      let
+        ppInvalidFilter = \case
+          (InvalidFilter error) ->
+              (dquotes $ pretty error) <+> "is an invalid filter"
+          (HasStatus Nothing) -> "Filter contains an invalid state value"
+          _ -> "The functions should not be called with a valid function"
+        errors = P.filter (not . isValidFilter) filterExps
+        errorsDoc = if (P.length errors) > 0
+          then Just $
+            vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
+            <> hardline <> hardline
+          else Nothing
+
+      -- TODO: Increase performance of this query
+      tasks <- query_ connection (getFilterQuery filterExps)
+
+      pure $ fromMaybe (pretty $ P.length (tasks :: [FullTask])) errorsDoc
 
 
 -- TODO: Print number of remaining tasks and how to display them at the bottom

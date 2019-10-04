@@ -33,7 +33,6 @@ import DbSetup
 import ImportExport
 import Migrations
 import Paths_tasklite_core (version)  -- Special module provided by Cabal
-import Task (TaskState(..))
 import Utils
 
 
@@ -105,7 +104,7 @@ data Command
   | ListRepeating
   | ListNoTag
   | ListWithTag [Text]
-  | Count (Filter TaskState)
+  | CountFiltered (Maybe [Text])
   | QueryTasks Text
   | RunSql Text
   | RunFilter [Text]
@@ -541,8 +540,11 @@ commandParser conf =
 
   <|> subparser ( commandGroup (T.unpack $ fst advanced_sec)
 
-    <> command "count" (toParserInfo (pure $ Count NoFilter)
-        "Output total number of tasks")
+    <> command "count"
+        (toParserInfo
+          (CountFiltered <$> (optional $ some
+            (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions")))
+        "Output total number of tasks filtered by the specified expressions")
 
     <> command "config" (toParserInfo (pure PrintConfig)
         "Print current configuration of TaskLite")
@@ -780,7 +782,7 @@ executeCLiCommand conf now connection cmd =
     AddNote noteText ids -> addNote conf connection noteText ids
     SetDueUtc datetime ids -> setDueUtc conf connection datetime ids
     Duplicate ids -> duplicateTasks conf connection ids
-    Count taskFilter -> countTasks conf taskFilter
+    CountFiltered taskFilter -> countTasks conf connection taskFilter
 
     {- Unset -}
     UnDueTasks ids -> undueTasks conf connection ids
