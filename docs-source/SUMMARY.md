@@ -20,4 +20,6 @@
 
 - [Development](./development.md)
 
+- [Changelog](./changelog.md)
+
 - [Related](./related.md)
