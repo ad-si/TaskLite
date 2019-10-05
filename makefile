@@ -1,5 +1,5 @@
 # Build the documentation
-docs:
+docs: book.toml docs-source
 	docker run \
 		--rm \
 		--volume "$$PWD":/data \

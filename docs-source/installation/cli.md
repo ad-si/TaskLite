@@ -1,38 +1,8 @@
 # CLI Tool
 
-## Configuration
-
-It's a good idea to create a config file
-at `~/.config/tasklite/config.yaml` first.
-
-Check out the [example config file] for infos about available settings.
-
-[example config file]:
-  https://github.com/ad-si/TaskLite/blob/master/tasklite-core/example-config.yaml
-
-
-## From Source
-
-To build TaskLite from source, you need [Stack].
-
-[Stack]: https://docs.haskellstack.org/en/stable/install_and_upgrade/
-
-```shell
-git clone https://github.com/ad-si/TaskLite
-cd TaskLite
-stack install tasklite-core
-```
-
-To test the installation run:
-
-```shell
-tasklite version
-```
-
-
 ## With Docker
 
-If you just want to try it out run:
+The easiest way to get started is using the prebuilt Docker image:
 
 ```sh
 docker run --rm adius/tasklite sh
@@ -64,3 +34,33 @@ alias tl="docker run …"
 
 Providing your own `config.yaml` file to the docker container
 is not yet supported.
+
+
+## From Source
+
+To build TaskLite from source, you need to [install Stack] first.
+
+[install Stack]: https://docs.haskellstack.org/en/stable/install_and_upgrade/
+
+```shell
+git clone https://github.com/ad-si/TaskLite
+cd TaskLite
+stack install tasklite-core
+```
+
+To test the installation run:
+
+```shell
+tasklite help
+```
+
+
+## Configuration
+
+It's a good idea to customize your config file
+at `~/.config/tasklite/config.yaml` afterwards.
+
+Check out the [example config file] for infos about available settings.
+
+[example config file]:
+  https://github.com/ad-si/TaskLite/blob/master/tasklite-core/example-config.yaml

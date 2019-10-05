@@ -34,6 +34,14 @@ For help please come visit us on one of the following sites:
 - [IRC](irc://chat.freenode.net:6697/TaskLite)
 
 
+### Latest Versions
+
+- CLI {{#include ../tasklite-core/package.yaml:2}}
+- App {{#include ../tasklite-app/package.yaml:2}}
+
+[Full Changelog](/changelog.html)
+
+
 ## Why Another CLI Task Manager?
 
 [Taskwarrior] has been the gold standard for CLI task managers so far.
