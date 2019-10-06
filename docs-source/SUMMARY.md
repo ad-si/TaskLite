@@ -7,6 +7,8 @@
     - [Desktop App](./installation/desktop_app.md)
     - [Web App](./installation/web_app.md)
 
+- [Concepts](./concepts.md)
+
 - [Usage](./usage/readme.md)
     - [CLI](./usage/cli.md)
     - [Desktop App](./usage/desktop_app.md)

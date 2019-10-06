@@ -1,8 +1,13 @@
 [book]
-authors = ["Adrian Sieber"]
-multilingual = false
-src = "docs-source"
 title = "TaskLite Documentation"
+description = "Documentation for the CLI task manager \"TaskLite\""
+authors = ["Adrian Sieber"]
+language = "en"
+src = "docs-source"
 
 [build]
 build-dir = "docs"
+
+
+[output.html]
+git-repository-url = "https://github.com/ad-si/TaskLite"

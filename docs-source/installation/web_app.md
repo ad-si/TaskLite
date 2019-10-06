@@ -1,5 +1,7 @@
 # Web App
 
+## Datasette
+
 The web app is currently based on [Datasette] and can
 only be used to view tasks, but not to create new ones.
 
@@ -46,3 +48,20 @@ limit 50
 ```
 
 Make sure to bookmark the views for easy access.
+
+
+## SQLite Web
+
+Another way to host a simple web frontend is [SQLite Web].
+While it's more bare bones than [Datasette],
+it has the advantage that it also allows you to modify data.
+
+[SQLite Web]: https://github.com/coleifer/sqlite-web
+
+```
+docker run -it --rm \
+  -p 8080:8080 \
+  -v ~/TaskLite:/data \
+  -e SQLITE_DATABASE=main.db \
+  coleifer/sqlite-web
+```

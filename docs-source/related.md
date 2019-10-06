@@ -17,6 +17,7 @@ fits the bill:
 - [Toodles] - Project management from the TODO's in your codebase.
 - [Tracli] - Command line app that tracks your time.
 - [Ultralist] - Open source task management system for the command line.
+- [Yokadi] - Command line oriented, SQLite powered todo list.
 
 
 [Buku]: https://github.com/jarun/Buku
@@ -32,3 +33,4 @@ fits the bill:
 [Toodles]: https://github.com/aviaviavi/toodles
 [Tracli]: https://github.com/ridvankaradag/tracli-terminal
 [Ultralist]: https://ultralist.io
+[Yokadi]: https://yokadi.github.io/
