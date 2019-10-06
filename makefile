@@ -7,10 +7,24 @@ docs: book.toml docs-source
 		mdbook build
 
 
+# Continously rebuild and serve at localhost:3000
+.PHONY: serve
+serve: book.toml docs-source
+	docker run \
+		--rm \
+		--volume "$$PWD":/data \
+		--publish 3000:3000 \
+		--publish 3001:3001 \
+		hrektts/mdbook \
+		mdbook serve --hostname 0.0.0.0
+
+
 .PHONY: deploy
 deploy: docs
-	echo 'tasklite.ad-si.com' > docs/CNAME
-	surge docs
+	netlify deploy \
+		--dir=docs \
+		--site=fc1a2240-e6d5-425a-ad02-35b59925a94b \
+		--prod
 
 
 .PHONY: docker-build
