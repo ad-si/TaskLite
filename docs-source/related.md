@@ -18,10 +18,12 @@ fits the bill:
 - [Tracli] - Command line app that tracks your time.
 - [Ultralist] - Open source task management system for the command line.
 - [Yokadi] - Command line oriented, SQLite powered todo list.
+- [Eagle] - Minimalistic todo app for command line.
 
 
 [Buku]: https://github.com/jarun/Buku
 [CommitTasks]: https://github.com/ZeroX-DG/CommitTasks
+[Eagle]: https://github.com/im-n1/eagle
 [Eureka]: https://github.com/simeg/eureka
 [Ff]: https://github.com/ff-notes/ff
 [git-pending]: https://github.com/kamranahmedse/git-pending
