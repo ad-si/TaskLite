@@ -11,11 +11,35 @@ CLI task manager built with [Haskell] and [SQLite].
 />
 
 
-## Installation
+## Documentation
 
-Check out [tasklite.ad-si.com/installation] for installation instructions.
+- [Introduction](https://tasklite.org/introduction)
+
+- [Installation](https://tasklite.org/installation/readme)
+    - [CLI](https://tasklite.org/installation/cli)
+    - [Desktop App](https://tasklite.org/installation/desktop_app)
+    - [Web App](https://tasklite.org/installation/web_app)
+
+- [Concepts](https://tasklite.org/concepts)
+
+- [Usage](https://tasklite.org/usage/readme)
+    - [CLI](https://tasklite.org/usage/cli)
+    - [Desktop App](https://tasklite.org/usage/desktop_app)
+    - [Web App](https://tasklite.org/usage/web_app)
+    - [REST API](https://tasklite.org/usage/rest_api)
+    - [Haskell API](https://tasklite.org/usage/haskell_api)
+
+- [Differences to Taskwarrior](https://tasklite.org/differences_taskwarrior)
+
+- [Performance](https://tasklite.org/performance)
+
+- [Development](https://tasklite.org/development)
+
+- [Changelog](https://tasklite.org/changelog)
+
+- [Related](https://tasklite.org/related)
+
 
 [Haskell]: https://haskell.org
 [SQLite]: https://sqlite.org
-[tasklite.ad-si.com/installation]: http://tasklite.ad-si.com/installation
-[TaskLite]: http://tasklite.ad-si.com
+[TaskLite]: https://tasklite.org

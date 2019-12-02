@@ -40,4 +40,4 @@
 [performance]: /performance
 [SQLite]: https://sqlite.org
 [TW Issues]: https://github.com/GothenburgBitFactory/taskwarrior/issues
-[VisiData]: http://visidata.org
+[VisiData]: https://visidata.org
