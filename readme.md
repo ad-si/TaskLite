@@ -15,14 +15,14 @@ CLI task manager built with [Haskell] and [SQLite].
 
 - [Introduction](https://tasklite.org/introduction)
 
-- [Installation](https://tasklite.org/installation/readme)
+- [Installation](https://tasklite.org/installation)
     - [CLI](https://tasklite.org/installation/cli)
     - [Desktop App](https://tasklite.org/installation/desktop_app)
     - [Web App](https://tasklite.org/installation/web_app)
 
 - [Concepts](https://tasklite.org/concepts)
 
-- [Usage](https://tasklite.org/usage/readme)
+- [Usage](https://tasklite.org/usage)
     - [CLI](https://tasklite.org/usage/cli)
     - [Desktop App](https://tasklite.org/usage/desktop_app)
     - [Web App](https://tasklite.org/usage/web_app)
