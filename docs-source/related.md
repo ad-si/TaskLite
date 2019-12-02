@@ -17,6 +17,7 @@ fits the bill:
 - [Toodles] - Project management from the TODO's in your codebase.
 - [Tracli] - Command line app that tracks your time.
 - [Ultralist] - Open source task management system for the command line.
+- [Unfog] - A simple CLI task and time manager.
 - [Yokadi] - Command line oriented, SQLite powered todo list.
 - [Eagle] - Minimalistic todo app for command line.
 
@@ -35,4 +36,5 @@ fits the bill:
 [Toodles]: https://github.com/aviaviavi/toodles
 [Tracli]: https://github.com/ridvankaradag/tracli-terminal
 [Ultralist]: https://ultralist.io
+[Unfog]: https://github.com/unfog-io/unfog-cli
 [Yokadi]: https://yokadi.github.io/
