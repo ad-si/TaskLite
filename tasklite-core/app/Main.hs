@@ -20,6 +20,7 @@ import Options.Applicative
 import Paths_tasklite_core
 import System.Directory
   ( copyFile
+  , createDirectoryIfMissing
   , getHomeDirectory
   , getXdgDirectory
   , XdgDirectory(..)
@@ -838,6 +839,8 @@ main = do
   let appName = "tasklite"
 
   configDirectory <- getXdgDirectory XdgConfig appName
+  createDirectoryIfMissing True configDirectory
+
   let configPath = configDirectory </> "config.yaml"
 
   configResult <- decodeFileEither configPath

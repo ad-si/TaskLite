@@ -11,7 +11,12 @@ import Data.Functor ((<&>))
 import Data.Text as T
 import Data.Vector (Vector)
 import Pipes
-import System.Directory (XdgDirectory(..), getXdgDirectory, getHomeDirectory)
+import System.Directory
+  ( createDirectoryIfMissing
+  , getXdgDirectory
+  , getHomeDirectory
+  , XdgDirectory(..)
+  )
 import System.FilePath ((</>))
 
 import Lib
@@ -66,6 +71,8 @@ main = do
   let appName = "tasklite"
 
   configDirectory <- getXdgDirectory XdgConfig appName
+  createDirectoryIfMissing True configDirectory
+
   let configPath = configDirectory </> "config.yaml"
 
   configUserEither <- decodeFileEither configPath
