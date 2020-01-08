@@ -2,6 +2,9 @@
 This is the main module which provides the CLI
 -}
 
+-- Necessary to print git hash in help output
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main where
 
 import Protolude
@@ -16,6 +19,7 @@ import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.Version (showVersion)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
+import GitHash
 import Options.Applicative
 import Paths_tasklite_core
 import System.Directory
@@ -614,16 +618,23 @@ commandParser conf =
 
 commandParserInfo :: Config -> ParserInfo Command
 commandParserInfo conf =
-  info
-    (helper <*> commandParser conf)
-    (noIntersperse
-      <> briefDesc
-      <> headerDoc (Just "{{header}}")
-      <> progDescDoc (Just "{{examples}}")
-      <> footerDoc (Just $ fromString $
-            "Version " <> (showVersion version)
-            <> ", developed by <adriansieber.com> at <feram.io>\n")
-    )
+  let
+    gitInfo = $$tGitInfoCwd
+    versionString =
+      "Version "
+      <> (showVersion version)
+      <> "+" <> take 8 (giHash gitInfo)
+      <> (if giDirty gitInfo then "-dirty" else "")
+      <> ", developed by <adriansieber.com>\n"
+  in
+    info
+      (helper <*> commandParser conf)
+      (noIntersperse
+        <> briefDesc
+        <> headerDoc (Just "{{header}}")
+        <> progDescDoc (Just "{{examples}}")
+        <> footerDoc (Just $ fromString versionString)
+      )
 
 
 groupBySpace :: Text -> [Doc ann]

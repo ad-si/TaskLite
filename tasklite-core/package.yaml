@@ -33,6 +33,7 @@ dependencies:
   - filepath
   - fuzzy
   - generic-random
+  - githash
   - hourglass
   - optparse-applicative
   - prettyprinter
