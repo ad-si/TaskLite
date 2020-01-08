@@ -238,7 +238,6 @@ importTask conf = do
   case importResult of
     Left error -> die $ (T.pack error) <> " in task \n" <> show content
     Right importTaskRecord -> do
-      putStr ("Importing … " :: Text)
       effectiveUserName <- getEffectiveUserName
       let
         taskParsed = task importTaskRecord
