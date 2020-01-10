@@ -17,14 +17,17 @@ jobs:
       - name: Build
         run: stack build tasklite-core
 
+      - name: Set env with output of `git describe`
+        run: echo ::set-env name=GIT_DESCRIBE::$(git describe --tags)
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ env.GIT_DESCRIBE }}
+          release_name: Release ${{ env.GIT_DESCRIBE }}
           body: ${{ github.event.commits[0].message }}
           draft: false
           prerelease: false
