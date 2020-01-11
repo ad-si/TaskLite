@@ -24,6 +24,7 @@ jobs:
         run: mv /home/runner/.local/bin/tasklite /tasklite-${{ matrix.os }}
 
   publish:
+    needs: build
     runs-on: ubuntu-18.04
     steps:
       - name: Set env with output of `git describe`
