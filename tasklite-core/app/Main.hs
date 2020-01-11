@@ -3,6 +3,7 @@ This is the main module which provides the CLI
 -}
 
 -- Necessary to print git hash in help output
+-- and to embed example config file
 {-# LANGUAGE TemplateHaskell #-}
 
 module Main where
@@ -11,6 +12,7 @@ import Protolude
 
 import Lib
 import Data.Char (isSpace)
+import Data.FileEmbed (embedStringFile)
 import Data.Hourglass
 import Data.String (fromString)
 import qualified Data.Text as T
@@ -23,8 +25,7 @@ import GitHash
 import Options.Applicative
 import Paths_tasklite_core
 import System.Directory
-  ( copyFile
-  , createDirectoryIfMissing
+  ( createDirectoryIfMissing
   , getHomeDirectory
   , getXdgDirectory
   , XdgDirectory(..)
@@ -842,6 +843,10 @@ printOutput appName configUser = do
   putDoc $ tableStatus <> migrationsStatus <> doc <> hardline
 
 
+exampleConfig :: IsString a => a
+exampleConfig = $(embedStringFile "example-config.yaml")
+
+
 main :: IO ()
 main = do
   -- Necessary for Docker image
@@ -860,8 +865,7 @@ main = do
     Left error -> do
       if "not found" `T.isInfixOf` (T.pack $ prettyPrintParseException error)
       then do
-        exampleConfigPath <- getDataFileName "example-config.yaml"
-        copyFile exampleConfigPath configPath
+        writeFile configPath exampleConfig
         configResult2 <- decodeFileEither configPath
 
         case configResult2 of

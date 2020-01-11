@@ -30,6 +30,7 @@ dependencies:
   - cassava
   - crockford
   - directory
+  - file-embed
   - filepath
   - fuzzy
   - generic-random
