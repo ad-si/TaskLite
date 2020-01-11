@@ -3,11 +3,8 @@ name: Haskell Stack CI
 on: [push]
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        os: [ubuntu-18.04, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+  linux:
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
 
@@ -20,57 +17,65 @@ jobs:
       - name: Build
         run: stack build tasklite-core
 
-      - name: Move to root
-        run: mv /home/runner/.local/bin/tasklite /tasklite-${{ matrix.os }}
-
-  publish:
-    needs: build
-    runs-on: ubuntu-18.04
-    steps:
-      - name: Set env with output of `git describe`
-        run: echo ::set-env name=GIT_DESCRIBE::$(git describe)
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.GIT_DESCRIBE }}
-          release_name: Release ${{ env.GIT_DESCRIBE }}
-          body: ${{ github.event.commits[0].message }}
-          draft: false
-          prerelease: false
-
       - name: Upload Linux Release
-        id: upload_linux_release
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/upload-artifact@v1
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /tasklite-ubuntu-18.04
-          asset_name: tasklite_linux_x86_64
-          asset_content_type: application/octet-stream
+          path: /home/runner/.local/bin/tasklite
+          name: tasklite_linux_x86_64
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Setup Stack
+        uses: mstksg/setup-stack@v1
+
+      - name: Install dependencies
+        run: stack install tasklite-core
+
+      - name: Build
+        run: stack build tasklite-core
 
       - name: Upload MacOS Release
-        id: upload_macos_release
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/upload-artifact@v1
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /tasklite-macos-latest
-          asset_name: tasklite_linux_x86_64
-          asset_content_type: application/octet-stream
+          path: /home/runner/.local/bin/tasklite
+          name: tasklite_macos_x86_64
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Install stack
+        shell: cmd
+        run: choco install haskell-stack
+
+      - name: Install dependencies
+        run: stack install tasklite-core
 
       - name: Upload Windows Release
-        id: upload_windows_release
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/upload-artifact@v1
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /tasklite-windows-latest
-          asset_name: tasklite_linux_x86_64.exe
-          asset_content_type: application/octet-stream
+          path: '%APPDATA%\local\bin\tasklite.exe'
+          name: tasklite_windows_x86_64.exe
+
+  # publish:
+  #   needs: build
+  #   runs-on: ubuntu-18.04
+  #   steps:
+  #     - name: Set env with output of `git describe`
+  #       run: echo ::set-env name=GIT_DESCRIBE::$(git describe)
+  #
+  #     - name: Create Release
+  #       id: create_release
+  #       uses: actions/create-release@v1
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         tag_name: ${{ env.GIT_DESCRIBE }}
+  #         release_name: Release ${{ env.GIT_DESCRIBE }}
+  #         body: ${{ github.event.commits[0].message }}
+  #         draft: false
+  #         prerelease: false
