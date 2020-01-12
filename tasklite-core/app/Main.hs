@@ -162,6 +162,18 @@ nameToAliasList = (
   [])
 
 
+{- Imitates output from `git describe` -}
+versionSlug :: Text
+versionSlug =
+  let
+    gitInfo = $$tGitInfoCwd
+  in
+    fromString $
+      (showVersion version)
+      <> "+" <> take 8 (giHash gitInfo)
+      <> (if giDirty gitInfo then "-dirty" else "")
+
+
 aliasWarning :: Text -> Doc AnsiStyle
 aliasWarning alias =
   "Invalid command."
@@ -620,13 +632,10 @@ commandParser conf =
 commandParserInfo :: Config -> ParserInfo Command
 commandParserInfo conf =
   let
-    gitInfo = $$tGitInfoCwd
-    versionString =
+    versionDesc =
       "Version "
-      <> (showVersion version)
-      <> "+" <> take 8 (giHash gitInfo)
-      <> (if giDirty gitInfo then "-dirty" else "")
-      <> ", developed by <adriansieber.com>\n"
+      <> versionSlug
+      <> ", developed by <adriansieber.com>"
   in
     info
       (helper <*> commandParser conf)
@@ -634,7 +643,7 @@ commandParserInfo conf =
         <> briefDesc
         <> headerDoc (Just "{{header}}")
         <> progDescDoc (Just "{{examples}}")
-        <> footerDoc (Just $ fromString versionString)
+        <> footerDoc (Just $ fromString $ T.unpack versionDesc)
       )
 
 
@@ -800,7 +809,7 @@ executeCLiCommand conf now connection cmd =
     {- Unset -}
     UnDueTasks ids -> undueTasks conf connection ids
 
-    Version -> pure $ pretty (showVersion version) <> hardline
+    Version -> pure $ pretty versionSlug <> hardline
     Help -> pure $ helpText conf
     PrintConfig -> pure $ pretty conf
     Alias alias -> pure $ aliasWarning alias
