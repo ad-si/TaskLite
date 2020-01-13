@@ -18,7 +18,7 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           path: /home/runner/.local/bin/tasklite
-          name: tasklite_linux_x86_64
+          name: tasklite_linux_x86_64.zip
 
   macos:
     runs-on: macos-latest
@@ -35,7 +35,7 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           path: /Users/runner/.local/bin/tasklite
-          name: tasklite_macos_x86_64
+          name: tasklite_macos_x86_64.zip
 
   # windows:
   #   runs-on: windows-latest
