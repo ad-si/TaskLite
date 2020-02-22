@@ -6,6 +6,10 @@ copy tasklite-core/package.yaml tasklite-core/package.yaml
 run stack install --only-dependencies tasklite-core
 
 copy tasklite-core tasklite-core
+
+# Needed for retrieving the version number
+copy .git .git
+
 run stack install
 
 

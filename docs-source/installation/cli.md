@@ -1,8 +1,22 @@
 # CLI Tool
 
-## With Docker
+## Prebuilt Binaries
 
-The easiest way to get started is using the prebuilt Docker image:
+Prebuilt binaries are available for macOS and Linux.
+
+You can get them for each CI build on the
+[GitHub Actions page](https://github.com/ad-si/TaskLite/actions).
+
+The latest stable version is
+[this build](https://github.com/ad-si/TaskLite/actions/runs/43430836).
+
+On macOS make sure to download the artifacts with `curl` or `wget`
+as macOS prevents the execution of files downloaded via a browser.
+
+
+## Prebuilt Docker Image
+
+Another easy way to get started is using the prebuilt Docker image:
 
 ```sh
 docker run --rm adius/tasklite sh

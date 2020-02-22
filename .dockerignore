@@ -1,5 +1,8 @@
 *
 
+# Needed for retrieving the version number
+!.git
+
 !/docker-stack.yaml
 
 !/tasklite-core
