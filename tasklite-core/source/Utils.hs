@@ -53,15 +53,13 @@ parseUtc utcText =
 parseUlidUtcSection :: Text -> Maybe DateTime
 parseUlidUtcSection encodedUtc = do
   let
-    decodedUtc = (Crock.decode . unpack) encodedUtc
+    decodedUtcMaybe = (Crock.decode . unpack) encodedUtc
     getElapsed val = Elapsed $ Seconds $ val `div` 1000
-    getMilliSeconds val =
-      readMaybe $ T.unpack $ T.takeEnd 3 $ show val :: Maybe Int64
 
-  elapsed <- fmap getElapsed decodedUtc
-  milliSeconds <- getMilliSeconds decodedUtc
+  elapsed <- fmap getElapsed decodedUtcMaybe
+  milliSecPart <- fmap (`mod` 1000) decodedUtcMaybe
 
-  let nanoSeconds = NanoSeconds $ milliSeconds * 1000000
+  let nanoSeconds = NanoSeconds $ milliSecPart * 1000000
 
   pure $ timeGetDateTimeOfDay $ ElapsedP elapsed nanoSeconds
 

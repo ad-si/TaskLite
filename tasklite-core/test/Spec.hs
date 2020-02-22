@@ -24,6 +24,22 @@ import Migrations
 -- | and therefore the order must not be changed
 testSuite :: Config -> DateTime -> Sql.Connection -> SpecWith ()
 testSuite conf now connection = do
+  describe "Utils" $ do
+    it "correctly parses beginning of UNIX epoch" $ do
+      (parseUlidUtcSection "0000000000")
+      `shouldBe`
+      (Just $ timeGetDateTimeOfDay $ Elapsed 0)
+
+    it "correctly parses 36 ms after UNIX epoch" $ do
+      (parseUlidUtcSection "0000000014")
+      `shouldBe`
+      (Just $ timeGetDateTimeOfDay $ ElapsedP 0 36000000)
+
+    it "correctly parses a ULID string" $ do
+      let ulidText = "0000000014T4R3JR7HMQNREEW8" :: Text
+
+      (fmap show $ parseUlidText ulidText) `shouldBe` (Just ulidText)
+
   describe "TaskLite" $ do
     let
       -- TODO: Make function more generic
