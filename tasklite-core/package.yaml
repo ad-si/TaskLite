@@ -8,7 +8,6 @@ copyright: Adrian Sieber
 
 extra-source-files:
   - README.md
-  - ChangeLog.md
 
 data-files:
   - example-config.yaml

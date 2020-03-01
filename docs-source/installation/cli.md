@@ -4,11 +4,13 @@
 
 Prebuilt binaries are available for macOS and Linux.
 
-You can get them for each CI build on the
-[GitHub Actions page](https://github.com/ad-si/TaskLite/actions).
+You can get the latest versions on
+[GitHub's Releases page](https://github.com/ad-si/TaskLite/releases).
 
-The latest stable version is
-[this build](https://github.com/ad-si/TaskLite/actions/runs/43430836).
+Furthermore you can get the latest CI builds on
+[GitHub's Actions page](https://github.com/ad-si/TaskLite/actions).
+They are quite stable since only tested and production ready
+code gets merged into the master branch.
 
 On macOS make sure to download the artifacts with `curl` or `wget`
 as macOS prevents the execution of files downloaded via a browser.
