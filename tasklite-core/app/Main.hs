@@ -125,7 +125,15 @@ data Command
   -- | Unblocked -- Tasks that are not blocked
 
   {- Unset -}
+  | UnCloseTasks [IdText]
   | UnDueTasks [IdText]
+  | UnWaitTasks [IdText]
+  -- | UnWakeTasks [IdText]
+  | UnRepeatTasks [IdText]
+  | UnTagTasks [IdText]
+  | UnNoteTasks [IdText]
+  | UnPrioTasks [IdText]
+  | UnMetaTasks [IdText]
 
   {- Misc -}
   -- | Demo -- Switch to demo mode
@@ -593,31 +601,41 @@ commandParser conf =
     (  metavar (T.unpack $ snd unset_sec)
     <> commandGroup (T.unpack $ fst unset_sec)
 
-  --   <> command "unclose"
-  --       "Delete closed UTC and delete Obsolete / Done state"
+    <> command "unclose" (toParserInfo (UnCloseTasks
+        <$> some (strArgument idsVar))
+        "Erase closed timestamp and erase Done / Obsolete / Deletable state")
 
-  --   <> command "untag"
-  --       "Delete all tags"
+    <> command "undue" (toParserInfo (UnDueTasks
+        <$> some (strArgument idsVar))
+        "Erase due timestamp for specified tasks")
 
-  --   <> command "unnote"
-  --       "Delete all notes"
+    <> command "unwait" (toParserInfo (UnWaitTasks
+        <$> some (strArgument idsVar))
+        "Erase wait timestamp for specified tasks")
 
-    <> command "undue" (toParserInfo (UnDueTasks <$> some (strArgument idsVar))
-        "Delete due UTC")
+    -- <> command "unwake" (toParserInfo (UnWakeTasks
+    --     <$> some (strArgument idsVar))
+    --     "Erase awake timestamp for specified tasks")
 
-  --   <> command "unwait"
-  --       "Delete wait UTC"
+    <> command "unrepeat" (toParserInfo (UnRepeatTasks
+        <$> some (strArgument idsVar))
+        "Erase repetition duration value for specified tasks")
 
-  --   <> command "unprioritize"
-  --       "Delete priority adjustment"
+    <> command "untag" (toParserInfo (UnTagTasks
+        <$> some (strArgument idsVar))
+        "Erase all tags")
 
-  --   <> command "unmeta"
-  --       "Delete metadata"
-    )
+    <> command "unnote" (toParserInfo (UnNoteTasks
+        <$> some (strArgument idsVar))
+        "Erase all notes")
 
-  <|> subparser ( commandGroup (T.unpack $ fst alias_sec)
+    <> command "unprio" (toParserInfo (UnPrioTasks
+        <$> some (strArgument idsVar))
+        "Erase manual priority adjustment")
 
-    <> fold (fmap getCommand nameToAliasList)
+    <> command "unmeta" (toParserInfo (UnMetaTasks
+        <$> some (strArgument idsVar))
+        "Erase metadata")
     )
 
   <|> subparser (internal <> fold (fmap getCommand nameToAliasList))
@@ -829,7 +847,15 @@ executeCLiCommand conf now connection cmd =
     CountFiltered taskFilter -> countTasks conf connection taskFilter
 
     {- Unset -}
+    UnCloseTasks ids -> uncloseTasks conf connection ids
     UnDueTasks ids -> undueTasks conf connection ids
+    UnWaitTasks ids -> unwaitTasks conf connection ids
+    -- UnWakeTasks ids -> unwakeTasks conf connection ids
+    UnRepeatTasks ids -> unrepeatTasks conf connection ids
+    UnTagTasks ids -> untagTasks conf connection ids
+    UnNoteTasks ids -> unnoteTasks conf connection ids
+    UnPrioTasks ids -> unprioTasks conf connection ids
+    UnMetaTasks ids -> unmetaTasks conf connection ids
 
     Version -> pure $ pretty versionSlug <> hardline
     Help -> pure $ helpText conf

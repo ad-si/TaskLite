@@ -823,22 +823,149 @@ setDueUtc conf connection datetime ids = do
   pure $ vsep docs
 
 
+getResultMsg :: Doc AnsiStyle -> Task -> Doc AnsiStyle
+getResultMsg msg task =
+  let
+    TaskUlid idText = primaryKey task
+    prettyBody = dquotes (pretty $ Task.body task)
+    prettyId = dquotes (pretty idText)
+  in
+    msg <+> "of task" <+> prettyBody <+> "with id" <+> prettyId
+
+
+uncloseTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+uncloseTasks conf connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithTask conf connection idSubstr $ \task -> do
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task_ -> mconcat
+              [ (Task.closed_utc task_) <-. (val_ Nothing)
+              , (Task.state task_) <-. (val_ Nothing)
+              ]
+          )
+          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+
+      pure $ getResultMsg "💥 Removed close timestamp and state field" task
+
+  pure $ vsep docs
+
+
 undueTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 undueTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      let
-        taskUlid@(TaskUlid idText) = primaryKey task
-        prettyBody = dquotes (pretty $ Task.body task)
-        prettyId = dquotes (pretty idText)
-
       runBeamSqlite connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
           (\task_ -> mconcat [(Task.due_utc task_) <-. (val_ Nothing)])
-          (\task_ -> primaryKey task_ ==. val_ taskUlid)
+          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
-      pure $ "💥 Removed due UTC of task" <+> prettyBody
-            <+> "with id" <+> prettyId
+      pure $ getResultMsg "💥 Removed due timestamp" task
+
+  pure $ vsep docs
+
+
+unwaitTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+unwaitTasks conf connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithTask conf connection idSubstr $ \task -> do
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task_ -> mconcat
+            [ (Task.waiting_utc task_) <-. (val_ Nothing)
+            , (Task.review_utc task_) <-. (val_ Nothing)
+            ]
+          )
+          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+
+      pure $ getResultMsg "💥 Removed waiting and review timestamps" task
+
+  pure $ vsep docs
+
+
+-- TODO:
+-- unwakeTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+-- unwakeTasks conf connection ids = do
+--   docs <- forM ids $ \idSubstr -> do
+--     execWithTask conf connection idSubstr $ \task -> do
+--       runBeamSqlite connection $ runUpdate $
+--         update (_tldbTasks taskLiteDb)
+--           (\task_ -> mconcat [(Task.awake_utc task_) <-. (val_ Nothing)])
+--           (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+
+--       pure $ getResultMsg "💥 Removed awake timestamp" task
+
+--   pure $ vsep docs
+
+
+unrepeatTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+unrepeatTasks conf connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithTask conf connection idSubstr $ \task -> do
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task_ -> mconcat
+              [(Task.repetition_duration task_) <-. (val_ Nothing)])
+          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+
+      pure $ getResultMsg "💥 Removed repetition duration value" task
+
+  pure $ vsep docs
+
+
+untagTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+untagTasks conf connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithTask conf connection idSubstr $ \task -> do
+      runBeamSqlite connection $ runDelete $ delete
+        (_tldbTaskToTag taskLiteDb)
+        (\tag -> TaskToTag.task_ulid tag ==. val_ (primaryKey task))
+
+      pure $ getResultMsg "💥 Removed all tags" task
+
+  pure $ vsep docs
+
+
+unnoteTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+unnoteTasks conf connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithTask conf connection idSubstr $ \task -> do
+      runBeamSqlite connection $ runDelete $ delete
+        (_tldbTaskToNote taskLiteDb)
+        (\noteValue ->
+            TaskToNote.task_ulid noteValue ==. val_ (primaryKey task)
+        )
+
+      pure $ getResultMsg "💥 Removed all notes" task
+
+  pure $ vsep docs
+
+
+unprioTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+unprioTasks conf connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithTask conf connection idSubstr $ \task -> do
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task_ -> mconcat
+              [(Task.priority_adjustment task_) <-. (val_ Nothing)])
+          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+
+      pure $ getResultMsg "💥 Removed priority adjustment" task
+
+  pure $ vsep docs
+
+
+unmetaTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+unmetaTasks conf connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithTask conf connection idSubstr $ \task -> do
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task_ -> mconcat [(Task.metadata task_) <-. (val_ Nothing)])
+          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+
+      pure $ getResultMsg "💥 Removed metadata" task
 
   pure $ vsep docs
 
