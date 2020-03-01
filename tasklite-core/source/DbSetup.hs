@@ -59,9 +59,11 @@ createTriggerClosed :: Connection -> IO (Doc ann)
 createTriggerClosed connection =
   S.createWithQuery connection $
     S.createTriggerAfterUpdate "set_closed_utc" "tasks"
-      "(new.state is 'Done'\n\
+      "old.state is not new.state and (\n\
+        \new.state is 'Done'\n\
         \or new.state is 'Obsolete'\n\
-        \or new.state is 'Deletable')"
+        \or new.state is 'Deletable'\n\
+        \)"
       "\
         \update tasks\n\
         \set closed_utc = datetime('now')\n\

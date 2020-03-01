@@ -162,6 +162,20 @@ _3_ =
       }
 
 
+-- | Fixes activation condition of task closed trigger.
+-- | FIXME: This empty migration is a hack to run an update of all triggers.
+_4_ :: MigrateDirection -> Migration
+_4_ =
+  let
+    base = Migration
+      { id = UserVersion 4
+      , querySet = []
+      }
+  in \case
+    MigrateUp -> base { Migrations.querySet = [] }
+    MigrateDown -> base { Migrations.querySet = [] }
+
+
 hasDuplicates :: Eq a => [a] -> Bool
 hasDuplicates [] = False
 hasDuplicates (x:xs) =
@@ -221,6 +235,7 @@ runMigrations conf connection = do
         _1_ :
         _2_ :
         _3_ :
+        _4_ :
       [])
 
     migrationsUp = fmap ($ MigrateUp) migrations
