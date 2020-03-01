@@ -62,11 +62,29 @@ tl ndjson | grep 'music' | jq
 
 ## Import
 
-Import a GitHub issue:
+TaskLite features a comprehensive and robust JSON importer.
 
-```
+For example to import a GitHub issue simply run:
+
+```sh
 curl https://api.github.com/repos/$OWNER/$REPO/issues/$NUM | tl import
 ```
+
+Or to import a task from TaskWarrior:
+
+```sh
+task 123 export | tl import
+```
+
+In order to avoid data loss of fields which aren't directly
+supported by TaskLite, the whole imported JSON object is also stored
+in TaskLite's task `metadata` field.
+However, if the original JSON object already has a `metadata` field,
+its value is used instead.
+
+**Attention:**
+An import object's `tags` field must be of type `[string]`,
+while a `notes` field must be of type `{ulid?: string, body: string}`.
 
 
 ## Export
