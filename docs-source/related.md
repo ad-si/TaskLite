@@ -14,6 +14,7 @@ fits the bill:
 - [Taskbook] - Tasks, boards & notes for the command-line habitat.
 - [Taskell] - Command line Kanban board / task management.
 - [Taskwarrior] - Command line task management.
+- [Todo.txt] - Simple and extensible shell script for managing a todo.txt file.
 - [Toodles] - Project management from the TODO's in your codebase.
 - [Tracli] - Command line app that tracks your time.
 - [Ultralist] - Open source task management system for the command line.
@@ -33,6 +34,7 @@ fits the bill:
 [Taskbook]: https://github.com/klauscfhq/taskbook
 [Taskell]: https://taskell.app
 [Taskwarrior]: https://github.com/GothenburgBitFactory/taskwarrior
+[Todo.txt]: http://todotxt.org/
 [Toodles]: https://github.com/aviaviavi/toodles
 [Tracli]: https://github.com/ridvankaradag/tracli-terminal
 [Ultralist]: https://ultralist.io
