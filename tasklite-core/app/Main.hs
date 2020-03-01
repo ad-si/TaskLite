@@ -23,7 +23,7 @@ import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import GitHash
 import Options.Applicative
-import Paths_tasklite_core
+import Paths_tasklite_core ()
 import System.Directory
   ( createDirectoryIfMissing
   , getHomeDirectory
@@ -68,6 +68,7 @@ data Command
   | RepeatTasks Duration [IdText]
   | BoostTasks [IdText]
   | HushTasks [IdText]
+  -- | Modify [IdText] Text -- DSL for modifying a task
 
   {- Modify With Parameter -}
   | Prioritize Float [IdText]
@@ -93,7 +94,7 @@ data Command
   | Ndjson
   | Sql
   | Backup
-  -- | Fork -- Create a new SQLite database with the tasks of the specified query
+  -- | Fork -- Create new SQLite database with the tasks of the specified query
 
   {- List -}
   | ListAll
@@ -234,7 +235,9 @@ commandParser conf =
   in
   (pure ListReady)
   <|>
-  (   subparser ( commandGroup (T.unpack $ fst basic_sec)
+  (   subparser
+    (  metavar (T.unpack $ snd basic_sec)
+    <> commandGroup (T.unpack $ fst basic_sec)
 
     <> command "add" (toParserInfo (AddTask <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
@@ -254,7 +257,7 @@ commandParser conf =
         "Set ready UTC of tasks")
 
     <> command "wait" (toParserInfo (WaitTasks <$> some (strArgument idsVar))
-        "Mark a task as waiting (e.g. waiting for feedback)")
+        "Mark a task as waiting (e.g. for feedback) and review it in 3 days")
 
     <> command "waitfor" (toParserInfo (WaitFor
       <$> argument (maybeReader parseDurationInDays)
@@ -364,7 +367,9 @@ commandParser conf =
     --     \with a timer of the past time since you started the task")
     )
 
-  <|> subparser ( commandGroup (T.unpack $ fst shortcut_sec)
+  <|> subparser
+    (  metavar (T.unpack $ snd shortcut_sec)
+    <> commandGroup (T.unpack $ fst shortcut_sec)
 
     <> command "write" (toParserInfo (AddWrite <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
@@ -400,7 +405,9 @@ commandParser conf =
         "Ship an item to someone")
     )
 
-  <|> subparser ( commandGroup (T.unpack $ fst list_sec)
+  <|> subparser
+    (  metavar (T.unpack $ snd list_sec)
+    <> commandGroup (T.unpack $ fst list_sec)
 
     <> command "head" (toParserInfo (pure ListHead)
         ("List " <> numTasks <> " most important open tasks by priority desc"))
@@ -516,7 +523,9 @@ commandParser conf =
     -- <> command "unblocked" -- Tasks that are not blocked (by priority)
     )
 
-  <|> subparser ( commandGroup (T.unpack $ fst vis_sec)
+  <|> subparser
+    (  metavar (T.unpack $ snd vis_sec)
+    <> commandGroup (T.unpack $ fst vis_sec)
     -- <> command "kanban" -- "List tasks columnized by state"
     -- <> command "burndown" -- "Burndown chart by week"
     -- <> command "calendar" -- "Calendar view of all open tasks"
@@ -535,7 +544,9 @@ commandParser conf =
 
     )
 
-  <|> subparser ( commandGroup (T.unpack $ fst i_o_sec)
+  <|> subparser
+    (  metavar (T.unpack $ snd i_o_sec)
+    <> commandGroup (T.unpack $ fst i_o_sec)
 
     <> command "import" (toParserInfo (pure Import)
         "Import one JSON task from stdin")
@@ -557,7 +568,9 @@ commandParser conf =
         "Create a backup of the tasks database at ~/tasklite/backups")
     )
 
-  <|> subparser ( commandGroup (T.unpack $ fst advanced_sec)
+  <|> subparser
+    (  metavar (T.unpack $ snd advanced_sec)
+    <> commandGroup (T.unpack $ fst advanced_sec)
 
     <> command "count"
         (toParserInfo
@@ -576,7 +589,9 @@ commandParser conf =
     <> command "help" (toParserInfo (pure Help) "Display current help page")
     )
 
-  <|> subparser ( commandGroup (T.unpack $ fst unset_sec)
+  <|> subparser
+    (  metavar (T.unpack $ snd unset_sec)
+    <> commandGroup (T.unpack $ fst unset_sec)
 
   --   <> command "unclose"
   --       "Delete closed UTC and delete Obsolete / Done state"
@@ -738,7 +753,9 @@ helpText conf =
       & spliceDocsIntoText helpReplacements
       & hcat
   in
-    case (parserFailure defaultPrefs (commandParserInfo conf) ShowHelpText mempty) of
+    case
+      (parserFailure defaultPrefs (commandParserInfo conf) ShowHelpText mempty)
+    of
       ParserFailure a -> case a "tasklite" of
         (theHelp, _, _) -> extendHelp theHelp
 
