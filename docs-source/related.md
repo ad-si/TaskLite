@@ -10,6 +10,7 @@ fits the bill:
 - [git-pending] - Git plugin to list TODO, FIXME, TESTME, DOCME
     comments in a repository.
 - [Org mode] - Notes and todo lists powered by an Emacs based plain-text system.
+- [Pomoday] - Keyboard only task management web app. [💻][Pomoday GitHub]
 - [Smos] - Purely functional semantic tree-based editor (similar to [Org mode]).
 - [Taskbook] - Tasks, boards & notes for the command-line habitat.
 - [Taskell] - Command line Kanban board / task management.
@@ -22,7 +23,6 @@ fits the bill:
 - [Yokadi] - Command line oriented, SQLite powered todo list.
 - [Eagle] - Minimalistic todo app for command line.
 
-
 [Buku]: https://github.com/jarun/Buku
 [CommitTasks]: https://github.com/ZeroX-DG/CommitTasks
 [Eagle]: https://github.com/im-n1/eagle
@@ -30,6 +30,8 @@ fits the bill:
 [Ff]: https://github.com/ff-notes/ff
 [git-pending]: https://github.com/kamranahmedse/git-pending
 [Org mode]: https://orgmode.org
+[Pomoday]: https://pomoday.app/
+[Pomoday GitHub]: https://github.com/huytd/pomoday-v2
 [Smos]: https://smos.cs-syd.eu
 [Taskbook]: https://github.com/klauscfhq/taskbook
 [Taskell]: https://taskell.app
@@ -40,3 +42,7 @@ fits the bill:
 [Ultralist]: https://ultralist.io
 [Unfog]: https://github.com/unfog-io/unfog-cli
 [Yokadi]: https://yokadi.github.io/
+
+Legend:
+
+- 💻 - Link to code
