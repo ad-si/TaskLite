@@ -27,18 +27,18 @@ And 9 exclusive secondary states.
 
 
 State\Field|`awake_utc`|`ready_utc`|`waiting_utc`|`review_utc`|`closed_utc`|`state`
------------|-----------|-----------|------------|-----------|-----------|--------
-`Open`     | ❌        | ❌       |     ❌     | ❌        | ❌        | ❌
-`Closed`   | ❌        | ❌       |     ❌     | ❌        | ✅        | ❌
-`Asleep`   | > now     | > now     |     ❌     | ❌       | ❌         | ❌
-`Awake`    | < now     | > now     |     ❌     | ❌       | ❌         | ❌
-`Ready`    | < now     | < now     |     ❌     | ❌       | ❌         | ❌
-`Waiting`  |   ❔      |   ❔     |     ✅     | > now     | ❌        | ❌
-`Review`   |   ❔      |   ❔     |     ✅     | < now     | ❌        | ❌
-`Done`     |   ❔     |   ❔      |     ❔     | ❔       | ✅         | `Done`
-`Obsolete` |   ❔     |   ❔      |     ❔     | ❔       | ✅        |`Obsolete`
-`Deletable`|   ❔     |   ❔      |     ❔     | ❔       | ✅        |`Deletable`
-`Blocked`  |   ❔     |   ❔      |     ❔     | ❔       | ❌         | ❌
+-----------|-----------|-----------|------------|-----------|----------|--------
+`Open`     | ❌        | ❌       |     ❌     | ❌        | ❌   | ❌
+`Asleep`   | > now     | > now     |     ❌     | ❌       | ❌   | ❌
+`Awake`    | < now     | > now     |     ❌     | ❌       | ❌   | ❌
+`Ready`    | < now     | < now     |     ❌     | ❌       | ❌   | ❌
+`Waiting`  |   ❔      |   ❔     |     ✅     | > now     | ❌   | ❌
+`Review`   |   ❔      |   ❔     |     ✅     | < now     | ❌   | ❌
+`Closed`   |   ❔      |   ❔     |     ❔     | ❔        | ✅   | ❔
+`Done`     |   ❔     |   ❔      |     ❔     | ❔       | ✅    | `Done`
+`Obsolete` |   ❔     |   ❔      |     ❔     | ❔       | ✅    | `Obsolete`
+`Deletable`|   ❔     |   ❔      |     ❔     | ❔       | ✅    | `Deletable`
+`Blocked`  |   ❔     |   ❔      |     ❔     | ❔       | ❌    | ❌
 
 Legend:
 - ❌ = Not allowed
@@ -57,12 +57,15 @@ Additional secondary states:
     (e.g. paying rent)
     The number of tasks which will be created in advance
     can be set via a config.
+- `Frozen` - Was previously repeating or recurring but has been stopped
+    for the time being.
 
 
 State\Field |`group_ulid`|`repetition_duration`|`recurrence_duration`
 ------------|------------|---------------------|---------------------
-`Repeating`   | ✅       | ✅                 | ❌
-`Recurring`   | ✅       | ❌                 | ✅
+`Repeating` | ✅         | ✅                  | ❌
+`Recurring` | ✅         | ❌                  | ✅
+`Frozen`    | ✅         | ❌                  | ❌
 
 
 ## Priority
