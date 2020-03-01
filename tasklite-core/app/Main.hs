@@ -130,7 +130,7 @@ data Command
   -- | Demo -- Switch to demo mode
   | Version -- Show version
   -- | License -- Show license
-  | Alias Text
+  | Alias Text (Maybe [Text])
   | Help
   | PrintConfig
   | UlidToUtc Text
@@ -144,16 +144,17 @@ nameToAliasList = (
   ("clone", "duplicate") :
   ("close", "end") :
   ("decrease", "hush") :
+  ("erase", "delete") :
   ("finish", "do") :
   ("fix", "do") :
   ("implement", "do") :
   ("inbox", "notag") :
   ("increase", "boost") :
   ("remove", "delete") :
-  -- ("reopen", "unclose") :
+  ("reopen", "unclose") :
   ("rm", "delete") :
-  ("stop", "end") :
   ("search", "find") :
+  ("stop", "end") :
   -- ("week", "sunday") :
   -- ("latest", "newest") :
   -- ("schedule", "activate") :
@@ -184,8 +185,8 @@ aliasWarning alias =
 getCommand :: (Text, Text) -> Mod CommandFields Command
 getCommand (alias, commandName) =
   command (T.unpack alias) $ info
-    (pure $ Alias commandName)
-    (progDesc $ T.unpack $ "-> " <> commandName)
+    ((pure $ Alias commandName) <*> (optional $ some $ strArgument idm))
+    (progDesc $ T.unpack $ alias <> "-> " <> commandName)
 
 
 toParserInfo :: Parser a -> Text -> ParserInfo a
@@ -208,15 +209,15 @@ basic_sec, shortcut_sec, list_sec,
   alias_sec, unset_sec, utils_sec
   :: (Text, Text)
 
-basic_sec    = ("{{basic_sec}}", "Basic Commands:")
-shortcut_sec = ("{{shortcut_sec}}", "Shortcuts to Add a Task:")
-list_sec     = ("{{list_sec}}", "List Commands:")
-vis_sec      = ("{{vis_sec}}", "Visualizations:")
-i_o_sec      = ("{{i_o_sec}}", "I/O Commands:")
-advanced_sec = ("{{advanced_sec}}", "Advanced Commands:")
-alias_sec    = ("{{alias_sec}}", "Aliases:")
-unset_sec    = ("{{unset_sec}}", "Unset:")
-utils_sec    = ("{{utils_sec}}", "Utils:")
+basic_sec    = ("{{basic_sec}}", "Basic Commands")
+shortcut_sec = ("{{shortcut_sec}}", "Shortcuts to Add a Task")
+list_sec     = ("{{list_sec}}", "List Commands")
+vis_sec      = ("{{vis_sec}}", "Visualizations")
+i_o_sec      = ("{{i_o_sec}}", "I/O Commands")
+advanced_sec = ("{{advanced_sec}}", "Advanced Commands")
+alias_sec    = ("{{alias_sec}}", "Aliases")
+unset_sec    = ("{{unset_sec}}", "Unset Commands")
+utils_sec    = ("{{utils_sec}}", "Utils")
 
 
 parseDurationInDays :: [Char] -> Maybe Duration
@@ -604,7 +605,11 @@ commandParser conf =
     <> fold (fmap getCommand nameToAliasList)
     )
 
-  <|> subparser ( commandGroup (T.unpack $ fst utils_sec)
+  <|> subparser (internal <> fold (fmap getCommand nameToAliasList))
+
+  <|> subparser
+    ( metavar (T.unpack $ snd utils_sec)
+    <> commandGroup (T.unpack $ fst utils_sec)
 
     <> command "ulid2utc" (toParserInfo
         (UlidToUtc <$> strArgument (metavar "ULID" <> help "The ULID"))
@@ -711,7 +716,7 @@ helpReplacements =
             "Task-list manager powered by Haskell and SQLite") :
     ("{{examples}}", examples) :
     fmap
-      (\(a, b) -> (a, annotate (colorDull Yellow) (pretty b)))
+      (\(a, b) -> (a, annotate (colorDull Yellow) (pretty b <> ":")))
       (
         basic_sec :
         shortcut_sec :
@@ -812,7 +817,7 @@ executeCLiCommand conf now connection cmd =
     Version -> pure $ pretty versionSlug <> hardline
     Help -> pure $ helpText conf
     PrintConfig -> pure $ pretty conf
-    Alias alias -> pure $ aliasWarning alias
+    Alias alias _ -> pure $ aliasWarning alias
     UlidToUtc ulid -> pure $ prettyUlid ulid
 
 
