@@ -43,6 +43,7 @@ dependencies:
   - protolude
   - QuickCheck
   - quickcheck-instances
+  - read-editor
   - simple-sql-parser
   - sqlite-simple
   - text

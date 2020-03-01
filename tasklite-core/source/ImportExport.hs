@@ -8,14 +8,16 @@ import Protolude as P hiding (state)
 
 import Data.Aeson as Aeson
 import Data.Aeson.Types
-import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Csv as Csv
+import qualified Data.HashMap.Strict as HM
+import Data.Hourglass
 import qualified Data.Text as T
 import qualified Data.Text.Lazy.Encoding as TL
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
-import Data.Hourglass
 import Data.ULID
+import Data.Yaml as Yaml
 import Database.Beam
 import Database.SQLite.Simple as Sql
 import Lib
@@ -23,6 +25,7 @@ import System.Directory
 import System.FilePath ((</>))
 import System.Process
 import System.Posix.User (getEffectiveUserName)
+import System.ReadEditor (readEditorWith)
 import Time.System
 import Utils
 import Task
@@ -57,6 +60,10 @@ annotationToNote annot@Annotation {entry = entry, description = description} =
     Note { ulid = (T.toLower . show) ulidCombined
          , body = description
          }
+
+
+importUtcFormat :: TimeFormatString
+importUtcFormat = (toFormat ("YYYY-MM-DD H:MI:S" :: [Char]))
 
 
 data ImportTask = ImportTask
@@ -96,7 +103,7 @@ instance FromJSON ImportTask where
     let
       maybeModified = modified <|> modified_at <|> o_modified_utc
         <|> modification_date <|> updated_at
-      modified_utc = T.pack $ timePrint ISO8601_DateAndTime $
+      modified_utc = T.pack $ timePrint importUtcFormat $
         fromMaybe createdUtc (parseUtc =<< maybeModified)
 
     o_tags  <- o .:? "tags"
@@ -111,7 +118,7 @@ instance FromJSON ImportTask where
     let
       maybeDue = due <|> o_due_utc <|> due_on
       due_utc = fmap
-        (T.pack . (timePrint ISO8601_DateAndTime))
+        (T.pack . (timePrint importUtcFormat))
         (parseUtc =<< maybeDue)
 
     awake'       <- o .:? "awake"
@@ -126,7 +133,7 @@ instance FromJSON ImportTask where
         <|> sleep' <|> sleep_utc' <|> sleep_until'
         <|> wait' <|> wait_until'
       awake_utc = fmap
-        (T.pack . (timePrint ISO8601_DateAndTime))
+        (T.pack . (timePrint importUtcFormat))
         (parseUtc =<< maybeAwake)
 
     ready'       <- o .:? "ready"
@@ -135,7 +142,7 @@ instance FromJSON ImportTask where
     let
       maybeReady = ready' <|> ready_since' <|> ready_utc'
       ready_utc = fmap
-        (T.pack . (timePrint ISO8601_DateAndTime))
+        (T.pack . (timePrint importUtcFormat))
         (parseUtc =<< maybeReady)
 
     review'       <- o .:? "review"
@@ -145,7 +152,7 @@ instance FromJSON ImportTask where
     let
       maybeReview = review' <|> review_at' <|> review_since' <|> review_utc'
       review_utc = fmap
-        (T.pack . (timePrint ISO8601_DateAndTime))
+        (T.pack . (timePrint importUtcFormat))
         (parseUtc =<< maybeReview)
 
     waiting'       <- o .:? "waiting"
@@ -154,7 +161,7 @@ instance FromJSON ImportTask where
     let
       maybewaiting = waiting' <|> waiting_since' <|> waiting_utc'
       waiting_utc = fmap
-        (T.pack . (timePrint ISO8601_DateAndTime))
+        (T.pack . (timePrint importUtcFormat))
         (parseUtc =<< maybewaiting)
 
     closed       <- o .:? "closed"
@@ -167,7 +174,7 @@ instance FromJSON ImportTask where
       maybeClosed = closed <|> o_closed_utc <|> closed_on
         <|> end <|> o_end_utc <|> end_on
       closed_utc = fmap
-        (T.pack . (timePrint ISO8601_DateAndTime))
+        (T.pack . (timePrint importUtcFormat))
         (parseUtc =<< maybeClosed)
 
     group_ulid' <- o .:? "group_ulid"
@@ -175,7 +182,7 @@ instance FromJSON ImportTask where
     let
       maybeGroupUlid = group_ulid' <|> group_id'
       group_ulid = fmap
-        (T.pack . (timePrint ISO8601_DateAndTime))
+        (T.pack . (timePrint importUtcFormat))
         (parseUtc =<< maybeGroupUlid)
 
     repetition_duration' <- o .:? "repetition_duration"
@@ -183,7 +190,7 @@ instance FromJSON ImportTask where
     let
       maybeRepetition = repetition_duration' <|> repeat_duration'
       repetition_duration = fmap
-        (T.pack . (timePrint ISO8601_DateAndTime))
+        (T.pack . (timePrint importUtcFormat))
         (parseUtc =<< maybeRepetition)
 
     recurrence_duration' <- o .:? "recurrence_duration"
@@ -191,10 +198,10 @@ instance FromJSON ImportTask where
     let
       maybeRecurrence = recurrence_duration' <|> recur_duration'
       recurrence_duration = fmap
-        (T.pack . (timePrint ISO8601_DateAndTime))
+        (T.pack . (timePrint importUtcFormat))
         (parseUtc =<< maybeRecurrence)
 
-    o_notes     <- optional (o .: "notes") :: Parser (Maybe [Note])
+    o_notes     <- o .:? "notes" :: Parser (Maybe [Note])
     annotations <- o .:? "annotations" :: Parser (Maybe [Annotation])
     let
       notes = case (o_notes, annotations) of
@@ -205,8 +212,9 @@ instance FromJSON ImportTask where
     o_user      <- o .:? "user"
     let user = fromMaybe "" o_user
 
+    o_metadata  <- o .:? "metadata"
     let
-      metadata = Just $ Object o
+      metadata = o_metadata <|> (Just $ Object o)
       tempTask = Task {ulid = "", ..}
 
     o_ulid  <- o .:? "ulid"
@@ -227,30 +235,34 @@ instance FromJSON ImportTask where
     pure $ ImportTask finalTask notes tags
 
 
+insertImportTask :: Connection -> ImportTask -> IO (Doc ann)
+insertImportTask connection importTaskRecord = do
+  effectiveUserName <- getEffectiveUserName
+  let
+    taskParsed = task importTaskRecord
+    theTask = if Task.user taskParsed == ""
+      then taskParsed { Task.user = T.pack effectiveUserName }
+      else taskParsed
+  insertTask connection theTask
+  insertTags connection (primaryKey theTask) (tags importTaskRecord)
+  insertNotes connection (primaryKey theTask) (notes importTaskRecord)
+  pure $
+    "📥 Imported task" <+> dquotes (pretty $ Task.body theTask)
+    <+> "with ulid" <+> dquotes (pretty $ Task.ulid theTask)
+    <+> hardline
+
+
 importTask :: Config -> IO (Doc AnsiStyle)
 importTask conf = do
   connection <- setupConnection conf
-  content <- BL.getContents
+  content <- BSL.getContents
 
   let
-    importResult = Aeson.eitherDecode content :: Either [Char] ImportTask
+    decodeResult = Aeson.eitherDecode content :: Either [Char] ImportTask
 
-  case importResult of
+  case decodeResult of
     Left error -> die $ (T.pack error) <> " in task \n" <> show content
-    Right importTaskRecord -> do
-      effectiveUserName <- getEffectiveUserName
-      let
-        taskParsed = task importTaskRecord
-        theTask = if Task.user taskParsed == ""
-          then taskParsed { Task.user = T.pack effectiveUserName }
-          else taskParsed
-      insertTags connection (primaryKey theTask) (tags importTaskRecord)
-      insertNotes connection (primaryKey theTask) (notes importTaskRecord)
-      insertTask connection theTask
-      pure $
-        "📥 Imported task" <+> dquotes (pretty $ Task.body theTask)
-        <+> "with ulid" <+> dquotes (pretty $ Task.ulid theTask)
-        <+> hardline
+    Right importTaskRecord -> insertImportTask connection importTaskRecord
 
 
 -- TODO: Use Task instead of FullTask to fix broken notes export
@@ -304,3 +316,57 @@ backupDatabase conf = do
     <> pretty (
           "✅ Backed up database \"" <> (dbName conf)
           <> "\" to \"" <> backupFilePath <> "\"")
+
+
+editTask :: Config -> Connection -> IdText -> IO (Doc AnsiStyle)
+editTask conf connection idSubstr = do
+  execWithTask conf connection idSubstr $ \taskToEdit -> do
+    let taskYaml = (T.unpack . decodeUtf8 . Yaml.encode) taskToEdit
+
+    newContent <- readEditorWith taskYaml
+
+    let
+      newContentBS = encodeUtf8 $ T.pack newContent
+
+      parseMetadata :: Value -> Parser Bool
+      parseMetadata val = case val of
+          Object obj -> do
+            let mdataMaybe = HM.lookup "metadata" obj
+
+            hasMdata <- pure $ case mdataMaybe of
+              Just (Object _) -> True
+              _ -> False
+
+            pure hasMdata
+          _ -> pure False
+
+      hasMetadata = parseMaybe parseMetadata
+        =<< (rightToMaybe $ Yaml.decodeEither' newContentBS :: Maybe Value)
+
+      decodeResult :: Either ParseException ImportTask
+      decodeResult = Yaml.decodeEither' newContentBS
+
+    case decodeResult of
+      Left error -> die $ (show error) <> " in task \n" <> show newContent
+      Right importTaskRecord -> do
+        effectiveUserName <- getEffectiveUserName
+        let
+          taskParsed = task importTaskRecord
+          taskFixed = taskParsed
+            { Task.user =
+                if Task.user taskParsed == ""
+                then T.pack effectiveUserName
+                else Task.user taskParsed
+            , Task.metadata =
+                if hasMetadata == Just True
+                then Task.metadata taskParsed
+                else Nothing
+            }
+
+        replaceTask connection taskFixed
+        insertTags connection (primaryKey taskFixed) (tags importTaskRecord)
+        insertNotes connection (primaryKey taskFixed) (notes importTaskRecord)
+        pure $
+          "✏️  Edited task" <+> dquotes (pretty $ Task.body taskFixed)
+          <+> "with ulid" <+> dquotes (pretty $ Task.ulid taskFixed)
+          <+> hardline

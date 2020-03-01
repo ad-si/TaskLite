@@ -78,7 +78,7 @@ data Command
   | Start [IdText]
   | Stop [IdText]
   | Duplicate [IdText]
-  -- | Edit -- Launch editor with YAML version of task
+  | EditTask IdText -- Launch editor with YAML version of task
   -- | Append -- Append words to a task description
   -- | Prepend -- Prepend words to a task description
   -- | Undo -- Revert last change
@@ -293,6 +293,9 @@ commandParser conf =
 
     <> command "end" (toParserInfo (EndTasks <$> some (strArgument idsVar))
         "Mark a task as obsolete")
+
+    <> command "edit" (toParserInfo (EditTask <$> strArgument idVar)
+        "Edit YAML version of task in your $EDITOR")
 
     <> command "trash" (toParserInfo (TrashTasks <$> some (strArgument idsVar))
         "Mark a task as deletable")
@@ -829,6 +832,7 @@ executeCLiCommand conf now connection cmd =
     DoTasks ids -> doTasks conf connection Nothing ids
     DoOneTask id noteWords -> doTasks conf connection noteWords [id]
     EndTasks ids -> endTasks conf connection ids
+    EditTask id -> editTask conf connection id
     TrashTasks ids -> trashTasks conf connection ids
     DeleteTasks ids -> deleteTasks conf connection ids
     RepeatTasks duration ids -> repeatTasks conf connection duration ids

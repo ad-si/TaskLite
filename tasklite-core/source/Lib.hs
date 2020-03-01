@@ -108,10 +108,16 @@ insertTask connection task = do
     insertValues [task]
 
 
+replaceTask :: Connection -> Task -> IO ()
+replaceTask connection task = do
+  runBeamSqlite connection $ runUpdate $
+    save (_tldbTasks taskLiteDb) task
+
+
 insertTags :: Connection -> TaskUlid -> [Text] -> IO ()
 insertTags connection taskUlid tags = do
   taskToTags <- forM tags $ \tag -> do
-    tagUlid <- fmap (toLower . show) getULID
+    tagUlid <- formatUlid getULID
     pure $ TaskToTag tagUlid taskUlid tag
 
   runBeamSqlite connection $ runInsert $
@@ -272,7 +278,8 @@ setStateAndClosed :: Connection -> TaskUlid -> Maybe TaskState -> IO ()
 setStateAndClosed connection taskUlid theTaskState = do
   runBeamSqlite connection $ runUpdate $
     update (_tldbTasks taskLiteDb)
-      (\task -> mconcat [ (Task.state task) <-. val_ theTaskState
+      (\task -> mconcat
+                [ (Task.state task) <-. val_ theTaskState
                 , (Task.review_utc task) <-. val_ Nothing
                 -- closed_utc is set via an SQL trigger
                 ])
@@ -749,7 +756,7 @@ addTag conf connection tag ids = do
         prettyId = dquotes (pretty idText)
 
       now <- fmap (pack . timePrint (utcFormat conf)) timeCurrentP
-      ulid <- fmap (toLower . show) getULID
+      ulid <- formatUlid getULID
 
       let taskToTag = TaskToTag ulid taskUlid tag
 
@@ -778,7 +785,7 @@ addNote conf connection noteBody ids = do
         prettyId = dquotes (pretty idText)
 
       now <- fmap (pack . timePrint (utcFormat conf)) timeCurrentP
-      ulid <- fmap (toLower . show) getULID
+      ulid <- formatUlid getULID
 
       let taskToNote = TaskToNote ulid taskUlid noteBody
 

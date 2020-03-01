@@ -4,6 +4,8 @@ import Protolude
 import Data.Aeson
 import qualified Data.Csv as Csv
 import Data.Text as T
+import Data.ULID
+
 
 data Note = Note
   { ulid :: Text
@@ -14,9 +16,16 @@ instance ToJSON Note
 
 instance FromJSON Note where
   parseJSON = withObject "note" $ \o -> do
-    ulid <- o .: "ulid"
+    o_ulid  <- o .:? "ulid"
+
+    let
+      ulidGenerated = (ulidFromInteger . abs . toInteger . hash) o
+      ulid = T.toLower $ fromMaybe "" (o_ulid <|> Just (show ulidGenerated))
+
     body <- o .: "body"
+
     pure Note{..}
+
 
 instance Hashable Note
 
