@@ -23,6 +23,37 @@ fits the bill:
 - [Yokadi] - Command line oriented, SQLite powered todo list.
 - [Eagle] - Minimalistic todo app for command line.
 
+Legend:
+
+- 💻 - Link to code
+
+
+## Comparison
+
+Status on 2020-03-02:
+
+Nr | Name          |   Stars | Commits  | Language   | Release Date
+---|---------------|--------:|---------:|------------|-------------
+ 1 | [Taskbook]    | 7449 ⭐️ |      227 | JavaScript |
+ 2 | [Todo.txt]    | 3907 ⭐️ |      444 | Shell      |
+ 3 | [Buku]        | 3396 ⭐️ |     1699 | Python     |
+ 4 | [Org mode]    |~3000 ⭐️ |    22935 | Emacs Lisp |
+ 5 | [Taskwarrior] | 1145 ⭐️ |     9016 | C++        |
+ 6 | [Toodles]     |  944 ⭐️ |      207 | Haskell    |
+ 7 | [Taskell]     |  834 ⭐️ |      989 | Haskell    |
+ 8 | [Ultralist]   |  707 ⭐️ |      356 | Go         |
+ 9 | [Pomoday]     |  443 ⭐️ |      149 | TypeScript | 2019-10
+ 9 | [CommitTasks] |  290 ⭐️ |       94 | JavaScript |
+10 | [git-pending] |  257 ⭐️ |       37 | JavaScript |
+11 | [Ff]          |  128 ⭐️ |      775 | Haskell    |
+12 | [Yokadi]      |  113 ⭐️ |     1159 | Python     |
+13 | [Smos]        |  113 ⭐️ |      797 | Haskell    |
+14 | [Unfog]       |   49 ⭐️ |      104 | Haskell    |
+15 | [TaskLite]    |   44 ⭐️ |      234 | Haskell    | 2019-07
+16 | [Tracli]      |   33 ⭐️ |       56 | JavaScript |
+17 | [Eagle]       |   10 ⭐️ |       46 | Python     |
+
+
 [Buku]: https://github.com/jarun/Buku
 [CommitTasks]: https://github.com/ZeroX-DG/CommitTasks
 [Eagle]: https://github.com/im-n1/eagle
@@ -35,6 +66,7 @@ fits the bill:
 [Smos]: https://smos.cs-syd.eu
 [Taskbook]: https://github.com/klauscfhq/taskbook
 [Taskell]: https://taskell.app
+[TaskLite]: https://tasklite.org
 [Taskwarrior]: https://github.com/GothenburgBitFactory/taskwarrior
 [Todo.txt]: http://todotxt.org/
 [Toodles]: https://github.com/aviaviavi/toodles
@@ -42,7 +74,3 @@ fits the bill:
 [Ultralist]: https://ultralist.io
 [Unfog]: https://github.com/unfog-io/unfog-cli
 [Yokadi]: https://yokadi.github.io/
-
-Legend:
-
-- 💻 - Link to code
