@@ -9,6 +9,8 @@
 
 - [Concepts](./concepts.md)
 
+- [Migration](./migration.md)
+
 - [Usage](./usage/readme.md)
     - [CLI](./usage/cli.md)
     - [Desktop App](./usage/desktop_app.md)
