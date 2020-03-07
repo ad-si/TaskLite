@@ -114,21 +114,40 @@ replaceTask connection task = do
     save (_tldbTasks taskLiteDb) task
 
 
-insertTags :: Connection -> TaskUlid -> [Text] -> IO ()
-insertTags connection taskUlid tags = do
+insertTags :: Connection -> Maybe DateTime -> TaskUlid -> [Text] -> IO ()
+insertTags connection mbCreatedUtc taskUlid tags = do
   taskToTags <- forM tags $ \tag -> do
-    tagUlid <- formatUlid getULID
-    pure $ TaskToTag tagUlid taskUlid tag
+    tagUlid <- getULID
+    pure $ TaskToTag
+      (mbCreatedUtc
+          <&> setDateTime tagUlid
+          & fromMaybe tagUlid
+          & show
+          & toLower)
+      taskUlid
+      tag
 
   runBeamSqlite connection $ runInsert $
     insert (_tldbTaskToTag taskLiteDb) $
     insertValues taskToTags
 
 
-insertNotes :: Connection -> TaskUlid -> [Note] -> IO ()
-insertNotes connection primKey notes = do
+insertNotes :: Connection -> Maybe DateTime -> TaskUlid -> [Note] -> IO ()
+insertNotes connection mbCreatedUtc primKey notes = do
   taskToNotes <- forM notes $ \theNote -> do
-    pure $ TaskToNote (Note.ulid theNote) primKey (Note.body theNote)
+    let
+      noteUlidTxt = Note.ulid theNote
+      mbNoteUlid = parseUlidText $ noteUlidTxt
+      mbNewUlid = do
+        createdUtc <- mbCreatedUtc
+        noteUlid <- mbNoteUlid
+
+        pure $ show $ setDateTime noteUlid createdUtc
+
+    pure $ TaskToNote
+      (toLower $ fromMaybe noteUlidTxt mbNewUlid)
+      primKey
+      (Note.body theNote)
 
   runBeamSqlite connection $ runInsert $
     insert (_tldbTaskToNote taskLiteDb) $
@@ -138,11 +157,14 @@ insertNotes connection primKey notes = do
 -- | Tuple is (Maybe createdUtc, noteBody)
 insertNoteTuples :: Connection -> TaskUlid -> [(Maybe DateTime, Text)] -> IO ()
 insertNoteTuples connection taskUlid notes = do
-  taskToNotes <- forM notes $ \(createdUtc, noteBody) -> do
+  taskToNotes <- forM notes $ \(mbCreatedUtc, noteBody) -> do
     noteUlid <- getULID
     pure $ TaskToNote
-      ((toLower . show . maybe noteUlid (setDateTime noteUlid))
-        createdUtc)
+      (mbCreatedUtc
+          <&> setDateTime noteUlid
+          & fromMaybe noteUlid
+          & show
+          & toLower)
       taskUlid
       noteBody
 
@@ -213,7 +235,7 @@ addTask conf connection bodyWords = do
       }
 
   insertTask connection task
-  insertTags connection (primaryKey task) tags
+  insertTags connection Nothing (primaryKey task) tags
   pure $
     "🆕 Added task" <+> dquotes (pretty $ Task.body task)
     <+> "with id" <+> dquotes (pretty $ Task.ulid task)
@@ -236,7 +258,7 @@ logTask conf connection bodyWords = do
       }
 
   insertTask connection task
-  insertTags connection (primaryKey task) tags
+  insertTags connection Nothing (primaryKey task) tags
   pure $
     "📝 Logged task" <+> dquotes (pretty $ Task.body task)
     <+> "with id" <+> dquotes (pretty $ Task.ulid task)
@@ -454,6 +476,7 @@ doTasks conf connection noteWordsMaybe ids = do
 
               liftIO $ insertTags
                 connection
+                Nothing
                 (TaskUlid newUlid)
                 (fmap TaskToTag.tag tags)
 
@@ -1013,6 +1036,7 @@ duplicateTasks conf connection ids = do
 
         liftIO $ insertTags
           connection
+          Nothing
           (TaskUlid dupeUlid)
           (fmap TaskToTag.tag tags)
 

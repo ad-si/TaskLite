@@ -1,0 +1,13 @@
+{
+  "id": 867,
+  "body": "Generate statistics for each file before uploading it",
+  "utc": "2017-10-16 12:37:18",
+  "tags": [
+    "upload",
+    "frontend"
+  ],
+  "notes":[
+    { "body": "Don't forget to filter out binary files first" },
+    { "body": "Include number of newlines" }
+  ]
+}

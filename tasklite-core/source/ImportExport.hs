@@ -76,11 +76,15 @@ data ImportTask = ImportTask
 -- | Values a suffixed with a prime (') to avoid name collisions
 instance FromJSON ImportTask where
   parseJSON = withObject "task" $ \o -> do
+    utc          <- o .:? "utc"
     entry        <- o .:? "entry"
     creation     <- o .:? "creation"
     created_at   <- o .:? "created_at"
-    let createdUtc = fromMaybe (timeFromElapsedP 0 :: DateTime)
-          (parseUtc =<< (entry <|> creation <|> created_at))
+    let
+      zeroTime = timeFromElapsedP 0 :: DateTime
+      parsedCreatedUtc = parseUtc
+        =<< (utc <|> entry <|> creation <|> created_at)
+      createdUtc = fromMaybe zeroTime parsedCreatedUtc
 
     o_body       <- o .:? "body"
     description  <- o .:? "description"
@@ -91,8 +95,8 @@ instance FromJSON ImportTask where
     let state = textToTaskState =<< (o_state <|> status)
 
     o_priority_adjustment <- o .:? "priority_adjustment"
-    urgency           <- o .:? "urgency"
-    priority          <- optional (o .: "priority")
+    urgency               <- o .:? "urgency"
+    priority              <- optional (o .: "priority")
     let priority_adjustment = o_priority_adjustment <|> urgency <|> priority
 
     modified          <- o .:? "modified"
@@ -205,9 +209,22 @@ instance FromJSON ImportTask where
     annotations <- o .:? "annotations" :: Parser (Maybe [Annotation])
     let
       notes = case (o_notes, annotations) of
-        (Just theNotes , _   ) -> theNotes
+        (Nothing, Nothing)     -> []
         (Nothing, Just values) -> values <$$> annotationToNote
-        _                      -> []
+        (Just theNotes , _)    -> case parsedCreatedUtc of
+          Just crUtc -> theNotes <&> (\theNote ->
+              let
+                noteUlidTxt = Note.ulid theNote
+                mbNoteUlid = parseUlidText noteUlidTxt
+                mbNewUlid = do
+                  noteUlid <- mbNoteUlid
+
+                  pure $ show $ setDateTime noteUlid crUtc
+              in
+                theNote { Note.ulid =
+                  (T.toLower $ fromMaybe noteUlidTxt mbNewUlid) }
+            )
+          Nothing       -> theNotes
 
     o_user      <- o .:? "user"
     let user = fromMaybe "" o_user
@@ -244,8 +261,10 @@ insertImportTask connection importTaskRecord = do
       then taskParsed { Task.user = T.pack effectiveUserName }
       else taskParsed
   insertTask connection theTask
-  insertTags connection (primaryKey theTask) (tags importTaskRecord)
-  insertNotes connection (primaryKey theTask) (notes importTaskRecord)
+  insertTags connection (ulidTextToDateTime $ Task.ulid taskParsed)
+    (primaryKey theTask) (tags importTaskRecord)
+  insertNotes connection (ulidTextToDateTime $ Task.ulid taskParsed)
+    (primaryKey theTask) (notes importTaskRecord)
   pure $
     "📥 Imported task" <+> dquotes (pretty $ Task.body theTask)
     <+> "with ulid" <+> dquotes (pretty $ Task.ulid theTask)
@@ -364,8 +383,10 @@ editTask conf connection idSubstr = do
             }
 
         replaceTask connection taskFixed
-        insertTags connection (primaryKey taskFixed) (tags importTaskRecord)
-        insertNotes connection (primaryKey taskFixed) (notes importTaskRecord)
+        insertTags connection Nothing
+          (primaryKey taskFixed) (tags importTaskRecord)
+        insertNotes connection Nothing
+          (primaryKey taskFixed) (notes importTaskRecord)
         pure $
           "✏️  Edited task" <+> dquotes (pretty $ Task.body taskFixed)
           <+> "with ulid" <+> dquotes (pretty $ Task.ulid taskFixed)
