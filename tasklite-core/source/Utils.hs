@@ -32,10 +32,21 @@ x <++> y =
   flip (<$>)
 
 
+parseUtcNum :: Int -> Maybe DateTime
+parseUtcNum number =
+  parseUtc (show number)
+
+
 parseUtc :: Text -> Maybe DateTime
 parseUtc utcText =
   let
     utcString = unpack $ T.toLower utcText
+
+    -- TOOD: Remove after https://github.com/vincenthz/hs-hourglass/issues/50
+    addSpaceAfter10 = T.intercalate " " . T.chunksOf 10
+    addSpaceAfter13 = T.intercalate " " . T.chunksOf 13
+    unixMicro = "EPOCH ms us" :: [Char]
+    unixMilli = "EPOCH ms" :: [Char]
 
     tParse :: [Char] -> Maybe DateTime
     tParse formatString =
@@ -48,6 +59,11 @@ parseUtc utcText =
     <|> (tParse "YYYY-MM-DD H:MI:S")
     <|> (tParse "YYYY-MM-DD H:MI")
     <|> (tParse "YYYY-MM-DD")
+    <|> timeParse
+          (toFormat unixMicro)
+          (unpack $ (addSpaceAfter10 . addSpaceAfter13) utcText)
+    <|> timeParse (toFormat unixMilli) (unpack $ addSpaceAfter10 utcText)
+    <|> (tParse "EPOCH")
 
 
 parseUlidUtcSection :: Text -> Maybe DateTime

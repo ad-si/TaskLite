@@ -76,14 +76,15 @@ data ImportTask = ImportTask
 -- | Values a suffixed with a prime (') to avoid name collisions
 instance FromJSON ImportTask where
   parseJSON = withObject "task" $ \o -> do
-    utc          <- o .:? "utc"
+    utc          <- o .:? "utc" <|> (o .:? "utc" :: Parser (Maybe Int))
     entry        <- o .:? "entry"
     creation     <- o .:? "creation"
     created_at   <- o .:? "created_at"
+
     let
       zeroTime = timeFromElapsedP 0 :: DateTime
       parsedCreatedUtc = parseUtc
-        =<< (utc <|> entry <|> creation <|> created_at)
+        =<< ((fmap show utc) <|> entry <|> creation <|> created_at)
       createdUtc = fromMaybe zeroTime parsedCreatedUtc
 
     o_body       <- o .:? "body"
