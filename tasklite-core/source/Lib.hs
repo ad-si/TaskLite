@@ -540,7 +540,7 @@ trashTasks conf connection ids = do
       pure $ if numOfChanges == 0
         then "⚠️  Task" <+> prettyBody <+> "with id" <+> prettyId
               <+> "is already marked as deletable"
-        else "🚮  Marked task" <+> prettyBody <+> "with id" <+> prettyId
+        else "🗑  Marked task" <+> prettyBody <+> "with id" <+> prettyId
               <+> "as deletable"
 
   pure $ vsep docs
