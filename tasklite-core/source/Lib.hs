@@ -56,7 +56,7 @@ data TaskLiteDb f = TaskLiteDb
   { _tldbTasks :: f (TableEntity TaskT)
   , _tldbTaskToTag :: f (TableEntity TaskToTagT)
   , _tldbTaskToNote :: f (TableEntity TaskToNoteT)
-  , _tldbTasksView :: f (ViewEntity TaskView)
+  , _tldbTasksView :: f (ViewEntity TaskViewT)
   } deriving Generic
 
 instance Database be TaskLiteDb
@@ -670,11 +670,11 @@ infoTask conf connection idSubstr = do
     let
       taskUlid@(TaskUlid idText) = primaryKey task
 
-    tasks <- query connection
-      (Query "select * from tasks_view where ulid is ?")
-      [idText :: Text]
-
     runBeamSqlite connection $ do
+      (mbFullTask :: Maybe TaskView) <- runSelectReturningOne $ select $
+        filter_ (\tsk -> TaskView.ulid tsk ==. val_ idText) $
+        allFromView_ (_tldbTasksView taskLiteDb)
+
       tags <- runSelectReturningList $ select $
         filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
         all_ (_tldbTaskToTag taskLiteDb)
@@ -688,9 +688,11 @@ infoTask conf connection idSubstr = do
         mkGreen = annotate (color Green)
         yamlList = (hang 2) . ("-" <+>)
         rmLastLine = unlines . P.reverse . P.drop 1 . P.reverse . lines . show
-        formattedTask priority =
-          pretty task <> hardline
-          <> mkGreen "priority:" <+> (pretty priority) <> hardline
+        formatTask fullTask =
+          pretty fullTask <> hardline
+          <> mkGreen "priority:"
+              <+> (pretty $ TaskView.priority fullTask)
+              <> hardline
           <> mkGreen "tags:\n"
           <> indent 2 (vsep $ fmap
               (yamlList . pretty . rmLastLine . pretty) tags)
@@ -699,9 +701,9 @@ infoTask conf connection idSubstr = do
           <> indent 2 (vsep $ fmap
               (yamlList . pretty . rmLastLine . pretty) notes)
 
-      pure $ case P.head (tasks :: [FullTask]) of
+      pure $ case mbFullTask of
         Nothing -> pretty noTasksWarning
-        Just fullTask -> formattedTask (priority fullTask :: Maybe Float)
+        Just fullTask -> formatTask fullTask
 
 
 nextTask :: Connection -> IO (Doc AnsiStyle)

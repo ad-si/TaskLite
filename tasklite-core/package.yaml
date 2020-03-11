@@ -53,6 +53,7 @@ dependencies:
   - yaml
 
 default-extensions:
+  - DeriveAnyClass
   - DeriveGeneric
   - FlexibleContexts
   - FlexibleInstances
