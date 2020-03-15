@@ -10,6 +10,9 @@ dueStyle: yellow
 overdueStyle: red
 tagStyle: blue
 utcFormat: YYYY-MM-DD H:MI:S
+#| FIXME: Blocked by https://github.com/vincenthz/hs-hourglass/issue
+# utcFormatShort: YYYY-DDD H:MI
+utcFormatShort: YYYY-MM-DD H:MI
 
 #| Optional, uses the XDG directory per default
 #| https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html

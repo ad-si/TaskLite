@@ -80,7 +80,7 @@ testSuite conf now connection = do
 
     context "When a task exists" $ do
       it "lists next task" $ do
-        result <- nextTask connection
+        result <- nextTask conf connection
         unpack (show result) `shouldStartWith` "\
           \awake_utc: null\n\
           \review_utc: null\n\
@@ -103,7 +103,7 @@ testSuite conf now connection = do
 
 
       it "adds a tag" $ do
-        result <- nextTask connection
+        result <- nextTask conf connection
         let ulidText = getUlidFromBody result
 
         tagResult <- addTag conf connection "test" [ulidText]
@@ -112,7 +112,7 @@ testSuite conf now connection = do
 
 
       it "adds a note" $ do
-        result <- nextTask connection
+        result <- nextTask conf connection
         let ulidText = getUlidFromBody result
 
         tagResult <- addNote conf connection
@@ -122,7 +122,7 @@ testSuite conf now connection = do
 
 
       it "sets due UTC" $ do
-        resultTask <- nextTask connection
+        resultTask <- nextTask conf connection
         let ulidText = getUlidFromBody resultTask
 
         case (parseUtc "2087-03-21 17:43") of
@@ -134,7 +134,7 @@ testSuite conf now connection = do
 
 
       it "completes it" $ do
-        result <- nextTask connection
+        result <- nextTask conf connection
         let ulidText = getUlidFromBody result
 
         doResult <- doTasks conf connection Nothing [ulidText]
@@ -144,7 +144,7 @@ testSuite conf now connection = do
     it "adds a task with metadata and deletes it" $ do
       _ <- addTask conf connection
             ["Just a test +tag due:2082-10-03 +what"]
-      result <- nextTask connection
+      result <- nextTask conf connection
       let ulidText = getUlidFromBody result
 
       deleteResult <- deleteTasks conf connection [ulidText]

@@ -10,6 +10,7 @@ import Data.Hourglass
 import Data.Text as T
 import Data.ULID
 import Data.Coerce
+import Data.Yaml as Yaml
 import Database.Beam hiding (char)
 import Database.Beam.Sqlite
 import Database.Beam.Schema.Tables
@@ -664,11 +665,151 @@ stopTasks conf connection ids = do
     (show logMessages)
 
 
+formatTaskForInfo
+  :: Config
+  -> DateTime
+  -> (TaskView, [TaskToTag], [TaskToNote])
+  -> Doc AnsiStyle
+formatTaskForInfo conf now (taskV, tags, notes) =
+  let
+    mkGreen = annotate (color Green)
+    grayOut = annotate (colorDull Black)
+    stateHierarchy = getStateHierarchy now $ copyTimesToTask taskV
+    mbCreatedUtc = fmap
+      (pack . (timePrint $ utcFormat defaultConfig))
+      (ulidTextToDateTime $ TaskView.ulid taskV)
+    tagsPretty = tags
+      <&> (\t -> (annotate (tagStyle conf) (pretty $ TaskToTag.tag t))
+                  <++> (fromMaybe mempty $ fmap
+                        (grayOut . pretty . pack . timePrint (utcFormat conf))
+                        (ulidTextToDateTime $ TaskToTag.ulid t))
+                  <++> (grayOut $ pretty $ TaskToTag.ulid t)
+          )
+    notesPretty = notes
+      <&> (\n -> (fromMaybe mempty $ fmap
+                    (grayOut . pretty . pack . timePrint (utcFormat conf))
+                    (ulidTextToDateTime $ TaskToNote.ulid n))
+                  <++> (grayOut $ pretty $ TaskToNote.ulid n) <> hardline
+                  <> (indent 2 $ reflow $ TaskToNote.note n)
+                  <> hardline
+          )
+
+    mbAwakeUtc = TaskView.awake_utc taskV
+    mbReadyUtc = TaskView.ready_utc taskV
+    mbWaitingUtc = TaskView.waiting_utc taskV
+    mbReviewUtc = TaskView.review_utc taskV
+    mbDueUtc = TaskView.due_utc taskV
+    mbClosedUtc = TaskView.closed_utc taskV
+    mbModifiedUtc = Just $ TaskView.modified_utc taskV
+
+    printIf :: Doc AnsiStyle -> Maybe Text -> Maybe (Doc AnsiStyle)
+    printIf name value = fmap
+      (\v -> name <+> (annotate (dueStyle conf) $ pretty v) <> hardline)
+      value
+  in
+       hardline
+    <> annotate bold (reflow $ TaskView.body taskV) <> hardline
+    <> hardline
+    <> (if P.null tags
+        then mempty
+        else (hsep $ (tags <&> TaskToTag.tag) <$$> (formatTag conf)) <> hardline
+              <> hardline
+        )
+
+    <> (if P.null notes
+        then mempty
+        else (notes
+              <&> (\n -> (fromMaybe mempty $ fmap
+                    (grayOut . pretty . pack . timePrint (utcFormatShort conf))
+                    (ulidTextToDateTime $ TaskToNote.ulid n))
+                    <++> (align $ reflow $ TaskToNote.note n)
+                  )
+              & vsep)
+              <> hardline
+              <> hardline
+        )
+
+    <> "   State:" <+> mkGreen (pretty stateHierarchy) <> hardline
+    <> "Priority:" <+> annotate (priorityStyle conf)
+          (pretty $ TaskView.priority taskV) <> hardline
+    <> "    ULID:" <+> grayOut (pretty $ TaskView.ulid taskV)
+        <> hardline
+
+    <> hardline
+
+    <> ((
+          (printIf "🆕  Created  ", mbCreatedUtc) :
+          (printIf "☀️   Awake   ", mbAwakeUtc) :
+          (printIf "📅   Ready   ", mbReadyUtc) :
+          (printIf "⏳  Waiting  ", mbWaitingUtc) :
+          (printIf "🔎  Review   ", mbReviewUtc) :
+          (printIf "📅    Due    ", mbDueUtc) :
+          (printIf "✅   Done    ", mbClosedUtc) :
+          (printIf "✏️   Modified ", mbModifiedUtc) :
+        [])
+        & sortBy (compare `on` snd)
+        <&> (\tup -> (fst tup) (snd tup))
+        & catMaybes
+        & punctuate (pretty ("       ⬇" :: Text))
+        & vsep
+      )
+
+    <> hardline
+
+    <> (fromMaybe mempty $ (fmap
+          (\value -> "Repetition Duration:" <+> (mkGreen $ pretty value)
+              <> hardline)
+          (TaskView.repetition_duration taskV)
+        ))
+
+    <> (fromMaybe mempty $ (fmap
+          (\value -> "Recurrence Duration:" <+> (mkGreen $ pretty value)
+              <> hardline)
+          (TaskView.recurrence_duration taskV)
+        ))
+
+    <> (fromMaybe mempty $ (fmap
+          (\value -> "Group Ulid:"
+              <+> (grayOut $ pretty value)
+              <> hardline)
+          (TaskView.group_ulid taskV)
+        ))
+
+    <> "User:" <+> (mkGreen $ pretty $ TaskView.user taskV) <> hardline
+
+    <> hardline
+
+    <> (fromMaybe mempty $ (fmap
+          (\value -> "Metadata:" <> hardline
+              <> indent 2 (pretty $ decodeUtf8 $ Yaml.encode value)
+              <> hardline
+          )
+          (TaskView.metadata taskV)
+        ))
+
+    <> (if P.null tags
+        then mempty
+        else (annotate underlined "Tags Detailed:") <> hardline
+              <> hardline
+              <> vsep tagsPretty <> hardline
+              <> hardline
+        )
+
+    <> (if P.null notes
+        then mempty
+        else (annotate underlined "Notes Detailed:") <> hardline
+              <> hardline
+              <> vsep notesPretty <> hardline
+        )
+
+
 infoTask :: Config -> Connection -> Text -> IO (Doc AnsiStyle)
 infoTask conf connection idSubstr = do
   execWithTask conf connection idSubstr $ \task -> do
     let
       taskUlid@(TaskUlid idText) = primaryKey task
+
+    now <- dateCurrent
 
     runBeamSqlite connection $ do
       (mbFullTask :: Maybe TaskView) <- runSelectReturningOne $ select $
@@ -683,39 +824,36 @@ infoTask conf connection idSubstr = do
         filter_ (\theNote -> TaskToNote.task_ulid theNote ==. val_ taskUlid) $
         all_ (_tldbTaskToNote taskLiteDb)
 
-      let
-        -- TODO: Colorize all YAML keys
-        mkGreen = annotate (color Green)
-        yamlList = (hang 2) . ("-" <+>)
-        rmLastLine = unlines . P.reverse . P.drop 1 . P.reverse . lines . show
-        formatTask fullTask =
-          pretty fullTask <> hardline
-          <> mkGreen "priority:"
-              <+> (pretty $ TaskView.priority fullTask)
-              <> hardline
-          <> mkGreen "tags:\n"
-          <> indent 2 (vsep $ fmap
-              (yamlList . pretty . rmLastLine . pretty) tags)
-          <> hardline
-          <> mkGreen "notes:\n"
-          <> indent 2 (vsep $ fmap
-              (yamlList . pretty . rmLastLine . pretty) notes)
-
       pure $ case mbFullTask of
         Nothing -> pretty noTasksWarning
-        Just fullTask -> formatTask fullTask
+        Just fullTask -> formatTaskForInfo conf now (fullTask, tags, notes)
 
 
-nextTask :: Connection -> IO (Doc AnsiStyle)
-nextTask connection = do
-  let
-    stateNullQuery = "select * from `tasks_view` where state is NULL "
-    orderByAndLimit = "order by `priority` desc limit 1"
-  tasks <- query_ connection $ Query $ stateNullQuery <> orderByAndLimit
+nextTask :: Config -> Connection -> IO (Doc AnsiStyle)
+nextTask conf connection = do
+  now <- dateCurrent
 
-  pure $ case P.head (tasks :: [FullTask]) of
-    Nothing -> pretty noTasksWarning
-    Just task -> pretty task
+  runBeamSqlite connection $ do
+    (mbFullTask :: Maybe TaskView) <- runSelectReturningOne $ select $
+      limit_ 1  $
+      orderBy_ (desc_ . TaskView.priority) $
+      filter_ (\tsk -> TaskView.closed_utc tsk ==. val_ Nothing) $
+      allFromView_ (_tldbTasksView taskLiteDb)
+
+    case mbFullTask of
+      Nothing -> pure $ pretty noTasksWarning
+      Just fullTask -> do
+        tags <- runSelectReturningList $ select $
+          filter_ (\tag -> TaskToTag.task_ulid tag ==.
+            (val_ $ TaskUlid $ TaskView.ulid fullTask)) $
+          all_ (_tldbTaskToTag taskLiteDb)
+
+        notes <- runSelectReturningList $ select $
+          filter_ (\theNote -> TaskToNote.task_ulid theNote ==.
+            (val_ $ TaskUlid $ TaskView.ulid fullTask)) $
+          all_ (_tldbTaskToNote taskLiteDb)
+
+        pure $ formatTaskForInfo conf now (fullTask, tags, notes)
 
 
 findTask :: Connection -> Text -> IO (Doc AnsiStyle)
@@ -1098,6 +1236,13 @@ showAtPrecision numOfDigits number =
       else ""
 
 
+formatTag :: Pretty a => Config -> a -> Doc AnsiStyle
+formatTag conf =
+  annotate (tagStyle conf)
+  . (annotate (color Black) "+" <>)
+  . pretty
+
+
 formatTaskLine :: Config -> DateTime -> Int -> FullTask -> Doc AnsiStyle
 formatTaskLine conf now taskUlidWidth task =
   let
@@ -1107,9 +1252,6 @@ formatTaskLine conf now taskUlidWidth task =
       (ulidTextToDateTime $ FullTask.ulid task)
     body = FullTask.body task
     tags = fromMaybe [] $ FullTask.tags task
-    formatTag = annotate (tagStyle conf)
-      . (annotate (color Black) "+" <>)
-      . pretty
     closedUtcMaybe = (FullTask.closed_utc task)
       >>= parseUtc
       <&> timePrint (utcFormat conf)
@@ -1151,7 +1293,7 @@ formatTaskLine conf now taskUlidWidth task =
             else grayOutIfDone (reflow body)) :
         annotate (dueStyle conf) (pretty dueUtcMaybe) :
         annotate (closedStyle conf) (pretty closedUtcMaybe) :
-        hsep (tags <$$> formatTag) :
+        hsep (tags <$$> (formatTag conf)) :
         (if (not $ P.null $ FullTask.notes task) then "📝" else "") :
         [])
   in

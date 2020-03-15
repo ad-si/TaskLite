@@ -847,7 +847,7 @@ executeCLiCommand conf now connection cmd =
     Stop ids -> stopTasks conf connection ids
     Prioritize val ids -> adjustPriority conf val ids
     InfoTask idSubstr -> infoTask conf connection idSubstr
-    NextTask -> nextTask connection
+    NextTask -> nextTask conf connection
     FindTask aPattern -> findTask connection aPattern
     AddTag tagText ids -> addTag conf connection tagText ids
     AddNote noteText ids -> addNote conf connection noteText ids

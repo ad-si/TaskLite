@@ -9,6 +9,7 @@ import Protolude as P hiding ((%))
 import Data.Aeson as Aeson
 import Data.Aeson.Text as Aeson
 import qualified Data.HashMap.Lazy as HM
+import Data.Hourglass (DateTime, timePrint)
 import Data.Yaml as Yaml
 import qualified Data.ByteString.Lazy as BSL
 import Data.Csv as Csv
@@ -27,6 +28,8 @@ import Database.SQLite.Simple.Ok
 import Test.QuickCheck
 import Test.QuickCheck.Instances.Text ()
 import Generic.Random
+
+import Config (utcFormat, defaultConfig)
 
 
 -- From https://gist.github.com/chrisdone/7b0c4ebb5b9b94514959206df8992076
@@ -128,6 +131,24 @@ instance Arbitrary DerivedState where
   arbitrary = genericArbitraryU
 
 
+-- | A tuple of (Primary State, Secondary State)
+-- | Check out tasklite.org/concepts for a
+-- | detailed explanation of the different states
+-- | and how they relate to each other
+type StateHierachy = (DerivedState, DerivedState)
+
+instance {-# OVERLAPS #-} Pretty StateHierachy where
+  pretty stateH = (
+    if fst stateH == snd stateH
+    then show $ fst stateH
+    else [fst stateH, snd stateH]
+      <&> show
+      & T.intercalate " and "
+    )
+      & T.replace "Is" ""
+      & pretty
+
+
 textToDerivedState :: Text -> Maybe DerivedState
 textToDerivedState = \case
   "open"      -> Just IsOpen
@@ -167,6 +188,37 @@ derivedStateToQuery = \case
   IsObsolete  -> "closed_utc is not null and state is 'Obsolete'"
   IsDeletable -> "closed_utc is not null and state is 'Deletable'"
   IsBlocked   -> "" -- TODO
+
+
+getStateHierarchy :: DateTime -> Task -> StateHierachy
+getStateHierarchy now task =
+  let
+    nowTxt = pack $ timePrint (utcFormat defaultConfig) now
+  in
+    case Task.state task of
+      Just Done -> (IsClosed, IsDone)
+      Just Obsolete -> (IsClosed, IsObsolete)
+      Just Deletable -> (IsClosed, IsDeletable)
+      Nothing -> case closed_utc task of
+        Just _ -> (IsClosed, IsClosed)
+        Nothing -> case review_utc task of
+          Just val -> if val > nowTxt
+            then (IsOpen, IsWaiting)
+            else (IsOpen, IsReview)
+          Nothing -> case waiting_utc task of
+            Just _ -> (IsOpen, IsWaiting)
+            Nothing -> case (ready_utc task, awake_utc task) of
+              (Just readyUtc, Just awakeUtc) ->
+                if readyUtc < nowTxt && awakeUtc < nowTxt
+                then (IsOpen, IsReady)
+                else
+                  if readyUtc > nowTxt && awakeUtc < nowTxt
+                  then (IsOpen, IsAwake)
+                  else (IsOpen, IsAsleep)
+              (Just readyUtc, Nothing) | readyUtc < nowTxt -> (IsOpen, IsReady)
+              (Nothing, Just awakeUtc) | awakeUtc < nowTxt -> (IsOpen, IsAwake)
+              (Nothing, Just awakeUtc) | awakeUtc > nowTxt -> (IsOpen, IsAsleep)
+              _ -> (IsOpen, IsOpen)
 
 
 newtype Ulid = Ulid Text

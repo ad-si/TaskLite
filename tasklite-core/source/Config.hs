@@ -28,6 +28,7 @@ data Config = Config
   , overdueStyle :: AnsiStyle
   , tagStyle :: AnsiStyle
   , utcFormat :: TimeFormatString
+  , utcFormatShort :: TimeFormatString
   , dataDir :: FilePath
   , dbName :: FilePath
   , dateWidth :: Int
@@ -52,6 +53,7 @@ instance FromJSON Config where
     overdueStyle    <- o .:? "overdueStyle" .!= overdueStyle defaultConfig
     tagStyle        <- o .:? "tagStyle" .!= tagStyle defaultConfig
     utcFormat       <- o .:? "utcFormat" .!= utcFormat defaultConfig
+    utcFormatShort  <- o .:? "utcFormatShort" .!= utcFormatShort defaultConfig
     dataDir         <- o .:? "dataDir" .!= dataDir defaultConfig
     dbName          <- o .:? "dbName" .!= dbName defaultConfig
     dateWidth       <- o .:? "dateWidth" .!= dateWidth defaultConfig
@@ -134,6 +136,7 @@ defaultConfig = Config
   , overdueStyle = color Red
   , tagStyle = color Blue
   , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
+  , utcFormatShort = toFormat ("YYYY-MM-DD H:MI" :: [Char])
   , dataDir = ""
   , dbName = "main.db"
   , dateWidth = 10

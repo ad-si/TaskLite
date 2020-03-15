@@ -61,6 +61,7 @@ default-extensions:
   - LambdaCase
   - MultiParamTypeClasses
   - MultiWayIf
+  - NamedFieldPuns
   - NoImplicitPrelude
   - OverloadedStrings
   - RecordWildCards

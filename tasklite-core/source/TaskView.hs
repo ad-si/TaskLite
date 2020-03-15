@@ -1,6 +1,6 @@
 module TaskView where
 
-import Protolude as P
+import Protolude as P hiding (state)
 
 import Data.Aeson as Aeson
 import Data.Text as T
@@ -66,3 +66,17 @@ instance Pretty TaskView where
     . T.dropEnd 1 -- Drop trailing newline to maybe add it later
     . decodeUtf8
     . Yaml.encode
+
+
+copyTimesToTask :: TaskView -> Task
+copyTimesToTask (TaskView {..}) =
+  zeroTask
+    { Task.ulid
+    , Task.modified_utc
+    , Task.awake_utc
+    , Task.ready_utc
+    , Task.waiting_utc
+    , Task.review_utc
+    , Task.due_utc
+    , Task.closed_utc
+    }
