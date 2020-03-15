@@ -25,28 +25,33 @@ And 9 exclusive secondary states.
 - `Blocked` - Some other task(s) must be done first.
     Blockers are stored in a separate table.
 
+&nbsp;
+
+<small>
 
 State\Field|`awake_utc`|`ready_utc`|`waiting_utc`|`review_utc`|`closed_utc`|`state`
------------|-----------|-----------|------------|-----------|----------|--------
-`Open`     | ❌        | ❌       |     ❌     | ❌        | ❌   | ❌
-`Asleep`   | > now     | > now     |     ❌     | ❌       | ❌   | ❌
-`Awake`    | < now     | > now     |     ❌     | ❌       | ❌   | ❌
-`Ready`    | < now     | < now     |     ❌     | ❌       | ❌   | ❌
-`Waiting`  |   ❔      |   ❔     |     ✅     | > now     | ❌   | ❌
-`Review`   |   ❔      |   ❔     |     ✅     | < now     | ❌   | ❌
-`Closed`   |   ❔      |   ❔     |     ❔     | ❔        | ✅   | ❔
-`Done`     |   ❔     |   ❔      |     ❔     | ❔       | ✅    | `Done`
-`Obsolete` |   ❔     |   ❔      |     ❔     | ❔       | ✅    | `Obsolete`
-`Deletable`|   ❔     |   ❔      |     ❔     | ❔       | ✅    | `Deletable`
-`Blocked`  |   ❔     |   ❔      |     ❔     | ❔       | ❌    | ❌
+-----------|:---------:|:---------:|:----------:|:---------:|:--------:|:------:
+**`Open`**   |   ❔      |    ❔     |   ❔    |    ❔     |  ❌  |    ❌
+`└─Asleep`   | > now     |> now or ❌|   ❌    |    ❌     |  ❌  |    ❌
+`└─Awake`    | < now     |> now or ❌|   ❌    |    ❌     |  ❌  |    ❌
+`└─Ready`    |< now or ❌| < now     |   ❌    |    ❌     |  ❌  |    ❌
+`└─Waiting`  |   ❔      |    ❔    |   < now  |> now or ❌|  ❌  |    ❌
+`└─Review`   |   ❔      |    ❔    |    ❔    | < now     |  ❌  |    ❌
+`└─Blocked`  |   ❔      |    ❔    |    ❔    |    ❔     |  ❌  |    ❌
+**`Closed`** |   ❔      |    ❔    |    ❔    |    ❔     |  ✅  |    ❔
+`└─Done`     |   ❔      |    ❔    |    ❔    |    ❔     |  ✅  |`Done`
+`└─Obsolete` |   ❔      |    ❔    |    ❔    |    ❔     |  ✅  |`Obsolete`
+`└─Deletable`|   ❔      |    ❔    |    ❔    |    ❔     |  ✅  |`Deletable`
+
+</small>
 
 Legend:
-- ❌ = Not allowed
-- ✅ = Required
-- ❔ = Maybe
+- ✅ = Set
+- ❌ = Not set
+- ❔ = Maybe set
 
 
-Additional secondary states:
+Tertiary states:
 
 - `Repeating` - If this task get completed, a duplicate will be created
     with the specified time offset.
