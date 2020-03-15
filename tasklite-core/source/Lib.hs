@@ -1449,7 +1449,7 @@ listWaiting :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listWaiting conf now connection = do
   tasks <- query_ connection
     "select * from tasks_view \
-    \where waiting_utc is not null \
+    \where closed_utc is null and waiting_utc is not null \
     \order by waiting_utc desc"
 
   pure $ formatTasks conf now tasks
