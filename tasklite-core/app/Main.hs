@@ -128,7 +128,8 @@ data Command
   | UnCloseTasks [IdText]
   | UnDueTasks [IdText]
   | UnWaitTasks [IdText]
-  -- | UnWakeTasks [IdText]
+  | UnWakeTasks [IdText]
+  | UnReadyTasks [IdText]
   | UnRepeatTasks [IdText]
   | UnTagTasks [IdText]
   | UnNoteTasks [IdText]
@@ -616,9 +617,13 @@ commandParser conf =
         <$> some (strArgument idsVar))
         "Erase wait timestamp for specified tasks")
 
-    -- <> command "unwake" (toParserInfo (UnWakeTasks
-    --     <$> some (strArgument idsVar))
-    --     "Erase awake timestamp for specified tasks")
+    <> command "unwake" (toParserInfo (UnWakeTasks
+        <$> some (strArgument idsVar))
+        "Erase awake timestamp for specified tasks")
+
+    <> command "unready" (toParserInfo (UnReadyTasks
+        <$> some (strArgument idsVar))
+        "Erase ready timestamp for specified tasks")
 
     <> command "unrepeat" (toParserInfo (UnRepeatTasks
         <$> some (strArgument idsVar))
@@ -854,7 +859,8 @@ executeCLiCommand conf now connection cmd =
     UnCloseTasks ids -> uncloseTasks conf connection ids
     UnDueTasks ids -> undueTasks conf connection ids
     UnWaitTasks ids -> unwaitTasks conf connection ids
-    -- UnWakeTasks ids -> unwakeTasks conf connection ids
+    UnWakeTasks ids -> unwakeTasks conf connection ids
+    UnReadyTasks ids -> unreadyTasks conf connection ids
     UnRepeatTasks ids -> unrepeatTasks conf connection ids
     UnTagTasks ids -> untagTasks conf connection ids
     UnNoteTasks ids -> unnoteTasks conf connection ids

@@ -915,19 +915,32 @@ unwaitTasks conf connection ids = do
   pure $ vsep docs
 
 
--- TODO:
--- unwakeTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
--- unwakeTasks conf connection ids = do
---   docs <- forM ids $ \idSubstr -> do
---     execWithTask conf connection idSubstr $ \task -> do
---       runBeamSqlite connection $ runUpdate $
---         update (_tldbTasks taskLiteDb)
---           (\task_ -> mconcat [(Task.awake_utc task_) <-. (val_ Nothing)])
---           (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+unwakeTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+unwakeTasks conf connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithTask conf connection idSubstr $ \task -> do
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task_ -> mconcat [(Task.awake_utc task_) <-. (val_ Nothing)])
+          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
---       pure $ getResultMsg "💥 Removed awake timestamp" task
+      pure $ getResultMsg "💥 Removed awake timestamp" task
 
---   pure $ vsep docs
+  pure $ vsep docs
+
+
+unreadyTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+unreadyTasks conf connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithTask conf connection idSubstr $ \task -> do
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task_ -> mconcat [(Task.ready_utc task_) <-. (val_ Nothing)])
+          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+
+      pure $ getResultMsg "💥 Removed ready timestamp" task
+
+  pure $ vsep docs
 
 
 unrepeatTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
