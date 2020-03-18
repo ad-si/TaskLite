@@ -375,31 +375,33 @@ waitTasks conf connection =
   waitFor conf connection $ mempty { durationHours = 72 }
 
 
-reviewTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
-reviewTasks conf connection ids = do
+reviewTasksIn :: Config -> Connection
+  -> Duration -> [Text] -> IO (Doc AnsiStyle)
+reviewTasksIn conf connection days ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
       now <- timeCurrentP
       let
         taskUlid@(TaskUlid idText) = primaryKey task
-        threeDays = (pack . timePrint (utcFormat conf))
-          (now `timeAdd` mempty { durationHours = 72 })
+        xDays = (pack . timePrint (utcFormat conf)) (now `timeAdd` days)
         prettyBody = dquotes (pretty $ Task.body task)
         prettyId = dquotes (pretty idText)
+        warningStart = "⚠️  Task" <+> prettyBody <+> "with id" <+> prettyId
 
-      runBeamSqlite connection $ runUpdate $
-        update (_tldbTasks taskLiteDb)
-          (\theTask -> mconcat
-            [(Task.review_utc theTask) <-. val_ (Just threeDays)])
-          (\theTask -> primaryKey theTask ==. val_ taskUlid)
+      if Task.closed_utc task /= Nothing
+      then pure $ warningStart <+> "is already closed"
+      else do
+        runBeamSqlite connection $ runUpdate $
+          update (_tldbTasks taskLiteDb)
+            (\theTask -> (Task.review_utc theTask) <-. val_ (Just xDays))
+            (\theTask -> primaryKey theTask ==. val_ taskUlid)
 
-      numOfChanges <- changes connection
+        numOfChanges <- changes connection
 
-      pure $ if numOfChanges == 0
-        then "⚠️  Task" <+> prettyBody <+> "with id" <+> prettyId
-              <+> "could not be reviewed"
-        else "🔎 Finished review for task" <+> prettyBody
-              <+> "with id" <+> prettyId
+        pure $
+          if numOfChanges == 0
+          then warningStart <+> "could not be reviewed"
+          else getResultMsg "🔎 Finished review" task
 
   pure $ vsep docs
 

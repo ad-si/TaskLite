@@ -60,6 +60,7 @@ data Command
   | WaitTasks [IdText]
   | WaitFor Duration [IdText]
   | ReviewTasks [IdText]
+  | ReviewTasksIn Duration [IdText]
   | DoTasks [IdText]
   | DoOneTask IdText (Maybe [Text])
   | EndTasks [IdText]
@@ -273,11 +274,18 @@ commandParser conf =
             (metavar "NUM_OF_DAYS" <> help "Duration in days \
               \(supports fractional values)")
       <*> some (strArgument idsVar))
-        "Wait specified number of days until it's ready for review")
+        "Wait x days until it's ready for review")
 
     <> command "review" (toParserInfo (ReviewTasks
         <$> some (strArgument idsVar))
-        "Finish review of task and set new review date in 3 days")
+        "Finish review and set new review date in 3 days")
+
+    <> command "reviewin" (toParserInfo (ReviewTasksIn
+      <$> argument (maybeReader parseDurationInDays)
+            (metavar "NUM_OF_DAYS" <> help "Duration in days \
+              \(supports fractional values)")
+      <*> some (strArgument idsVar))
+        "Finish review and set new review date in x days")
 
     <> command "do" (toParserInfo (DoOneTask
         <$> strArgument idsVar
@@ -794,6 +802,8 @@ executeCLiCommand conf now connection cmd =
     prettyUlid ulid = pretty $ fmap
       (T.pack . timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])))
       (ulidTextToDateTime ulid)
+    days3 = mempty {durationHours = 72}
+
   in case cmd of
     ListAll -> listAll conf now connection
     ListHead -> headTasks conf now connection
@@ -833,7 +843,8 @@ executeCLiCommand conf now connection cmd =
     ReadyOn datetime ids -> setReadyUtc conf connection datetime ids
     WaitTasks ids -> waitTasks conf connection ids
     WaitFor duration ids -> waitFor conf connection duration ids
-    ReviewTasks ids -> reviewTasks conf connection ids
+    ReviewTasks ids -> reviewTasksIn conf connection days3 ids
+    ReviewTasksIn days ids -> reviewTasksIn conf connection days ids
     DoTasks ids -> doTasks conf connection Nothing ids
     DoOneTask id noteWords -> doTasks conf connection noteWords [id]
     EndTasks ids -> endTasks conf connection ids
