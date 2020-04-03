@@ -161,6 +161,8 @@ testSuite conf now connection = do
         "📝 Logged task \"Just a test\" with id"
 
 
+    it "dies on invalid filter expressions" $ do
+      (runFilter conf now connection [" "]) `shouldThrow` (== ExitFailure 1)
 
 
 main :: IO ()

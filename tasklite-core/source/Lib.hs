@@ -1600,29 +1600,37 @@ isValidFilter = \case
 runFilter :: Config -> DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
 runFilter conf now connection exps = do
   let
-    parserResults = readP_to_S filterExpsParser $ T.unpack (unwords exps)
-    filterMay = listToMaybe parserResults
+    parserResults = readP_to_S filterExpsParser $ T.unpack $ unwords exps
+    filterHelp =
+      "Filter expressions must be a list of key[:value] entries."
+      <> hardline
+    dieWithError err = do
+      hPutDoc stderr $ annotate (color Red) err
+      exitFailure
 
-  case filterMay of
-    Nothing -> pure "This case should be impossible as the parser doesn't fail"
-    Just (filterExps, _) -> do
+  case parserResults of
+    [(filterExps, _)] -> do
       let
         ppInvalidFilter = \case
           (InvalidFilter error) ->
-              (dquotes $ pretty error) <+> "is an invalid filter"
-          (HasStatus Nothing) -> "Filter contains an invalid state value"
-          _ -> "The functions should not be called with a valid function"
+            (dquotes $ pretty error) <+> "is an invalid filter." <> hardline
+            <> filterHelp
+          (HasStatus Nothing) ->
+            "Filter contains an invalid state value"
+          _ ->
+            "The functions should not be called with a valid function"
         errors = P.filter (not . isValidFilter) filterExps
-        errorsDoc = if (P.length errors) > 0
-          then Just $
-            vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
-            <> hardline <> hardline
-          else Nothing
         sqlQuery = getFilterQuery filterExps
 
       tasks <- query_ connection sqlQuery
 
-      pure $ fromMaybe (formatTasks conf now tasks) errorsDoc
+      if (P.length errors) > 0
+      then
+        dieWithError $ vsep (fmap ppInvalidFilter errors)
+      else
+        pure $ formatTasks conf now tasks
+
+    _ -> dieWithError filterHelp
 
 
 -- TODO: Increase performance of this query
