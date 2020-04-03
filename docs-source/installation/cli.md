@@ -2,7 +2,27 @@
 
 ## Prebuilt Binaries
 
-Prebuilt binaries are available for macOS and Linux.
+### MacOS
+
+Install it via my [Homebrew](https://brew.sh) tap:
+
+```sh
+brew cask install ad-si/tap/perspec
+```
+
+You can also get this (and previous) versions from
+[the releases page](https://github.com/ad-si/Perspec/releases).
+
+Make sure to download the artifacts with `curl` or `wget`
+as macOS prevents the execution of files downloaded via a browser.
+
+Furthermore you can get the latest CI builds on
+[GitHub's Actions page](https://github.com/ad-si/TaskLite/actions).
+They are quite stable since only tested and production ready
+code gets merged into the master branch.
+
+
+### Linux
 
 You can get the latest versions on
 [GitHub's Releases page](https://github.com/ad-si/TaskLite/releases).
@@ -11,9 +31,6 @@ Furthermore you can get the latest CI builds on
 [GitHub's Actions page](https://github.com/ad-si/TaskLite/actions).
 They are quite stable since only tested and production ready
 code gets merged into the master branch.
-
-On macOS make sure to download the artifacts with `curl` or `wget`
-as macOS prevents the execution of files downloaded via a browser.
 
 
 ## Prebuilt Docker Image
