@@ -21,12 +21,12 @@ import System.FilePath ((</>))
 import System.IO as SIO
 import System.Process (readProcess)
 import System.Posix.User (getEffectiveUserName)
-import qualified Text.Fuzzy as Fuzzy
+import qualified Text.Huzzy as Huzzy
 import Text.ParserCombinators.ReadP as ReadP
 import GHC.Unicode (isSpace)
 import Time.System
 import Text.Read (readMaybe)
-import Data.Text.Prettyprint.Doc hiding ((<>))
+import Data.Text.Prettyprint.Doc as Pp hiding ((<>))
 import Data.Text.Prettyprint.Doc.Util
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Unsafe (unsafeHead)
@@ -860,38 +860,65 @@ nextTask conf connection = do
 
 findTask :: Connection -> Text -> IO (Doc AnsiStyle)
 findTask connection aPattern = do
-  tasks <- query_ connection $ Query
-    "select ulid, body, tags, notes, metadata from tasks_view"
+  tasks :: [(Text, Text, Maybe [Text], Maybe [Text], Maybe Text)]
+    <- query_ connection $ Query
+      "select ulid, body, tags, notes, metadata from tasks_view"
 
   let
-    scoreWidth = 5
+    ulidWidth = 5
     numOfResults = 8
-    results = Fuzzy.filter
+    minimumScore = 4
+    ulidColor = Green
+    preTag = "\x1b[4m\x1b[34m"  -- ^ Set color to blue and underline text
+    postTag = "\x1b[0m"  -- ^ Reset styling
+    metaNorm metadata = metadata
+      & fromMaybe ""
+      & T.replace ",\"" ", \""
+      & T.replace "\":" "\": "
+      & T.replace "\"" ""
+    matchFunc = Huzzy.match
+      Huzzy.IgnoreCase
+      (preTag, postTag)
+      identity
       aPattern
-      (tasks :: [(Text, Text, Maybe [Text], Maybe [Text], Maybe Text)])
-      "\x1b[4m\x1b[32m" -- Set underline and color to green
-      "\x1b[0m"
-      (\(ulid, theBody, tags, notes, metadata) -> unwords
-        [ ulid
-        , "\n"
-        , theBody
-        , maybe "" unwords tags
-        , maybe "" unwords notes
-        , T.replace "\",\"" "\", \"" $ fromMaybe "" metadata
-        ])
-      False -- Case insensitive
-    moreResults = (P.length results) - numOfResults
+
+    -- | Calculate fuzzy score for each part individually
+    -- and pick the highest one
+    scoreFunc = \(ulid, theBody, mbTags, mbNotes, mbMetadata) ->
+      let
+        scoreParts =
+          [ matchFunc theBody
+          , matchFunc (maybe "" unwords mbNotes)
+          -- TODO: Find good way to include tags
+          -- , matchFunc (maybe "" unwords mbTags)
+          , matchFunc (metaNorm mbMetadata)
+          , matchFunc ulid
+          ]
+        highestScore = P.maximum $ 0 : (catMaybes scoreParts <&> Huzzy.score)
+        combinedText = vcat $ P.intersperse mempty $ (catMaybes scoreParts)
+          <&> Huzzy.rendered
+          <&> reflow
+      in
+        (highestScore, ulid, combinedText)
+
+    fstOf3 (x, _, _) = x
+    tasksScored = tasks
+      <&> scoreFunc
+      & P.filter ((> minimumScore) . fstOf3)
+      & sortOn (Down . fstOf3)
+    moreResults = (P.length tasksScored) - numOfResults
     header =
-      annotate (underlined <> color Red) (fill scoreWidth "Score") <++>
-      annotate (underlined) (fill 10 "Task") <>
+      annotate (underlined <> color ulidColor) (fill ulidWidth "ULID") <++>
+      annotate (underlined) (fill 20 "Task") <>
       hardline
     body =
-      results
+      tasksScored
         & P.take numOfResults
-        <&> (\result ->
-              annotate (color Red)
-                (fill scoreWidth $ pretty $ Fuzzy.score result)
-              <++> (align (reflow $ Fuzzy.rendered result)))
+        <&> (\(_, ulid, combinedText) ->
+              annotate (color ulidColor)
+                (fill ulidWidth $ pretty $ T.takeEnd ulidWidth ulid)
+              <> (indent 2 combinedText))
+        & P.intersperse mempty
         & vsep
     footer =
       if moreResults > 0

@@ -13,7 +13,7 @@ data-files:
   - example-config.yaml
 
 synopsis: CLI task / todo list manager with SQLite backend
-category: Cli
+category: CLI, Task, Todo
 
 description: |
   Please see the README on GitHub
@@ -30,10 +30,10 @@ dependencies:
   - directory
   - file-embed
   - filepath
-  - fuzzy
   - generic-random
   - githash
   - hourglass
+  - huzzy
   - optparse-applicative
   - prettyprinter
   - prettyprinter-ansi-terminal
@@ -72,12 +72,13 @@ default-extensions:
   - UndecidableInstances
 
 ghc-options:
+  - -fno-warn-orphans
   - -Wall
   - -Wcompat
   - -Wincomplete-record-updates
   - -Wincomplete-uni-patterns
   - -Wredundant-constraints
-  - -fno-warn-orphans
+  # - -Wunused-packages
 
 library:
   source-dirs: source
@@ -94,8 +95,8 @@ tests:
     main: Spec.hs
     source-dirs: test
     dependencies:
-      - tasklite-core
       - hspec
+      - tasklite-core
       - temporary
 
 benchmarks:

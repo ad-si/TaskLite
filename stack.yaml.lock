@@ -5,13 +5,6 @@
 
 packages:
 - completed:
-    hackage: fuzzy-0.1.0.0@sha256:123b9581c587ae5422b67bbad7e81186b1ecbf86941a8049f921ddf136f2234e,833
-    pantry-tree:
-      size: 261
-      sha256: 97019c97e95f2a91089acec705243e1fa5b8529ae112658757e0ab3574905f3c
-  original:
-    hackage: fuzzy-0.1.0.0
-- completed:
     hackage: gi-gtk-declarative-0.4.2@sha256:8f6a0c3fe61143b07b857d28ec4354c6e5540971ffbaf39837009e81c288a0bd,3719
     pantry-tree:
       size: 1918
