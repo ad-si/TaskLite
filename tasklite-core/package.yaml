@@ -27,7 +27,6 @@ dependencies:
   - beam-sqlite
   - bytestring
   - cassava
-  - crockford
   - directory
   - file-embed
   - filepath

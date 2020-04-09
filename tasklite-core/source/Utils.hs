@@ -6,14 +6,13 @@ module Utils where
 
 import Protolude as P
 
-import Codec.Crockford as Crock
 import Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Hourglass
 import Data.ULID
 import Data.ULID.TimeStamp
 import Data.ULID.Random
-
+import Base32
 
 type IdText = Text
 type TagText = Text
@@ -69,7 +68,7 @@ parseUtc utcText =
 parseUlidUtcSection :: Text -> Maybe DateTime
 parseUlidUtcSection encodedUtc = do
   let
-    decodedUtcMaybe = (Crock.decode . unpack) encodedUtc
+    decodedUtcMaybe = Base32.decode encodedUtc
     getElapsed val = Elapsed $ Seconds $ val `div` 1000
 
   elapsed <- fmap getElapsed decodedUtcMaybe

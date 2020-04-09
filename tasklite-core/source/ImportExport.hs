@@ -54,7 +54,7 @@ annotationToNote :: Annotation -> Note
 annotationToNote annot@Annotation {entry = entry, description = description} =
   let
     utc = fromMaybe (timeFromElapsedP 0 :: DateTime) (parseUtc entry)
-    ulidGenerated = (ulidFromInteger . abs . toInteger . hash) annot
+    Right ulidGenerated = (ulidFromInteger . abs . toInteger . hash) annot
     ulidCombined = setDateTime ulidGenerated utc
   in
     Note { ulid = (T.toLower . show) ulidCombined
@@ -237,7 +237,7 @@ instance FromJSON ImportTask where
 
     o_ulid  <- o .:? "ulid"
     let
-      ulidGenerated = (ulidFromInteger . abs . toInteger . hash) tempTask
+      Right ulidGenerated = (ulidFromInteger . abs . toInteger . hash) tempTask
       ulidCombined = setDateTime ulidGenerated createdUtc
       ulid = T.toLower $ fromMaybe ""
         (o_ulid <|> Just (show ulidCombined))

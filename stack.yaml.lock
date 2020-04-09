@@ -5,34 +5,6 @@
 
 packages:
 - completed:
-    hackage: beam-core-0.8.0.0@sha256:7514a7b9cc092d7e890adf2ad08c1ea3c66ea5900e263b32ff0c55c31e01bac0,5044
-    pantry-tree:
-      size: 2553
-      sha256: c3520bd90aa71fe509740827acc5973a9dc47ed9a830f67e13e68b1893b763ba
-  original:
-    hackage: beam-core-0.8.0.0
-- completed:
-    hackage: beam-migrate-0.4.0.1@sha256:c53948a84972f67e97ba9c56f3dda9abfed556ba2f1672dc3070eb2512791efb,4920
-    pantry-tree:
-      size: 1720
-      sha256: 7ab124f3ac3c74bf5b342d2ef73c9ef3c13ddd7b0804aea340423ceb1baf72a1
-  original:
-    hackage: beam-migrate-0.4.0.1
-- completed:
-    hackage: beam-sqlite-0.4.0.0@sha256:00504aa701bd000eb2a9df2214c46bc81a8244b41fb2bee16433adf16b89a94f,2750
-    pantry-tree:
-      size: 618
-      sha256: 182b944bdc2c787f0c4069125508357440c04261251b2581038b60b6481a901a
-  original:
-    hackage: beam-sqlite-0.4.0.0
-- completed:
-    hackage: crockford-0.2@sha256:6ec593711a20bd4b81a0fc13f3d850d2d890690941d777230fbf980c483e434a,553
-    pantry-tree:
-      size: 269
-      sha256: b99646e3fa78b1409ff9929f2756a28bfa7e65734289c4a97aadac55a041afe1
-  original:
-    hackage: crockford-0.2
-- completed:
     hackage: fuzzy-0.1.0.0@sha256:123b9581c587ae5422b67bbad7e81186b1ecbf86941a8049f921ddf136f2234e,833
     pantry-tree:
       size: 261
@@ -54,12 +26,12 @@ packages:
   original:
     hackage: gi-gtk-declarative-app-simple-0.4.1
 - completed:
-    hackage: ulid-0.2.0.0@sha256:ac415298b0272479909ca576f4444862ae942ed85c7849fa0675e3bf496be6f3,2485
+    hackage: ulid-0.3.0.0@sha256:f0eff432ed0f0d0b71be0fd7f45acb54d87aebc4e1e153d2c2e1be4b09eb20b5,2918
     pantry-tree:
-      size: 671
-      sha256: cb750f111e8126188ae3d16d870471acb86a522e73d55080e8c6dbb5221d7e75
+      size: 1004
+      sha256: acfb00d6d9f085c9151a0bff1b4282df0b0ac40fbb5822128dce8a62cff07085
   original:
-    hackage: ulid-0.2.0.0
+    hackage: ulid-0.3.0.0
 - completed:
     size: 132157
     url: https://github.com/JakeWheat/simple-sql-parser/archive/00433a26e8303c9e61359f406da5a2dbf1293fc8.tar.gz
