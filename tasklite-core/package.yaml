@@ -33,8 +33,11 @@ dependencies:
   - generic-random
   - githash
   - hourglass
+  - hsemail
   - huzzy
   - optparse-applicative
+  - parsec
+  - portable-lines
   - prettyprinter
   - prettyprinter-ansi-terminal
   - process
@@ -45,6 +48,7 @@ dependencies:
   - simple-sql-parser
   - sqlite-simple
   - text
+  - time
   - ulid
   - unix
   - unordered-containers

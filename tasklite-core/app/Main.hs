@@ -91,6 +91,7 @@ data Command
 
   {- I/O -}
   | Import
+  | ImportFile FilePath
   | Csv
   | Ndjson
   | Sql
@@ -571,6 +572,10 @@ commandParser conf =
     <> command "import" (toParserInfo (pure Import)
         "Import one JSON task from stdin")
 
+    <> command "importfile" (toParserInfo (ImportFile <$> strArgument
+        (metavar "FILEPATH" <> help "Path to import file"))
+        "Import a .json or .eml file containing one task")
+
     <> command "csv" (toParserInfo (pure Csv)
         "Show tasks in CSV format")
 
@@ -825,7 +830,8 @@ executeCLiCommand conf now connection cmd =
     Tags -> listTags conf connection
     Projects -> listProjects conf connection
     Stats -> getStats conf connection
-    Import -> importTask conf
+    Import -> importTask conf connection
+    ImportFile filePath -> importFile conf connection filePath
     Csv -> dumpCsv conf
     Ndjson -> dumpNdjson conf
     Sql -> dumpSql conf

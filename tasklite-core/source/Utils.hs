@@ -97,6 +97,13 @@ parseUlidText ulidText = do
   pure $ ULID ulidTime ulidRandom
 
 
+-- TODO: Remove after https://github.com/vincenthz/hs-hourglass/issues/52
+rationalToElapsedP :: Rational -> ElapsedP
+rationalToElapsedP secondsFrac =
+  let (sec, nanoSec) = properFraction secondsFrac
+  in ElapsedP (Elapsed (Seconds sec)) (NanoSeconds $ truncate $ nanoSec * 1e9)
+
+
 -- TODO: Remove after https://github.com/vincenthz/hs-hourglass/issues/45
 elapsedPToRational :: ElapsedP -> Rational
 elapsedPToRational (ElapsedP (Elapsed (Seconds s)) (NanoSeconds ns)) =

@@ -884,7 +884,7 @@ findTask connection aPattern = do
 
     -- | Calculate fuzzy score for each part individually
     -- and pick the highest one
-    scoreFunc = \(ulid, theBody, mbTags, mbNotes, mbMetadata) ->
+    scoreFunc = \(ulid, theBody, _, mbNotes, mbMetadata) ->
       let
         scoreParts =
           [ matchFunc theBody

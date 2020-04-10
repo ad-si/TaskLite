@@ -13,6 +13,7 @@ import Data.Hourglass (DateTime, timePrint)
 import Data.Yaml as Yaml
 import qualified Data.ByteString.Lazy as BSL
 import Data.Csv as Csv
+import Data.HashMap.Lazy as HML
 import Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import qualified Data.Vector as V
@@ -317,4 +318,15 @@ zeroTask = Task
   , priority_adjustment = Nothing
   , user = ""
   , metadata = Nothing
+  }
+
+
+setMetadataField :: Text -> Value -> Task -> Task
+setMetadataField fieldName value task =
+  task {metadata = (case metadata task of
+      Just (Object obj) ->
+        Just $ Object $ HML.insert fieldName value obj
+      Nothing ->
+        Just $ Object $ HML.fromList [(fieldName, value)]
+      _ -> metadata task)
   }

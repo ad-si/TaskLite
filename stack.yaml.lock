@@ -19,6 +19,13 @@ packages:
   original:
     hackage: gi-gtk-declarative-app-simple-0.4.1
 - completed:
+    hackage: portable-lines-0.1@sha256:21c3b905888a4b43f957cd8e8cdf2af00942bb161aa19a6b20db18b661de0510,1552
+    pantry-tree:
+      size: 371
+      sha256: 2eeb1d9aefe4fb172dc56baa75f09aaaac824799d926922b4673188293f9f95c
+  original:
+    hackage: portable-lines-0.1
+- completed:
     hackage: ulid-0.3.0.0@sha256:f0eff432ed0f0d0b71be0fd7f45acb54d87aebc4e1e153d2c2e1be4b09eb20b5,2918
     pantry-tree:
       size: 1004

@@ -9,6 +9,7 @@ packages:
 extra-deps:
   - gi-gtk-declarative-0.4.2
   - gi-gtk-declarative-app-simple-0.4.1
+  - portable-lines-0.1
   - ulid-0.3.0.0
   - github: JakeWheat/simple-sql-parser
     commit: 00433a26e8303c9e61359f406da5a2dbf1293fc8

@@ -11,21 +11,29 @@ import Data.Aeson.Types
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Csv as Csv
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashMap.Lazy as HML
 import Data.Hourglass
 import qualified Data.Text as T
 import qualified Data.Text.Lazy.Encoding as TL
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
+import Data.Time.LocalTime (zonedTimeToUTC)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.ULID
+import qualified Data.Vector as V
 import Data.Yaml as Yaml
 import Database.Beam
 import Database.SQLite.Simple as Sql
 import Lib
 import System.Directory
-import System.FilePath ((</>))
+import System.FilePath ((</>), takeExtension)
 import System.Process
 import System.Posix.User (getEffectiveUserName)
 import System.ReadEditor (readEditorWith)
+import Text.ParserCombinators.Parsec as Parsec (parse)
+import qualified Text.Parsec.Rfc2822 as Email
+import Text.Parsec.Rfc2822 (GenericMessage(..), message)
+import Text.PortableLines.ByteString.Lazy (lines8)
 import Time.System
 import Utils
 import Task
@@ -71,6 +79,14 @@ data ImportTask = ImportTask
   , notes :: [Note]
   , tags :: [Text]
   } deriving Show
+
+
+emptyImportTask :: ImportTask
+emptyImportTask = ImportTask
+  { task = zeroTask
+  , notes = []
+  , tags = []
+  }
 
 
 -- | Values a suffixed with a prime (') to avoid name collisions
@@ -272,9 +288,8 @@ insertImportTask connection importTaskRecord = do
     <+> hardline
 
 
-importTask :: Config -> IO (Doc AnsiStyle)
-importTask conf = do
-  connection <- setupConnection conf
+importTask :: Config -> Connection -> IO (Doc AnsiStyle)
+importTask _ connection = do
   content <- BSL.getContents
 
   let
@@ -283,6 +298,107 @@ importTask conf = do
   case decodeResult of
     Left error -> die $ (T.pack error) <> " in task \n" <> show content
     Right importTaskRecord -> insertImportTask connection importTaskRecord
+
+
+emailToImportTask :: GenericMessage BSL.ByteString -> ImportTask
+emailToImportTask email@(Message headerFields msgBody) =
+  let
+    addBody (ImportTask task notes tags) = ImportTask
+      task {Task.body = Task.body task <> (msgBody
+        & lines8
+        <&> TL.decodeUtf8
+        <&> toStrict
+        & T.unlines
+        & T.dropEnd 1
+      )}
+      notes
+      tags
+
+    namesToJson names = Array $ V.fromList $ names
+      <&> (\(Email.NameAddr name emailAddress) -> Object $ HML.fromList $
+              [ ("name", Aeson.String $ T.pack $ fromMaybe "" name)
+              , ("email", Aeson.String $ T.pack emailAddress)
+              ])
+
+    addHeaderToTask :: ImportTask -> Email.Field -> ImportTask
+    addHeaderToTask impTask@(ImportTask task notes tags) headerValue =
+      case headerValue of
+        Email.Date emailDate ->
+          let
+            utc = emailDate
+              & zonedTimeToUTC
+              & utcTimeToPOSIXSeconds
+              & toRational
+              & rationalToElapsedP
+              & timeFromElapsedP
+              :: DateTime
+            Right ulidGenerated =
+              (ulidFromInteger . abs . toInteger . hash) $ (show email :: Text)
+            ulidCombined = setDateTime ulidGenerated utc
+          in
+            ImportTask
+              task { Task.ulid = T.toLower $ show ulidCombined
+                    , Task.modified_utc =
+                        T.pack $ timePrint (toFormat importUtcFormat) utc
+                    }
+              notes
+              tags
+
+        Email.From names -> ImportTask
+          (setMetadataField "from" (namesToJson names) task)
+          notes
+          tags
+
+        Email.To names -> ImportTask
+          (setMetadataField "to" (namesToJson names) task)
+          notes
+          tags
+
+        Email.MessageID msgId -> ImportTask
+          (setMetadataField "messageId" (Aeson.String $ T.pack msgId) task)
+          notes
+          tags
+
+        Email.Subject subj -> ImportTask
+          task {Task.body = Task.body task <> T.pack subj}
+          notes
+          tags
+
+        Email.Keywords kwords -> ImportTask task notes
+          (tags <> fmap (T.unwords . fmap T.pack) kwords)
+
+        Email.Comments cmnts -> ImportTask
+          (setMetadataField "comments" (Aeson.String $ T.pack cmnts) task)
+          notes
+          tags
+
+        _ -> impTask
+  in
+    foldl addHeaderToTask (addBody emptyImportTask) headerFields
+
+
+importFile :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
+importFile _ connection filePath = do
+  content <- BSL.readFile filePath
+
+  let
+    fileExt = takeExtension filePath
+
+  case fileExt of
+    ".json" ->
+      let decodeResult = Aeson.eitherDecode content :: Either [Char] ImportTask
+      in case decodeResult of
+            Left error ->
+              die $ (T.pack error) <> " in task \n" <> show content
+            Right importTaskRecord ->
+              insertImportTask connection importTaskRecord
+
+    ".eml" ->
+      case Parsec.parse message filePath content of
+        Left error -> die $ show error
+        Right email -> insertImportTask connection $ emailToImportTask email
+
+    _ -> die $ T.pack $ "File type " <> fileExt <> " is not supported"
 
 
 -- TODO: Use Task instead of FullTask to fix broken notes export
