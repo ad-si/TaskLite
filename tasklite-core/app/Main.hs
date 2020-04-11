@@ -136,6 +136,7 @@ data Command
   | UnWakeTasks [IdText]
   | UnReadyTasks [IdText]
   | UnRepeatTasks [IdText]
+  | UnRecurTasks [IdText]
   | UnTagTasks [IdText]
   | UnNoteTasks [IdText]
   | UnPrioTasks [IdText]
@@ -659,7 +660,11 @@ commandParser conf =
 
     <> command "unrepeat" (toParserInfo (UnRepeatTasks
         <$> some (strArgument idsVar))
-        "Erase repetition duration value for specified tasks")
+        "Erase repetition duration for specified tasks")
+
+    <> command "unrecur" (toParserInfo (UnRecurTasks
+        <$> some (strArgument idsVar))
+        "Erase recurrence duration for specified tasks")
 
     <> command "untag" (toParserInfo (UnTagTasks
         <$> some (strArgument idsVar))
@@ -900,6 +905,7 @@ executeCLiCommand conf now connection cmd =
     UnWakeTasks ids -> unwakeTasks conf connection ids
     UnReadyTasks ids -> unreadyTasks conf connection ids
     UnRepeatTasks ids -> unrepeatTasks conf connection ids
+    UnRecurTasks ids -> unrecurTasks conf connection ids
     UnTagTasks ids -> untagTasks conf connection ids
     UnNoteTasks ids -> unnoteTasks conf connection ids
     UnPrioTasks ids -> unprioTasks conf connection ids

@@ -1227,7 +1227,22 @@ unrepeatTasks conf connection ids = do
               [(Task.repetition_duration task_) <-. (val_ Nothing)])
           (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
-      pure $ getResultMsg "💥 Removed repetition duration value" task
+      pure $ getResultMsg "💥 Removed repetition duration" task
+
+  pure $ vsep docs
+
+
+unrecurTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+unrecurTasks conf connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithTask conf connection idSubstr $ \task -> do
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task_ -> mconcat
+              [(Task.recurrence_duration task_) <-. (val_ Nothing)])
+          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+
+      pure $ getResultMsg "💥 Removed recurrence duration" task
 
   pure $ vsep docs
 
