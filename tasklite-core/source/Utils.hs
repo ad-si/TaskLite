@@ -8,6 +8,8 @@ import Protolude as P
 
 import Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
+import Data.Time (addUTCTime, UTCTime, ZonedTime, zonedTimeToUTC)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Data.Hourglass
 import Data.ULID
 import Data.ULID.TimeStamp
@@ -120,3 +122,37 @@ setDateTime ulid dateTime =
   ULID
     (toUlidTime dateTime)
     (random ulid)
+
+
+-- | Currently not needed
+-- addStartUtc :: DateTime -> Iso8601.Interval -> Iso8601.Interval
+-- addStartUtc utc interval = case interval of
+--   Iso8601.Interval (Iso8601.JustDuration duration) ->
+--     Iso8601.Interval (Iso8601.StartDuration (dateTimeToUtcTime utc) duration)
+--   _ -> interval
+
+
+zonedTimeToDateTime :: ZonedTime -> DateTime
+zonedTimeToDateTime zTime = zTime
+  & zonedTimeToUTC
+  & utcTimeToPOSIXSeconds
+  & toRational
+  & rationalToElapsedP
+  & timeFromElapsedP
+
+
+utcTimeToDateTime :: UTCTime -> DateTime
+utcTimeToDateTime utcTime = utcTime
+  & utcTimeToPOSIXSeconds
+  & toRational
+  & rationalToElapsedP
+  & timeFromElapsedP
+
+
+dateTimeToUtcTime :: DateTime -> UTCTime
+dateTimeToUtcTime dateTime = dateTime
+  & timeGetElapsedP
+  & elapsedPToRational
+  & fromRational
+  & flip addUTCTime (posixSecondsToUTCTime 0)
+

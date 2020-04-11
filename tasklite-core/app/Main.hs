@@ -18,6 +18,7 @@ import Data.String (fromString)
 import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
+import qualified Data.Time.ISO8601.Duration as ISO8601
 import Data.Version (showVersion)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
@@ -67,6 +68,7 @@ data Command
   | TrashTasks [IdText]
   | DeleteTasks [IdText]
   | RepeatTasks Duration [IdText]
+  | RecurTasks ISO8601.Duration [IdText]
   | BoostTasks [IdText]
   | HushTasks [IdText]
   -- | Modify [IdText] Text -- DSL for modifying a task
@@ -240,6 +242,12 @@ parseDurationInDays =
   . readMaybe
 
 
+parseDurationString :: [Char] -> Either [Char] ISO8601.Duration
+parseDurationString text = text
+  & fromString
+  & ISO8601.parseDuration
+
+
 commandParser :: Config -> Parser Command
 commandParser conf =
   let
@@ -322,6 +330,13 @@ commandParser conf =
       <*> some (strArgument idsVar))
         "Repeat a task x days after its due UTC or after it gets closed \
         \(whichever occurs later)")
+
+    <> command "recur" (toParserInfo (RecurTasks
+      <$> argument (eitherReader parseDurationString)
+            (metavar "DURATION" <> help "ISO8601 duration \
+              \(e.g. P1DT5H for 1 day and 5 hours)")
+      <*> some (strArgument idsVar))
+        "Recur a task DURATION after its due UTC")
 
     <> command "duplicate" (toParserInfo
         (Duplicate <$> some (strArgument idsVar))
@@ -863,6 +878,7 @@ executeCLiCommand conf now connection cmd =
     TrashTasks ids -> trashTasks conf connection ids
     DeleteTasks ids -> deleteTasks conf connection ids
     RepeatTasks duration ids -> repeatTasks conf connection duration ids
+    RecurTasks duration ids -> recurTasks conf connection duration ids
     BoostTasks ids -> adjustPriority conf 1 ids
     HushTasks ids -> adjustPriority conf (-1) ids
     Start ids -> startTasks conf connection ids

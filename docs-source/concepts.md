@@ -72,6 +72,9 @@ State\Field |`group_ulid`|`repetition_duration`|`recurrence_duration`
 `Recurring` | ✅         | ❌                  | ✅
 `Frozen`    | ✅         | ❌                  | ❌
 
+A task is either recurring or repeating,
+but can't be both at the same time.
+
 
 ## Priority
 

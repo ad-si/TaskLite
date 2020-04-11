@@ -8,6 +8,7 @@ import Protolude as P
 
 import Data.Hourglass
 import Data.Text as T
+import qualified Data.Time.ISO8601.Duration as Iso8601
 import Data.ULID
 import Data.Coerce
 import Data.Yaml as Yaml
@@ -421,6 +422,133 @@ parseIsoDuration isoDuration =
   else Nothing
 
 
+createNextRepetition
+  :: Config -> Connection -> Task -> IO (Maybe (Doc ann))
+createNextRepetition conf connection task = do
+  newUlidText <- formatUlid getULID
+  let
+    taskUlid = primaryKey task
+    nowMaybe = ulidTextToDateTime newUlidText
+    dueUtcMb = (Task.due_utc task) >>= parseUtc
+    showDateTime = pack . timePrint (utcFormat conf)
+    repIsoDur = (Task.repetition_duration task) >>= parseIsoDuration
+    nextDueMb = liftA2 timeAdd
+      (if nowMaybe < dueUtcMb then dueUtcMb else nowMaybe)
+      repIsoDur
+
+  -- TODO: Investigate why this isn't working and replace afterwards
+  -- runBeamSqlite connection $ runInsert $
+  --   insert (_tldbTasks taskLiteDb) $
+  --   insertValues [ task
+  --     { Task.ulid = val_ newUlidText
+  --     , Task.due_utc = nowMaybe + (Task.repetition_duration task)
+  --     }
+  --   ]
+
+  runBeamSqlite connection $ do
+    runInsert $ insert (_tldbTasks taskLiteDb) $ insertFrom $ do
+      originalTask <- filter_
+        (\theTask -> primaryKey theTask ==. val_ taskUlid)
+        (all_ $ _tldbTasks taskLiteDb)
+
+      pure originalTask
+        { Task.ulid = val_ newUlidText
+        , Task.due_utc = val_ $ fmap showDateTime nextDueMb
+        , Task.awake_utc = val_ $
+            fmap showDateTime $ liftA2 timeAdd
+              ((Task.awake_utc task) >>= parseUtc)
+              repIsoDur
+        , Task.ready_utc = val_ $
+            fmap showDateTime $ liftA2 timeAdd
+              ((Task.ready_utc task) >>= parseUtc)
+              repIsoDur
+        }
+
+    -- Duplicate tags
+    tags <- runSelectReturningList $ select $
+      filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
+      all_ (_tldbTaskToTag taskLiteDb)
+
+    liftIO $ insertTags
+      connection
+      Nothing
+      (TaskUlid newUlidText)
+      (fmap TaskToTag.tag tags)
+
+  liftIO $ pure $ Just $ "➡️  Created next task"
+    <+> dquotes (pretty $ Task.body task)
+    <+> "in repetition series" <+> dquotes (pretty $ Task.group_ulid task)
+    <+> "with id" <+> dquotes (pretty newUlidText)
+
+
+createNextRecurrence
+  :: Config -> Connection -> Task -> IO (Maybe (Doc ann))
+createNextRecurrence conf connection task = do
+  newUlidText <- formatUlid getULID
+  let
+    taskUlid = primaryKey task
+    dueUtcMb = (Task.due_utc task) >>= parseUtc
+
+    showDateTime :: DateTime -> Text
+    showDateTime = pack . timePrint (utcFormat conf)
+
+    durTextEither = maybeToEither
+                        "Task has no recurrence duration"
+                        (Task.recurrence_duration task)
+    isoDurEither =
+      durTextEither
+      <&> encodeUtf8
+      >>= Iso8601.parseDuration
+
+    showEither e = e
+      & (either (const Nothing) Just)
+      <&> utcTimeToDateTime
+      <&> showDateTime
+
+    nextDueMb = liftA2 Iso8601.addDuration isoDurEither
+      (maybeToEither "Task has no due UTC" (dueUtcMb <&> dateTimeToUtcTime))
+
+  runBeamSqlite connection $ do
+    runInsert $ insert (_tldbTasks taskLiteDb) $ insertFrom $ do
+      originalTask <- filter_
+        (\theTask -> primaryKey theTask ==. val_ taskUlid)
+        (all_ $ _tldbTasks taskLiteDb)
+
+      pure originalTask
+        { Task.ulid = val_ newUlidText
+        , Task.due_utc = val_ $ nextDueMb & showEither
+
+        , Task.awake_utc = val_ $
+            (liftA2 Iso8601.addDuration isoDurEither
+              (maybeToEither "Task has no awake UTC"
+                ((Task.awake_utc task) >>= parseUtc <&> dateTimeToUtcTime)))
+            & showEither
+
+        , Task.ready_utc = val_ $
+            (liftA2 Iso8601.addDuration isoDurEither
+              (maybeToEither "Task has no ready UTC"
+                ((Task.ready_utc task) >>= parseUtc <&> dateTimeToUtcTime)))
+            & showEither
+
+        }
+
+    -- Duplicate tags
+    tags <- runSelectReturningList $ select $
+      filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
+      all_ (_tldbTaskToTag taskLiteDb)
+
+    liftIO $ insertTags
+      connection
+      Nothing
+      (TaskUlid newUlidText)
+      (fmap TaskToTag.tag tags)
+
+  liftIO $ pure $ Just $ "➡️  Created next task"
+    <+> dquotes (pretty $ Task.body task)
+    <+> "in recurrence series" <+> dquotes (pretty $ Task.group_ulid task)
+    <+> "with id" <+> dquotes (pretty newUlidText)
+
+
 doTasks :: Config -> Connection -> Maybe [Text] -> [Text] -> IO (Doc AnsiStyle)
 doTasks conf connection noteWordsMaybe ids = do
   docs <- forM ids $ \idSubstr -> do
@@ -432,61 +560,12 @@ doTasks conf connection noteWordsMaybe ids = do
       then pure $ "⚠️  Task" <+> dquotes (pretty idText) <+> "is already done"
       else do
         logMessageMaybe <-
-          if Task.repetition_duration task == Nothing
-          then pure Nothing
-          else do
-            newUlid <- formatUlid getULID
-            let
-              nowMaybe = ulidTextToDateTime newUlid
-              dueUtc = (Task.due_utc task) >>= parseUtc
-              showDateTime = pack . timePrint (utcFormat conf)
-              nextDue = liftA2 timeAdd
-                (if nowMaybe < dueUtc then dueUtc else nowMaybe)
-                ((Task.repetition_duration task) >>= parseIsoDuration)
-
-            -- TODO: Investigate why this isn't working and replace afterwards
-            -- runBeamSqlite connection $ runInsert $
-            --   insert (_tldbTasks taskLiteDb) $
-            --   insertValues [ task
-            --     { Task.ulid = val_ newUlid
-            --     , Task.due_utc = nowMaybe + (Task.repetition_duration task)
-            --     }
-            --   ]
-
-            runBeamSqlite connection $ do
-              runInsert $ insert (_tldbTasks taskLiteDb) $ insertFrom $ do
-                originalTask <- filter_
-                  (\theTask -> primaryKey theTask ==. val_ taskUlid)
-                  (all_ $ _tldbTasks taskLiteDb)
-
-                pure originalTask
-                  { Task.ulid = val_ newUlid
-                  , Task.due_utc = val_ $ fmap showDateTime nextDue
-                  , Task.awake_utc = val_ $
-                      fmap showDateTime $ liftA2 timeAdd
-                        ((Task.awake_utc task) >>= parseUtc)
-                        ((Task.repetition_duration task) >>= parseIsoDuration)
-                  , Task.ready_utc = val_ $
-                      fmap showDateTime $ liftA2 timeAdd
-                        ((Task.ready_utc task) >>= parseUtc)
-                        ((Task.repetition_duration task) >>= parseIsoDuration)
-                  }
-
-              -- Duplicate tags
-              tags <- runSelectReturningList $ select $
-                filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
-                all_ (_tldbTaskToTag taskLiteDb)
-
-              liftIO $ insertTags
-                connection
-                Nothing
-                (TaskUlid newUlid)
-                (fmap TaskToTag.tag tags)
-
-            liftIO $ pure $ Just $ "➡️  Created next task"
-              <+> dquotes (pretty $ Task.body task)
-              <+> "in repetition series"
-              <+> dquotes (pretty $ Task.group_ulid task)
+          if Task.repetition_duration task /= Nothing
+          then createNextRepetition conf connection task
+          else
+            if Task.recurrence_duration task /= Nothing
+            then createNextRecurrence conf connection task
+            else pure Nothing
 
         noteMessageMaybe <- case noteWordsMaybe of
           Nothing -> pure Nothing
@@ -606,6 +685,34 @@ repeatTasks conf connection duration ids = do
       pure $ "📅 Set repeat duration of task" <+> prettyBody
         <+> "with id" <+> prettyId
         <+> "to" <+> dquotes (pretty $ durIso)
+
+  pure $ vsep docs
+
+
+recurTasks ::
+  Config -> Connection -> Iso8601.Duration -> [IdText] -> IO (Doc AnsiStyle)
+recurTasks conf connection duration ids = do
+  docs <- forM ids $ \idSubstr ->
+    execWithTask conf connection idSubstr $ \task -> do
+      let
+        taskUlid@(TaskUlid idText) = primaryKey task
+        prettyBody = dquotes (pretty $ Task.body task)
+        prettyId = dquotes (pretty idText)
+        durationIsoText = decodeUtf8 $ Iso8601.formatDuration duration
+
+      groupUlid <- formatUlid getULID
+
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task_ -> mconcat
+            [ (Task.recurrence_duration task_) <-. val_ (Just durationIsoText)
+            , (Task.group_ulid task_) <-. val_ (Just groupUlid)
+            ])
+          (\task_ -> primaryKey task_ ==. val_ taskUlid)
+
+      pure $ "📅 Set recurrence duration of task" <+> prettyBody
+        <+> "with id" <+> prettyId
+        <+> "to" <+> dquotes (pretty $ durationIsoText)
 
   pure $ vsep docs
 

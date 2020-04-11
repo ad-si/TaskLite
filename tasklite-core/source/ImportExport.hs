@@ -17,8 +17,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy.Encoding as TL
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
-import Data.Time.LocalTime (zonedTimeToUTC)
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.ULID
 import qualified Data.Vector as V
 import Data.Yaml as Yaml
@@ -331,13 +329,7 @@ emailToImportTask email@(Message headerFields msgBody) =
       case headerValue of
         Email.Date emailDate ->
           let
-            utc = emailDate
-              & zonedTimeToUTC
-              & utcTimeToPOSIXSeconds
-              & toRational
-              & rationalToElapsedP
-              & timeFromElapsedP
-              :: DateTime
+            utc = zonedTimeToDateTime emailDate
             Right ulidGenerated =
               (ulidFromInteger . abs . toInteger . hash) $ (show email :: Text)
             ulidCombined = setDateTime ulidGenerated utc

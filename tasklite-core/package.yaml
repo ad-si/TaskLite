@@ -35,6 +35,7 @@ dependencies:
   - hourglass
   - hsemail
   - huzzy
+  - iso8601-duration
   - optparse-applicative
   - parsec
   - portable-lines
