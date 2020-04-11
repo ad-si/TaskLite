@@ -288,16 +288,22 @@ insertImportTask connection importTaskRecord = do
     <+> hardline
 
 
-importTask :: Config -> Connection -> IO (Doc AnsiStyle)
-importTask _ connection = do
+importJson :: Config -> Connection -> IO (Doc AnsiStyle)
+importJson _ connection = do
   content <- BSL.getContents
 
-  let
-    decodeResult = Aeson.eitherDecode content :: Either [Char] ImportTask
-
-  case decodeResult of
+  case Aeson.eitherDecode content of
     Left error -> die $ (T.pack error) <> " in task \n" <> show content
     Right importTaskRecord -> insertImportTask connection importTaskRecord
+
+
+importEml :: Config -> Connection -> IO (Doc AnsiStyle)
+importEml _ connection = do
+  content <- BSL.getContents
+
+  case Parsec.parse message "<stdin>" content of
+    Left error -> die $ show error
+    Right email -> insertImportTask connection $ emailToImportTask email
 
 
 emailToImportTask :: GenericMessage BSL.ByteString -> ImportTask

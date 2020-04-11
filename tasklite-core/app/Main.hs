@@ -90,8 +90,9 @@ data Command
   | FindTask Text
 
   {- I/O -}
-  | Import
   | ImportFile FilePath
+  | ImportJson
+  | ImportEml
   | Csv
   | Ndjson
   | Sql
@@ -569,12 +570,15 @@ commandParser conf =
     (  metavar (T.unpack $ snd i_o_sec)
     <> commandGroup (T.unpack $ fst i_o_sec)
 
-    <> command "import" (toParserInfo (pure Import)
-        "Import one JSON task from stdin")
-
-    <> command "importfile" (toParserInfo (ImportFile <$> strArgument
+    <> command "import" (toParserInfo (ImportFile <$> strArgument
         (metavar "FILEPATH" <> help "Path to import file"))
         "Import a .json or .eml file containing one task")
+
+    <> command "importjson" (toParserInfo (pure ImportJson)
+        "Import one JSON object from stdin")
+
+    <> command "importeml" (toParserInfo (pure ImportEml)
+        "Import one email from stdin")
 
     <> command "csv" (toParserInfo (pure Csv)
         "Show tasks in CSV format")
@@ -830,8 +834,9 @@ executeCLiCommand conf now connection cmd =
     Tags -> listTags conf connection
     Projects -> listProjects conf connection
     Stats -> getStats conf connection
-    Import -> importTask conf connection
     ImportFile filePath -> importFile conf connection filePath
+    ImportJson -> importJson conf connection
+    ImportEml -> importEml conf connection
     Csv -> dumpCsv conf
     Ndjson -> dumpNdjson conf
     Sql -> dumpSql conf
