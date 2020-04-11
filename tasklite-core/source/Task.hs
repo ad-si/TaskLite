@@ -322,11 +322,11 @@ zeroTask = Task
 
 
 setMetadataField :: Text -> Value -> Task -> Task
-setMetadataField fieldName value task =
+setMetadataField fieldNameText value task =
   task {metadata = (case metadata task of
       Just (Object obj) ->
-        Just $ Object $ HML.insert fieldName value obj
+        Just $ Object $ HML.insert fieldNameText value obj
       Nothing ->
-        Just $ Object $ HML.fromList [(fieldName, value)]
+        Just $ Object $ HML.fromList [(fieldNameText, value)]
       _ -> metadata task)
   }

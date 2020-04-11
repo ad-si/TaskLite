@@ -68,8 +68,8 @@ instance Pretty TaskView where
     . Yaml.encode
 
 
-copyTimesToTask :: TaskView -> Task
-copyTimesToTask (TaskView {..}) =
+cpTimesAndState :: TaskView -> Task
+cpTimesAndState (TaskView {..}) =
   zeroTask
     { Task.ulid
     , Task.modified_utc
@@ -79,4 +79,5 @@ copyTimesToTask (TaskView {..}) =
     , Task.review_utc
     , Task.due_utc
     , Task.closed_utc
+    , Task.state
     }

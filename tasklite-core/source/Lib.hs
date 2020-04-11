@@ -783,7 +783,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
   let
     mkGreen = annotate (color Green)
     grayOut = annotate (colorDull Black)
-    stateHierarchy = getStateHierarchy now $ copyTimesToTask taskV
+    stateHierarchy = getStateHierarchy now $ cpTimesAndState taskV
     mbCreatedUtc = fmap
       (pack . (timePrint $ utcFormat defaultConfig))
       (ulidTextToDateTime $ TaskView.ulid taskV)
