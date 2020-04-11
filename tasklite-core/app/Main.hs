@@ -18,7 +18,7 @@ import Data.String (fromString)
 import qualified Data.Text as T
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
-import qualified Data.Time.ISO8601.Duration as ISO8601
+import qualified Data.Time.ISO8601.Duration as Iso
 import Data.Version (showVersion)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
@@ -59,16 +59,16 @@ data Command
   {- Modify -}
   | ReadyOn DateTime [IdText]
   | WaitTasks [IdText]
-  | WaitFor Duration [IdText]
+  | WaitFor Iso.Duration [IdText]
   | ReviewTasks [IdText]
-  | ReviewTasksIn Duration [IdText]
+  | ReviewTasksIn Iso.Duration [IdText]
   | DoTasks [IdText]
   | DoOneTask IdText (Maybe [Text])
   | EndTasks [IdText]
   | TrashTasks [IdText]
   | DeleteTasks [IdText]
-  | RepeatTasks Duration [IdText]
-  | RecurTasks ISO8601.Duration [IdText]
+  | RepeatTasks Iso.Duration [IdText]
+  | RecurTasks Iso.Duration [IdText]
   | BoostTasks [IdText]
   | HushTasks [IdText]
   -- | Modify [IdText] Text -- DSL for modifying a task
@@ -236,17 +236,10 @@ unset_sec    = ("{{unset_sec}}", "Unset Commands")
 utils_sec    = ("{{utils_sec}}", "Utils")
 
 
-parseDurationInDays :: [Char] -> Maybe Duration
-parseDurationInDays =
-  (fmap (\days -> mempty
-    { durationMinutes = Minutes $ round ((days :: Float) * 1440)}))
-  . readMaybe
-
-
-parseDurationString :: [Char] -> Either [Char] ISO8601.Duration
+parseDurationString :: [Char] -> Either [Char] Iso.Duration
 parseDurationString text = text
   & fromString
-  & ISO8601.parseDuration
+  & Iso.parseDuration
 
 
 commandParser :: Config -> Parser Command
@@ -281,22 +274,22 @@ commandParser conf =
         "Mark a task as waiting (e.g. for feedback) and review it in 3 days")
 
     <> command "waitfor" (toParserInfo (WaitFor
-      <$> argument (maybeReader parseDurationInDays)
-            (metavar "NUM_OF_DAYS" <> help "Duration in days \
-              \(supports fractional values)")
+      <$> argument (eitherReader parseDurationString)
+            (metavar "DURATION"
+            <> help "ISO8601 duration (e.g. P1DT5H for 1 day and 5 hours)")
       <*> some (strArgument idsVar))
-        "Wait x days until it's ready for review")
+        "Wait DURATION until it's ready for review")
 
     <> command "review" (toParserInfo (ReviewTasks
         <$> some (strArgument idsVar))
         "Finish review and set new review date in 3 days")
 
     <> command "reviewin" (toParserInfo (ReviewTasksIn
-      <$> argument (maybeReader parseDurationInDays)
-            (metavar "NUM_OF_DAYS" <> help "Duration in days \
-              \(supports fractional values)")
+      <$> argument (eitherReader parseDurationString)
+            (metavar "DURATION"
+            <> help "ISO8601 duration (e.g. P1DT5H for 1 day and 5 hours)")
       <*> some (strArgument idsVar))
-        "Finish review and set new review date in x days")
+        "Finish review and set new review date in DURATION")
 
     <> command "do" (toParserInfo (DoOneTask
         <$> strArgument idsVar
@@ -325,9 +318,9 @@ commandParser conf =
         "Delete a task from the database (Attention: Irreversible)")
 
     <> command "repeat" (toParserInfo (RepeatTasks
-      <$> argument (maybeReader parseDurationInDays)
-            (metavar "NUM_OF_DAYS" <> help "Number of days \
-              \(supports fractional values)")
+      <$> argument (eitherReader parseDurationString)
+            (metavar "DURATION"
+            <> help "ISO8601 duration (e.g. P1DT5H for 1 day and 5 hours)")
       <*> some (strArgument idsVar))
         "Repeat a task x days after its due UTC or after it gets closed \
         \(whichever occurs later)")
@@ -831,7 +824,7 @@ executeCLiCommand conf now connection cmd =
     prettyUlid ulid = pretty $ fmap
       (T.pack . timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])))
       (ulidTextToDateTime ulid)
-    days3 = mempty {durationHours = 72}
+    days3 = Iso.DurationDate (Iso.DurDateDay (Iso.DurDay 3) Nothing)
 
   in case cmd of
     ListAll -> listAll conf now connection

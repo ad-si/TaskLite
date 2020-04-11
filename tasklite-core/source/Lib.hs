@@ -8,7 +8,7 @@ import Protolude as P
 
 import Data.Hourglass
 import Data.Text as T
-import qualified Data.Time.ISO8601.Duration as Iso8601
+import qualified Data.Time.ISO8601.Duration as Iso
 import Data.ULID
 import Data.Coerce
 import Data.Yaml as Yaml
@@ -339,7 +339,8 @@ setReadyUtc conf connection datetime ids = do
   pure $ vsep docs
 
 
-waitFor :: Config -> Connection -> Duration -> [Text] -> IO (Doc AnsiStyle)
+waitFor
+  :: Config -> Connection -> Iso.Duration -> [Text] -> IO (Doc AnsiStyle)
 waitFor conf connection duration ids = do
   docs <- forM ids $ \idSubstr ->
     execWithTask conf connection idSubstr $ \task -> do
@@ -347,7 +348,9 @@ waitFor conf connection duration ids = do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         nowAsText = (pack . timePrint (utcFormat conf)) now
-        threeDays = (pack . timePrint (utcFormat conf)) (now `timeAdd` duration)
+        threeDays = (pack . timePrint (utcFormat conf))
+          (utcTimeToDateTime $ Iso.addDuration duration $
+            dateTimeToUtcTime $ timeFromElapsedP now)
         prettyBody = dquotes (pretty $ Task.body task)
         prettyId = dquotes (pretty idText)
 
@@ -373,18 +376,21 @@ waitFor conf connection duration ids = do
 
 waitTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 waitTasks conf connection =
-  waitFor conf connection $ mempty { durationHours = 72 }
+  waitFor conf connection $
+    Iso.DurationDate (Iso.DurDateDay (Iso.DurDay 3) Nothing)
 
 
 reviewTasksIn :: Config -> Connection
-  -> Duration -> [Text] -> IO (Doc AnsiStyle)
-reviewTasksIn conf connection days ids = do
+  -> Iso.Duration -> [Text] -> IO (Doc AnsiStyle)
+reviewTasksIn conf connection duration ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
       now <- timeCurrentP
       let
         taskUlid@(TaskUlid idText) = primaryKey task
-        xDays = (pack . timePrint (utcFormat conf)) (now `timeAdd` days)
+        xDays = (pack . timePrint (utcFormat conf))
+          (utcTimeToDateTime $ Iso.addDuration duration $
+            dateTimeToUtcTime $ timeFromElapsedP now)
         prettyBody = dquotes (pretty $ Task.body task)
         prettyId = dquotes (pretty idText)
         warningStart = "⚠️  Task" <+> prettyBody <+> "with id" <+> prettyId
@@ -498,14 +504,14 @@ createNextRecurrence conf connection task = do
     isoDurEither =
       durTextEither
       <&> encodeUtf8
-      >>= Iso8601.parseDuration
+      >>= Iso.parseDuration
 
     showEither e = e
       & (either (const Nothing) Just)
       <&> utcTimeToDateTime
       <&> showDateTime
 
-    nextDueMb = liftA2 Iso8601.addDuration isoDurEither
+    nextDueMb = liftA2 Iso.addDuration isoDurEither
       (maybeToEither "Task has no due UTC" (dueUtcMb <&> dateTimeToUtcTime))
 
   runBeamSqlite connection $ do
@@ -519,13 +525,13 @@ createNextRecurrence conf connection task = do
         , Task.due_utc = val_ $ nextDueMb & showEither
 
         , Task.awake_utc = val_ $
-            (liftA2 Iso8601.addDuration isoDurEither
+            (liftA2 Iso.addDuration isoDurEither
               (maybeToEither "Task has no awake UTC"
                 ((Task.awake_utc task) >>= parseUtc <&> dateTimeToUtcTime)))
             & showEither
 
         , Task.ready_utc = val_ $
-            (liftA2 Iso8601.addDuration isoDurEither
+            (liftA2 Iso.addDuration isoDurEither
               (maybeToEither "Task has no ready UTC"
                 ((Task.ready_utc task) >>= parseUtc <&> dateTimeToUtcTime)))
             & showEither
@@ -661,9 +667,9 @@ durationToIso dur =
 
 
 repeatTasks ::
-  Config -> Connection -> Duration -> [IdText] -> IO (Doc AnsiStyle)
+  Config -> Connection -> Iso.Duration -> [IdText] -> IO (Doc AnsiStyle)
 repeatTasks conf connection duration ids = do
-  let durIso = durationToIso duration
+  let durationIsoText = decodeUtf8 $ Iso.formatDuration duration
 
   docs <- forM ids $ \idSubstr ->
     execWithTask conf connection idSubstr $ \task -> do
@@ -677,28 +683,29 @@ repeatTasks conf connection duration ids = do
       runBeamSqlite connection $ runUpdate $
         update (_tldbTasks taskLiteDb)
           (\task_ -> mconcat
-            [ (Task.repetition_duration task_) <-. val_ (Just durIso)
+            [ (Task.repetition_duration task_) <-. val_ (Just durationIsoText)
             , (Task.group_ulid task_) <-. val_ (Just groupUlid)
             ])
           (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
       pure $ "📅 Set repeat duration of task" <+> prettyBody
         <+> "with id" <+> prettyId
-        <+> "to" <+> dquotes (pretty $ durIso)
+        <+> "to" <+> dquotes (pretty $ durationIsoText)
 
   pure $ vsep docs
 
 
 recurTasks ::
-  Config -> Connection -> Iso8601.Duration -> [IdText] -> IO (Doc AnsiStyle)
+  Config -> Connection -> Iso.Duration -> [IdText] -> IO (Doc AnsiStyle)
 recurTasks conf connection duration ids = do
+  let durationIsoText = decodeUtf8 $ Iso.formatDuration duration
+
   docs <- forM ids $ \idSubstr ->
     execWithTask conf connection idSubstr $ \task -> do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         prettyBody = dquotes (pretty $ Task.body task)
         prettyId = dquotes (pretty idText)
-        durationIsoText = decodeUtf8 $ Iso8601.formatDuration duration
 
       groupUlid <- formatUlid getULID
 
