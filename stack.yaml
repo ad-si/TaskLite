@@ -15,6 +15,8 @@ extra-deps:
   - github: JakeWheat/simple-sql-parser
     commit: 00433a26e8303c9e61359f406da5a2dbf1293fc8
 
+allow-newer: true
+
 # Build TaskLite in a container
 # docker:
 #   repo: fpco/stack-build

@@ -4,6 +4,9 @@
 !.git
 
 !/docker-stack.yaml
+!/tasklite-core/example-config.yaml
+
+!/huzzy
 
 !/tasklite-core
 /tasklite-core/.stack-work

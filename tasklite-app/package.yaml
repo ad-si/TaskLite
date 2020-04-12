@@ -22,7 +22,6 @@ dependencies:
   - cassava
   - directory
   - filepath
-  - fuzzy
   - gi-gtk
   - gi-gtk-declarative
   - gi-gtk-declarative-app-simple

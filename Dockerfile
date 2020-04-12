@@ -2,7 +2,12 @@ from haskell:8.6.5 as builder
 
 copy docker-stack.yaml stack.yaml
 
+copy tasklite-core/README.md tasklite-core/README.md
+copy tasklite-core/example-config.yaml tasklite-core/example-config.yaml
 copy tasklite-core/package.yaml tasklite-core/package.yaml
+
+copy huzzy huzzy
+
 run stack install --only-dependencies tasklite-core
 
 copy tasklite-core tasklite-core
