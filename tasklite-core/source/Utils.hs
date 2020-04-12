@@ -156,3 +156,14 @@ dateTimeToUtcTime dateTime = dateTime
   & fromRational
   & flip addUTCTime (posixSecondsToUTCTime 0)
 
+
+-- From https://mail.haskell.org/pipermail/haskell-cafe/2009-August/065854.html
+numDigits :: Integer -> Integer -> Integer
+numDigits base num =
+  let
+    ilog b n
+     | n < b     = (0, n)
+     | otherwise = let (e, r) = ilog (b * b) n
+                   in  if r < b then (2 * e, r) else (2 * e+1, r `div` b)
+  in
+    1 + fst (ilog base num)

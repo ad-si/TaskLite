@@ -16,7 +16,7 @@ import Database.Beam hiding (char)
 import Database.Beam.Sqlite
 import Database.Beam.Schema.Tables
 import Database.SQLite.Simple as Sql
-import Numeric
+import Numeric (showFFloat)
 import System.Directory
 import System.FilePath ((</>))
 import System.IO as SIO
@@ -1906,34 +1906,43 @@ listProjects conf connection = do
 
 getStats :: Config -> Connection -> IO (Doc AnsiStyle)
 getStats _ connection = do
-  [NumRows numOfTasks] <- query_ connection $
+  [NumRows numOfTasksTotal] <- query_ connection $
     Query "select count(1) from tasks"
   [NumRows numOfTasksOpen] <- query_ connection $
     Query "select count(1) from tasks where closed_utc is null"
   [NumRows numOfTasksClosed] <- query_ connection $
     Query "select count(1) from tasks where closed_utc is not null"
+  [NumRows numOfTasksDone] <- query_ connection $
+    Query "select count(1) from tasks where state is 'Done'"
+  [NumRows numOfTasksObsolete] <- query_ connection $
+    Query "select count(1) from tasks where state is 'Obsolete'"
+  [NumRows numOfTasksDeletable] <- query_ connection $
+    Query "select count(1) from tasks where state is 'Deletable'"
 
   let
-    lengthOfKey = 10
-    lengthOfValue = 10
+    widthKey = 12
+    widthValue = max 5 $ fromIntegral $ numDigits 10 numOfTasksTotal
+    formatLine (name :: Text) (numTasks :: Integer) =
+      let
+        numTotalInt :: Double = fromIntegral numOfTasksTotal
+        numTasksInt :: Double = fromIntegral numTasks
+        share = T.pack $ showFFloat (Just 3) (numTasksInt / numTotalInt) ""
+      in
+        fill widthKey (pretty name)
+        <++> fill widthValue
+              (pretty $ justifyRight widthValue ' ' $ show numTasks)
+        <++> pretty share
 
   pure $
-         annotate (bold <> underlined) (fill lengthOfKey "Metric")
-    <++> annotate (bold <> underlined) (fill lengthOfValue "Value")
+         annotate (bold <> underlined) (fill widthKey "State")
+    <++> annotate (bold <> underlined) (fill widthValue "Value")
     <++> annotate (bold <> underlined) "Share"
     <> line
     <> vsep (
-      fill lengthOfKey (pretty ("Tasks" :: Text))
-        <++> fill lengthOfValue (pretty (numOfTasks :: Integer))
-        <++> pretty ("1.0" :: Text) :
-      fill lengthOfKey (pretty ("Open" :: Text))
-        <++> fill lengthOfValue (pretty (numOfTasksOpen :: Integer))
-        <++> pretty (showAtPrecision 3 $
-            (fromIntegral numOfTasksOpen) / (fromIntegral numOfTasks)
-          ) :
-      fill lengthOfKey (pretty ("Closed" :: Text))
-        <++> fill lengthOfValue (pretty (numOfTasksClosed :: Integer))
-        <++> pretty (showAtPrecision 3 $
-            (fromIntegral numOfTasksClosed) / (fromIntegral numOfTasks)
-          ) :
-    [])
+        formatLine "Any"          numOfTasksTotal :
+        formatLine "Open"         numOfTasksOpen :
+        formatLine "Closed"       numOfTasksClosed :
+        formatLine "└─ Done"      numOfTasksDone :
+        formatLine "└─ Obsolete"  numOfTasksObsolete :
+        formatLine "└─ Deletable" numOfTasksDeletable :
+        [])
