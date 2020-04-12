@@ -48,6 +48,7 @@ data Command
   = AddTask   [Text]
   | AddWrite  [Text]
   | AddRead   [Text]
+  | AddIdea   [Text]
   | AddWatch  [Text]
   | AddListen [Text]
   | AddBuy    [Text]
@@ -407,8 +408,12 @@ commandParser conf =
         "Write a message or a post")
 
     <> command "read" (toParserInfo (AddRead <$> some (strArgument
-        (metavar "BODY" <> help "Url or title oo a website or blog post")))
+        (metavar "BODY" <> help "Url or title to a website or blog post")))
         "Read the specified URL")
+
+    <> command "idea" (toParserInfo (AddIdea <$> some (strArgument
+        (metavar "BODY" <> help "Description of your idea")))
+        "Quickly capture an idea")
 
     <> command "watch" (toParserInfo (AddWatch <$> some (strArgument
         (metavar "BODY" <> help "Url or title of a video or movie to watch")))
@@ -857,6 +862,7 @@ executeCLiCommand conf now connection cmd =
     AddTask bodyWords -> addTaskC bodyWords
     AddWrite bodyWords -> addTaskC $ ["Write"] <> bodyWords <> ["+write"]
     AddRead bodyWords -> addTaskC $ ["Read"] <> bodyWords <> ["+read"]
+    AddIdea bodyWords -> addTaskC $ bodyWords <> ["+idea"]
     AddWatch bodyWords -> addTaskC $ ["Watch"] <> bodyWords <> ["+watch"]
     AddListen bodyWords -> addTaskC $ ["Listen"] <> bodyWords <> ["+listen"]
     AddBuy bodyWords -> addTaskC $ ["Buy"] <> bodyWords <> ["+buy"]
