@@ -4,16 +4,134 @@ The default config primarily defines the styling and formatting
 
 module Config where
 
-import Protolude as P
+import Protolude as P hiding (modify)
 
 import Data.Aeson
+import System.FilePath (takeBaseName)
 import Data.Hourglass
-import Data.Text
+import Data.Text as T
 import Data.Text.Prettyprint.Doc (pretty)
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.Text.Prettyprint.Doc.Render.Terminal.Internal (ansiForeground)
 import Data.Text.Prettyprint.Doc.Internal
 import Data.Yaml (encode)
+
+
+data Hook = Hook
+  { interpreter :: Text
+  , body :: Text
+  } deriving (Generic, Show)
+
+instance ToJSON Hook
+instance FromJSON Hook
+
+emptyHook :: Hook
+emptyHook = Hook
+  { interpreter = ""
+  , body = ""
+  }
+
+
+data HookSet = HookSet
+  { pre :: [Hook]
+  , post :: [Hook]
+  } deriving (Generic, Show)
+
+instance ToJSON HookSet
+
+-- | Necessary to make fields optional without using a Maybe type
+instance FromJSON HookSet where
+  parseJSON = withObject "hookSet" $ \o -> do
+    pre   <- o .:? "pre" .!= pre emptyHookSet
+    post  <- o .:? "post".!= post emptyHookSet
+
+    pure $ HookSet {..}
+
+emptyHookSet :: HookSet
+emptyHookSet = HookSet
+  { pre = []
+  , post = []
+  }
+
+
+data HooksConfig = HooksConfig
+  { directory :: FilePath
+  , launch :: HookSet
+  , add :: HookSet
+  , modify :: HookSet
+  , exit :: HookSet
+  -- TODO: , delete :: HookSet
+  } deriving (Generic, Show)
+
+instance ToJSON HooksConfig
+
+-- | Necessary to make fields optional without using a Maybe type
+instance FromJSON HooksConfig where
+  parseJSON = withObject "hooksConfig" $ \o -> do
+    directory  <- o .:? "directory" .!= directory defaultHooksConfig
+    launch     <- o .:? "launch".!= launch defaultHooksConfig
+    add        <- o .:? "add" .!= add defaultHooksConfig
+    modify     <- o .:? "modify" .!= modify defaultHooksConfig
+    exit       <- o .:? "exit" .!= exit defaultHooksConfig
+
+    pure $ HooksConfig {..}
+
+defaultHooksConfig :: HooksConfig
+defaultHooksConfig = HooksConfig
+  { directory = ""
+  , launch = emptyHookSet
+  , add = emptyHookSet
+  , modify = emptyHookSet
+  , exit = emptyHookSet
+  }
+
+
+addHookFilesToConfig :: Config -> [(FilePath, b, Text)]  -> Config
+addHookFilesToConfig =
+  let
+    buildHook :: Text -> Hook
+    buildHook content =
+      case lines content of
+        firstLine : rest -> Hook
+          { interpreter = firstLine
+              & T.replace "#!" ""
+              & T.strip
+          , body = rest
+              & unlines
+              & T.strip
+          }
+        _ -> emptyHook
+
+    addToHookSet :: Hook -> Text -> HookSet -> HookSet
+    addToHookSet hook stage hookSet =
+      case stage of
+        "pre"  -> hookSet { pre  = (hookSet & pre) <> [hook] }
+        "post" -> hookSet { post = (hookSet & post) <> [hook] }
+        _ -> hookSet
+
+    addToHooksConfig :: Text -> Text -> Hook -> HooksConfig -> HooksConfig
+    addToHooksConfig event stage hook hConfig =
+      case event of
+        "launch" -> hConfig
+          { launch = addToHookSet hook stage (hConfig & launch) }
+        "add"    -> hConfig
+          { add = addToHookSet hook stage (hConfig & add) }
+        "modify" -> hConfig
+          { modify = addToHookSet hook stage (hConfig & modify) }
+        "exit"   -> hConfig
+          { exit = addToHookSet hook stage (hConfig & exit) }
+        _ -> hConfig
+
+  in
+    P.foldl $ \conf (filePath, _, fileContent) ->
+        case split (== '-') $ pack $ takeBaseName filePath of
+          [stage, event] ->
+            conf { hooks = addToHooksConfig event stage
+              (buildHook fileContent)
+              (conf & hooks)
+            }
+
+          _ -> conf
 
 
 data Config = Config
@@ -37,9 +155,11 @@ data Config = Config
   , headCount :: Int
   , maxWidth :: Int
   , progressBarWidth :: Int
+  , hooks :: HooksConfig
   } deriving (Generic, Show)
 
 
+-- | Necessary to make fields optional without using a Maybe type
 instance FromJSON Config where
   parseJSON = withObject "config" $ \o -> do
     idStyle         <- o .:? "idStyle" .!= idStyle defaultConfig
@@ -62,7 +182,9 @@ instance FromJSON Config where
     headCount       <- o .:? "headCount" .!= headCount defaultConfig
     maxWidth        <- o .:? "maxWidth" .!= maxWidth defaultConfig
     progressBarWidth <- o .:? "progressBarWidth"
-      .!= progressBarWidth defaultConfig
+                                  .!= progressBarWidth defaultConfig
+    hooks           <- o .:? "hooks" .!= hooks defaultConfig
+
 
     pure $ Config {..}
 
@@ -145,4 +267,11 @@ defaultConfig = Config
   , headCount = 20
   , maxWidth = 120
   , progressBarWidth = 24
+  , hooks = HooksConfig
+      { directory = ""
+      , launch = emptyHookSet
+      , add = emptyHookSet
+      , modify = emptyHookSet
+      , exit = emptyHookSet
+      }
   }

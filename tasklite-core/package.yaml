@@ -39,6 +39,7 @@ dependencies:
   - optparse-applicative
   - parsec
   - portable-lines
+  - pretty-simple
   - prettyprinter
   - prettyprinter-ansi-terminal
   - process

@@ -13,6 +13,7 @@
 
 - [Usage](./usage/readme.md)
     - [CLI](./usage/cli.md)
+    - [Hooks](./usage/hooks.md)
     - [Desktop App](./usage/desktop_app.md)
     - [Web App](./usage/web_app.md)
     - [REST API](./usage/rest_api.md)

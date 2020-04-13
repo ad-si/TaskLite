@@ -12,7 +12,7 @@ import Protolude
 
 import Lib
 import Data.Char (isSpace)
-import Data.FileEmbed (embedStringFile)
+import Data.FileEmbed (embedStringFile, makeRelativeToProject)
 import Data.Hourglass
 import Data.String (fromString)
 import qualified Data.Text as T
@@ -27,15 +27,19 @@ import Options.Applicative
 import Paths_tasklite_core ()
 import System.Directory
   ( createDirectoryIfMissing
+  , executable
   , getHomeDirectory
+  , getPermissions
   , getXdgDirectory
+  , listDirectory
+  , Permissions
   , XdgDirectory(..)
   )
 import System.FilePath ((</>))
 import Time.System
 import Database.SQLite.Simple (close, Connection(..))
 
-import Config (Config(..))
+import Config (Config(..), HooksConfig(..), addHookFilesToConfig)
 import DbSetup
 import ImportExport
 import Migrations
@@ -918,33 +922,76 @@ executeCLiCommand conf now connection cmd =
 
 
 printOutput :: [Char] -> Config -> IO ()
-printOutput appName configUser = do
-  configUserNorm <-
-    if (dataDir configUser /= "")
-    then pure $ configUser
-    else do
-     xdgDataDir <- getXdgDirectory XdgData appName
-     pure $ configUser {dataDir = xdgDataDir}
+printOutput appName config = do
+  let dataPath = config & dataDir
 
-  config <- case (T.stripPrefix "~/" $ T.pack $ dataDir configUserNorm) of
-              Nothing ->
-                pure $ configUser {dataDir = dataDir configUserNorm}
-              Just rest -> do
-                homeDir <- getHomeDirectory
-                pure $ configUser { dataDir = homeDir </> T.unpack rest }
+  configNormDataDir <-
+    if null dataPath
+    then do
+      xdgDataDir <- getXdgDirectory XdgData appName
+      pure $ config {dataDir = xdgDataDir}
+    else
+      case T.stripPrefix "~/" $ T.pack dataPath of
+        Nothing -> pure $ config
+        Just rest -> do
+          homeDir <- getHomeDirectory
+          pure $ config { dataDir = homeDir </> T.unpack rest }
 
-  cliCommand <- execParser $ commandParserInfo config
 
-  connection <- setupConnection config
+  let hooksPath = configNormDataDir & hooks & directory
+
+  configNormHookDir <-
+    if null hooksPath
+    then pure $
+      configNormDataDir
+        { hooks = (configNormDataDir & hooks)
+          { directory = dataDir configNormDataDir </> "hooks" }
+        }
+    else
+      case T.stripPrefix "~/" $ T.pack hooksPath of
+        Nothing -> pure $ configNormDataDir
+        Just rest -> do
+          homeDir <- getHomeDirectory
+          pure $ configNormDataDir
+            { hooks = (configNormDataDir & hooks)
+              { directory = homeDir </> T.unpack rest }
+            }
+
+  let hooksPathNorm = configNormHookDir & hooks & directory
+
+  createDirectoryIfMissing True hooksPathNorm
+
+  hookFiles <- listDirectory hooksPathNorm
+
+  hookFilesPerm :: [(FilePath, Permissions)] <- sequence $ hookFiles
+    & filter (\name ->
+        ("pre-" `isPrefixOf` name) || ("post-" `isPrefixOf` name))
+    <&> (hooksPathNorm </>)
+    <&> \path -> do
+            perm <- getPermissions path
+            pure (path, perm)
+
+  hookFilesPermContent <- sequence $ hookFilesPerm
+    & filter (\(_, perm) -> executable perm)
+    <&> \(filePath, perm) -> do
+            fileContent <- readFile filePath
+            pure (filePath, perm, fileContent)
+
+
+  let configNorm = addHookFilesToConfig configNormHookDir hookFilesPermContent
+
+  cliCommand <- execParser $ commandParserInfo configNorm
+
+  connection <- setupConnection configNorm
   -- TODO: Integrate into migrations
-  tableStatus <- createTables config connection
-  migrationsStatus <- runMigrations config connection
+  tableStatus <- createTables configNorm connection
+  migrationsStatus <- runMigrations configNorm connection
   nowElapsed <- timeCurrentP
 
   let
     now = timeFromElapsedP nowElapsed :: DateTime
 
-  doc <- executeCLiCommand config now connection cliCommand
+  doc <- executeCLiCommand configNorm now connection cliCommand
 
   -- TODO: Use withConnection instead
   close connection
@@ -976,7 +1023,8 @@ main = do
 
   case configResult of
     Left error -> do
-      if "not found" `T.isInfixOf` (T.pack $ prettyPrintParseException error)
+      if "file not found" `T.isInfixOf`
+            (T.pack $ prettyPrintParseException error)
       then do
         writeFile configPath exampleConfig
         configResult2 <- decodeFileEither configPath
