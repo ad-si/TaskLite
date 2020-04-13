@@ -1,0 +1,5 @@
+--warnings
+--clear
+--reverse-errors
+--no-height-limit
+--command="stack ghci tasklite-core"
