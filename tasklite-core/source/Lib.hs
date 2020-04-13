@@ -983,8 +983,8 @@ findTask connection aPattern = do
     numOfResults = 8
     minimumScore = 4
     ulidColor = Green
-    preTag = "\x1b[4m\x1b[34m"  -- ^ Set color to blue and underline text
-    postTag = "\x1b[0m"  -- ^ Reset styling
+    preTag = "\x1b[4m\x1b[34m"  -- Set color to blue and underline text
+    postTag = "\x1b[0m"  -- Reset styling
     metaNorm metadata = metadata
       & fromMaybe ""
       & T.replace ",\"" ", \""

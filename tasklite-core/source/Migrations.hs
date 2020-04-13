@@ -220,7 +220,7 @@ lintMigration migration =
 runMigration :: Connection -> [Query] -> IO (Either SQLError [()])
 runMigration connection querySet = do
   withTransaction connection $ do
-    -- | For debuging: Print querySet of migrations
+    -- For debugging: Print querySet of migrations
     -- putText $ "Result: " <> show querySet
     try $ mapM (execute_ connection) querySet
 
@@ -249,12 +249,12 @@ runMigrations conf connection = do
         "'pragma user_verison' does not return current version"
         (P.head currentVersionList)
 
-      -- | Check if duplicate user versions are defined
+      -- Check if duplicate user versions are defined
       _ <- if migrationsUp <&> Migrations.id & hasDuplicates
           then Left "Your migrations contain duplicate user versions"
           else Right []
 
-      -- | Get new migrations, lint and wrap them
+      -- Get new migrations, lint and wrap them
       migrationsUp
         & P.filter (\m -> (Migrations.id m) > currentVersion)
         <&> lintMigration
