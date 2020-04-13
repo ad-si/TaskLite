@@ -953,8 +953,11 @@ printOutput appName configUser = do
   putDoc $ tableStatus <> migrationsStatus <> doc <> hardline
 
 
-exampleConfig :: IsString a => a
-exampleConfig = $(embedStringFile "example-config.yaml")
+exampleConfig :: Text
+exampleConfig = $(
+    makeRelativeToProject "example-config.yaml"
+    >>= embedStringFile
+  )
 
 
 main :: IO ()
