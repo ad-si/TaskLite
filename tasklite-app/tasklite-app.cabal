@@ -1,0 +1,96 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: e0d07cc00d04171dcc5d656366489a7cf1f7800e25952269a63fce52997261ea
+
+name:           tasklite-app
+version:        0.3.0.0
+category:       Web
+homepage:       https://github.com/ad-si/tasklite-app#readme
+author:         Adrian Sieber
+maintainer:     mail@adriansieber.com
+copyright:      Adrian Sieber
+license:        AGPL-3.0-or-later
+build-type:     Simple
+extra-source-files:
+    readme.md
+
+library
+  exposed-modules:
+      Lib
+  other-modules:
+      Paths_tasklite_app
+  hs-source-dirs:
+      source
+  default-extensions: DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NoImplicitPrelude OverloadedStrings RecordWildCards StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -fno-warn-orphans -threaded
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-migrate
+    , beam-sqlite
+    , bytestring
+    , cassava
+    , directory
+    , filepath
+    , gi-gtk
+    , gi-gtk-declarative
+    , gi-gtk-declarative-app-simple
+    , hourglass
+    , pipes
+    , pipes-extras
+    , prettyprinter
+    , prettyprinter-ansi-terminal
+    , process
+    , protolude
+    , simple-sql-parser
+    , sqlite-simple
+    , tasklite-core
+    , text
+    , ulid
+    , unix
+    , vector
+    , yaml
+  default-language: Haskell2010
+
+executable tasklite-app
+  main-is: Main.hs
+  other-modules:
+      Paths_tasklite_app
+  hs-source-dirs:
+      app
+  default-extensions: DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NoImplicitPrelude OverloadedStrings RecordWildCards StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -fno-warn-orphans -threaded
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-migrate
+    , beam-sqlite
+    , bytestring
+    , cassava
+    , directory
+    , filepath
+    , gi-gtk
+    , gi-gtk-declarative
+    , gi-gtk-declarative-app-simple
+    , hourglass
+    , pipes
+    , pipes-extras
+    , prettyprinter
+    , prettyprinter-ansi-terminal
+    , process
+    , protolude
+    , simple-sql-parser
+    , sqlite-simple
+    , tasklite-core
+    , text
+    , ulid
+    , unix
+    , vector
+    , yaml
+  default-language: Haskell2010

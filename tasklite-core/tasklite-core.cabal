@@ -1,0 +1,239 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 69b45dd7309fea6a05747bf3cabd5f9affec99a94d1de45691df0b2ffcbceba3
+
+name:           tasklite-core
+version:        0.3.0.0
+synopsis:       CLI task / todo list manager with SQLite backend
+description:    Please see the README on GitHub
+                at <https://github.com/ad-si/tasklite#readme>
+category:       CLI, Task, Todo
+homepage:       https://github.com/ad-si/tasklite#readme
+bug-reports:    https://github.com/ad-si/tasklite/issues
+author:         Adrian Sieber
+maintainer:     mail@adriansieber.com
+copyright:      Adrian Sieber
+license:        AGPL-3.0-or-later
+build-type:     Simple
+extra-source-files:
+    README.md
+data-files:
+    example-config.yaml
+
+source-repository head
+  type: git
+  location: https://github.com/ad-si/tasklite
+
+library
+  exposed-modules:
+      Base32
+      Config
+      DbSetup
+      FullTask
+      ImportExport
+      Lib
+      Migrations
+      Note
+      SqlUtils
+      Task
+      TaskToNote
+      TaskToTag
+      TaskView
+      Utils
+  other-modules:
+      Paths_tasklite_core
+  hs-source-dirs:
+      source
+  default-extensions: DeriveAnyClass DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
+  build-depends:
+      QuickCheck
+    , aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-migrate
+    , beam-sqlite
+    , bytestring
+    , cassava
+    , directory
+    , file-embed
+    , filepath
+    , generic-random
+    , githash
+    , hourglass
+    , hsemail
+    , huzzy
+    , iso8601-duration
+    , optparse-applicative
+    , parsec
+    , portable-lines
+    , pretty-simple
+    , prettyprinter
+    , prettyprinter-ansi-terminal
+    , process
+    , protolude
+    , quickcheck-instances
+    , read-editor
+    , simple-sql-parser
+    , sqlite-simple
+    , text
+    , time
+    , ulid
+    , unix
+    , unordered-containers
+    , vector
+    , yaml
+  default-language: Haskell2010
+
+executable tasklite
+  main-is: Main.hs
+  other-modules:
+      Paths_tasklite_core
+  hs-source-dirs:
+      app
+  default-extensions: DeriveAnyClass DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
+  build-depends:
+      QuickCheck
+    , aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-migrate
+    , beam-sqlite
+    , bytestring
+    , cassava
+    , directory
+    , file-embed
+    , filepath
+    , generic-random
+    , githash
+    , hourglass
+    , hsemail
+    , huzzy
+    , iso8601-duration
+    , optparse-applicative
+    , parsec
+    , portable-lines
+    , pretty-simple
+    , prettyprinter
+    , prettyprinter-ansi-terminal
+    , process
+    , protolude
+    , quickcheck-instances
+    , read-editor
+    , simple-sql-parser
+    , sqlite-simple
+    , tasklite-core
+    , text
+    , time
+    , ulid
+    , unix
+    , unordered-containers
+    , vector
+    , yaml
+  default-language: Haskell2010
+
+test-suite tasklite-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_tasklite_core
+  hs-source-dirs:
+      test
+  default-extensions: DeriveAnyClass DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
+  build-depends:
+      QuickCheck
+    , aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-migrate
+    , beam-sqlite
+    , bytestring
+    , cassava
+    , directory
+    , file-embed
+    , filepath
+    , generic-random
+    , githash
+    , hourglass
+    , hsemail
+    , hspec
+    , huzzy
+    , iso8601-duration
+    , optparse-applicative
+    , parsec
+    , portable-lines
+    , pretty-simple
+    , prettyprinter
+    , prettyprinter-ansi-terminal
+    , process
+    , protolude
+    , quickcheck-instances
+    , read-editor
+    , simple-sql-parser
+    , sqlite-simple
+    , tasklite-core
+    , temporary
+    , text
+    , time
+    , ulid
+    , unix
+    , unordered-containers
+    , vector
+    , yaml
+  default-language: Haskell2010
+
+benchmark tasklite-bench
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Paths_tasklite_core
+  hs-source-dirs:
+      benchmarks
+  default-extensions: DeriveAnyClass DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
+  build-depends:
+      QuickCheck
+    , aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-migrate
+    , beam-sqlite
+    , bytestring
+    , cassava
+    , criterion
+    , directory
+    , file-embed
+    , filepath
+    , generic-random
+    , githash
+    , hourglass
+    , hsemail
+    , huzzy
+    , iso8601-duration
+    , optparse-applicative
+    , parsec
+    , portable-lines
+    , pretty-simple
+    , prettyprinter
+    , prettyprinter-ansi-terminal
+    , process
+    , protolude
+    , quickcheck-instances
+    , read-editor
+    , simple-sql-parser
+    , sqlite-simple
+    , tasklite-core
+    , text
+    , time
+    , ulid
+    , unix
+    , unordered-containers
+    , vector
+    , yaml
+  default-language: Haskell2010
