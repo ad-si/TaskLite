@@ -1590,6 +1590,16 @@ listRepeating conf now connection = do
   pure $ formatTasks conf now tasks
 
 
+listRecurring :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+listRecurring conf now connection = do
+  tasks <- query_ connection $ Query $
+    "select * from tasks_view \
+    \where recurrence_duration is not null \
+    \order by recurrence_duration desc"
+
+  pure $ formatTasks conf now tasks
+
+
 listReady :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listReady conf now connection = do
   tasks <- query_ connection $ Query $

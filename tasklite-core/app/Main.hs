@@ -119,6 +119,7 @@ data Command
   | ListWaiting
   | ListOverdue
   | ListRepeating
+  | ListRecurring
   | ListNoTag
   | ListWithTag [Text]
   | CountFiltered (Maybe [Text])
@@ -480,6 +481,9 @@ commandParser conf =
 
     <> command "repeating" (toParserInfo (pure ListRepeating)
         "List all repeating tasks by priority desc")
+
+    <> command "recurring" (toParserInfo (pure ListRecurring)
+        "List all recurring tasks by priority desc")
 
     <> command "new" (toParserInfo (pure ListNew)
         ("List " <> numTasks
@@ -843,6 +847,7 @@ executeCLiCommand conf now connection cmd =
     ListOpen -> openTasks conf now connection
     ListOverdue -> overdueTasks conf now connection
     ListRepeating -> listRepeating conf now connection
+    ListRecurring -> listRecurring conf now connection
     ListReady -> listReady conf now connection
     ListWaiting -> listWaiting conf now connection
     ListDone -> doneTasks conf now connection
