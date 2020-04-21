@@ -20,7 +20,8 @@ instance FromJSON Note where
 
     let
       ulidGenerated = (ulidFromInteger . abs . toInteger . hash) o
-      ulid = T.toLower $ fromMaybe "" (o_ulid <|> Just (show ulidGenerated))
+      ulid = T.toLower $ fromMaybe "" $
+        o_ulid <|> (hush $ ulidGenerated <&> show)
 
     body <- o .: "body"
 
