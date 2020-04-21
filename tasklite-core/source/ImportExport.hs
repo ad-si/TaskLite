@@ -105,10 +105,6 @@ instance FromJSON ImportTask where
     description  <- o .:? "description"
     let body = fromMaybe "" (o_body <|> description)
 
-    o_state      <- o .:? "state"
-    status       <- o .:? "status"
-    let state = textToTaskState =<< (o_state <|> status)
-
     o_priority_adjustment <- o .:? "priority_adjustment"
     urgency               <- o .:? "urgency"
     priority              <- optional (o .: "priority")
@@ -124,6 +120,16 @@ instance FromJSON ImportTask where
         <|> modification_date <|> updated_at
       modified_utc = T.pack $ timePrint importUtcFormat $
         fromMaybe createdUtc (parseUtc =<< maybeModified)
+
+    o_state      <- o .:? "state"
+    status       <- o .:? "status"
+    let
+      state = textToTaskState =<< (o_state <|> status)
+      implicitCloseUtcMaybe =
+        if isJust state
+        then (maybeModified
+          <|> (Just $ T.pack $ timePrint importUtcFormat $ createdUtc))
+        else Nothing
 
     o_tags  <- o .:? "tags"
     project <- o .:? "project"
@@ -191,7 +197,7 @@ instance FromJSON ImportTask where
     end_on       <- o .:? "end_on"
     let
       maybeClosed = closed <|> o_closed_utc <|> closed_on
-        <|> end <|> o_end_utc <|> end_on
+        <|> end <|> o_end_utc <|> end_on <|> implicitCloseUtcMaybe
       closed_utc = fmap
         (T.pack . (timePrint importUtcFormat))
         (parseUtc =<< maybeClosed)
