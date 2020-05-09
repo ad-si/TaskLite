@@ -11,11 +11,14 @@ module Main where
 import Protolude
 
 import Lib
+import Data.Aeson as Aeson
 import Data.Char (isSpace)
 import Data.FileEmbed (embedStringFile, makeRelativeToProject)
 import Data.Hourglass
 import Data.String (fromString)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TL
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import qualified Data.Time.ISO8601.Duration as Iso
@@ -36,10 +39,11 @@ import System.Directory
   , XdgDirectory(..)
   )
 import System.FilePath ((</>))
+import System.Process
 import Time.System
 import Database.SQLite.Simple (close, Connection(..))
 
-import Config (Config(..), HooksConfig(..), addHookFilesToConfig)
+import Config (Config(..), Hook(..), HookSet(..), HooksConfig(..), addHookFilesToConfig)
 import DbSetup
 import ImportExport
 import Migrations
@@ -926,6 +930,32 @@ executeCLiCommand conf now connection cmd =
     UlidToUtc ulid -> pure $ prettyUlid ulid
 
 
+executeHooks :: Text -> [Hook] -> IO (Doc AnsiStyle)
+executeHooks stdinText hooks = do
+  let stdinStr = T.unpack stdinText
+  cmdOutput <- forM hooks $ \hook ->
+    case (hook & filePath) of
+      Just fPath -> readProcess fPath [] stdinStr
+      Nothing -> do
+        let ipret = hook & interpreter
+        if | ipret `elem` ["ruby", "rb"] ->
+              readProcess "ruby" ["-e", (T.unpack $ hook & body)] stdinStr
+
+           | ipret `elem` ["javascript", "js", "node", "node.js"] ->
+              readProcess "node" ["-e", (T.unpack $ hook & body)] stdinStr
+
+           | ipret `elem` ["python", "python3", "py"] ->
+              readProcess "python3" ["-c", (T.unpack $ hook & body)] stdinStr
+
+           | otherwise ->
+              pure mempty
+
+  pure $ cmdOutput
+    <&> T.pack
+    & T.unlines
+    & pretty
+
+
 printOutput :: [Char] -> Config -> IO ()
 printOutput appName config = do
   let dataPath = config & dataDir
@@ -968,6 +998,8 @@ printOutput appName config = do
 
   hookFiles <- listDirectory hooksPathNorm
 
+  traceShowM hooksPathNorm
+
   hookFilesPerm :: [(FilePath, Permissions)] <- sequence $ hookFiles
     & filter (\name ->
         ("pre-" `isPrefixOf` name) || ("post-" `isPrefixOf` name))
@@ -985,6 +1017,9 @@ printOutput appName config = do
 
   let configNorm = addHookFilesToConfig configNormHookDir hookFilesPermContent
 
+  preLaunchResult <- executeHooks "" (configNorm & hooks & launch & pre)
+  putDoc preLaunchResult
+
   cliCommand <- execParser $ commandParserInfo configNorm
 
   connection <- setupConnection configNorm
@@ -995,6 +1030,12 @@ printOutput appName config = do
 
   let
     now = timeFromElapsedP nowElapsed :: DateTime
+
+  args <- getArgs
+  postLaunchResult <- executeHooks
+    (TL.toStrict $ TL.decodeUtf8 $ Aeson.encode $ object ["arguments" .= args])
+    (configNorm & hooks & launch & post)
+  putDoc postLaunchResult
 
   doc <- executeCLiCommand configNorm now connection cliCommand
 

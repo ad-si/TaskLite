@@ -18,7 +18,8 @@ import Data.Yaml (encode)
 
 
 data Hook = Hook
-  { interpreter :: Text
+  { filePath :: Maybe FilePath
+  , interpreter :: Text
   , body :: Text
   } deriving (Generic, Show)
 
@@ -27,7 +28,8 @@ instance FromJSON Hook
 
 emptyHook :: Hook
 emptyHook = Hook
-  { interpreter = ""
+  { filePath = Nothing
+  , interpreter = ""
   , body = ""
   }
 
@@ -89,11 +91,12 @@ defaultHooksConfig = HooksConfig
 addHookFilesToConfig :: Config -> [(FilePath, b, Text)]  -> Config
 addHookFilesToConfig =
   let
-    buildHook :: Text -> Hook
-    buildHook content =
+    buildHook :: FilePath -> Text -> Hook
+    buildHook filePath content =
       case lines content of
         firstLine : rest -> Hook
-          { interpreter = firstLine
+          { filePath = Just filePath
+          , interpreter = firstLine
               & T.replace "#!" ""
               & T.strip
           , body = rest
@@ -127,7 +130,7 @@ addHookFilesToConfig =
         case split (== '-') $ pack $ takeBaseName filePath of
           [stage, event] ->
             conf { hooks = addToHooksConfig event stage
-              (buildHook fileContent)
+              (buildHook filePath fileContent)
               (conf & hooks)
             }
 

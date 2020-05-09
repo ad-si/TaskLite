@@ -78,11 +78,11 @@ default-extensions:
   - UndecidableInstances
 
 ghc-options:
-  - -fno-warn-orphans
   - -Wall
   - -Wcompat
   - -Wincomplete-record-updates
   - -Wincomplete-uni-patterns
+  - -Wno-orphans
   - -Wredundant-constraints
   # - -Wunused-packages
 
