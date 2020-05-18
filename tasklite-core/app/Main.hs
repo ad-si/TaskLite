@@ -145,6 +145,7 @@ data Command
   | UnWaitTasks [IdText]
   | UnWakeTasks [IdText]
   | UnReadyTasks [IdText]
+  | UnReviewTasks [IdText]
   | UnRepeatTasks [IdText]
   | UnRecurTasks [IdText]
   | UnTagTasks [IdText]
@@ -654,27 +655,31 @@ commandParser conf =
 
     <> command "undue" (toParserInfo (UnDueTasks
         <$> some (strArgument idsVar))
-        "Erase due timestamp for specified tasks")
+        "Erase due timestamp of specified tasks")
 
     <> command "unwait" (toParserInfo (UnWaitTasks
         <$> some (strArgument idsVar))
-        "Erase wait timestamp for specified tasks")
+        "Erase wait timestamp of specified tasks")
 
     <> command "unwake" (toParserInfo (UnWakeTasks
         <$> some (strArgument idsVar))
-        "Erase awake timestamp for specified tasks")
+        "Erase awake timestamp of specified tasks")
 
     <> command "unready" (toParserInfo (UnReadyTasks
         <$> some (strArgument idsVar))
-        "Erase ready timestamp for specified tasks")
+        "Erase ready timestamp of specified tasks")
+
+    <> command "unreview" (toParserInfo (UnReviewTasks
+        <$> some (strArgument idsVar))
+        "Erase review timestamp of specified tasks")
 
     <> command "unrepeat" (toParserInfo (UnRepeatTasks
         <$> some (strArgument idsVar))
-        "Erase repetition duration for specified tasks")
+        "Erase repetition duration of specified tasks")
 
     <> command "unrecur" (toParserInfo (UnRecurTasks
         <$> some (strArgument idsVar))
-        "Erase recurrence duration for specified tasks")
+        "Erase recurrence duration of specified tasks")
 
     <> command "untag" (toParserInfo (UnTagTasks
         <$> some (strArgument idsVar))
@@ -916,6 +921,7 @@ executeCLiCommand conf now connection cmd =
     UnWaitTasks ids -> unwaitTasks conf connection ids
     UnWakeTasks ids -> unwakeTasks conf connection ids
     UnReadyTasks ids -> unreadyTasks conf connection ids
+    UnReviewTasks ids -> unreviewTasks conf connection ids
     UnRepeatTasks ids -> unrepeatTasks conf connection ids
     UnRecurTasks ids -> unrecurTasks conf connection ids
     UnTagTasks ids -> untagTasks conf connection ids

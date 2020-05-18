@@ -1224,6 +1224,20 @@ unreadyTasks conf connection ids = do
   pure $ vsep docs
 
 
+unreviewTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+unreviewTasks conf connection ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithTask conf connection idSubstr $ \task -> do
+      runBeamSqlite connection $ runUpdate $
+        update (_tldbTasks taskLiteDb)
+          (\task_ -> mconcat [(Task.review_utc task_) <-. (val_ Nothing)])
+          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+
+      pure $ getResultMsg "💥 Removed review timestamp" task
+
+  pure $ vsep docs
+
+
 unrepeatTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unrepeatTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
