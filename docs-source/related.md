@@ -23,7 +23,7 @@ Name          | Description
 [Unfog]       | A simple CLI task and time manager
 [Yokadi]      | Command line oriented, SQLite powered todo list
 [Eagle]       | Minimalistic todo app for command line
-
+[Dstask]      | Single binary CLI todo manager with git sync and markdown notes
 
 ## Comparison
 
@@ -46,6 +46,7 @@ Nr|Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 11|[git-pending]|  257|     37|      2 |[JavaScript][gpGH]|2019‑06‑17
 12|[Eureka]     |  161|    147|      7 |[Rust][Eureka]    |2017‑11‑20
 13|[Ff]         |  128|    775|      9 |[Haskell][Ff]     |2017‑12‑29
+14|[Dstask]     |  125|    479|      2 |[Go][Dstask]      |2018-12-08
 14|[Yokadi]     |  113|   1159|     12 |[Python][YGH]     |2008‑08‑24
 15|[Smos]       |  113|    797|      5 |[Haskell][SmosGH] |2018‑07‑29
 16|[Unfog]      |   49|    104|      1 |[Haskell][Unfog]  |2019‑10‑22
@@ -59,6 +60,8 @@ Nr|Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 
 [CommitTasks]: https://github.com/ZeroX-DG/CommitTasks
 [CTGH]: https://github.com/ZeroX-DG/CommitTasks
+
+[Dstask]: https://github.com/naggie/dstask
 
 [Eagle]: https://github.com/im-n1/eagle
 
