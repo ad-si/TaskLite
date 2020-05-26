@@ -23,7 +23,7 @@ Name          | Description
 [Unfog]       | A simple CLI task and time manager
 [Yokadi]      | Command line oriented, SQLite powered todo list
 [Eagle]       | Minimalistic todo app for command line
-
+[dstask]      | Single binary CLI todo manager: super-reliable git sync + markdown notes for each task
 
 ## Comparison
 
@@ -106,3 +106,5 @@ Nr|Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 
 [Yokadi]: https://yokadi.github.io/
 [YGH]: https://github.com/agateau/yokadi
+
+[dstask]: https://github.com/naggie/dstask
