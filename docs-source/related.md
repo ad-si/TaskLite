@@ -109,5 +109,3 @@ Nr|Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 
 [Yokadi]: https://yokadi.github.io/
 [YGH]: https://github.com/agateau/yokadi
-
-[dstask]: https://github.com/naggie/dstask
