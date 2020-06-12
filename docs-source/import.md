@@ -1,6 +1,6 @@
-# Migration
+# Import / Migration
 
-This is a best effort list on how to migrate your tasks
+This is a best effort list on how to import your tasks
 from other task managers to TaskLite.
 
 
@@ -80,19 +80,42 @@ find . -iname '*.json' \
     jq -c \
       '.textContent as $txt
         | .labels as $lbls
+        | .title as $title
+        | (if .isArchived then "done"
+          elif .isTrashed then "deletable"
+          else null
+          end) as $state
         | {
             utc: .userEditedTimestampUsec,
-            body: .title
+            body: ((if $title and $title != "" then $title else $txt end)
+              + (if .listContent
+                then "\n\n" +
+                  (
+                    .listContent
+                    | map("- [" + (if .isChecked then "x" else " " end) + "] "
+                      + .text)
+                    | join("\n")
+                  )
+                else ""
+                end))
+
           }
-        | if $lbls      then . + {tags: ($lbls | map(.name))} else . end
-        | if $txt != "" then . + {notes: [{body: $txt}]}        else . end
+        | if $lbls then . + {tags: ($lbls | map(.name))} else . end
+        | if $title and $title != "" and $txt and $txt != ""
+          then . + {notes: [{body: $txt}]}
+          else .
+          end
+        | if $state then . + {state: $state} else . end
       ' \
       "$task" \
-    | tl import
+    | tl importjson
   done
 ```
 
 The title of the Google Keep note becomes the body of the task
 and the note itself becomes a TaskLite note attached to the task.
+A list of sub-tasks will be converted to a GitHub Flavored Markdown [task list].
 
+[task list]:
+  https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax#task-lists
 [Google Takeout]: https://takeout.google.com
