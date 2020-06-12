@@ -1,9 +1,9 @@
 resolver: lts-14.27
 packages:
-  # - tasklite-api
   - huzzy
-  - tasklite-app
   - tasklite-core
+  # - tasklite-api
+  # - tasklite-app
   # - tasklite-web
 
 extra-deps:
