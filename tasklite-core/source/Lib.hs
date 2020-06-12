@@ -1352,6 +1352,7 @@ duplicateTasks conf connection ids = do
             , Task.awake_utc = val_ Nothing
             , Task.closed_utc = val_ Nothing
             , Task.modified_utc = val_ modified_utc
+            , Task.state = val_ Nothing
             }
 
         -- Duplicate tags
