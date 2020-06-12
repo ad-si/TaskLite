@@ -11,10 +11,15 @@ import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Time (addUTCTime, UTCTime, ZonedTime, zonedTimeToUTC)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Data.Hourglass
+import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.ULID
-import Data.ULID.TimeStamp
 import Data.ULID.Random
+import Data.ULID.TimeStamp
+import System.Process
+
 import Base32
+import Config
+
 
 type IdText = Text
 type TagText = Text
@@ -167,3 +172,29 @@ numDigits base num =
                    in  if r < b then (2 * e, r) else (2 * e+1, r `div` b)
   in
     1 + fst (ilog base num)
+
+
+executeHooks :: Text -> [Hook] -> IO (Doc AnsiStyle)
+executeHooks stdinText hooks = do
+  let stdinStr = T.unpack stdinText
+  cmdOutput <- forM hooks $ \hook ->
+    case (hook & filePath) of
+      Just fPath -> readProcess fPath [] stdinStr
+      Nothing -> do
+        let ipret = hook & interpreter
+        if | ipret `elem` ["ruby", "rb"] ->
+              readProcess "ruby" ["-e", (T.unpack $ hook & body)] stdinStr
+
+           | ipret `elem` ["javascript", "js", "node", "node.js"] ->
+              readProcess "node" ["-e", (T.unpack $ hook & body)] stdinStr
+
+           | ipret `elem` ["python", "python3", "py"] ->
+              readProcess "python3" ["-c", (T.unpack $ hook & body)] stdinStr
+
+           | otherwise ->
+              pure mempty
+
+  pure $ cmdOutput
+    <&> T.pack
+    & T.unlines
+    & pretty

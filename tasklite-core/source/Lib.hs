@@ -6,8 +6,11 @@ module Lib where
 
 import Protolude as P
 
+import Data.Aeson as Aeson
 import Data.Hourglass
 import Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Time.ISO8601.Duration as Iso
 import Data.ULID
 import Data.Coerce
@@ -235,6 +238,16 @@ addTask conf connection bodyWords = do
       , Task.modified_utc = modified_utc
       , Task.user = T.pack effectiveUserName
       }
+
+  args <- getArgs
+  preAddResult <- executeHooks
+    (TL.toStrict $ TL.decodeUtf8 $ Aeson.encode $ object
+      ["arguments" .= args
+      ,"taskToAdd" .= task
+      -- TODO: Add tags and notes to task
+      ])
+    (conf & hooks & add & pre)
+  putDoc preAddResult
 
   insertTask connection task
   insertTags connection Nothing (primaryKey task) tags
