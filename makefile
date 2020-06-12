@@ -1,5 +1,11 @@
 # Build the documentation
 docs: book.toml docs-source
+	mdbook build
+
+
+# Build the documentation with Docker
+.PHONY: docker-docs
+docker-docs: book.toml docs-source
 	docker run \
 		--rm \
 		--volume "$$PWD":/data \
@@ -7,9 +13,15 @@ docs: book.toml docs-source
 		mdbook build
 
 
-# Continously rebuild and serve at localhost:3000
+# Continuously rebuild and serve at localhost:3000
 .PHONY: serve
-serve: book.toml docs-source
+serve:
+	mdbook serve
+
+
+# Continuously rebuild and serve at localhost:3000 with Docker
+.PHONY: docker-serve
+docker-serve: book.toml docs-source
 	docker run \
 		--rm \
 		--volume "$$PWD":/data \
