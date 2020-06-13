@@ -1571,6 +1571,24 @@ openTasks conf now connection = do
     \order by `priority` desc"
   pure $ formatTasks conf now tasks
 
+modifiedTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+modifiedTasks conf now connection = do
+  tasks <- query_ connection $ Query
+    "select * from `tasks_view` \
+    \order by `modified_utc` desc"
+  pure $ formatTasks conf now $ filterModified tasks
+  where
+    filterModified =
+      P.filter (\task ->
+        (removeNSec $ ulidTextToDateTime $ FullTask.ulid  task)
+        /= (parseUtc $ FullTask.modified_utc task))
+    removeNSec :: Maybe DateTime -> Maybe DateTime
+    removeNSec mDateTime =
+      case mDateTime of
+        Just dateTime -> Just $ dateTime { dtTime = (dtTime dateTime) { todNSec = 0 } }
+        Nothing -> Nothing
+      
+
 
 overdueTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 overdueTasks conf now connection = do
