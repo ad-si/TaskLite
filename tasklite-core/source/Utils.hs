@@ -27,6 +27,9 @@ type TagText = Text
 data Filter a = NoFilter | Only a
   deriving (Eq, Ord, Show)
 
+data ListModifiedFlag = AllItems | ModifiedItemsOnly
+  deriving (Eq, Show)
+
 
 (<++>) :: Doc ann -> Doc ann -> Doc ann
 x <++> y =

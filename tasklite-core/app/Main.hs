@@ -861,8 +861,8 @@ executeCLiCommand conf now connection cmd =
     ListNew -> newTasks conf now connection
     ListOld -> listOldTasks conf now connection
     ListOpen -> openTasks conf now connection
-    ListModified -> modifiedTasks conf now connection
-    ListModifiedOnly -> modifiedOnlyTasks conf now connection
+    ListModified -> modifiedTasks conf now connection AllItems 
+    ListModifiedOnly -> modifiedTasks conf now connection ModifiedItemsOnly
     ListOverdue -> overdueTasks conf now connection
     ListRepeating -> listRepeating conf now connection
     ListRecurring -> listRecurring conf now connection
