@@ -1365,6 +1365,7 @@ duplicateTasks conf connection ids = do
             , Task.awake_utc = val_ Nothing
             , Task.closed_utc = val_ Nothing
             , Task.modified_utc = val_ modified_utc
+            , Task.state = val_ Nothing
             }
 
         -- Duplicate tags
@@ -1569,6 +1570,36 @@ openTasks conf now connection = do
     \where closed_utc is null \
     \order by `priority` desc"
   pure $ formatTasks conf now tasks
+
+
+modifiedTasks 
+  :: Config 
+  -> DateTime 
+  -> Connection 
+  -> ListModifiedFlag 
+  -> IO (Doc AnsiStyle)
+modifiedTasks conf now connection listModifiedFlag = do
+  tasks <- query_ connection $ Query
+    "select * from `tasks_view` \
+    \order by `modified_utc` desc"
+  let
+    filterModified =
+      P.filter (\task ->
+        (removeNSec $ ulidTextToDateTime $ FullTask.ulid  task)
+        /= (parseUtc $ FullTask.modified_utc task))
+
+    removeNSec :: Maybe DateTime -> Maybe DateTime
+    removeNSec mDateTime =
+      case mDateTime of
+        Just dateTime -> Just $ dateTime { dtTime = (dtTime dateTime) { todNSec = 0 } }
+        Nothing -> Nothing
+
+    filteredTasks =
+      case listModifiedFlag of
+        AllItems -> tasks
+        ModifiedItemsOnly -> filterModified tasks
+
+  pure $ formatTasks conf now filteredTasks
 
 
 overdueTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)

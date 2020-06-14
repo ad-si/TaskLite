@@ -116,6 +116,8 @@ data Command
   | ListNew
   | ListOld
   | ListOpen
+  | ListModified
+  | ListModifiedOnly
   | ListDone
   | ListObsolete
   | ListDeletable
@@ -468,6 +470,12 @@ commandParser conf =
 
     <> command "open" (toParserInfo (pure ListOpen)
         "List all open tasks by priority desc")
+      
+    <> command "modified" (toParserInfo (pure ListModified)
+        "List all tasks by modified UTC desc")
+
+    <> command "modifiedonly" (toParserInfo (pure ListModifiedOnly)
+        "List tasks where modified UTC != creation UTC by modified UTC desc")
 
     -- All tasks due to no later than
     -- <> command "yesterday"

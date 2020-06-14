@@ -465,50 +465,55 @@ editTask conf connection idSubstr = do
 
     newContent <- readEditorWith taskYaml
 
-    let
-      newContentBS = encodeUtf8 $ T.pack newContent
+    if newContent == taskYaml
+    then
+      pure $
+        "⚠️  Nothing changed" <+> hardline
+    else do
+      let
+        newContentBS = encodeUtf8 $ T.pack newContent
 
-      parseMetadata :: Value -> Parser Bool
-      parseMetadata val = case val of
-          Object obj -> do
-            let mdataMaybe = HM.lookup "metadata" obj
+        parseMetadata :: Value -> Parser Bool
+        parseMetadata val = case val of
+            Object obj -> do
+              let mdataMaybe = HM.lookup "metadata" obj
 
-            hasMdata <- pure $ case mdataMaybe of
-              Just (Object _) -> True
-              _ -> False
+              hasMdata <- pure $ case mdataMaybe of
+                Just (Object _) -> True
+                _ -> False
 
-            pure hasMdata
-          _ -> pure False
+              pure hasMdata
+            _ -> pure False
 
-      hasMetadata = parseMaybe parseMetadata
-        =<< (rightToMaybe $ Yaml.decodeEither' newContentBS :: Maybe Value)
+        hasMetadata = parseMaybe parseMetadata
+          =<< (rightToMaybe $ Yaml.decodeEither' newContentBS :: Maybe Value)
 
-      decodeResult :: Either ParseException ImportTask
-      decodeResult = Yaml.decodeEither' newContentBS
+        decodeResult :: Either ParseException ImportTask
+        decodeResult = Yaml.decodeEither' newContentBS
 
-    case decodeResult of
-      Left error -> die $ (show error) <> " in task \n" <> show newContent
-      Right importTaskRecord -> do
-        effectiveUserName <- getEffectiveUserName
-        let
-          taskParsed = task importTaskRecord
-          taskFixed = taskParsed
-            { Task.user =
-                if Task.user taskParsed == ""
-                then T.pack effectiveUserName
-                else Task.user taskParsed
-            , Task.metadata =
-                if hasMetadata == Just True
-                then Task.metadata taskParsed
-                else Nothing
-            }
+      case decodeResult of
+        Left error -> die $ (show error) <> " in task \n" <> show newContent
+        Right importTaskRecord -> do
+          effectiveUserName <- getEffectiveUserName
+          let
+            taskParsed = task importTaskRecord
+            taskFixed = taskParsed
+              { Task.user =
+                  if Task.user taskParsed == ""
+                  then T.pack effectiveUserName
+                  else Task.user taskParsed
+              , Task.metadata =
+                  if hasMetadata == Just True
+                  then Task.metadata taskParsed
+                  else Nothing
+              }
 
-        replaceTask connection taskFixed
-        insertTags connection Nothing
-          (primaryKey taskFixed) (tags importTaskRecord)
-        insertNotes connection Nothing
-          (primaryKey taskFixed) (notes importTaskRecord)
-        pure $
-          "✏️  Edited task" <+> dquotes (pretty $ Task.body taskFixed)
-          <+> "with ulid" <+> dquotes (pretty $ Task.ulid taskFixed)
-          <+> hardline
+          replaceTask connection taskFixed
+          insertTags connection Nothing
+            (primaryKey taskFixed) (tags importTaskRecord)
+          insertNotes connection Nothing
+            (primaryKey taskFixed) (notes importTaskRecord)
+          pure $
+            "✏️  Edited task" <+> dquotes (pretty $ Task.body taskFixed)
+            <+> "with ulid" <+> dquotes (pretty $ Task.ulid taskFixed)
+            <+> hardline
