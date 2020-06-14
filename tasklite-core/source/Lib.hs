@@ -1571,8 +1571,17 @@ openTasks conf now connection = do
     \order by `priority` desc"
   pure $ formatTasks conf now tasks
 
+
 modifiedTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-modifiedTasks conf now connection = 
+modifiedTasks conf now connection = do
+  tasks <- query_ connection $ Query
+    "select * from `tasks_view` \
+    \order by `modified_utc` desc"
+  pure $ formatTasks conf now tasks
+
+
+modifiedOnlyTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+modifiedOnlyTasks conf now connection = 
   let
     filterModified =
       P.filter (\task ->
@@ -1588,7 +1597,6 @@ modifiedTasks conf now connection =
     "select * from `tasks_view` \
     \order by `modified_utc` desc"
   pure $ formatTasks conf now $ filterModified tasks
-      
 
 
 overdueTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)

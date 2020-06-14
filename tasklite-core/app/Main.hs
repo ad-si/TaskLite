@@ -116,6 +116,7 @@ data Command
   | ListOld
   | ListOpen
   | ListModified
+  | ListModifiedOnly
   | ListDone
   | ListObsolete
   | ListDeletable
@@ -465,7 +466,10 @@ commandParser conf =
         "List all open tasks by priority desc")
       
     <> command "modified" (toParserInfo (pure ListModified)
-        "List all modified tasks by modified_utc desc")
+        "List all tasks by modified_utc desc")
+
+    <> command "modified-only" (toParserInfo (pure ListModifiedOnly)
+      "List all modified tasks by modified_utc desc")
 
     -- All tasks due to no later than
     -- <> command "yesterday"
@@ -858,6 +862,7 @@ executeCLiCommand conf now connection cmd =
     ListOld -> listOldTasks conf now connection
     ListOpen -> openTasks conf now connection
     ListModified -> modifiedTasks conf now connection
+    ListModifiedOnly -> modifiedOnlyTasks conf now connection
     ListOverdue -> overdueTasks conf now connection
     ListRepeating -> listRepeating conf now connection
     ListRecurring -> listRecurring conf now connection
