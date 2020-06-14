@@ -1572,12 +1572,8 @@ openTasks conf now connection = do
   pure $ formatTasks conf now tasks
 
 modifiedTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-modifiedTasks conf now connection = do
-  tasks <- query_ connection $ Query
-    "select * from `tasks_view` \
-    \order by `modified_utc` desc"
-  pure $ formatTasks conf now $ filterModified tasks
-  where
+modifiedTasks conf now connection = 
+  let
     filterModified =
       P.filter (\task ->
         (removeNSec $ ulidTextToDateTime $ FullTask.ulid  task)
@@ -1587,6 +1583,11 @@ modifiedTasks conf now connection = do
       case mDateTime of
         Just dateTime -> Just $ dateTime { dtTime = (dtTime dateTime) { todNSec = 0 } }
         Nothing -> Nothing
+  in do
+  tasks <- query_ connection $ Query
+    "select * from `tasks_view` \
+    \order by `modified_utc` desc"
+  pure $ formatTasks conf now $ filterModified tasks
       
 
 
