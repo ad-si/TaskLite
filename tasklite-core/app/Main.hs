@@ -84,6 +84,7 @@ data Command
   {- Modify With Parameter -}
   | Prioritize Float [IdText]
   | AddTag TagText [IdText]
+  | DeleteTag TagText [IdText]
   | AddNote Text [IdText]
   | SetDueUtc DateTime [IdText]
   | Start [IdText]
@@ -378,6 +379,11 @@ commandParser conf =
       <$> strArgument (metavar "TAG" <> help "The tag")
       <*> some (strArgument idsVar))
       "Add a tag to specified tasks")
+
+    <> command "deletetag" (toParserInfo (DeleteTag
+      <$> strArgument (metavar "TAG" <> help "The tag")
+      <*> some (strArgument idsVar))
+      "Delete a tag from specified tasks")
 
     <> command "note" (toParserInfo (AddNote
       <$> strArgument (metavar "NOTE" <> help "The note")
@@ -919,6 +925,7 @@ executeCLiCommand conf now connection cmd =
     NextTask -> nextTask conf connection
     FindTask aPattern -> findTask connection aPattern
     AddTag tagText ids -> addTag conf connection tagText ids
+    DeleteTag tagText ids -> deleteTag conf connection tagText ids
     AddNote noteText ids -> addNote conf connection noteText ids
     SetDueUtc datetime ids -> setDueUtc conf connection datetime ids
     Duplicate ids -> duplicateTasks conf connection ids

@@ -1094,6 +1094,22 @@ addTag conf connection tag ids = do
   pure $ vsep docs
 
 
+deleteTag :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
+deleteTag conf connection tag ids = do
+  docs <- forM ids $ \idSubstr -> do
+    execWithTask conf connection idSubstr $ \task -> do
+      runBeamSqlite connection $ runDelete $ delete
+        (_tldbTaskToTag taskLiteDb)
+        (\tagRecord ->
+            TaskToTag.task_ulid tagRecord ==. val_ (primaryKey task) &&.
+            (TaskToTag.tag tagRecord ==. val_ tag)
+        )
+
+      pure $ getResultMsg ("💥 Removed tag \"" <> pretty tag <> "\"")  task
+
+  pure $ vsep docs
+
+
 addNote :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
 addNote conf connection noteBody ids = do
   docs <- forM ids $ \idSubstr ->
