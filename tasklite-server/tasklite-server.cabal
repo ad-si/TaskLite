@@ -1,0 +1,65 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 21742af8c0c9837c929e24ab35c7b04c38d78a5eff7bdc1f96d1c5c9e8b5577c
+
+name:           tasklite-server
+version:        0.1.0.0
+synopsis:       REST API server for TaskLite
+description:    After signing up for an account, users can manage their ideas.
+                Every idea contains 3 scores: Impact, Ease and Confidence.
+                Each idea can be added, edited and deleted.
+                All the ideas will be sorted by the average of all three scores.
+                Every API call will return 10 ideas.
+                When not using the service, users can log out of the system.
+category:       Web
+homepage:       https://github.com/ad-si/TaskLite/tree/master/tasklite-server
+author:         Adrian Sieber
+maintainer:     mail@adriansieber.com
+copyright:      Adrian Sieber
+license:        AGPL-3.0-or-later
+build-type:     Simple
+extra-source-files:
+    readme.md
+
+executable tasklite-server
+  main-is: Main.hs
+  other-modules:
+      AccessToken
+      Database
+      DbIdea
+      DbUser
+      Helpers
+      Idea
+      PostIdea
+      SignupUser
+      Types
+      User
+      Paths_tasklite_server
+  hs-source-dirs:
+      source
+  default-extensions: DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -fno-warn-orphans
+  build-depends:
+      QuickCheck
+    , acid-state
+    , aeson
+    , base >=4.7 && <5
+    , bcrypt
+    , bytestring
+    , extra
+    , gravatar
+    , http-types
+    , jose
+    , lens
+    , mtl
+    , protolude
+    , safecopy
+    , scotty
+    , text
+    , time
+    , unordered-containers
+  default-language: Haskell2010

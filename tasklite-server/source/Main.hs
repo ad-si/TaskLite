@@ -34,7 +34,7 @@ makeClaims :: DbUser -> IO ClaimsSet
 makeClaims user = do
   now <- getCurrentTime
   pure $ emptyClaimsSet
-    & (claimIss ?~ fromString "my-idea-pool")
+    & (claimIss ?~ fromString "tasklite-server")
     & (claimAud ?~ Audience [fromString $ T.unpack $ DbUser.email user])
     & (claimIat ?~ NumericDate now)
     & (claimExp ?~ (NumericDate $ (fromRational 600 {-sec-}) `addUTCTime` now))
@@ -350,5 +350,5 @@ main = do
   case portMaybe of
     Nothing -> die "Port must be a number"
     Just port -> do
-      database <- openLocalStateFrom "my-idea-pool-db/" (Database [] [])
+      database <- openLocalStateFrom "tasklite-server-db/" (Database [] [])
       scotty port $ app database

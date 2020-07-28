@@ -2,11 +2,13 @@ resolver: lts-14.27
 packages:
   - huzzy
   - tasklite-core
+  - tasklite-server
   # - tasklite-api
   # - tasklite-app
   # - tasklite-web
 
 extra-deps:
+  - acid-state-0.15.0
   - gi-gtk-declarative-0.4.2
   - gi-gtk-declarative-app-simple-0.4.1
   - iso8601-duration-0.1.1.0

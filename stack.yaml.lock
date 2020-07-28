@@ -5,6 +5,13 @@
 
 packages:
 - completed:
+    hackage: acid-state-0.15.0@sha256:d964507f262d46d704078a276914e7d6e6ab9a899cdff6bc4c31e06f09e5b741,6144
+    pantry-tree:
+      size: 13811
+      sha256: e1a95ba5928a60805cd09d974f8ca97923e38a9eb73ba7b4227b8525c67d9f95
+  original:
+    hackage: acid-state-0.15.0
+- completed:
     hackage: gi-gtk-declarative-0.4.2@sha256:8f6a0c3fe61143b07b857d28ec4354c6e5540971ffbaf39837009e81c288a0bd,3719
     pantry-tree:
       size: 1918
@@ -42,9 +49,6 @@ packages:
 - completed:
     size: 132157
     url: https://github.com/JakeWheat/simple-sql-parser/archive/00433a26e8303c9e61359f406da5a2dbf1293fc8.tar.gz
-    cabal-file:
-      size: 5101
-      sha256: 0ad3e31d8d5ce51b6e75d4ca8ca374a5c254c897806a5cd69584809dbdb9c1a5
     name: simple-sql-parser
     version: 0.5.0
     sha256: a003b0d5906248468b886feea1536febc8b91946e634c4321b2f5c1c42744385
