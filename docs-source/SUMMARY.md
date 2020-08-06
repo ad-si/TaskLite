@@ -22,6 +22,8 @@
     - [REST API](./usage/rest_api.md)
     - [Haskell API](./usage/haskell_api.md)
 
+- [Automation](./automation.md)
+
 - [Differences to Taskwarrior](./differences_taskwarrior.md)
 
 - [Performance](./performance.md)
