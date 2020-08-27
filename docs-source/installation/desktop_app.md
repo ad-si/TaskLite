@@ -4,7 +4,7 @@
 
 **Attention: This is still early alpha**
 
-A few dependencies must be availabe to build the app.
+A few dependencies must be available to build the app.
 To install them on macOS run:
 
 ```shell

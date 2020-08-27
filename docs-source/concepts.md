@@ -88,7 +88,7 @@ and several other values.
 The idea is that you never have to manually set a priority,
 because it can be derived accurately from other values.
 This of course requires you
-to use the other availabe meta information adequately!
+to use the other available meta information adequately!
 
 The exact calculation algorithm can be found
 in the `taskViewQuery` function in [DbSetup.hs].
