@@ -5,26 +5,79 @@
 
 packages:
 - completed:
-    hackage: acid-state-0.15.0@sha256:d964507f262d46d704078a276914e7d6e6ab9a899cdff6bc4c31e06f09e5b741,6144
+    size: 1206068
+    subdir: beam-core
+    url: https://github.com/haskell-beam/beam/archive/ef3a4e6ce67edc145b7877cd9942168c97d43dcf.tar.gz
+    name: beam-core
+    version: 0.9.0.0
+    sha256: 550a175abecccf71ef755be0dfd4afb897d58868fdc75dace36634c54fb6cc28
     pantry-tree:
-      size: 13811
-      sha256: e1a95ba5928a60805cd09d974f8ca97923e38a9eb73ba7b4227b8525c67d9f95
+      size: 2703
+      sha256: 353b824b0d800d1665be22d7ea31c8809bf5c52a76d56df337489559e70707a0
   original:
-    hackage: acid-state-0.15.0
+    subdir: beam-core
+    url: https://github.com/haskell-beam/beam/archive/ef3a4e6ce67edc145b7877cd9942168c97d43dcf.tar.gz
 - completed:
-    hackage: gi-gtk-declarative-0.4.2@sha256:8f6a0c3fe61143b07b857d28ec4354c6e5540971ffbaf39837009e81c288a0bd,3719
+    size: 1206068
+    subdir: beam-migrate
+    url: https://github.com/haskell-beam/beam/archive/ef3a4e6ce67edc145b7877cd9942168c97d43dcf.tar.gz
+    name: beam-migrate
+    version: 0.5.0.0
+    sha256: 550a175abecccf71ef755be0dfd4afb897d58868fdc75dace36634c54fb6cc28
     pantry-tree:
-      size: 1918
-      sha256: 8788065c2a93dbf76b988f1e83ce2588de9ad399df123220d0a24d1e540dcd1d
+      size: 1825
+      sha256: cc3431fde785d4ee6b5cdd2fbcba51e3bdcfb8cb660533c758ddf33a4e0fbfad
   original:
-    hackage: gi-gtk-declarative-0.4.2
+    subdir: beam-migrate
+    url: https://github.com/haskell-beam/beam/archive/ef3a4e6ce67edc145b7877cd9942168c97d43dcf.tar.gz
 - completed:
-    hackage: gi-gtk-declarative-app-simple-0.4.1@sha256:5090c7bc7bdf950eb0c98561b8de47d452eacee8871c640509ec4d72781a999d,1818
+    size: 1206068
+    subdir: beam-sqlite
+    url: https://github.com/haskell-beam/beam/archive/ef3a4e6ce67edc145b7877cd9942168c97d43dcf.tar.gz
+    name: beam-sqlite
+    version: 0.5.0.0
+    sha256: 550a175abecccf71ef755be0dfd4afb897d58868fdc75dace36634c54fb6cc28
     pantry-tree:
-      size: 257
-      sha256: 3e2ca55f6838ad1fb9e54c4b7a0ec91fb78321a77d6cf27cc59d10750b8da39f
+      size: 1147
+      sha256: 872abdbdf697e72a3e523dffaf00444380860fc4beb905b1f5d6b81bfeb36d27
   original:
-    hackage: gi-gtk-declarative-app-simple-0.4.1
+    subdir: beam-sqlite
+    url: https://github.com/haskell-beam/beam/archive/ef3a4e6ce67edc145b7877cd9942168c97d43dcf.tar.gz
+- completed:
+    hackage: sqlite-simple-0.4.18.0@sha256:3ceea56375c0a3590c814e411a4eb86943f8d31b93b110ca159c90689b6b39e5,3002
+    pantry-tree:
+      size: 1930
+      sha256: e58b9955e483d51ee0966f8ba4384305d871480e2a38b32ee0fcd4573d74cf95
+  original:
+    hackage: sqlite-simple-0.4.18.0
+- completed:
+    hackage: acid-state-0.16.0.1@sha256:d43f6ee0b23338758156c500290c4405d769abefeb98e9bc112780dae09ece6f,6207
+    pantry-tree:
+      size: 13678
+      sha256: d57bcb2ad5e01fe7424abbcf9e58cf943027b5c4a8496d93625c57b6e1272274
+  original:
+    hackage: acid-state-0.16.0.1
+- completed:
+    hackage: dependent-map-0.2.4.0@sha256:21d35c1eba3f2afa3af3c4c5d8998fd14ac76f596f951c280bd83d1d5a19ae28,1739
+    pantry-tree:
+      size: 453
+      sha256: fb90d868424e86c32b03cef1ae1b08413e66503f3fc2e31f5111cf1f49846886
+  original:
+    hackage: dependent-map-0.2.4.0
+- completed:
+    hackage: dependent-sum-0.5@sha256:da0cb690c900e3a94197770e4d86c9b7b19a13f4f2e3844fc5e990b2c44eafef,1900
+    pantry-tree:
+      size: 617
+      sha256: 33c0b274f9e2eab445d3dac8a339f9ad89a3f3382fae24038df8d1314972cece
+  original:
+    hackage: dependent-sum-0.5
+- completed:
+    hackage: direct-sqlite-2.3.26@sha256:04e835402f1508abca383182023e4e2b9b86297b8533afbd4e57d1a5652e0c23,3718
+    pantry-tree:
+      size: 770
+      sha256: 11874ab21e10c5b54cd1e02a037b677dc1e2ee9986f38c599612c56654dc01c3
+  original:
+    hackage: direct-sqlite-2.3.26
 - completed:
     hackage: iso8601-duration-0.1.1.0@sha256:0e9e7531e71b693c20115198186a0280aa3631dc29da226e84e55f0984bec1af,2210
     pantry-tree:
@@ -40,13 +93,6 @@ packages:
   original:
     hackage: portable-lines-0.1
 - completed:
-    hackage: ulid-0.3.0.0@sha256:f0eff432ed0f0d0b71be0fd7f45acb54d87aebc4e1e153d2c2e1be4b09eb20b5,2918
-    pantry-tree:
-      size: 1004
-      sha256: acfb00d6d9f085c9151a0bff1b4282df0b0ac40fbb5822128dce8a62cff07085
-  original:
-    hackage: ulid-0.3.0.0
-- completed:
     size: 132157
     url: https://github.com/JakeWheat/simple-sql-parser/archive/00433a26e8303c9e61359f406da5a2dbf1293fc8.tar.gz
     name: simple-sql-parser
@@ -59,7 +105,7 @@ packages:
     url: https://github.com/JakeWheat/simple-sql-parser/archive/00433a26e8303c9e61359f406da5a2dbf1293fc8.tar.gz
 snapshots:
 - completed:
-    size: 524996
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/27.yaml
-    sha256: 7ea31a280c56bf36ff591a7397cc384d0dff622e7f9e4225b47d8980f019a0f0
-  original: lts-14.27
+    size: 532381
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/11.yaml
+    sha256: 1f43c4ad661a114a4f9dd4580988f30da1208d844c097714f5867c52a02e0aa1
+  original: lts-16.11

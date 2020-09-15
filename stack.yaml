@@ -1,4 +1,4 @@
-resolver: lts-14.27
+resolver: lts-16.14
 packages:
   - huzzy
   - tasklite-core
@@ -8,12 +8,20 @@ packages:
   # - tasklite-web
 
 extra-deps:
-  - acid-state-0.15.0
-  - gi-gtk-declarative-0.4.2
-  - gi-gtk-declarative-app-simple-0.4.1
+  - github: haskell-beam/beam
+    # 2020-09-09
+    commit: ef3a4e6ce67edc145b7877cd9942168c97d43dcf
+    subdirs:
+      - beam-core
+      - beam-migrate
+      - beam-sqlite
+  - sqlite-simple-0.4.18.0
+  - acid-state-0.16.0.1
+  - dependent-map-0.2.4.0
+  - dependent-sum-0.5
+  - direct-sqlite-2.3.26
   - iso8601-duration-0.1.1.0
   - portable-lines-0.1
-  - ulid-0.3.0.0
   - github: JakeWheat/simple-sql-parser
     commit: 00433a26e8303c9e61359f406da5a2dbf1293fc8
 
