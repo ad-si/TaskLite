@@ -31,7 +31,7 @@ cat tasks.yaml \
 | jq -c '.[]' \
 | while read -r task
   do
-    echo "$task" | tl import
+    echo "$task" | tasklite importjson
   done
 ```
 
@@ -43,7 +43,9 @@ Therefore migration is really simple:
 
 ```bash
 task export rc.json.array=off \
-| while read -r task; do echo $task | tasklite import; done
+| while read -r task; \
+  do echo $task | tasklite importjson; \
+  done
 ```
 
 [export format]: https://taskwarrior.org/docs/design/task.html
