@@ -12,6 +12,7 @@ import Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Time.ISO8601.Duration as Iso
+import Data.Time.Clock (UTCTime)
 import Data.ULID
 import Data.Coerce
 import Data.Yaml as Yaml
@@ -29,7 +30,6 @@ import qualified Text.Huzzy as Huzzy
 import Text.ParserCombinators.ReadP as ReadP
 import GHC.Unicode (isSpace)
 import Time.System
-import Text.Read (readMaybe)
 import Data.Text.Prettyprint.Doc as Pp hiding ((<>))
 import Data.Text.Prettyprint.Doc.Util
 import Data.Text.Prettyprint.Doc.Render.Terminal
@@ -426,19 +426,16 @@ reviewTasksIn conf connection duration ids = do
   pure $ vsep docs
 
 
--- TODO: Replace with proper IS08601 duration parser
-parseIsoDuration :: Text -> Maybe Duration
-parseIsoDuration isoDuration =
-  if "PT" `T.isPrefixOf` isoDuration && "M" `T.isSuffixOf` isoDuration
-  then
-    let
-      minutes :: Maybe Int64
-      minutes = readMaybe $ unpack $ (T.drop 2 . T.dropEnd 1) isoDuration
-    in
-      fmap
-        (\mins -> mempty { durationMinutes = Minutes mins })
-        minutes
-  else Nothing
+showDateTime :: Config -> DateTime -> Text
+showDateTime conf =
+    pack . timePrint (utcFormat conf)
+
+
+showEither :: Config -> Either a UTCTime -> Maybe Text
+showEither conf e = e
+  & (either (const Nothing) Just)
+  <&> utcTimeToDateTime
+  <&> (showDateTime conf)
 
 
 createNextRepetition
@@ -447,13 +444,17 @@ createNextRepetition conf connection task = do
   newUlidText <- formatUlid getULID
   let
     taskUlid = primaryKey task
-    nowMaybe = ulidTextToDateTime newUlidText
     dueUtcMb = (Task.due_utc task) >>= parseUtc
-    showDateTime = pack . timePrint (utcFormat conf)
-    repIsoDur = (Task.repetition_duration task) >>= parseIsoDuration
-    nextDueMb = liftA2 timeAdd
-      (if nowMaybe < dueUtcMb then dueUtcMb else nowMaybe)
-      repIsoDur
+    durTextEither = maybeToEither
+                        "Task has no repetition duration"
+                        (Task.repetition_duration task)
+    isoDurEither =
+      durTextEither
+      <&> encodeUtf8
+      >>= Iso.parseDuration
+
+    nextDueMb = liftA2 Iso.addDuration isoDurEither
+      (maybeToEither "Task has no due UTC" (dueUtcMb <&> dateTimeToUtcTime))
 
   -- TODO: Investigate why this isn't working and replace afterwards
   -- runBeamSqlite connection $ runInsert $
@@ -472,15 +473,17 @@ createNextRepetition conf connection task = do
 
       pure originalTask
         { Task.ulid = val_ newUlidText
-        , Task.due_utc = val_ $ fmap showDateTime nextDueMb
+        , Task.due_utc = val_ $ nextDueMb & showEither conf
         , Task.awake_utc = val_ $
-            fmap showDateTime $ liftA2 timeAdd
-              ((Task.awake_utc task) >>= parseUtc)
-              repIsoDur
+            (liftA2 Iso.addDuration isoDurEither
+              (maybeToEither "Task has no awake UTC"
+                ((Task.awake_utc task) >>= parseUtc <&> dateTimeToUtcTime)))
+            & showEither conf
         , Task.ready_utc = val_ $
-            fmap showDateTime $ liftA2 timeAdd
-              ((Task.ready_utc task) >>= parseUtc)
-              repIsoDur
+            (liftA2 Iso.addDuration isoDurEither
+              (maybeToEither "Task has no ready UTC"
+                ((Task.ready_utc task) >>= parseUtc <&> dateTimeToUtcTime)))
+            & showEither conf
         }
 
     -- Duplicate tags
@@ -500,6 +503,7 @@ createNextRepetition conf connection task = do
     <+> "with id" <+> dquotes (pretty newUlidText)
 
 
+-- TODO: Eliminate code duplication with createNextRepetition
 createNextRecurrence
   :: Config -> Connection -> Task -> IO (Maybe (Doc ann))
 createNextRecurrence conf connection task = do
@@ -507,10 +511,6 @@ createNextRecurrence conf connection task = do
   let
     taskUlid = primaryKey task
     dueUtcMb = (Task.due_utc task) >>= parseUtc
-
-    showDateTime :: DateTime -> Text
-    showDateTime = pack . timePrint (utcFormat conf)
-
     durTextEither = maybeToEither
                         "Task has no recurrence duration"
                         (Task.recurrence_duration task)
@@ -518,11 +518,6 @@ createNextRecurrence conf connection task = do
       durTextEither
       <&> encodeUtf8
       >>= Iso.parseDuration
-
-    showEither e = e
-      & (either (const Nothing) Just)
-      <&> utcTimeToDateTime
-      <&> showDateTime
 
     nextDueMb = liftA2 Iso.addDuration isoDurEither
       (maybeToEither "Task has no due UTC" (dueUtcMb <&> dateTimeToUtcTime))
@@ -535,19 +530,19 @@ createNextRecurrence conf connection task = do
 
       pure originalTask
         { Task.ulid = val_ newUlidText
-        , Task.due_utc = val_ $ nextDueMb & showEither
+        , Task.due_utc = val_ $ nextDueMb & showEither conf
 
         , Task.awake_utc = val_ $
             (liftA2 Iso.addDuration isoDurEither
               (maybeToEither "Task has no awake UTC"
                 ((Task.awake_utc task) >>= parseUtc <&> dateTimeToUtcTime)))
-            & showEither
+            & showEither conf
 
         , Task.ready_utc = val_ $
             (liftA2 Iso.addDuration isoDurEither
               (maybeToEither "Task has no ready UTC"
                 ((Task.ready_utc task) >>= parseUtc <&> dateTimeToUtcTime)))
-            & showEither
+            & showEither conf
 
         }
 
@@ -1588,11 +1583,11 @@ openTasks conf now connection = do
   pure $ formatTasks conf now tasks
 
 
-modifiedTasks 
-  :: Config 
-  -> DateTime 
-  -> Connection 
-  -> ListModifiedFlag 
+modifiedTasks
+  :: Config
+  -> DateTime
+  -> Connection
+  -> ListModifiedFlag
   -> IO (Doc AnsiStyle)
 modifiedTasks conf now connection listModifiedFlag = do
   tasks <- query_ connection $ Query
