@@ -7,6 +7,7 @@ Name          | Description
 --------------|-----------------------------------------------------------------
 [Buku]        | Store and manage your bookmarks from the command line
 [CommitTasks] | Combination between git commit and todo list
+[Etm]         | Event and task manager
 [Eureka]      | CLI tool to input and store ideas without leaving the terminal
 [Ff]          | A distributed note taker and task manager
 [git-pending] | Git plugin to list TODO, FIXME, … comments in a repository
@@ -52,7 +53,8 @@ Nr|Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 16|[Unfog]      |   49|    104|      1 |[Haskell][Unfog]  |2019‑10‑22
 17|[TaskLite]   |   44|    234|      1 |[Haskell][TLGH]   |2018‑06‑04
 18|[Tracli]     |   33|     56|      2 |[JavaScript][TrGH]|2019‑07‑15
-19|[Eagle]      |   10|     46|      1 |[Python][Eagle]   |2018‑10‑28
+19|[Etm]        |   13|   3203|      2 |[Python][Etm]     |2017‑09‑02
+20|[Eagle]      |   10|     46|      1 |[Python][Eagle]   |2018‑10‑28
 
 
 
@@ -64,6 +66,8 @@ Nr|Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 [Dstask]: https://github.com/naggie/dstask
 
 [Eagle]: https://github.com/im-n1/eagle
+
+[Etm]: https://github.com/dagraham/etm-dgraham
 
 [Eureka]: https://github.com/simeg/eureka
 
