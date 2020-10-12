@@ -10,6 +10,7 @@
     - [Web App](./installation/web_app.md)
 
 - [Concepts](./concepts.md)
+    - [Repetition and Recurrence](./repetition_and_recurrence.md)
 
 - [Import](./import.md)
 

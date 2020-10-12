@@ -74,6 +74,8 @@ State\Field |`group_ulid`|`repetition_duration`|`recurrence_duration`
 
 A task is either recurring or repeating,
 but can't be both at the same time.
+For more information and examples check out the
+[corresponding documentation page](repetition_and_recurrence.html)
 
 
 ## Priority
