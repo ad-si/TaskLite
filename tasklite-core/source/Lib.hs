@@ -444,6 +444,7 @@ createNextRepetition conf connection task = do
   newUlidText <- formatUlid getULID
   let
     taskUlid = primaryKey task
+    nowMb = ulidTextToDateTime newUlidText
     dueUtcMb = (Task.due_utc task) >>= parseUtc
     durTextEither = maybeToEither
                         "Task has no repetition duration"
@@ -453,15 +454,16 @@ createNextRepetition conf connection task = do
       <&> encodeUtf8
       >>= Iso.parseDuration
 
+    offsetMb = if nowMb < dueUtcMb then dueUtcMb else nowMb
     nextDueMb = liftA2 Iso.addDuration isoDurEither
-      (maybeToEither "Task has no due UTC" (dueUtcMb <&> dateTimeToUtcTime))
+      (maybeToEither "Task has no due UTC" (offsetMb <&> dateTimeToUtcTime))
 
   -- TODO: Investigate why this isn't working and replace afterwards
   -- runBeamSqlite connection $ runInsert $
   --   insert (_tldbTasks taskLiteDb) $
   --   insertValues [ task
   --     { Task.ulid = val_ newUlidText
-  --     , Task.due_utc = nowMaybe + (Task.repetition_duration task)
+  --     , Task.due_utc = nowMb + (Task.repetition_duration task)
   --     }
   --   ]
 
