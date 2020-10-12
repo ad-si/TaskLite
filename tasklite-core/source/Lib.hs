@@ -476,16 +476,22 @@ createNextRepetition conf connection task = do
       pure originalTask
         { Task.ulid = val_ newUlidText
         , Task.due_utc = val_ $ nextDueMb & showEither conf
+
         , Task.awake_utc = val_ $
             (liftA2 Iso.addDuration isoDurEither
               (maybeToEither "Task has no awake UTC"
                 ((Task.awake_utc task) >>= parseUtc <&> dateTimeToUtcTime)))
             & showEither conf
+
         , Task.ready_utc = val_ $
             (liftA2 Iso.addDuration isoDurEither
               (maybeToEither "Task has no ready UTC"
                 ((Task.ready_utc task) >>= parseUtc <&> dateTimeToUtcTime)))
             & showEither conf
+
+        , Task.modified_utc = val_ $ fromMaybe "" $ nowMb
+            <&> timePrint (utcFormat conf)
+            <&> pack
         }
 
     -- Duplicate tags
@@ -546,6 +552,10 @@ createNextRecurrence conf connection task = do
                 ((Task.ready_utc task) >>= parseUtc <&> dateTimeToUtcTime)))
             & showEither conf
 
+        , Task.modified_utc = val_ $ fromMaybe ""
+            $ ulidTextToDateTime newUlidText
+            <&> timePrint (utcFormat conf)
+            <&> pack
         }
 
     -- Duplicate tags
