@@ -104,6 +104,7 @@ data Command
   | ImportFile FilePath
   | ImportJson
   | ImportEml
+  | IngestFile FilePath
   | Csv
   | Ndjson
   | Sql
@@ -470,7 +471,7 @@ commandParser conf =
 
     <> command "open" (toParserInfo (pure ListOpen)
         "List all open tasks by priority desc")
-      
+
     <> command "modified" (toParserInfo (pure ListModified)
         "List all tasks by modified UTC desc")
 
@@ -619,6 +620,11 @@ commandParser conf =
 
     <> command "importeml" (toParserInfo (pure ImportEml)
         "Import one email from stdin")
+
+    <> command "ingest" (toParserInfo (IngestFile <$> strArgument
+        (metavar "FILEPATH" <> help "Path to file"))
+        ("Ingest a .json or .eml file containing one task "
+          <> "(import, open in editor, delete the original file)"))
 
     <> command "csv" (toParserInfo (pure Csv)
         "Show tasks in CSV format")
@@ -839,6 +845,7 @@ helpReplacements =
 helpText :: Config -> Doc AnsiStyle
 helpText conf =
   let
+    extendHelp :: ParserHelp -> Doc AnsiStyle
     extendHelp theHelp = theHelp
       & show
       & spliceDocsIntoText helpReplacements
@@ -867,7 +874,7 @@ executeCLiCommand conf now connection cmd =
     ListNew -> newTasks conf now connection
     ListOld -> listOldTasks conf now connection
     ListOpen -> openTasks conf now connection
-    ListModified -> modifiedTasks conf now connection AllItems 
+    ListModified -> modifiedTasks conf now connection AllItems
     ListModifiedOnly -> modifiedTasks conf now connection ModifiedItemsOnly
     ListOverdue -> overdueTasks conf now connection
     ListRepeating -> listRepeating conf now connection
@@ -888,6 +895,7 @@ executeCLiCommand conf now connection cmd =
     ImportFile filePath -> importFile conf connection filePath
     ImportJson -> importJson conf connection
     ImportEml -> importEml conf connection
+    IngestFile filePath -> ingestFile conf connection filePath
     Csv -> dumpCsv conf
     Ndjson -> dumpNdjson conf
     Sql -> dumpSql conf

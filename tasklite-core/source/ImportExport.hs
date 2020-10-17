@@ -405,6 +405,39 @@ importFile _ connection filePath = do
     _ -> die $ T.pack $ "File type " <> fileExt <> " is not supported"
 
 
+ingestFile :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
+ingestFile config connection filePath = do
+  content <- BSL.readFile filePath
+
+  let
+    fileExt = takeExtension filePath
+
+  resultDoc <- case fileExt of
+    ".json" ->
+      let decodeResult = Aeson.eitherDecode content :: Either [Char] ImportTask
+      in case decodeResult of
+            Left error ->
+              die $ (T.pack error) <> " in task \n" <> show content
+            Right importTaskRecord@ImportTask { task } -> do
+              insertImportTask connection importTaskRecord
+              editTaskByTask config connection task
+
+    ".eml" ->
+      case Parsec.parse message filePath content of
+        Left error -> die $ show error
+        Right email -> do
+          let taskRecord@ImportTask { task } =
+                emailToImportTask email
+          insertImportTask connection taskRecord
+          editTaskByTask config connection task
+
+    _ -> die $ T.pack $ "File type " <> fileExt <> " is not supported"
+
+  removeFile filePath
+
+  pure $ resultDoc <+> "❌ Deleted file \"" <> (pretty filePath) <> "\""
+
+
 -- TODO: Use Task instead of FullTask to fix broken notes export
 dumpCsv :: Config -> IO (Doc AnsiStyle)
 dumpCsv conf = do
@@ -458,62 +491,67 @@ backupDatabase conf = do
           <> "\" to \"" <> backupFilePath <> "\"")
 
 
+editTaskByTask :: Config -> Connection -> Task -> IO (Doc AnsiStyle)
+editTaskByTask conf connection taskToEdit = do
+  let taskYaml = (T.unpack . decodeUtf8 . Yaml.encode) taskToEdit
+
+  newContent <- readEditorWith taskYaml
+
+  if newContent == taskYaml
+  then
+    pure $
+      "⚠️  Nothing changed" <+> hardline
+  else do
+    let
+      newContentBS = encodeUtf8 $ T.pack newContent
+
+      parseMetadata :: Value -> Parser Bool
+      parseMetadata val = case val of
+          Object obj -> do
+            let mdataMaybe = HM.lookup "metadata" obj
+
+            hasMdata <- pure $ case mdataMaybe of
+              Just (Object _) -> True
+              _ -> False
+
+            pure hasMdata
+          _ -> pure False
+
+      hasMetadata = parseMaybe parseMetadata
+        =<< (rightToMaybe $ Yaml.decodeEither' newContentBS :: Maybe Value)
+
+      decodeResult :: Either ParseException ImportTask
+      decodeResult = Yaml.decodeEither' newContentBS
+
+    case decodeResult of
+      Left error -> die $ (show error) <> " in task \n" <> show newContent
+      Right importTaskRecord -> do
+        effectiveUserName <- getEffectiveUserName
+        let
+          taskParsed = task importTaskRecord
+          taskFixed = taskParsed
+            { Task.user =
+                if Task.user taskParsed == ""
+                then T.pack effectiveUserName
+                else Task.user taskParsed
+            , Task.metadata =
+                if hasMetadata == Just True
+                then Task.metadata taskParsed
+                else Nothing
+            }
+
+        replaceTask connection taskFixed
+        insertTags connection Nothing
+          (primaryKey taskFixed) (tags importTaskRecord)
+        insertNotes connection Nothing
+          (primaryKey taskFixed) (notes importTaskRecord)
+        pure $
+          "✏️  Edited task" <+> dquotes (pretty $ Task.body taskFixed)
+          <+> "with ulid" <+> dquotes (pretty $ Task.ulid taskFixed)
+          <+> hardline
+
+
 editTask :: Config -> Connection -> IdText -> IO (Doc AnsiStyle)
 editTask conf connection idSubstr = do
   execWithTask conf connection idSubstr $ \taskToEdit -> do
-    let taskYaml = (T.unpack . decodeUtf8 . Yaml.encode) taskToEdit
-
-    newContent <- readEditorWith taskYaml
-
-    if newContent == taskYaml
-    then
-      pure $
-        "⚠️  Nothing changed" <+> hardline
-    else do
-      let
-        newContentBS = encodeUtf8 $ T.pack newContent
-
-        parseMetadata :: Value -> Parser Bool
-        parseMetadata val = case val of
-            Object obj -> do
-              let mdataMaybe = HM.lookup "metadata" obj
-
-              hasMdata <- pure $ case mdataMaybe of
-                Just (Object _) -> True
-                _ -> False
-
-              pure hasMdata
-            _ -> pure False
-
-        hasMetadata = parseMaybe parseMetadata
-          =<< (rightToMaybe $ Yaml.decodeEither' newContentBS :: Maybe Value)
-
-        decodeResult :: Either ParseException ImportTask
-        decodeResult = Yaml.decodeEither' newContentBS
-
-      case decodeResult of
-        Left error -> die $ (show error) <> " in task \n" <> show newContent
-        Right importTaskRecord -> do
-          effectiveUserName <- getEffectiveUserName
-          let
-            taskParsed = task importTaskRecord
-            taskFixed = taskParsed
-              { Task.user =
-                  if Task.user taskParsed == ""
-                  then T.pack effectiveUserName
-                  else Task.user taskParsed
-              , Task.metadata =
-                  if hasMetadata == Just True
-                  then Task.metadata taskParsed
-                  else Nothing
-              }
-
-          replaceTask connection taskFixed
-          insertTags connection Nothing
-            (primaryKey taskFixed) (tags importTaskRecord)
-          insertNotes connection Nothing
-            (primaryKey taskFixed) (notes importTaskRecord)
-          pure $
-            "✏️  Edited task" <+> dquotes (pretty $ Task.body taskFixed)
-            <+> "with ulid" <+> dquotes (pretty $ Task.ulid taskFixed)
-            <+> hardline
+    editTaskByTask conf connection taskToEdit
