@@ -27,6 +27,7 @@ import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import GitHash
 import Options.Applicative
+import Options.Applicative.Help.Core (parserHelp)
 import Paths_tasklite_core ()
 import System.Directory
   ( createDirectoryIfMissing
@@ -166,6 +167,12 @@ data Command
   | UlidToUtc Text
 
   deriving (Show, Eq)
+
+
+data CliArgs = CliArgs
+  { cliCommand :: Command
+  , runHelpCommand :: Bool
+  }
 
 
 nameToAliasList :: [(Text, Text)]
@@ -746,8 +753,23 @@ commandParser conf =
   )
 
 
-commandParserInfo :: Config -> ParserInfo Command
-commandParserInfo conf =
+runHelpSwitch :: Parser Bool
+runHelpSwitch =
+  switch
+    ( long "help"
+    <> short 'h'
+    <> help "Display current help page"
+    <> internal)
+
+
+cliArgsParser :: Config -> Parser CliArgs
+cliArgsParser conf = CliArgs
+  <$> commandParser conf
+  <*> runHelpSwitch
+
+
+parserInfo :: Config -> ParserInfo CliArgs
+parserInfo conf =
   let
     versionDesc =
       "Version "
@@ -755,7 +777,7 @@ commandParserInfo conf =
       <> ", developed by <adriansieber.com>"
   in
     info
-      (helper <*> commandParser conf)
+      (cliArgsParser conf)
       (noIntersperse
         <> briefDesc
         <> headerDoc (Just "{{header}}")
@@ -842,25 +864,15 @@ helpReplacements =
       []))
 
 
-helpText :: Config -> Doc AnsiStyle
-helpText conf =
-  let
-    extendHelp :: ParserHelp -> Doc AnsiStyle
-    extendHelp theHelp = theHelp
-      & show
-      & spliceDocsIntoText helpReplacements
-      & hcat
-  in
-    case
-      (parserFailure defaultPrefs (commandParserInfo conf) ShowHelpText mempty)
-    of
-      ParserFailure a -> case a "tasklite" of
-        (theHelp, _, _) -> extendHelp theHelp
+extendHelp :: ParserHelp -> Doc AnsiStyle
+extendHelp theHelp = theHelp
+  & show
+  & spliceDocsIntoText helpReplacements
+  & hcat
 
 
-executeCLiCommand ::
-  Config -> DateTime -> Connection -> Command -> IO (Doc AnsiStyle)
-executeCLiCommand conf now connection cmd =
+executeCLiCommand :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
+executeCLiCommand conf now connection = do
   let
     addTaskC = addTask conf connection
     prettyUlid ulid = pretty $ fmap
@@ -868,96 +880,101 @@ executeCLiCommand conf now connection cmd =
       (ulidTextToDateTime ulid)
     days3 = Iso.DurationDate (Iso.DurDateDay (Iso.DurDay 3) Nothing)
 
-  in case cmd of
-    ListAll -> listAll conf now connection
-    ListHead -> headTasks conf now connection
-    ListNew -> newTasks conf now connection
-    ListOld -> listOldTasks conf now connection
-    ListOpen -> openTasks conf now connection
-    ListModified -> modifiedTasks conf now connection AllItems
-    ListModifiedOnly -> modifiedTasks conf now connection ModifiedItemsOnly
-    ListOverdue -> overdueTasks conf now connection
-    ListRepeating -> listRepeating conf now connection
-    ListRecurring -> listRecurring conf now connection
-    ListReady -> listReady conf now connection
-    ListWaiting -> listWaiting conf now connection
-    ListDone -> doneTasks conf now connection
-    ListObsolete -> obsoleteTasks conf now connection
-    ListDeletable -> deletableTasks conf now connection
-    ListNoTag -> listNoTag conf now connection
-    ListWithTag tags -> listWithTag conf now connection tags
-    QueryTasks query -> queryTasks conf now connection query
-    RunSql query -> runSql conf query
-    RunFilter expressions -> runFilter conf now connection expressions
-    Tags -> listTags conf connection
-    Projects -> listProjects conf connection
-    Stats -> getStats conf connection
-    ImportFile filePath -> importFile conf connection filePath
-    ImportJson -> importJson conf connection
-    ImportEml -> importEml conf connection
-    IngestFile filePath -> ingestFile conf connection filePath
-    Csv -> dumpCsv conf
-    Ndjson -> dumpNdjson conf
-    Sql -> dumpSql conf
-    Backup -> backupDatabase conf
-    AddTask bodyWords -> addTaskC bodyWords
-    AddWrite bodyWords -> addTaskC $ ["Write"] <> bodyWords <> ["+write"]
-    AddRead bodyWords -> addTaskC $ ["Read"] <> bodyWords <> ["+read"]
-    AddIdea bodyWords -> addTaskC $ bodyWords <> ["+idea"]
-    AddWatch bodyWords -> addTaskC $ ["Watch"] <> bodyWords <> ["+watch"]
-    AddListen bodyWords -> addTaskC $ ["Listen"] <> bodyWords <> ["+listen"]
-    AddBuy bodyWords -> addTaskC $ ["Buy"] <> bodyWords <> ["+buy"]
-    AddSell bodyWords -> addTaskC $ ["Sell"] <> bodyWords <> ["+sell"]
-    AddPay bodyWords -> addTaskC $ ["Pay"] <> bodyWords <> ["+pay"]
-    AddShip bodyWords -> addTaskC $ ["Ship"] <> bodyWords <> ["+ship"]
-    LogTask bodyWords -> logTask conf connection bodyWords
-    ReadyOn datetime ids -> setReadyUtc conf connection datetime ids
-    WaitTasks ids -> waitTasks conf connection ids
-    WaitFor duration ids -> waitFor conf connection duration ids
-    ReviewTasks ids -> reviewTasksIn conf connection days3 ids
-    ReviewTasksIn days ids -> reviewTasksIn conf connection days ids
-    DoTasks ids -> doTasks conf connection Nothing ids
-    DoOneTask id noteWords -> doTasks conf connection noteWords [id]
-    EndTasks ids -> endTasks conf connection ids
-    EditTask id -> editTask conf connection id
-    TrashTasks ids -> trashTasks conf connection ids
-    DeleteTasks ids -> deleteTasks conf connection ids
-    RepeatTasks duration ids -> repeatTasks conf connection duration ids
-    RecurTasks duration ids -> recurTasks conf connection duration ids
-    BoostTasks ids -> adjustPriority conf 1 ids
-    HushTasks ids -> adjustPriority conf (-1) ids
-    Start ids -> startTasks conf connection ids
-    Stop ids -> stopTasks conf connection ids
-    Prioritize val ids -> adjustPriority conf val ids
-    InfoTask idSubstr -> infoTask conf connection idSubstr
-    NextTask -> nextTask conf connection
-    FindTask aPattern -> findTask connection aPattern
-    AddTag tagText ids -> addTag conf connection tagText ids
-    DeleteTag tagText ids -> deleteTag conf connection tagText ids
-    AddNote noteText ids -> addNote conf connection noteText ids
-    SetDueUtc datetime ids -> setDueUtc conf connection datetime ids
-    Duplicate ids -> duplicateTasks conf connection ids
-    CountFiltered taskFilter -> countTasks conf connection taskFilter
+  cliArgs <- execParser (parserInfo conf)
 
-    {- Unset -}
-    UnCloseTasks ids -> uncloseTasks conf connection ids
-    UnDueTasks ids -> undueTasks conf connection ids
-    UnWaitTasks ids -> unwaitTasks conf connection ids
-    UnWakeTasks ids -> unwakeTasks conf connection ids
-    UnReadyTasks ids -> unreadyTasks conf connection ids
-    UnReviewTasks ids -> unreviewTasks conf connection ids
-    UnRepeatTasks ids -> unrepeatTasks conf connection ids
-    UnRecurTasks ids -> unrecurTasks conf connection ids
-    UnTagTasks ids -> untagTasks conf connection ids
-    UnNoteTasks ids -> unnoteTasks conf connection ids
-    UnPrioTasks ids -> unprioTasks conf connection ids
-    UnMetaTasks ids -> unmetaTasks conf connection ids
+  if runHelpCommand cliArgs
+  then pure $ extendHelp $ parserHelp defaultPrefs $ cliArgsParser conf
+  else
+    case cliCommand cliArgs of
+      ListAll -> listAll conf now connection
+      ListHead -> headTasks conf now connection
+      ListNew -> newTasks conf now connection
+      ListOld -> listOldTasks conf now connection
+      ListOpen -> openTasks conf now connection
+      ListModified -> modifiedTasks conf now connection AllItems
+      ListModifiedOnly -> modifiedTasks conf now connection ModifiedItemsOnly
+      ListOverdue -> overdueTasks conf now connection
+      ListRepeating -> listRepeating conf now connection
+      ListRecurring -> listRecurring conf now connection
+      ListReady -> listReady conf now connection
+      ListWaiting -> listWaiting conf now connection
+      ListDone -> doneTasks conf now connection
+      ListObsolete -> obsoleteTasks conf now connection
+      ListDeletable -> deletableTasks conf now connection
+      ListNoTag -> listNoTag conf now connection
+      ListWithTag tags -> listWithTag conf now connection tags
+      QueryTasks query -> queryTasks conf now connection query
+      RunSql query -> runSql conf query
+      RunFilter expressions -> runFilter conf now connection expressions
+      Tags -> listTags conf connection
+      Projects -> listProjects conf connection
+      Stats -> getStats conf connection
+      ImportFile filePath -> importFile conf connection filePath
+      ImportJson -> importJson conf connection
+      ImportEml -> importEml conf connection
+      IngestFile filePath -> ingestFile conf connection filePath
+      Csv -> dumpCsv conf
+      Ndjson -> dumpNdjson conf
+      Sql -> dumpSql conf
+      Backup -> backupDatabase conf
+      AddTask bodyWords -> addTaskC bodyWords
+      AddWrite bodyWords -> addTaskC $ ["Write"] <> bodyWords <> ["+write"]
+      AddRead bodyWords -> addTaskC $ ["Read"] <> bodyWords <> ["+read"]
+      AddIdea bodyWords -> addTaskC $ bodyWords <> ["+idea"]
+      AddWatch bodyWords -> addTaskC $ ["Watch"] <> bodyWords <> ["+watch"]
+      AddListen bodyWords -> addTaskC $ ["Listen"] <> bodyWords <> ["+listen"]
+      AddBuy bodyWords -> addTaskC $ ["Buy"] <> bodyWords <> ["+buy"]
+      AddSell bodyWords -> addTaskC $ ["Sell"] <> bodyWords <> ["+sell"]
+      AddPay bodyWords -> addTaskC $ ["Pay"] <> bodyWords <> ["+pay"]
+      AddShip bodyWords -> addTaskC $ ["Ship"] <> bodyWords <> ["+ship"]
+      LogTask bodyWords -> logTask conf connection bodyWords
+      ReadyOn datetime ids -> setReadyUtc conf connection datetime ids
+      WaitTasks ids -> waitTasks conf connection ids
+      WaitFor duration ids -> waitFor conf connection duration ids
+      ReviewTasks ids -> reviewTasksIn conf connection days3 ids
+      ReviewTasksIn days ids -> reviewTasksIn conf connection days ids
+      DoTasks ids -> doTasks conf connection Nothing ids
+      DoOneTask id noteWords -> doTasks conf connection noteWords [id]
+      EndTasks ids -> endTasks conf connection ids
+      EditTask id -> editTask conf connection id
+      TrashTasks ids -> trashTasks conf connection ids
+      DeleteTasks ids -> deleteTasks conf connection ids
+      RepeatTasks duration ids -> repeatTasks conf connection duration ids
+      RecurTasks duration ids -> recurTasks conf connection duration ids
+      BoostTasks ids -> adjustPriority conf 1 ids
+      HushTasks ids -> adjustPriority conf (-1) ids
+      Start ids -> startTasks conf connection ids
+      Stop ids -> stopTasks conf connection ids
+      Prioritize val ids -> adjustPriority conf val ids
+      InfoTask idSubstr -> infoTask conf connection idSubstr
+      NextTask -> nextTask conf connection
+      FindTask aPattern -> findTask connection aPattern
+      AddTag tagText ids -> addTag conf connection tagText ids
+      DeleteTag tagText ids -> deleteTag conf connection tagText ids
+      AddNote noteText ids -> addNote conf connection noteText ids
+      SetDueUtc datetime ids -> setDueUtc conf connection datetime ids
+      Duplicate ids -> duplicateTasks conf connection ids
+      CountFiltered taskFilter -> countTasks conf connection taskFilter
 
-    Version -> pure $ pretty versionSlug <> hardline
-    Help -> pure $ helpText conf
-    PrintConfig -> pure $ pretty conf
-    Alias alias _ -> pure $ aliasWarning alias
-    UlidToUtc ulid -> pure $ prettyUlid ulid
+      {- Unset -}
+      UnCloseTasks ids -> uncloseTasks conf connection ids
+      UnDueTasks ids -> undueTasks conf connection ids
+      UnWaitTasks ids -> unwaitTasks conf connection ids
+      UnWakeTasks ids -> unwakeTasks conf connection ids
+      UnReadyTasks ids -> unreadyTasks conf connection ids
+      UnReviewTasks ids -> unreviewTasks conf connection ids
+      UnRepeatTasks ids -> unrepeatTasks conf connection ids
+      UnRecurTasks ids -> unrecurTasks conf connection ids
+      UnTagTasks ids -> untagTasks conf connection ids
+      UnNoteTasks ids -> unnoteTasks conf connection ids
+      UnPrioTasks ids -> unprioTasks conf connection ids
+      UnMetaTasks ids -> unmetaTasks conf connection ids
+
+      Version -> pure $ pretty versionSlug <> hardline
+      Help -> pure $ extendHelp $ parserHelp defaultPrefs $ cliArgsParser conf
+      PrintConfig -> pure $ pretty conf
+      Alias alias _ -> pure $ aliasWarning alias
+      UlidToUtc ulid -> pure $ prettyUlid ulid
 
 
 printOutput :: [Char] -> Config -> IO ()
@@ -1022,8 +1039,6 @@ printOutput appName config = do
   preLaunchResult <- executeHooks "" (configNorm & hooks & launch & pre)
   putDoc preLaunchResult
 
-  cliCommand <- execParser $ commandParserInfo configNorm
-
   connection <- setupConnection configNorm
   -- TODO: Integrate into migrations
   tableStatus <- createTables configNorm connection
@@ -1039,7 +1054,7 @@ printOutput appName config = do
     (configNorm & hooks & launch & post)
   putDoc postLaunchResult
 
-  doc <- executeCLiCommand configNorm now connection cliCommand
+  doc <- executeCLiCommand configNorm now connection
 
   -- TODO: Use withConnection instead
   close connection
