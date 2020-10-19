@@ -10,7 +10,6 @@ import Data.Aeson
 import System.FilePath (takeBaseName)
 import Data.Hourglass
 import Data.Text as T
-import Data.Text.Prettyprint.Doc (pretty)
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.Text.Prettyprint.Doc.Render.Terminal.Internal (ansiForeground)
 import Data.Text.Prettyprint.Doc.Internal
