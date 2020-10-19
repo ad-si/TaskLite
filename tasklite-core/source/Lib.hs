@@ -1867,7 +1867,12 @@ runFilter conf now connection exps = do
           _ ->
             "The functions should not be called with a valid function"
         errors = P.filter (not . isValidFilter) filterExps
-        sqlQuery = getFilterQuery filterExps
+        isStateExp = \case (HasStatus _) -> True; _ -> False
+        updatedFilterExps =
+          if P.any isStateExp filterExps
+          then filterExps
+          else (HasStatus $ Just IsOpen) : filterExps
+        sqlQuery = getFilterQuery updatedFilterExps
 
       tasks <- query_ connection sqlQuery
 
