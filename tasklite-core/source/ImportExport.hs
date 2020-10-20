@@ -132,10 +132,11 @@ instance FromJSON ImportTask where
         else Nothing
 
     o_tags  <- o .:? "tags"
+    o_labels  <- o .:? "labels"
     project <- o .:? "project"
     let
       projects = fmap (:[]) project
-      tags = fromMaybe [] (o_tags  <> projects)
+      tags = fromMaybe [] (o_tags <> o_labels <> projects)
 
     due       <- o .:? "due"
     o_due_utc <- o .:? "due_utc"
@@ -191,12 +192,13 @@ instance FromJSON ImportTask where
 
     closed       <- o .:? "closed"
     o_closed_utc <- o .:? "closed_utc"
+    closed_at    <- o .:? "closed_at"
     closed_on    <- o .:? "closed_on"
     end          <- o .:? "end"
     o_end_utc    <- o .:? "end_utc"
     end_on       <- o .:? "end_on"
     let
-      maybeClosed = closed <|> o_closed_utc <|> closed_on
+      maybeClosed = closed <|> o_closed_utc <|> closed_at <|> closed_on
         <|> end <|> o_end_utc <|> end_on <|> implicitCloseUtcMaybe
       closed_utc = fmap
         (T.pack . (timePrint importUtcFormat))
@@ -248,7 +250,10 @@ instance FromJSON ImportTask where
           Nothing       -> theNotes
 
     o_user      <- o .:? "user"
-    let user = fromMaybe "" o_user
+    o_author      <- o .:? "author"
+    let
+      userMaybe = o_user <|> o_author
+      user = fromMaybe "" userMaybe
 
     o_metadata  <- o .:? "metadata"
     let
