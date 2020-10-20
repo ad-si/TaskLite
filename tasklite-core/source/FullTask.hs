@@ -16,7 +16,6 @@ import Database.SQLite.Simple.FromField as Sql.FromField
 import Database.SQLite.Simple.Internal hiding (result)
 import Database.SQLite.Simple.Ok
 import Data.Text.Prettyprint.Doc hiding ((<>))
-import Utils
 import Task
 import Note (Note(..))
 
@@ -61,7 +60,7 @@ instance Sql.FromField.FromField [Text] where
 instance Sql.FromField.FromField [Note] where
   fromField (Field (SQLText txt) _) =
     let notes = split (== ',') txt
-    in Ok $ notes <$$> (Note "")
+    in Ok $ notes <&> (Note "")
   fromField f = returnError ConversionFailed f "expecting SQLText column type"
 
 

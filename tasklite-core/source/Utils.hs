@@ -36,11 +36,6 @@ x <++> y =
   x <> softline <> softline <> y
 
 
-(<$$>) :: Functor f => f a -> (a -> b) -> f b
-(<$$>) =
-  flip (<$>)
-
-
 parseUtcNum :: Int -> Maybe DateTime
 parseUtcNum number =
   parseUtc (show number)

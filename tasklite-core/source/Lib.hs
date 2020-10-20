@@ -848,7 +848,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
     <> hardline
     <> (if P.null tags
         then mempty
-        else (hsep $ (tags <&> TaskToTag.tag) <$$> (formatTag conf)) <> hardline
+        else (hsep $ (tags <&> TaskToTag.tag) <&> (formatTag conf)) <> hardline
               <> hardline
         )
 
@@ -1484,7 +1484,7 @@ formatTaskLine conf now taskUlidWidth task =
     -- redOut onTime doc = if onTime
     --   then annotate (bodyStyle conf) doc
     --   else annotate (color Red) doc
-    taskLine = createdUtc <$$> \taskDate ->
+    taskLine = createdUtc <&> \taskDate ->
       hang hangWidth $ hhsep $ P.filter isEmptyDoc (
         annotate (idStyle conf) id :
         annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
@@ -1502,7 +1502,7 @@ formatTaskLine conf now taskUlidWidth task =
             else grayOutIfDone (reflow body)) :
         annotate (dueStyle conf) (pretty dueUtcMaybe) :
         annotate (closedStyle conf) (pretty closedUtcMaybe) :
-        hsep (tags <$$> (formatTag conf)) :
+        hsep (tags <&> (formatTag conf)) :
         (if (not $ P.null $ FullTask.notes task) then "📝" else "") :
         [])
   in
