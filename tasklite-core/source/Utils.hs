@@ -58,6 +58,7 @@ parseUtc utcText =
   in
     -- From long (specific) to short (unspecific)
         (timeParse ISO8601_DateAndTime utcString)
+    <|> (tParse "YYYY-MM-DDtH:MI:S")
     <|> (tParse "YYYY-MM-DDtH:MI")
     <|> (tParse "YYYYMMDDtHMIS")
     <|> (tParse "YYYY-MM-DD H:MI:S")
