@@ -68,6 +68,17 @@ annotationToNote annot@Annotation {entry = entry, description = description} =
          }
 
 
+textToNote :: DateTime -> Text -> Note
+textToNote utc body =
+  let
+    Right ulidGenerated = (ulidFromInteger . abs . toInteger . hash) body
+    ulidCombined = setDateTime ulidGenerated utc
+  in
+    Note { ulid = (T.toLower . show) ulidCombined
+         , body = body
+         }
+
+
 importUtcFormat :: TimeFormatString
 importUtcFormat = (toFormat ("YYYY-MM-DD H:MI:S" :: [Char]))
 
@@ -228,12 +239,20 @@ instance FromJSON ImportTask where
         (T.pack . (timePrint importUtcFormat))
         (parseUtc =<< maybeRecurrence)
 
-    o_notes     <- o .:? "notes" :: Parser (Maybe [Note])
+    o_notes <- asum
+      [ o .:? "notes" :: Parser (Maybe [Note])
+      , do
+          notesMb <- o .:? "notes" :: Parser (Maybe [Text])
+          pure $ case notesMb of
+            Just textNotes -> Just $ textNotes <&> textToNote createdUtc
+            Nothing -> Just []
+      ]
     annotations <- o .:? "annotations" :: Parser (Maybe [Annotation])
+
     let
       notes = case (o_notes, annotations) of
         (Nothing, Nothing)     -> []
-        (Nothing, Just values) -> values <$$> annotationToNote
+        (Nothing, Just values) -> values <&> annotationToNote
         (Just theNotes , _)    -> case parsedCreatedUtc of
           Just crUtc -> theNotes <&> (\theNote ->
               let
