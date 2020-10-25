@@ -15,6 +15,7 @@ import qualified Data.HashMap.Lazy as HML
 import Data.Hourglass
 import qualified Data.Text as T
 import qualified Data.Text.Lazy.Encoding as TL
+import qualified Data.Time.ISO8601.Duration as Iso
 import Data.Text.Prettyprint.Doc hiding ((<>))
 import Data.Text.Prettyprint.Doc.Render.Terminal
 import Data.ULID
@@ -215,29 +216,25 @@ instance FromJSON ImportTask where
         (T.pack . (timePrint importUtcFormat))
         (parseUtc =<< maybeClosed)
 
-    group_ulid' <- o .:? "group_ulid"
-    group_id'   <- o .:? "group_id"
-    let
-      maybeGroupUlid = group_ulid' <|> group_id'
-      group_ulid = fmap
-        (T.pack . (timePrint importUtcFormat))
-        (parseUtc =<< maybeGroupUlid)
+    group_ulid <- o .:? "group_ulid"
+
+    let parseIsoDurationMb durTextMb = hush
+          $ fmap (P.decodeUtf8 . Iso.formatDuration)
+          $ Iso.parseDuration
+          $ P.encodeUtf8
+          $ fromMaybe "" durTextMb
 
     repetition_duration' <- o .:? "repetition_duration"
     repeat_duration'     <- o .:? "repeat_duration"
     let
       maybeRepetition = repetition_duration' <|> repeat_duration'
-      repetition_duration = fmap
-        (T.pack . (timePrint importUtcFormat))
-        (parseUtc =<< maybeRepetition)
+      repetition_duration = parseIsoDurationMb maybeRepetition
 
     recurrence_duration' <- o .:? "recurrence_duration"
     recur_duration'      <- o .:? "recur_duration"
     let
       maybeRecurrence = recurrence_duration' <|> recur_duration'
-      recurrence_duration = fmap
-        (T.pack . (timePrint importUtcFormat))
-        (parseUtc =<< maybeRecurrence)
+      recurrence_duration = parseIsoDurationMb maybeRecurrence
 
     o_notes <- asum
       [ o .:? "notes" :: Parser (Maybe [Note])
