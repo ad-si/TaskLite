@@ -44,7 +44,6 @@ import Time.System
 import Database.SQLite.Simple (close, Connection(..))
 
 import Config (Config(..), HookSet(..), HooksConfig(..), addHookFilesToConfig)
-import DbSetup
 import ImportExport
 import Migrations
 import Paths_tasklite_core (version)  -- Special module provided by Cabal
@@ -1040,8 +1039,6 @@ printOutput appName config = do
   putDoc preLaunchResult
 
   connection <- setupConnection configNorm
-  -- TODO: Integrate into migrations
-  tableStatus <- createTables configNorm connection
   migrationsStatus <- runMigrations configNorm connection
   nowElapsed <- timeCurrentP
 
@@ -1060,7 +1057,7 @@ printOutput appName config = do
   close connection
 
   -- TODO: Remove color when piping into other command
-  putDoc $ tableStatus <> migrationsStatus <> doc <> hardline
+  putDoc $ migrationsStatus <> doc <> hardline
 
 
 exampleConfig :: Text

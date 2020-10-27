@@ -1,10 +1,10 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 69b45dd7309fea6a05747bf3cabd5f9affec99a94d1de45691df0b2ffcbceba3
+-- hash: 40e88c1a2002eeeed25891da6c54f8130b509785efafc63bd78d903b199f9bdc
 
 name:           tasklite-core
 version:        0.3.0.0
@@ -32,7 +32,6 @@ library
   exposed-modules:
       Base32
       Config
-      DbSetup
       FullTask
       ImportExport
       Lib

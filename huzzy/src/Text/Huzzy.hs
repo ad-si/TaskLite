@@ -5,8 +5,6 @@ module Text.Huzzy where
 import Protolude as P hiding (filter, null)
 
 import Data.Char (toLower)
-import Data.Maybe (isJust, mapMaybe)
-import Data.Monoid (mempty, (<>))
 
 import qualified Data.Monoid.Textual as T
 
