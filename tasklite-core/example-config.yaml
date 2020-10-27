@@ -26,10 +26,10 @@ headCount: 20
 maxWidth: 120
 progressBarWidth: 24
 
-hooks:
-  #| Is per default the "hooks" directory in the `dataDir`
-  # directory: /custom/path/hooks
-  launch:
-    pre:
-      - interpreter: python3
-        body: print('Python test')
+# hooks:
+#   #| Is per default the "hooks" directory in the `dataDir`
+#   # directory: /custom/path/hooks
+#   launch:
+#     pre:
+#       - interpreter: python3
+#         body: print('Python test')
