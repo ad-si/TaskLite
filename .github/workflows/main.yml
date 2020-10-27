@@ -6,7 +6,14 @@ jobs:
   linux:
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
+
+      - name: Cache .stack-work
+        uses: actions/cache@v2
+        with:
+          path: .stack-work
+          key: tasklite_stack-work_ubuntu
+          restore-keys: tasklite_stack-work_ubuntu
 
       - name: Setup Stack
         uses: actions/setup-haskell@v1.1
@@ -16,6 +23,12 @@ jobs:
 
       - name: Install TaskLite CLI tool
         run: stack install tasklite-core
+
+      - name: Test adding of tasks
+        run: tasklite add Buy milk
+
+      - name: Test listing of tasks
+        run: tasklite
 
       - name: Upload Linux Release
         uses: actions/upload-artifact@v1
@@ -26,7 +39,14 @@ jobs:
   macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
+
+      - name: Cache .stack-work
+        uses: actions/cache@v2
+        with:
+          path: .stack-work
+          key: tasklite_stack-work_macos
+          restore-keys: tasklite_stack-work_macos
 
       - name: Setup Stack
         uses: actions/setup-haskell@v1.1
@@ -36,6 +56,12 @@ jobs:
 
       - name: Install TaskLite CLI tool
         run: stack install tasklite-core
+
+      - name: Test adding of tasks
+        run: tasklite add Buy milk
+
+      - name: Test listing of tasks
+        run: tasklite
 
       - name: Upload MacOS Release
         uses: actions/upload-artifact@v1
