@@ -75,6 +75,17 @@ packages:
   original:
     hackage: ulid-0.3.0.0
 - completed:
+    size: 22648
+    url: https://github.com/ad-si/hsemail/archive/052b0e307c8d169fdc10ecc7b1da2915654aa453.tar.gz
+    name: hsemail
+    version: 2.2.0
+    sha256: 5d446b4bb451918e14b1efd1c842828dc7c4414debeb013d51b3216846edb46f
+    pantry-tree:
+      size: 849
+      sha256: 8483e62b7b6b858e119ae5f3820e91f10d403e58ab82e0493d253d4d25338471
+  original:
+    url: https://github.com/ad-si/hsemail/archive/052b0e307c8d169fdc10ecc7b1da2915654aa453.tar.gz
+- completed:
     size: 1210257
     subdir: beam-core
     url: https://github.com/haskell-beam/beam/archive/efd464b079755a781c2bb7a2fc030d6c141bbb8a.tar.gz
