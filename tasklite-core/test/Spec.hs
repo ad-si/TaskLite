@@ -16,7 +16,6 @@ import Time.System
 import Config (Config(..), defaultConfig)
 import Lib
 import Utils
-import DbSetup
 import Migrations
 
 
@@ -67,26 +66,11 @@ testSuite conf now connection = do
 
       (fmap show $ parseUlidText ulidText) `shouldBe` (Just ulidText)
 
+
   describe "TaskLite" $ do
-    it "creates necessary tables on initial run" $ do
-      tableStatus <- createTables conf connection
-      unpack (show tableStatus) `shouldBe`
-        -- TODO: Improve formatting "create trigger"
-        "🆕 Create table \"tasks\"\n\
-        \🆕 Create table \"task_to_tag\"\n\
-        \🆕 Create table \"task_to_note\"\n\
-        \🆕 \"create trigger `set_modified_utc_after_update`\\n\
-          \after… \n\
-        \🆕 \"create trigger `set_closed_utc_after_update`\\n\
-          \after… \n\
-        \🆕 Create table \"tasks_view\"\n\
-        \🆕 Create table \"tags\"\n"
-
-
-    it "migrates tables to latest version" $ do
+    it "creates tables on initial run migrates tables to latest version" $ do
       migrationStatus <- runMigrations conf connection
-      unpack (show migrationStatus) `shouldStartWith`
-        "Replaced views and triggers:"
+      unpack (show migrationStatus) `shouldStartWith` "Migration succeeded"
 
 
     it "initially contains no tasks" $ do

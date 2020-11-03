@@ -24,6 +24,9 @@ jobs:
       - name: Install TaskLite CLI tool
         run: stack install tasklite-core
 
+      - name: Run test suite
+        run: stack test
+
       - name: Test adding of tasks
         run: /home/runner/.local/bin/tasklite add Buy milk
 
@@ -56,6 +59,9 @@ jobs:
 
       - name: Install TaskLite CLI tool
         run: stack install tasklite-core
+
+      - name: Run test suite
+        run: stack test
 
       - name: Test adding of tasks
         run: /Users/runner/.local/bin/tasklite add Buy milk
