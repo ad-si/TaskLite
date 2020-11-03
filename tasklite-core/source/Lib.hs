@@ -438,6 +438,7 @@ showEither conf e = e
   <&> (showDateTime conf)
 
 
+-- TODO: Eliminate code duplication with createNextRecurrence
 createNextRepetition
   :: Config -> Connection -> Task -> IO (Maybe (Doc ann))
 createNextRepetition conf connection task = do
@@ -476,6 +477,8 @@ createNextRepetition conf connection task = do
       pure originalTask
         { Task.ulid = val_ newUlidText
         , Task.due_utc = val_ $ nextDueMb & showEither conf
+        , Task.closed_utc = val_ Nothing
+        , Task.state = val_ Nothing
 
         , Task.awake_utc = val_ $
             (liftA2 Iso.addDuration isoDurEither
@@ -539,6 +542,8 @@ createNextRecurrence conf connection task = do
       pure originalTask
         { Task.ulid = val_ newUlidText
         , Task.due_utc = val_ $ nextDueMb & showEither conf
+        , Task.closed_utc = val_ Nothing
+        , Task.state = val_ Nothing
 
         , Task.awake_utc = val_ $
             (liftA2 Iso.addDuration isoDurEither
@@ -708,9 +713,23 @@ repeatTasks conf connection duration ids = do
             ])
           (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
+      -- If repetition is set for already closed task,
+      -- next task in series must be created immediately
+      creationMb <- if Task.closed_utc task /= Nothing
+                    then liftIO $ createNextRepetition conf connection $ task
+                            { Task.repetition_duration = Just durationIsoText
+                            , Task.group_ulid = Just groupUlid
+                            }
+                    else pure mempty
+
+      let creationResult = fromMaybe
+            "⚠️ Next task in repetition series could not be created!"
+            creationMb
+
       pure $ "📅 Set repeat duration of task" <+> prettyBody
         <+> "with id" <+> prettyId
         <+> "to" <+> dquotes (pretty $ durationIsoText)
+        <++> creationResult
 
   pure $ vsep docs
 
@@ -737,9 +756,23 @@ recurTasks conf connection duration ids = do
             ])
           (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
+      -- If recurrence is set for already closed task,
+      -- next task in series must be created immediately
+      creationMb <- if Task.closed_utc task /= Nothing
+                    then liftIO $ createNextRecurrence conf connection $ task
+                            { Task.recurrence_duration = Just durationIsoText
+                            , Task.group_ulid = Just groupUlid
+                            }
+                    else pure mempty
+
+      let creationResult = fromMaybe
+            "⚠️ Next task in recurrence series could not be created!"
+            creationMb
+
       pure $ "📅 Set recurrence duration of task" <+> prettyBody
         <+> "with id" <+> prettyId
         <+> "to" <+> dquotes (pretty $ durationIsoText)
+        <++> creationResult
 
   pure $ vsep docs
 
@@ -1614,7 +1647,8 @@ modifiedTasks conf now connection listModifiedFlag = do
     removeNSec :: Maybe DateTime -> Maybe DateTime
     removeNSec mDateTime =
       case mDateTime of
-        Just dateTime -> Just $ dateTime { dtTime = (dtTime dateTime) { todNSec = 0 } }
+        Just dateTime -> Just $
+          dateTime { dtTime = (dtTime dateTime) { todNSec = 0 } }
         Nothing -> Nothing
 
     filteredTasks =
