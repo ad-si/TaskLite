@@ -29,6 +29,34 @@ data Migration = Migration
   } deriving (Show)
 
 
+createSetModifiedUtcTrigger :: Query
+createSetModifiedUtcTrigger =
+  "create trigger set_modified_utc_after_update\n\
+        \after update on tasks\n\
+        \when new.modified_utc is old.modified_utc\n\
+        \begin\n\
+        \  update tasks\n\
+        \  set modified_utc = datetime('now')\n\
+        \  where ulid = new.ulid;\n\
+        \end"
+
+
+createSetClosedUtcTrigger :: Query
+createSetClosedUtcTrigger =
+  "create trigger set_closed_utc_after_update\n\
+        \after update on tasks\n\
+        \when old.state is not new.state and (\n\
+        \    new.state is 'Done'\n\
+        \    or new.state is 'Obsolete'\n\
+        \    or new.state is 'Deletable'\n\
+        \  )\n\
+        \begin\n\
+        \  update tasks\n\
+        \  set closed_utc = datetime('now')\n\
+        \  where ulid = new.ulid;\n\
+        \end"
+
+
 _0_ :: MigrateDirection -> Migration
 _0_ =
   let
@@ -50,27 +78,9 @@ _0_ =
         \  metadata text\n\
         \)"
 
-      , "create trigger set_modified_utc_after_update\n\
-        \after update on tasks\n\
-        \when new.modified_utc is old.modified_utc\n\
-        \begin\n\
-        \  update tasks\n\
-        \  set modified_utc = datetime('now')\n\
-        \  where ulid = new.ulid;\n\
-        \end"
+      , createSetModifiedUtcTrigger
 
-      , "create trigger `set_closed_utc_after_update`\n\
-        \after update on `tasks`\n\
-        \when old.state is not new.state and (\n\
-        \    new.state is 'Done'\n\
-        \    or new.state is 'Obsolete'\n\
-        \    or new.state is 'Deletable'\n\
-        \  )\n\
-        \begin\n\
-        \  update tasks\n\
-        \  set closed_utc = datetime('now')\n\
-        \  where ulid = new.ulid;\n\
-        \end"
+      , createSetClosedUtcTrigger
 
       , "create table task_to_note (\n\
         \  ulid text not null primary key,\n\
@@ -209,6 +219,8 @@ _3_ =
           \from tasks" :
         "drop table tasks" :
         "alter table tasks_temp rename to tasks" :
+        createSetModifiedUtcTrigger :
+        createSetClosedUtcTrigger :
         [])
       }
 
@@ -223,7 +235,6 @@ _3_ =
       }
 
 
--- | Fixes activation condition of task closed trigger.
 _4_ :: MigrateDirection -> Migration
 _4_ =
   let
@@ -369,9 +380,9 @@ lintMigration migration =
 runMigration :: Connection -> [Query] -> IO (Either SQLError [()])
 runMigration connection querySet = do
   withTransaction connection $ do
-    -- For debugging: Print querySet of migrations
-    -- putText $ "QuerySet:\n" <> show querySet <> "\n"
     try $ mapM (execute_ connection) querySet
+    -- Following doesn't work due to
+    -- https://github.com/nurpax/sqlite-simple/issues/44
     -- try $ execute_ connection $ P.fold $ querySet <&> (<> ";\n")
 
 

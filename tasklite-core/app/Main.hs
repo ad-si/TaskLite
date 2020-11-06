@@ -41,7 +41,8 @@ import System.Directory
   )
 import System.FilePath ((</>))
 import Time.System
-import Database.SQLite.Simple (close, Connection(..))
+import Database.SQLite.Simple (Connection(..))
+import qualified Database.SQLite.Simple as SQLite
 
 import Config (Config(..), HookSet(..), HooksConfig(..), addHookFilesToConfig)
 import ImportExport
@@ -1038,6 +1039,10 @@ printOutput appName config = do
   putDoc preLaunchResult
 
   connection <- setupConnection configNorm
+
+  -- For debugging SQLite interactions
+  -- SQLite.setTrace connection $ Just print
+
   migrationsStatus <- runMigrations configNorm connection
   nowElapsed <- timeCurrentP
 
@@ -1053,7 +1058,7 @@ printOutput appName config = do
   doc <- executeCLiCommand configNorm now connection
 
   -- TODO: Use withConnection instead
-  close connection
+  SQLite.close connection
 
   -- TODO: Remove color when piping into other command
   putDoc $ migrationsStatus <> doc <> hardline
