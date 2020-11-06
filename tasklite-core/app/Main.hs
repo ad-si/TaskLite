@@ -342,8 +342,7 @@ commandParser conf =
             (metavar "DURATION"
             <> help "ISO8601 duration (e.g. P1DT5H for 1 day and 5 hours)")
       <*> some (strArgument idsVar))
-        "Repeat a task x days after its due UTC or after it gets closed \
-        \(whichever occurs later)")
+        "Repeat a task DURATION after it gets closed")
 
     <> command "recur" (toParserInfo (RecurTasks
       <$> argument (eitherReader parseDurationString)

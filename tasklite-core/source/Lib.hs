@@ -446,7 +446,6 @@ createNextRepetition conf connection task = do
   let
     taskUlid = primaryKey task
     nowMb = ulidTextToDateTime newUlidText
-    dueUtcMb = (Task.due_utc task) >>= parseUtc
     durTextEither = maybeToEither
                         "Task has no repetition duration"
                         (Task.repetition_duration task)
@@ -455,9 +454,10 @@ createNextRepetition conf connection task = do
       <&> encodeUtf8
       >>= Iso.parseDuration
 
-    offsetMb = if nowMb < dueUtcMb then dueUtcMb else nowMb
     nextDueMb = liftA2 Iso.addDuration isoDurEither
-      (maybeToEither "Task has no due UTC" (offsetMb <&> dateTimeToUtcTime))
+      (maybeToEither
+        "ULID can't be converted to UTC time"
+        (nowMb <&> dateTimeToUtcTime))
 
   -- TODO: Investigate why this isn't working and replace afterwards
   -- runBeamSqlite connection $ runInsert $
@@ -720,7 +720,7 @@ repeatTasks conf connection duration ids = do
                             { Task.repetition_duration = Just durationIsoText
                             , Task.group_ulid = Just groupUlid
                             }
-                    else pure mempty
+                    else pure $ Just mempty
 
       let creationResult = fromMaybe
             "⚠️ Next task in repetition series could not be created!"
