@@ -125,3 +125,33 @@ Nr|Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 
 [Yokadi]: https://yokadi.github.io/
 [YGH]: https://github.com/agateau/yokadi
+
+
+## Commercial
+
+For completeness sake here is also a list of popular commercial apps
+and SaaS providers:
+
+- [Asana] - Your team’s goals, plans, tasks, files together in one shared space.
+- [Google Keep] - Hybrid note taking and todo app.
+- [Jira] - Bug- & issue-tracking and project-management service.
+- [Microsoft TODO] - Cloud based task management application.
+- [Nirvana] - To-do app available on macOS, Android, Windows, and web.
+- [Remember The Milk] - Web based task- and time-management.
+- [Tasker] - Tool for managing tasks, processes and employees.
+- [TaskPaper] - Plain text to-do lists (macOS app).
+- [Things] - Personal task manager to achieve your goals (Apple only).
+- [Todoist] - SaaS to-do list to organize work and life.
+- [Trello] - Web based Kanban list-making application.
+
+[Asana]: https://asana.com
+[Google Keep]: https://keep.google.com
+[Jira]: https://www.atlassian.com/software/jira
+[Microsoft TODO]: https://to-do.microsoft.com
+[Nirvana]: https://nirvanahq.com/
+[Remember The Milk]: https://rememberthemilk.com
+[Tasker]: https://www.taskertools.com
+[TaskPaper]: https://www.taskpaper.com
+[Things]: https://culturedcode.com/things/
+[Todoist]: https://todoist.com
+[Trello]: https://trello.com
