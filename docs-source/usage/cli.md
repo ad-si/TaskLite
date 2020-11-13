@@ -34,6 +34,8 @@ There is no first class support for views (or "context" in [GTD] slang),
 because it can be easily implemented with aliases / custom CLI commands
 and the SQL query API.
 
+[GTD]: https://en.wikipedia.org/wiki/Getting_Things_Done
+
 For example I have following `work` command in my `$PATH`:
 
 ```bash
@@ -101,7 +103,32 @@ Use one of following commands:
 - `tl backup` - Creates a backup at `$TaskLiteDir/backups/YYYY-MM-DDtHHMM.db`
 
 
-[GTD]: https://en.wikipedia.org/wiki/Getting_Things_Done
+## Custom Views
+
+The export commands in combination with other common CLI tools like
+[csvkit] can also be used for custom views of tasks.
+
+[csvkit]: https://csvkit.readthedocs.io
+
+```sh
+tl csv \
+| csvgrep --column tags --match tasklite \
+| head -n 6 \
+| csvcut --columns ulid,body,tags \
+| csvlook --max-column-width 30
+```
+
+yields
+
+```txt
+| ulid                       | body                           | tags     |
+| -------------------------- | ------------------------------ | -------- |
+| 01chk64zwwjyybanvk7016hyyg | Add a burndown chart view      | tasklite |
+| 01chk6c08h70xra2awd8dngtr7 | Add multi user support         | tasklite |
+| 01chk6dxaxttwfyg019d3g3sze | Add a statistics view          | tasklite |
+| 01chk6f3sq1mrskgkt1046fz7q | Add a calendar view            | tasklite |
+| 01chk6vnm30ttvwc1qkasjaktm | Publish the TaskLite git re... | tasklite |
+```
 
 
 ## Metadata
