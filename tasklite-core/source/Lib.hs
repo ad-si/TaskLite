@@ -763,7 +763,7 @@ recurTasks conf connection duration ids = do
                             { Task.recurrence_duration = Just durationIsoText
                             , Task.group_ulid = Just groupUlid
                             }
-                    else pure mempty
+                    else pure $ Just mempty
 
       let creationResult = fromMaybe
             "⚠️ Next task in recurrence series could not be created!"
