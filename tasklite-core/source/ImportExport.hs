@@ -108,7 +108,6 @@ instance FromJSON ImportTask where
     created_at   <- o .:? "created_at"
 
     let
-      zeroTime = timeFromElapsedP 0 :: DateTime
       parsedCreatedUtc = parseUtc
         =<< ((fmap show utc) <|> entry <|> creation <|> created_at)
       createdUtc = fromMaybe zeroTime parsedCreatedUtc

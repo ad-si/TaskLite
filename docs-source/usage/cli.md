@@ -14,7 +14,15 @@ It is also possible to immediately add tags when creating a task:
 tl add Improve the TaskLite manual +tasklite +pc
 ```
 
-**Attention:** The tags must be the last parameters
+And even to set certain fields:
+
+```shell
+tl add Buy milk +groceries due:2020-09-01 created:2020-08-27
+```
+
+**Attention:**
+The tags and special commands must be the last parameters,
+but their order doesn't matter.
 
 
 ## Help

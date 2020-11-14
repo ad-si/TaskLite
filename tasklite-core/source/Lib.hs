@@ -189,14 +189,15 @@ formatUlid =
 
 
 -- | Parses the body of the tasks and extracts all meta data
--- | Returns a tuple (body, tags, due_utc)
+-- | Returns a tuple (body, tags, dueUtcMb, createdUtcMb)
 -- TODO: Replace with parsec implementation
-parseTaskBody :: Config -> [Text] -> (Text, [Text], Maybe Text)
-parseTaskBody conf bodyWords =
+parseTaskBody :: [Text] -> (Text, [Text], Maybe Text, Maybe DateTime)
+parseTaskBody bodyWords =
   let
     isTag = ("+" `T.isPrefixOf`)
     isDueUtc = ("due:" `T.isPrefixOf`)
-    isMeta word = isTag word || isDueUtc word
+    isCreatedUtc = ("created:" `T.isPrefixOf`)
+    isMeta word = isTag word || isDueUtc word || isCreatedUtc word
     -- Handle case when word is actually a text
     bodyWordsReversed = bodyWords & T.unwords & T.words & P.reverse
     body = bodyWordsReversed
@@ -207,20 +208,26 @@ parseTaskBody conf bodyWords =
       & P.takeWhile isMeta
       & P.reverse
     tags = fmap (T.replace "+" "") (P.filter isTag metadata)
-    dueUtc = metadata
+    dueUtcMb = metadata
       & P.filter isDueUtc
       <&> T.replace "due:" ""
       & P.lastMay
       >>= parseUtc
-      <&> pack . timePrint (utcFormat conf)
+      <&> pack . timePrint utcFormatReadable
+    createdUtcMb = metadata
+      & P.filter isCreatedUtc
+      <&> T.replace "created:" ""
+      & P.lastMay
+      >>= parseUtc
   in
-    (body, tags, dueUtc)
+    (body, tags, dueUtcMb, createdUtcMb)
 
 
-getTriple :: Config -> IO (Text, Text, [Char])
+getTriple :: Config -> IO (ULID, Text, [Char])
 getTriple conf = do
-  ulid <- formatUlid getULID
-  modified_utc <- formatElapsedP conf timeCurrentP -- TODO: Set via a SQL trigger
+  ulid <- getULID
+  -- TODO: Set via a SQL trigger
+  modified_utc <- formatElapsedP conf timeCurrentP
   effectiveUserName <- getEffectiveUserName
 
   pure (ulid, modified_utc, effectiveUserName)
@@ -230,11 +237,13 @@ addTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 addTask conf connection bodyWords = do
   (ulid, modified_utc, effectiveUserName) <- getTriple conf
   let
-    (body, tags, due_utc) = parseTaskBody conf bodyWords
+    (body, tags, dueUtcMb, createdUtcMb) = parseTaskBody bodyWords
     task = zeroTask
-      { Task.ulid = ulid
+      { Task.ulid = toLower $ show $ case createdUtcMb of
+          Nothing -> ulid
+          Just createdUtc -> setDateTime ulid createdUtc
       , Task.body = body
-      , Task.due_utc = due_utc
+      , Task.due_utc = dueUtcMb
       , Task.modified_utc = modified_utc
       , Task.user = T.pack effectiveUserName
       }
@@ -260,13 +269,15 @@ logTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 logTask conf connection bodyWords = do
   (ulid, modified_utc, effectiveUserName) <- getTriple conf
   let
-    (body, extractedTags, due_utc) = parseTaskBody conf bodyWords
+    (body, extractedTags, dueUtcMb, createdUtcMb) = parseTaskBody bodyWords
     tags = extractedTags <> ["log"]
     task = zeroTask
-      { Task.ulid = ulid
+      { Task.ulid = toLower $ show $ case createdUtcMb of
+          Nothing -> ulid
+          Just createdUtc -> setDateTime ulid createdUtc
       , Task.body = body
       , Task.state = Just Done
-      , Task.due_utc = due_utc
+      , Task.due_utc = dueUtcMb
       , Task.closed_utc = Just modified_utc
       , Task.user = T.pack effectiveUserName
       , Task.modified_utc = modified_utc

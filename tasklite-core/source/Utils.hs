@@ -36,6 +36,15 @@ x <++> y =
   x <> softline <> softline <> y
 
 
+zeroTime :: DateTime
+zeroTime = timeFromElapsedP 0
+
+
+utcFormatReadable :: TimeFormatString
+utcFormatReadable =
+  toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
+
+
 parseUtcNum :: Int -> Maybe DateTime
 parseUtcNum number =
   parseUtc (show number)
