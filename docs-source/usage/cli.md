@@ -52,8 +52,8 @@ For example I have following `work` command in my `$PATH`:
 tasklite query \
   "(tags is null or tags not like '%feram%') \
     and state is 'Open' \
-    order by priority \
-    desc limit 10"
+    order by priority desc, due_utc asc, ulid desc \
+    limit 10"
 ```
 
 

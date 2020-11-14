@@ -43,7 +43,7 @@ select substr(ulid,22) as ulid,priority,body,due_utc,
   replace(tags,',',', ') as tags,notes,user
 from tasks_view
 where closed_utc is null
-order by priority desc
+order by priority desc, due_utc asc, ulid desc
 limit 50
 ```
 

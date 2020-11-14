@@ -1607,7 +1607,7 @@ headTasks conf now connection = do
     -- TODO: Add `wait_utc` < datetime('now')"
     "select * from tasks_view \
     \where closed_utc is null \
-    \order by `priority` desc \
+    \order by priority desc, due_utc asc, ulid desc \
     \limit " <> show (headCount conf)
   pure $ formatTasks conf now tasks
 
@@ -1635,7 +1635,7 @@ openTasks conf now connection = do
   tasks <- query_ connection $ Query
     "select * from `tasks_view` \
     \where closed_utc is null \
-    \order by `priority` desc"
+    \order by priority desc, due_utc asc, ulid desc"
   pure $ formatTasks conf now tasks
 
 
@@ -1675,7 +1675,7 @@ overdueTasks conf now connection = do
   tasks <- query_ connection $ Query
     "select * from `tasks_view` \
     \where closed_utc is null and due_utc < datetime('now') \
-    \order by `priority` desc"
+    \order by priority desc, due_utc asc, ulid desc"
   pure $ formatTasks conf now tasks
 
 
@@ -1733,7 +1733,7 @@ listReady conf now connection = do
     \where (ready_utc is null \
     \or (ready_utc is not null and ready_utc < datetime('now'))) \
     \and closed_utc is null \
-    \order by priority desc \
+    \order by priority desc, due_utc asc, ulid desc \
     \limit " <> show (headCount conf)
 
   pure $ formatTasks conf now tasks
@@ -1763,7 +1763,7 @@ listNoTag conf now connection = do
   tasks <-  query_ connection
     "select * from tasks_view \
     \where closed_utc is null and tags is null \
-    \order by priority desc"
+    \order by priority desc, due_utc asc, ulid desc"
   pure $ formatTasks conf now tasks
 
 
@@ -1784,7 +1784,7 @@ listWithTag conf now connection tags = do
     mainQuery = FullTask.selectQuery <> "\
       \from (" <> ulidsQuery <> ") tasks1\n\
       \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
-      \order by priority desc"
+      \order by priority desc, due_utc asc, ulid desc"
 
   -- TODO: Use beam to execute query
   tasks <- query_ connection $ Query mainQuery
@@ -1951,7 +1951,7 @@ getFilterQuery filterExps =
     mainQuery = FullTask.selectQuery <> "\
       \from (" <> ulidsQuery <> ") tasks1\n\
       \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
-      \order by priority desc, due_utc asc"
+      \order by priority desc, due_utc asc, ulid desc"
   in
     Query mainQuery
 
