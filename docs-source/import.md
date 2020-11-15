@@ -22,7 +22,7 @@ Run following command to import it.
 Be sure to make [yaml2json] available in your path
 and to install [jq] first.
 
-[yaml2json]: https://github.com/ad-si/dotfiles/blob/master/bin/yaml2json
+[yaml2json]: https://github.com/ad-si/dotfiles/blob/master/bin/yaml2json-ruby
 [jq]: https://stedolan.github.io/jq/
 
 ```bash
@@ -121,3 +121,18 @@ A list of sub-tasks will be converted to a GitHub Flavored Markdown [task list].
 [task list]:
   https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax#task-lists
 [Google Takeout]: https://takeout.google.com
+
+
+## Telegram
+
+Telegram's "Saved Messages" -- a.k.a. messages to oneself -- are a pretty
+convenient inbox. Here is how to move them to TaskLite afterwards:
+
+1. Install [Telegram Desktop](https://desktop.telegram.org/)
+1. Go to "Saved Messages"
+1. Click on 3 dots in the upper right corner
+1. Deselect all additional media and select "JSON" as output format
+1. Approve download on a mobile device
+1. Download the JSON file and clean it up
+1. Import data as described in the section for YAML files
+1. Clear chat history on Telegram
