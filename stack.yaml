@@ -1,4 +1,4 @@
-resolver: lts-16.19
+resolver: lts-16.21
 packages:
   - huzzy
   - tasklite-core
@@ -18,10 +18,6 @@ extra-deps:
   - portable-lines-0.1
   - sqlite-simple-0.4.18.0
   - ulid-0.3.0.0
-
-  # TODO: Remove after https://github.com/peti/hsemail/pull/6 is merged
-  - github: ad-si/hsemail
-    commit: 052b0e307c8d169fdc10ecc7b1da2915654aa453
 
   - github: haskell-beam/beam
     commit: efd464b079755a781c2bb7a2fc030d6c141bbb8a  # v0.9.0.0

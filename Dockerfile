@@ -1,4 +1,6 @@
-from haskell:8.6.5 as builder
+from haskell:8.8.4 as builder
+
+workdir tasklite
 
 copy docker-stack.yaml stack.yaml
 
