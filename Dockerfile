@@ -1,4 +1,4 @@
-from haskell:8.8.4 as builder
+from haskell:8.8.4-buster as builder
 
 workdir tasklite
 
@@ -20,9 +20,10 @@ copy .git .git
 run stack install
 
 
-from debian:9.9
+# Same OS version as the builder image
+from debian:buster
 run apt-get update && \
     apt-get install -y libgmp10
-copy --from=builder /tasklite-core/example-config.yaml /root/.config/tasklite/config.yaml
+copy --from=builder /tasklite/tasklite-core/example-config.yaml /root/.config/tasklite/config.yaml
 copy --from=builder /root/.local/bin/tasklite /usr/local/bin/tasklite
 cmd ["tasklite"]
