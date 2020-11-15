@@ -82,7 +82,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Copy .git Directory to Project Directory
-        run: cp $GITHUB_WORKSPACE/.git ./.git
+        run: cp -R $GITHUB_WORKSPACE/.git ./.git
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
