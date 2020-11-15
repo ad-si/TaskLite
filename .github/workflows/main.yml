@@ -75,6 +75,25 @@ jobs:
           path: /Users/runner/.local/bin/tasklite
           name: tasklite_macos_x86_64.zip
 
+  docker:
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          tags: adius/tasklite:latest
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
+
   # windows:
   #   runs-on: windows-latest
   #   steps:
