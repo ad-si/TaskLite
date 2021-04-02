@@ -1036,6 +1036,21 @@ nextTask conf connection = do
         pure $ formatTaskForInfo conf now (fullTask, tags, notes)
 
 
+-- TODO: Implement with Beam after
+--       https://github.com/haskell-beam/beam/issues/557
+randomTask :: Config -> Connection -> IO (Doc AnsiStyle)
+randomTask conf connection = do
+  (tasks :: [FullTask]) <- query_ connection $ Query
+    "select * from `tasks_view` \
+    \where closed_utc is null \
+    \order by random() \
+    \limit 1"
+
+  case tasks of
+    [fullTask] -> infoTask conf connection (FullTask.ulid fullTask)
+    _ -> pure $ pretty noTasksWarning
+
+
 findTask :: Connection -> Text -> IO (Doc AnsiStyle)
 findTask connection aPattern = do
   tasks :: [(Text, Text, Maybe [Text], Maybe [Text], Maybe Text)]

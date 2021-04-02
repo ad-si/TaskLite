@@ -136,6 +136,7 @@ uuids           | -       | Filtered list of UUIDs
 \_zshcommands   | -       | Zsh formatted command list
 \_zshids        | -       | Zsh formatted ID list
 \_zshuuids      | -       | Zsh formatted UUID list
+-               | random  | Show a random open task
 
 
 [add]: https://taskwarrior.org/docs/commands/add.html
