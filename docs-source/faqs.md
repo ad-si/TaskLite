@@ -102,6 +102,12 @@ an outstanding user experience beyond the product itself:
 
 <details>
   <summary><small>Answer:</small></summary>
+
+[The code](https://github.com/ad-si/TaskLite)
+is completely free open source software and compiling and using it
+is straight forward.
+Whatever happens to me, TaskLite will always be available in this way.
+
 </details>
 
 
@@ -109,13 +115,22 @@ an outstanding user experience beyond the product itself:
 
 <details>
   <summary><small>Answer:</small></summary>
+
+I'm using it daily and it has become something like my second brain.
+Since I'm not interested in abandoning my brain,
+it will be maintained and further developed in the future.
+
 </details>
 
 
-## What happens if the company dies?
+## What happens if you die?
 
 <details>
   <summary><small>Answer:</small></summary>
+
+A good friend has access to the repository and
+can transfer it to the community.
+
 </details>
 
 
@@ -123,6 +138,18 @@ an outstanding user experience beyond the product itself:
 
 <details>
   <summary><small>Answer:</small></summary>
+
+Not locking you in is one of the most important aspects of TaskLite.
+Therefore it supports numerous export formats:
+
+- [NDJSON](http://ndjson.org/) - One JSON object per task
+- CSV
+- SQL
+- Direct access to the SQLite database
+
+For more information check out the
+[export documentation](/usage/cli.html#export)
+
 </details>
 
 
@@ -130,6 +157,11 @@ an outstanding user experience beyond the product itself:
 
 <details>
   <summary><small>Answer:</small></summary>
+
+All your data is stored in **your** TaskLite database on **your** computer.
+No analytics data or data of any other kind gets transfered to a third party
+during the usage of TaskLite.
+
 </details>
 
 
@@ -137,10 +169,9 @@ an outstanding user experience beyond the product itself:
 
 <details>
   <summary><small>Answer:</small></summary>
+
+We do not have access to any of your data!
+
 </details>
-
-
-
-
 
 </div>

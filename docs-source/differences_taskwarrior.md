@@ -7,7 +7,7 @@
   shell features like aliases.
 
 - **More Robust & Stable** \
-  Taskwarrior is plagued by [numerous bugs][TW Issues] due to its
+  Taskwarrior is plagued by [numerous bugs][TW Bugs] due to its
   unnecessary complexity and non-optimal choice of programming languages.
   TaskLite's simple structure and [Haskell]'s excellent correctness guarantees,
   however, yield a stable and robust piece of software.
@@ -39,7 +39,7 @@
 [LiteCLI]: https://litecli.com
 [performance]: /performance
 [SQLite]: https://sqlite.org
-[TW Issues]: https://github.com/GothenburgBitFactory/taskwarrior/issues
+[TW Bugs]: https://github.com/GothenburgBitFactory/taskwarrior/labels/bug
 [VisiData]: https://visidata.org
 
 
@@ -52,7 +52,7 @@ annotate   | note       | Add a note / comment / annotation to a task
 [append]   | -          | Append words to a task description
 [calc]     | -          | Expression calculator
 config     | config     | TL only displays it, TW allows modification
-context    | -          | Manage contexts
+context    | -          | Manage contexts. TL uses tags instead.
 [count]    | count      | Count the tasks matching a filter
 delete     | trash      | Mark a task as deletable
 denotate   | unnote     | Remove an annotation from a task

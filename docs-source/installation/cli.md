@@ -7,11 +7,11 @@
 Install it via my [Homebrew](https://brew.sh) tap:
 
 ```sh
-brew cask install ad-si/tap/perspec
+brew cask install ad-si/tap/tasklite
 ```
 
 You can also get this (and previous) versions from
-[the releases page](https://github.com/ad-si/Perspec/releases).
+[the releases page](https://github.com/ad-si/TaskLite/releases).
 
 Make sure to download the artifacts with `curl` or `wget`
 as macOS prevents the execution of files downloaded via a browser.

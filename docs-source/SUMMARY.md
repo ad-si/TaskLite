@@ -2,12 +2,14 @@
 
 - [Introduction](./introduction.md)
 
-- [FAQs](./faqs.md)
-
 - [Installation](./installation/readme.md)
     - [CLI](./installation/cli.md)
     - [Desktop App](./installation/desktop_app.md)
     - [Web App](./installation/web_app.md)
+
+- [FAQs](./faqs.md)
+
+- [Roadmap](./roadmap.md)
 
 - [Concepts](./concepts.md)
     - [Repetition and Recurrence](./repetition_and_recurrence.md)
