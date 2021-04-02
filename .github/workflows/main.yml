@@ -16,7 +16,7 @@ jobs:
           restore-keys: tasklite_stack-work_ubuntu
 
       - name: Setup Stack
-        uses: actions/setup-haskell@v1.1
+        uses: haskell/actions/setup@v1
         with:
           enable-stack: true
           stack-no-global: true
@@ -52,7 +52,7 @@ jobs:
           restore-keys: tasklite_stack-work_macos
 
       - name: Setup Stack
-        uses: actions/setup-haskell@v1.1
+        uses: haskell/actions/setup@v1
         with:
           enable-stack: true
           stack-no-global: true
