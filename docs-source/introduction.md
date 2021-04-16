@@ -31,7 +31,7 @@ The Code is available on [GitHub].
 For help please come visit us on one of the following sites:
 
 - [Reddit](https://www.reddit.com/r/TaskLite/)
-- [IRC](irc://chat.freenode.net:6697/TaskLite)
+- [Matrix](matrix:r/tasklite:matrix.feram.io) (#tasklite:matrix.feram.io)
 
 
 ### Latest Versions
