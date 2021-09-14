@@ -3,12 +3,14 @@
 # Needed for retrieving the version number
 !.git
 
+!/stack.yaml
 !/docker-stack.yaml
-!/tasklite-core/example-config.yaml
 
 !/huzzy
+/huzzy/huzzy.cabal
 
 !/tasklite-core
 /tasklite-core/.stack-work
 
-!/stack.yaml
+!/tasklite-server
+/tasklite-server/.stack-work

@@ -45,24 +45,24 @@ extra-source-files:
   - readme.md
 
 dependencies:
-  - acid-state
   - aeson
+  - attoparsec
   - base >= 4.7 && < 5
-  - bcrypt
+  - base-compat
   - bytestring
-  - unordered-containers
-  - extra
-  - gravatar
-  - http-types
-  - jose
-  - lens
+  - directory
   - mtl
-  - protolude
-  - safecopy
-  - scotty
+  - blaze-html
+  - blaze-markup
+  - http-media
+  - lucid
+  - servant
+  - servant-server
+  - string-conversions
   - text
   - time
-  - QuickCheck
+  - wai
+  - warp
 
 executables:
   tasklite-server:

@@ -1,10 +1,8 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: e9e0d78c412a5013dbae695f885727dde00a73d45d8af7bee90ad5abe39ed086
 
 name:           huzzy
 version:        0.1.0.0
@@ -28,7 +26,8 @@ library
       Paths_huzzy
   hs-source-dirs:
       src
-  default-extensions: NoImplicitPrelude
+  default-extensions:
+      NoImplicitPrelude
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -fno-warn-orphans
   build-depends:
       base >=4.7 && <5
@@ -43,7 +42,8 @@ test-suite huzzy-test
       Paths_huzzy
   hs-source-dirs:
       tests
-  default-extensions: NoImplicitPrelude
+  default-extensions:
+      NoImplicitPrelude
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -fno-warn-orphans
   build-depends:
       HUnit

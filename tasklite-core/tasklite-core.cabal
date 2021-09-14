@@ -1,10 +1,8 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 40e88c1a2002eeeed25891da6c54f8130b509785efafc63bd78d903b199f9bdc
 
 name:           tasklite-core
 version:        0.3.0.0
@@ -47,7 +45,25 @@ library
       Paths_tasklite_core
   hs-source-dirs:
       source
-  default-extensions: DeriveAnyClass DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  default-extensions:
+      DeriveAnyClass
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+      TypeSynonymInstances
+      UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
   build-depends:
       QuickCheck
@@ -94,7 +110,25 @@ executable tasklite
       Paths_tasklite_core
   hs-source-dirs:
       app
-  default-extensions: DeriveAnyClass DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  default-extensions:
+      DeriveAnyClass
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+      TypeSynonymInstances
+      UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
   build-depends:
       QuickCheck
@@ -143,7 +177,25 @@ test-suite tasklite-test
       Paths_tasklite_core
   hs-source-dirs:
       test
-  default-extensions: DeriveAnyClass DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  default-extensions:
+      DeriveAnyClass
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+      TypeSynonymInstances
+      UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
   build-depends:
       QuickCheck
@@ -194,7 +246,25 @@ benchmark tasklite-bench
       Paths_tasklite_core
   hs-source-dirs:
       benchmarks
-  default-extensions: DeriveAnyClass DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  default-extensions:
+      DeriveAnyClass
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+      TypeSynonymInstances
+      UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
   build-depends:
       QuickCheck

@@ -2,7 +2,7 @@ resolver: lts-16.21
 packages:
   - huzzy
   - tasklite-core
-  # - tasklite-server
+  - tasklite-server
   # - tasklite-api
   # - tasklite-app
   # - tasklite-web

@@ -1,10 +1,8 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 21742af8c0c9837c929e24ab35c7b04c38d78a5eff7bdc1f96d1c5c9e8b5577c
 
 name:           tasklite-server
 version:        0.1.0.0
@@ -28,38 +26,44 @@ extra-source-files:
 executable tasklite-server
   main-is: Main.hs
   other-modules:
-      AccessToken
-      Database
-      DbIdea
-      DbUser
-      Helpers
-      Idea
-      PostIdea
-      SignupUser
-      Types
-      User
       Paths_tasklite_server
   hs-source-dirs:
       source
-  default-extensions: DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NoImplicitPrelude OverloadedStrings RecordWildCards ScopedTypeVariables StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  default-extensions:
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NoImplicitPrelude
+      OverloadedStrings
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+      TypeSynonymInstances
+      UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -fno-warn-orphans
   build-depends:
-      QuickCheck
-    , acid-state
-    , aeson
+      aeson
+    , attoparsec
     , base >=4.7 && <5
-    , bcrypt
+    , base-compat
+    , blaze-html
+    , blaze-markup
     , bytestring
-    , extra
-    , gravatar
-    , http-types
-    , jose
-    , lens
+    , directory
+    , http-media
+    , lucid
     , mtl
-    , protolude
-    , safecopy
-    , scotty
+    , servant
+    , servant-server
+    , string-conversions
     , text
     , time
-    , unordered-containers
+    , wai
+    , warp
   default-language: Haskell2010
