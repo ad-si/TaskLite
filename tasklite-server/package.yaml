@@ -15,21 +15,58 @@ maintainer: mail@adriansieber.com
 copyright: Adrian Sieber
 category: Web
 
+dependencies:
+  - aeson
+  - attoparsec
+  - base >= 4.7 && < 5
+  - base-compat
+  - blaze-html
+  - blaze-markup
+  - bytestring
+  - directory
+  - file-embed
+  - filepath
+  - githash
+  - hourglass
+  - http-media
+  - iso8601-duration
+  - lucid
+  - mtl
+  - optparse-applicative
+  - prettyprinter
+  - prettyprinter-ansi-terminal
+  - protolude
+  - servant
+  - servant-server
+  - sqlite-simple
+  - string-conversions
+  - tasklite-core
+  - text
+  - time
+  - wai
+  - warp
+  - yaml
+
 default-extensions:
+  - DataKinds
+  - DeriveGeneric
   - DeriveGeneric
   - FlexibleContexts
   - FlexibleInstances
   - GADTs
+  - GeneralizedNewtypeDeriving
   - LambdaCase
   - MultiParamTypeClasses
   - MultiWayIf
   - NoImplicitPrelude
   - OverloadedStrings
+  - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
   - StandaloneDeriving
   - TypeApplications
   - TypeFamilies
+  - TypeOperators
   - TypeSynonymInstances
   - UndecidableInstances
 
@@ -43,26 +80,6 @@ ghc-options:
 
 extra-source-files:
   - readme.md
-
-dependencies:
-  - aeson
-  - attoparsec
-  - base >= 4.7 && < 5
-  - base-compat
-  - bytestring
-  - directory
-  - mtl
-  - blaze-html
-  - blaze-markup
-  - http-media
-  - lucid
-  - servant
-  - servant-server
-  - string-conversions
-  - text
-  - time
-  - wai
-  - warp
 
 executables:
   tasklite-server:

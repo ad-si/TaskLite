@@ -30,20 +30,25 @@ executable tasklite-server
   hs-source-dirs:
       source
   default-extensions:
+      DataKinds
+      DeriveGeneric
       DeriveGeneric
       FlexibleContexts
       FlexibleInstances
       GADTs
+      GeneralizedNewtypeDeriving
       LambdaCase
       MultiParamTypeClasses
       MultiWayIf
       NoImplicitPrelude
       OverloadedStrings
+      RankNTypes
       RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
       TypeApplications
       TypeFamilies
+      TypeOperators
       TypeSynonymInstances
       UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -fno-warn-orphans
@@ -56,14 +61,26 @@ executable tasklite-server
     , blaze-markup
     , bytestring
     , directory
+    , file-embed
+    , filepath
+    , githash
+    , hourglass
     , http-media
+    , iso8601-duration
     , lucid
     , mtl
+    , optparse-applicative
+    , prettyprinter
+    , prettyprinter-ansi-terminal
+    , protolude
     , servant
     , servant-server
+    , sqlite-simple
     , string-conversions
+    , tasklite-core
     , text
     , time
     , wai
     , warp
+    , yaml
   default-language: Haskell2010

@@ -32,7 +32,12 @@ docker-serve: book.toml docs-source
 
 
 .PHONY: deploy
-deploy: docs
+deploy: fly.toml
+	fly deploy
+
+
+.PHONY: deploy-docs
+deploy-docs: docs
 	netlify deploy \
 		--dir=docs \
 		--site=fc1a2240-e6d5-425a-ad02-35b59925a94b \

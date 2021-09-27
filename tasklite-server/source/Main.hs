@@ -1,76 +1,204 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators #-}
+-- Necessary to print git hash in help output,
+-- to embed example config file, and for Servant
+{-# LANGUAGE TemplateHaskell #-}
+
 
 module Main where
 
-import Prelude ()
-import Prelude.Compat
+import Protolude
 
-import Control.Monad.Except
-import Control.Monad.Reader
-import Data.Aeson
-import Data.Aeson.Types
-import Data.Attoparsec.ByteString
-import Data.ByteString (ByteString)
-import Data.List
-import Data.Maybe
-import Data.String.Conversions
-import Data.Time.Calendar
-import GHC.Generics
-import Lucid
-import Network.HTTP.Media ((//), (/:))
+import Lib
+import Data.Aeson as Aeson
+import Data.FileEmbed (embedStringFile, makeRelativeToProject)
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TL
+import Data.Text.Prettyprint.Doc.Render.Terminal
+import Data.Yaml (decodeFileEither, prettyPrintParseException)
+import GHC.IO.Encoding (setLocaleEncoding, utf8)
+import Paths_tasklite_server ()
+import System.FilePath ((</>))
+import qualified Database.SQLite.Simple as SQLite
+
+import Migrations
+-- import Paths_tasklite_server (version)  -- Special module provided by Cabal
+import Utils
+
+import Config (Config(..), HookSet(..), HooksConfig(..), addHookFilesToConfig)
 import Network.Wai
 import Network.Wai.Handler.Warp
 import Servant
 import System.Directory
-import Text.Blaze
-import Text.Blaze.Html.Renderer.Utf8
-import Servant.Types.SourceT (source)
-import qualified Data.Aeson.Parser
-import qualified Text.Blaze.Html
+import FullTask
 
 
-type UserAPI = "users" :> Get '[JSON] [User]
-
-data User = User
-  { name :: String
-  , age :: Int
-  , email :: String
-  , registration_date :: Day
-  } deriving (Eq, Show, Generic)
-
-instance ToJSON User
+type TaskAPI = "tasks" :> Get '[JSON] [FullTask]
+          :<|> "tags" :> Get '[JSON] [Tag]
 
 
-users1 :: [User]
-users1 =
-  [ User "Isaac Newton"    372 "isaac@newton.co.uk" (fromGregorian 1683  3 1)
-  , User "Albert Einstein" 136 "ae@mc2.org"         (fromGregorian 1905 12 1)
-  ]
+type Tag = (Text, Integer, Integer, Double)
 
-server1 :: Server UserAPI
-server1 =
-  return users1
 
-userAPI :: Proxy UserAPI
-userAPI =
+taskAPI :: Proxy TaskAPI
+taskAPI =
   Proxy
 
--- 'serve' comes from servant and hands you a WAI Application,
+
+getTasks :: Config -> Handler [FullTask]
+getTasks conf =
+  -- fmap (Protolude.map SQLite.fromOnly) . liftIO $
+  liftIO $
+    -- TODO: Use Task instead of FullTask to fix broken notes export
+    execWithConn conf $ \connection ->
+     SQLite.query_ connection
+       "select * from tasks_view \
+      \where closed_utc is null \
+      \order by priority desc, due_utc asc, ulid desc \
+      \limit 50"
+
+
+getTags :: Config -> Handler [Tag]
+getTags conf =
+  liftIO $ execWithConn conf $ \connection ->
+    SQLite.query_ connection "select * from tags" :: IO [Tag]
+
+
+server :: Config -> Server TaskAPI
+server conf =
+  getTasks conf
+  :<|> getTags conf
+
+
+-- `serve` comes from servant and hands you a WAI Application,
 -- which you can think of as an "abstract" web application,
--- not yet a webserver.
-app1 :: Application
-app1 =
-  serve userAPI server1
+-- not yet a web-server.
+app :: Config -> Application
+app conf =
+  serve taskAPI $ server conf
+
+
+startServer :: [Char] -> Config -> IO ()
+startServer appName config = do
+  let dataPath = config & dataDir
+
+  configNormDataDir <-
+    if null dataPath
+    then do
+      xdgDataDir <- getXdgDirectory XdgData appName
+      pure $ config {dataDir = xdgDataDir}
+    else
+      case T.stripPrefix "~/" $ T.pack dataPath of
+        Nothing -> pure $ config
+        Just rest -> do
+          homeDir <- getHomeDirectory
+          pure $ config { dataDir = homeDir </> T.unpack rest }
+
+
+  let hooksPath = configNormDataDir & hooks & directory
+
+  configNormHookDir <-
+    if null hooksPath
+    then pure $
+      configNormDataDir
+        { hooks = (configNormDataDir & hooks)
+          { directory = dataDir configNormDataDir </> "hooks" }
+        }
+    else
+      case T.stripPrefix "~/" $ T.pack hooksPath of
+        Nothing -> pure $ configNormDataDir
+        Just rest -> do
+          homeDir <- getHomeDirectory
+          pure $ configNormDataDir
+            { hooks = (configNormDataDir & hooks)
+              { directory = homeDir </> T.unpack rest }
+            }
+
+  let hooksPathNorm = configNormHookDir & hooks & directory
+
+  createDirectoryIfMissing True hooksPathNorm
+
+  hookFiles <- listDirectory hooksPathNorm
+
+  hookFilesPerm :: [(FilePath, Permissions)] <- sequence $ hookFiles
+    & filter (\name ->
+        ("pre-" `isPrefixOf` name) || ("post-" `isPrefixOf` name))
+    <&> (hooksPathNorm </>)
+    <&> \path -> do
+            perm <- getPermissions path
+            pure (path, perm)
+
+  hookFilesPermContent <- sequence $ hookFilesPerm
+    & filter (\(_, perm) -> executable perm)
+    <&> \(filePath, perm) -> do
+            fileContent <- readFile filePath
+            pure (filePath, perm, fileContent)
+
+
+  let configNorm = addHookFilesToConfig configNormHookDir hookFilesPermContent
+
+  preLaunchResult <- executeHooks "" (configNorm & hooks & launch & pre)
+  putDoc preLaunchResult
+
+  connection <- setupConnection configNorm
+
+  -- For debugging SQLite interactions
+  -- SQLite.setTrace connection $ Just print
+
+  migrationsStatus <- runMigrations configNorm connection
+
+  putDoc migrationsStatus
+
+  -- nowElapsed <- timeCurrentP
+
+  -- let
+  --   now = timeFromElapsedP nowElapsed :: DateTime
+
+  args <- getArgs
+  postLaunchResult <- executeHooks
+    (TL.toStrict $ TL.decodeUtf8 $ Aeson.encode $ object ["arguments" .= args])
+    (configNorm & hooks & launch & post)
+  putDoc postLaunchResult
+
+
+  let port = 8081
+  putStrLn $ "Starting server at http://localhost:" ++ show (port :: Int)
+  run port $ app configNorm
+
+
+exampleConfig :: Text
+exampleConfig = $(
+    makeRelativeToProject "../tasklite-core/example-config.yaml"
+    >>= embedStringFile
+  )
 
 
 main :: IO ()
-main =
-  run 8080 app1
+main = do
+  -- Necessary for Docker image
+  setLocaleEncoding utf8
+
+  let appName = "tasklite"
+
+  configDirectory <- getXdgDirectory XdgConfig appName
+  createDirectoryIfMissing True configDirectory
+
+  let configPath = configDirectory </> "config.yaml"
+
+  configResult <- decodeFileEither configPath
+
+  case configResult of
+    Left error -> do
+      if "file not found" `T.isInfixOf`
+            (T.pack $ prettyPrintParseException error)
+      then do
+        writeFile configPath exampleConfig
+        configResult2 <- decodeFileEither configPath
+
+        case configResult2 of
+          Left error2 -> die $ T.pack $ prettyPrintParseException error2
+          Right configUser -> startServer appName configUser
+      else
+        die $ T.pack $ prettyPrintParseException error
+
+    Right configUser ->
+      startServer appName configUser
