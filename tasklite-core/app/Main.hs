@@ -108,6 +108,7 @@ data Command
   | ImportEml
   | IngestFile FilePath
   | Csv
+  | Json
   | Ndjson
   | Sql
   | Backup
@@ -643,6 +644,9 @@ commandParser conf =
         (metavar "QUERY" <> help "The SQL query"))
         "Run any SQL query and show result as CSV")
 
+    <> command "json" (toParserInfo (pure Json)
+        "Show tasks in JSON format")
+
     <> command "ndjson" (toParserInfo (pure Ndjson)
         "Show tasks in NDJSON format")
 
@@ -919,6 +923,7 @@ executeCLiCommand conf now connection = do
       ImportEml -> importEml conf connection
       IngestFile filePath -> ingestFile conf connection filePath
       Csv -> dumpCsv conf
+      Json -> dumpJson conf
       Ndjson -> dumpNdjson conf
       Sql -> dumpSql conf
       Backup -> backupDatabase conf

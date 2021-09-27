@@ -481,6 +481,14 @@ dumpNdjson conf = do
       fmap (pretty . TL.decodeUtf8 . Aeson.encode) tasks
 
 
+dumpJson :: Config -> IO (Doc AnsiStyle)
+dumpJson conf = do
+  -- TODO: Use Task instead of FullTask to fix broken notes export
+  execWithConn conf $ \connection -> do
+    tasks <- (query_ connection "select * from tasks_view") :: IO [FullTask]
+    pure $ pretty $ fmap (TL.decodeUtf8 . Aeson.encode) tasks
+
+
 dumpSql :: Config -> IO (Doc AnsiStyle)
 dumpSql conf = do
   result <- readProcess "sqlite3"
