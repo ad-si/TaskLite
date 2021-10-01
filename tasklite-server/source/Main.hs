@@ -19,6 +19,7 @@ import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Paths_tasklite_server ()
 import System.FilePath ((</>))
 import qualified Database.SQLite.Simple as SQLite
+import Network.Wai.Middleware.Cors (simpleCors)
 
 import Migrations
 -- import Paths_tasklite_server (version)  -- Special module provided by Cabal
@@ -74,7 +75,7 @@ server conf =
 -- not yet a web-server.
 app :: Config -> Application
 app conf =
-  serve taskAPI $ server conf
+  simpleCors $ serve taskAPI $ server conf
 
 
 startServer :: [Char] -> Config -> IO ()

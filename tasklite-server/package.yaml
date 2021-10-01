@@ -44,6 +44,7 @@ dependencies:
   - text
   - time
   - wai
+  - wai-cors
   - warp
   - yaml
 
