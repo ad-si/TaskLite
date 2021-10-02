@@ -1,6 +1,6 @@
 {
-  "short_name": "Elm App",
-  "name": "Create Elm App Sample",
+  "short_name": "TaskLite",
+  "name": "TaskLite - The CLI task manager for power users",
   "icons": [
     {
       "src": "favicon.ico",

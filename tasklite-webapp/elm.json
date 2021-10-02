@@ -1,7 +1,8 @@
 {
     "type": "application",
     "source-directories": [
-        "src"
+        "src",
+        "gen"
     ],
     "elm-version": "0.19.1",
     "dependencies": {
@@ -11,14 +12,16 @@
             "elm/core": "1.0.4",
             "elm/html": "1.0.0",
             "elm/http": "2.0.0",
-            "elm/json": "1.1.2"
+            "elm/json": "1.1.2",
+            "rtfeldman/elm-css": "16.1.1"
         },
         "indirect": {
             "elm/bytes": "1.0.8",
             "elm/file": "1.0.5",
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
-            "elm/virtual-dom": "1.0.2"
+            "elm/virtual-dom": "1.0.2",
+            "rtfeldman/elm-hex": "1.0.0"
         }
     },
     "test-dependencies": {

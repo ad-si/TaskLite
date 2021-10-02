@@ -1,0 +1,11 @@
+{
+  "script": {
+    "start": "elm-app start",
+    "build": "elm-tailwind-modules --dir ./gen"
+  },
+  "devDependencies": {
+    "elm-tailwind-modules": "^0.3.2",
+    "postcss": "^8.3.8",
+    "tailwindcss": "^2.2.16"
+  }
+}

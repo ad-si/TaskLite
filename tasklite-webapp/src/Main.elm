@@ -2,8 +2,25 @@ module Main exposing (..)
 
 import Browser
 import Debug exposing (toString)
-import Html exposing (Html, div, h1, img, li, p, text, ul)
-import Html.Attributes exposing (src)
+import Html.Styled
+    exposing
+        ( Html
+        , div
+        , h1
+        , img
+        , input
+        , li
+        , p
+        , text
+        , toUnstyled
+        , ul
+        )
+import Html.Styled.Attributes
+    exposing
+        ( css
+        , src
+        , type_
+        )
 import Http
 import Json.Decode as Decode
     exposing
@@ -16,12 +33,15 @@ import Json.Decode as Decode
         , string
         )
 import Json.Decode.Pipeline exposing (hardcoded, optional, required)
+import Tailwind.Breakpoints
+import Tailwind.Utilities as T
 
 
 loadTasks : Cmd Msg
 loadTasks =
     Http.get
-        { url = "http://localhost:8081/tasks"
+        { -- Proxied to tasklite-server
+          url = "/tasks"
         , expect = Http.expectJson GotTasks tasksDecoder
         }
 
@@ -123,7 +143,7 @@ type alias Model =
 init : ( Model, Cmd Msg )
 init =
     ( { tasks = []
-      , isLoading = True
+      , isLoading = False
       , errors = []
       }
     , loadTasks
@@ -168,12 +188,29 @@ update msg model =
 
 viewTasks : List Task -> List (Html Msg)
 viewTasks tasks =
-    [ div []
-        [ ul []
+    [ div [ css [ T.flex, T.flex_row, T.justify_center, T.p_2 ] ]
+        [ ul [ css [ T.list_none, T.list_inside, T.max_w_full ] ]
             (List.map
                 (\task ->
-                    li []
-                        [ text (Maybe.withDefault "" task.body) ]
+                    li
+                        [ css
+                            [ T.bg_white
+                            , T.px_4
+                            , T.py_3
+                            , T.mb_0_dot_5
+                            , T.rounded_md
+                            , T.shadow
+                            , T.flex
+                            , T.items_center
+                            ]
+                        ]
+                        [ input
+                            [ css [ T.mr_3, T.w_5, T.h_5 ]
+                            , type_ "checkbox"
+                            ]
+                            []
+                        , text (Maybe.withDefault "" task.body)
+                        ]
                 )
                 tasks
             )
@@ -200,17 +237,21 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "TaskLite"
     , body =
-        case model.isLoading of
-            True ->
-                [ p [] [ text "Loading …" ] ]
+        [ toUnstyled <|
+            div [ css [ T.h_full ] ]
+                (case model.isLoading || model.tasks == [] of
+                    True ->
+                        [ p [] [ text "Loading …" ] ]
 
-            False ->
-                case model.errors of
-                    [] ->
-                        viewTasks model.tasks
+                    False ->
+                        case model.errors of
+                            [] ->
+                                viewTasks model.tasks
 
-                    _ ->
-                        viewErrors model.errors
+                            _ ->
+                                viewErrors model.errors
+                )
+        ]
     }
 
 
