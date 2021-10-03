@@ -13,6 +13,7 @@
             "elm/html": "1.0.0",
             "elm/http": "2.0.0",
             "elm/json": "1.1.2",
+            "elm-community/list-extra": "8.5.1",
             "rtfeldman/elm-css": "16.1.1"
         },
         "indirect": {

@@ -11,6 +11,7 @@ import Html.Styled
         , input
         , li
         , p
+        , span
         , text
         , toUnstyled
         , ul
@@ -33,15 +34,23 @@ import Json.Decode as Decode
         , string
         )
 import Json.Decode.Pipeline exposing (hardcoded, optional, required)
+import List.Extra exposing (remove)
 import Tailwind.Breakpoints
 import Tailwind.Utilities as T
+
+
+{-| All tasks with this tag will be displayed
+and the tag will not be listed separately for each task.
+-}
+tagToDisplay =
+    "focus"
 
 
 loadTasks : Cmd Msg
 loadTasks =
     Http.get
         { -- Proxied to tasklite-server
-          url = "/tasks"
+          url = "/tasks?tags=" ++ tagToDisplay
         , expect = Http.expectJson GotTasks tasksDecoder
         }
 
@@ -186,6 +195,22 @@ update msg model =
 ---- VIEW ----
 
 
+viewTag : String -> Html Msg
+viewTag tag =
+    div
+        [ css
+            [ T.bg_blue_50
+            , T.px_1
+            , T.py_1
+            , T.mr_1
+            , T.rounded_sm
+            , T.text_xs
+            , T.text_gray_600
+            ]
+        ]
+        [ text tag ]
+
+
 viewTasks : List Task -> List (Html Msg)
 viewTasks tasks =
     [ div [ css [ T.flex, T.flex_row, T.justify_center, T.p_2 ] ]
@@ -204,13 +229,25 @@ viewTasks tasks =
                             , T.items_center
                             ]
                         ]
-                        [ input
-                            [ css [ T.mr_3, T.w_5, T.h_5 ]
+                        ([ input
+                            [ css [ T.mr_3, T.w_5, T.h_5, T.flex_shrink_0 ]
                             , type_ "checkbox"
                             ]
                             []
-                        , text (Maybe.withDefault "" task.body)
-                        ]
+                         , span
+                            [ css
+                                [ T.mr_2
+                                , T.overflow_ellipsis
+                                , T.overflow_hidden
+                                ]
+                            ]
+                            [ text (Maybe.withDefault "" task.body) ]
+                         ]
+                            ++ (task.tags
+                                    |> remove tagToDisplay
+                                    |> List.map viewTag
+                               )
+                        )
                 )
                 tasks
             )

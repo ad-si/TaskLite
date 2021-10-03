@@ -1782,17 +1782,21 @@ listNoTag conf now connection = do
   pure $ formatTasks conf now tasks
 
 
-listWithTag :: Config -> DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
-listWithTag conf now connection tags = do
+getWithTag :: Connection -> [Text] -> IO [FullTask]
+getWithTag connection tags = do
   let
-    getTagQuery =
-      (T.intercalate " or ") . (fmap (("tag like '" <>) . (<> "'")))
+    getTagQuery = \case
+      [] -> ""
+      tags_ -> tags_
+        <&> (\t -> "tag like '" <> t <> "'")
+        & (T.intercalate " or ")
+        & ("where " <>)
 
     ulidsQuery = "\
       \select tasks.ulid \
       \from tasks \
       \left join task_to_tag on tasks.ulid is task_to_tag.task_ulid \
-      \where " <> (getTagQuery tags) <> " \
+      \" <> (getTagQuery tags) <> " \
       \group by tasks.ulid \
       \having count(tag) = " <> show (P.length tags)
 
@@ -1802,7 +1806,12 @@ listWithTag conf now connection tags = do
       \order by priority desc, due_utc asc, ulid desc"
 
   -- TODO: Use beam to execute query
-  tasks <- query_ connection $ Query mainQuery
+  query_ connection $ Query mainQuery
+
+
+listWithTag :: Config -> DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
+listWithTag conf now connection tags = do
+  tasks <- getWithTag connection tags
   pure $ formatTasks conf now tasks
 
 

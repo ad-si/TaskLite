@@ -12,3 +12,6 @@ node_modules
 
 # Desktop Services Store on macOS
 .DS_Store
+
+# Automatically generated Elm files
+/gen

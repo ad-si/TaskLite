@@ -33,7 +33,7 @@ import System.Directory
 import FullTask
 
 
-type TaskAPI = "tasks" :> Get '[JSON] [FullTask]
+type TaskAPI = "tasks" :> QueryParams "tags" Text :> Get '[JSON] [FullTask]
           :<|> "tags" :> Get '[JSON] [Tag]
 
 
@@ -45,29 +45,24 @@ taskAPI =
   Proxy
 
 
-getTasks :: Config -> Handler [FullTask]
-getTasks conf =
-  -- fmap (Protolude.map SQLite.fromOnly) . liftIO $
+server :: Config -> Server TaskAPI
+server conf =
+  getTasks conf
+  :<|> getTags conf
+
+
+getTasks :: Config -> [Text] -> Handler [FullTask]
+getTasks conf tags = do
   liftIO $
     -- TODO: Use Task instead of FullTask to fix broken notes export
     execWithConn conf $ \connection ->
-     SQLite.query_ connection
-       "select * from tasks_view \
-      \where closed_utc is null \
-      \order by priority desc, due_utc asc, ulid desc \
-      \limit 50"
+      getWithTag connection tags
 
 
 getTags :: Config -> Handler [Tag]
 getTags conf =
   liftIO $ execWithConn conf $ \connection ->
     SQLite.query_ connection "select * from tags" :: IO [Tag]
-
-
-server :: Config -> Server TaskAPI
-server conf =
-  getTasks conf
-  :<|> getTags conf
 
 
 -- `serve` comes from servant and hands you a WAI Application,
