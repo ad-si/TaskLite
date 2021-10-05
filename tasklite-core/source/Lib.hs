@@ -1782,21 +1782,28 @@ listNoTag conf now connection = do
   pure $ formatTasks conf now tasks
 
 
-getWithTag :: Connection -> [Text] -> IO [FullTask]
-getWithTag connection tags = do
+getWithTag :: Connection -> Maybe DerivedState -> [Text] -> IO [FullTask]
+getWithTag connection stateMaybe tags = do
   let
-    getTagQuery = \case
+    tagQuery = case tags of
       [] -> ""
-      tags_ -> tags_
+      _ -> tags
         <&> (\t -> "tag like '" <> t <> "'")
         & (T.intercalate " or ")
-        & ("where " <>)
+        & ("and " <>)
 
+    stateQuery = case stateMaybe of
+      Nothing -> ""
+      Just derivedState -> "and " <> derivedStateToQuery derivedState
+
+    -- `where true` simplifies adding additional filters with "and"
     ulidsQuery = "\
       \select tasks.ulid \
       \from tasks \
       \left join task_to_tag on tasks.ulid is task_to_tag.task_ulid \
-      \" <> (getTagQuery tags) <> " \
+      \where true \
+      \" <> tagQuery <> " \
+      \" <> stateQuery <> " \
       \group by tasks.ulid \
       \having count(tag) = " <> show (P.length tags)
 
@@ -1811,7 +1818,7 @@ getWithTag connection tags = do
 
 listWithTag :: Config -> DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
 listWithTag conf now connection tags = do
-  tasks <- getWithTag connection tags
+  tasks <- getWithTag connection Nothing tags
   pure $ formatTasks conf now tasks
 
 

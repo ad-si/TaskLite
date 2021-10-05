@@ -30,6 +30,7 @@ import Network.Wai
 import Network.Wai.Handler.Warp
 import Servant
 import System.Directory
+import Task
 import FullTask
 
 
@@ -56,7 +57,7 @@ getTasks conf tags = do
   liftIO $
     -- TODO: Use Task instead of FullTask to fix broken notes export
     execWithConn conf $ \connection ->
-      getWithTag connection tags
+      getWithTag connection (Just IsOpen) tags
 
 
 getTags :: Config -> Handler [Tag]
