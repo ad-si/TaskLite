@@ -1,6 +1,6 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.34.6.
 --
 -- see: https://github.com/sol/hpack
 
@@ -24,6 +24,8 @@ library
       Text.Huzzy
   other-modules:
       Paths_huzzy
+  autogen-modules:
+      Paths_huzzy
   hs-source-dirs:
       src
   default-extensions:
@@ -39,6 +41,8 @@ test-suite huzzy-test
   type: exitcode-stdio-1.0
   main-is: tests.hs
   other-modules:
+      Paths_huzzy
+  autogen-modules:
       Paths_huzzy
   hs-source-dirs:
       tests

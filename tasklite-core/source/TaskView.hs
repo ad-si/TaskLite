@@ -4,7 +4,7 @@ import Protolude as P hiding (state)
 
 import Data.Aeson as Aeson
 import Data.Text as T
-import Data.Text.Prettyprint.Doc
+import Prettyprinter
 import Data.Yaml as Yaml
 import Database.Beam
 import Database.Beam.Sqlite.Connection

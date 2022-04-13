@@ -12,15 +12,14 @@ import Protolude
 
 import Lib
 import Data.Aeson as Aeson
-import Data.Char (isSpace)
 import Data.FileEmbed (embedStringFile, makeRelativeToProject)
 import Data.Hourglass
 import Data.String (fromString)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
-import Data.Text.Prettyprint.Doc hiding ((<>))
-import Data.Text.Prettyprint.Doc.Render.Terminal
+import Prettyprinter hiding ((<>))
+import Prettyprinter.Render.Terminal
 import qualified Data.Time.ISO8601.Duration as Iso
 import Data.Version (showVersion)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)

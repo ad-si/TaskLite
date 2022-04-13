@@ -28,12 +28,10 @@ import System.Process (readProcess)
 import System.Posix.User (getEffectiveUserName)
 import qualified Text.Huzzy as Huzzy
 import Text.ParserCombinators.ReadP as ReadP
-import GHC.Unicode (isSpace)
 import Time.System
-import Data.Text.Prettyprint.Doc as Pp hiding ((<>))
-import Data.Text.Prettyprint.Doc.Util
-import Data.Text.Prettyprint.Doc.Render.Terminal
-import Unsafe (unsafeHead)
+import Prettyprinter as Pp hiding ((<>))
+import Prettyprinter.Util
+import Prettyprinter.Render.Terminal
 
 import Utils
 import Task
@@ -128,7 +126,7 @@ insertTags connection mbCreatedUtc taskUlid tags = do
           <&> setDateTime tagUlid
           & fromMaybe tagUlid
           & show
-          & toLower)
+          & T.toLower)
       taskUlid
       tag
 
@@ -150,7 +148,7 @@ insertNotes connection mbCreatedUtc primKey notes = do
         pure $ show $ setDateTime noteUlid createdUtc
 
     pure $ TaskToNote
-      (toLower $ fromMaybe noteUlidTxt mbNewUlid)
+      (T.toLower $ fromMaybe noteUlidTxt mbNewUlid)
       primKey
       (Note.body theNote)
 
@@ -169,7 +167,7 @@ insertNoteTuples connection taskUlid notes = do
           <&> setDateTime noteUlid
           & fromMaybe noteUlid
           & show
-          & toLower)
+          & T.toLower)
       taskUlid
       noteBody
 
@@ -185,7 +183,7 @@ formatElapsedP conf =
 
 formatUlid :: IO ULID -> IO Text
 formatUlid =
-  fmap (toLower . show)
+  fmap (T.toLower . show)
 
 
 -- | Parses the body of the tasks and extracts all meta data
@@ -239,7 +237,7 @@ addTask conf connection bodyWords = do
   let
     (body, tags, dueUtcMb, createdUtcMb) = parseTaskBody bodyWords
     task = zeroTask
-      { Task.ulid = toLower $ show $ case createdUtcMb of
+      { Task.ulid = T.toLower $ show $ case createdUtcMb of
           Nothing -> ulid
           Just createdUtc -> setDateTime ulid createdUtc
       , Task.body = body
@@ -272,7 +270,7 @@ logTask conf connection bodyWords = do
     (body, extractedTags, dueUtcMb, createdUtcMb) = parseTaskBody bodyWords
     tags = extractedTags <> ["log"]
     task = zeroTask
-      { Task.ulid = toLower $ show $ case createdUtcMb of
+      { Task.ulid = T.toLower $ show $ case createdUtcMb of
           Nothing -> ulid
           Just createdUtc -> setDateTime ulid createdUtc
       , Task.body = body
@@ -309,7 +307,7 @@ execWithTask conf connection idSubstr callback = do
     | numOfTasks == 0 -> pure $
         "⚠️  Task" <+> quote (prefix <> idSubstr) <+> "does not exist"
     | numOfTasks == 1 ->
-        callback $ unsafeHead tasks
+        callback $ fromMaybe zeroTask $ P.head tasks
     | numOfTasks > 1 -> pure $
         "⚠️  Id slice" <+> (quote idSubstr) <+> "is not unique."
         <+> "It could refer to one of the following tasks:"

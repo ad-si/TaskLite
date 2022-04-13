@@ -4,8 +4,6 @@ module Text.Huzzy where
 
 import Protolude as P hiding (filter, null)
 
-import Data.Char (toLower)
-
 import qualified Data.Monoid.Textual as T
 
 

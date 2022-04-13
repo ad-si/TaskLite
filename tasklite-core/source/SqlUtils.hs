@@ -8,7 +8,7 @@ import Protolude as P
 
 import Data.Text as T
 import Database.SQLite.Simple as Sql hiding (columnName)
-import Data.Text.Prettyprint.Doc (Doc, pretty)
+import Prettyprinter (Doc, pretty)
 import Language.SQL.SimpleSQL.Syntax
 
 
@@ -196,7 +196,7 @@ createWithQuery connection theQuery = do
   let
     output = case result :: Either SQLError () of
       Left errorMessage ->
-        if "already exists" `isSuffixOf` (sqlErrorDetails errorMessage)
+        if "already exists" `T.isSuffixOf` (sqlErrorDetails errorMessage)
         then ""
         else T.pack $ (show errorMessage) <> "\n"
       Right _ ->
@@ -212,7 +212,7 @@ createTableWithQuery connection aTableName theQuery = do
   let
     output = case result :: Either SQLError () of
       Left errorMessage ->
-        if "already exists" `isSuffixOf` (sqlErrorDetails errorMessage)
+        if "already exists" `T.isSuffixOf` (sqlErrorDetails errorMessage)
         then ""
         else T.pack $ (show errorMessage) <> "\n"
       Right _ -> "🆕 Create table \"" <> aTableName <> "\"\n"

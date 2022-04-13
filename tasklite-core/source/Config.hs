@@ -10,9 +10,9 @@ import Data.Aeson
 import System.FilePath (takeBaseName)
 import Data.Hourglass
 import Data.Text as T
-import Data.Text.Prettyprint.Doc.Render.Terminal
-import Data.Text.Prettyprint.Doc.Render.Terminal.Internal (ansiForeground)
-import Data.Text.Prettyprint.Doc.Internal
+import Prettyprinter.Render.Terminal
+import Prettyprinter.Render.Terminal.Internal (ansiForeground)
+import Prettyprinter.Internal
 import Data.Yaml (encode)
 
 
@@ -221,7 +221,7 @@ parseColor colorTxt =
 parseAnsiStyle :: Text -> Maybe AnsiStyle
 parseAnsiStyle colorTxt =
   let
-    func = if "dull" `isInfixOf` colorTxt
+    func = if "dull" `T.isInfixOf` colorTxt
       then colorDull
       else color
     colorMaybe = parseColor colorTxt

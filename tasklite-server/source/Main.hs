@@ -13,7 +13,7 @@ import Data.FileEmbed (embedStringFile, makeRelativeToProject)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
-import Data.Text.Prettyprint.Doc.Render.Terminal
+import Prettyprinter.Render.Terminal
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Paths_tasklite_server ()
@@ -52,7 +52,7 @@ server conf =
   :<|> getTags conf
 
 
-getTasks :: Config -> [Text] -> Handler [FullTask]
+getTasks :: Config -> [Text] -> Servant.Handler [FullTask]
 getTasks conf tags = do
   liftIO $
     -- TODO: Use Task instead of FullTask to fix broken notes export
@@ -60,7 +60,7 @@ getTasks conf tags = do
       getWithTag connection (Just IsOpen) tags
 
 
-getTags :: Config -> Handler [Tag]
+getTags :: Config -> Servant.Handler [Tag]
 getTags conf =
   liftIO $ execWithConn conf $ \connection ->
     SQLite.query_ connection "select * from tags" :: IO [Tag]

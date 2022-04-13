@@ -15,7 +15,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Csv as Csv
 import Data.HashMap.Lazy as HML
 import Data.Text as T
-import Data.Text.Prettyprint.Doc hiding ((<>))
+import Prettyprinter hiding ((<>))
 import qualified Data.Vector as V
 import Database.Beam
 import Database.Beam.Backend.SQL
@@ -104,9 +104,9 @@ textToTaskState :: Text -> Maybe TaskState
 textToTaskState txt =
   let
     func t
-      | t `elem` ["done", "completed", "finished", "fixed"] = Just Done
-      | t `elem` ["obsolete"] = Just Obsolete
-      | t `elem` [ "deletable", "deleted"
+      | t `P.elem` ["done", "completed", "finished", "fixed"] = Just Done
+      | t `P.elem` ["obsolete"] = Just Obsolete
+      | t `P.elem` [ "deletable", "deleted"
                  , "removable", "removed"] = Just Deletable
       | otherwise = Nothing
     txtLower = T.toLower txt

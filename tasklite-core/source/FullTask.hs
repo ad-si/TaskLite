@@ -15,7 +15,7 @@ import Database.SQLite.Simple as Sql
 import Database.SQLite.Simple.FromField as Sql.FromField
 import Database.SQLite.Simple.Internal hiding (result)
 import Database.SQLite.Simple.Ok
-import Data.Text.Prettyprint.Doc hiding ((<>))
+import Prettyprinter hiding ((<>))
 import Task
 import Note (Note(..))
 

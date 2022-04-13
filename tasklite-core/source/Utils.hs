@@ -7,11 +7,11 @@ module Utils where
 import Protolude as P
 
 import Data.Text as T
-import Data.Text.Prettyprint.Doc hiding ((<>))
+import Prettyprinter hiding ((<>))
 import Data.Time (addUTCTime, UTCTime, ZonedTime, zonedTimeToUTC)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Data.Hourglass
-import Data.Text.Prettyprint.Doc.Render.Terminal
+import Prettyprinter.Render.Terminal
 import Data.ULID
 import Data.ULID.Random
 import Data.ULID.TimeStamp
@@ -190,13 +190,13 @@ executeHooks stdinText hooks = do
       Just fPath -> readProcess fPath [] stdinStr
       Nothing -> do
         let ipret = hook & interpreter
-        if | ipret `elem` ["ruby", "rb"] ->
+        if | ipret `P.elem` ["ruby", "rb"] ->
               readProcess "ruby" ["-e", (T.unpack $ hook & body)] stdinStr
 
-           | ipret `elem` ["javascript", "js", "node", "node.js"] ->
+           | ipret `P.elem` ["javascript", "js", "node", "node.js"] ->
               readProcess "node" ["-e", (T.unpack $ hook & body)] stdinStr
 
-           | ipret `elem` ["python", "python3", "py"] ->
+           | ipret `P.elem` ["python", "python3", "py"] ->
               readProcess "python3" ["-c", (T.unpack $ hook & body)] stdinStr
 
            | otherwise ->

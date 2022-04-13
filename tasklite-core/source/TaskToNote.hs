@@ -6,7 +6,7 @@ import Data.Yaml as Yaml
 import Database.Beam
 import Task (TaskT)
 import Data.Text as T
-import Data.Text.Prettyprint.Doc hiding ((<>))
+import Prettyprinter hiding ((<>))
 
 
 -- | Record for storing entries of the `task_to_note` table

@@ -1,10 +1,10 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e0d07cc00d04171dcc5d656366489a7cf1f7800e25952269a63fce52997261ea
+-- hash: 2a976f354e938ffecd19f5a6208b0996448cc0076725dccf4ede38befa78bada
 
 name:           tasklite-app
 version:        0.3.0.0
@@ -25,7 +25,22 @@ library
       Paths_tasklite_app
   hs-source-dirs:
       source
-  default-extensions: DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NoImplicitPrelude OverloadedStrings RecordWildCards StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  default-extensions:
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NoImplicitPrelude
+      OverloadedStrings
+      RecordWildCards
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+      TypeSynonymInstances
+      UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -fno-warn-orphans -threaded
   build-depends:
       aeson
@@ -63,7 +78,22 @@ executable tasklite-app
       Paths_tasklite_app
   hs-source-dirs:
       app
-  default-extensions: DeriveGeneric FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses MultiWayIf NoImplicitPrelude OverloadedStrings RecordWildCards StandaloneDeriving TypeApplications TypeFamilies TypeSynonymInstances UndecidableInstances
+  default-extensions:
+      DeriveGeneric
+      FlexibleContexts
+      FlexibleInstances
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NoImplicitPrelude
+      OverloadedStrings
+      RecordWildCards
+      StandaloneDeriving
+      TypeApplications
+      TypeFamilies
+      TypeSynonymInstances
+      UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -fno-warn-orphans -threaded
   build-depends:
       aeson

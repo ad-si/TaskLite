@@ -16,8 +16,8 @@ import Data.Hourglass
 import qualified Data.Text as T
 import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Time.ISO8601.Duration as Iso
-import Data.Text.Prettyprint.Doc hiding ((<>))
-import Data.Text.Prettyprint.Doc.Render.Terminal
+import Prettyprinter hiding ((<>))
+import Prettyprinter.Render.Terminal
 import Data.ULID
 import qualified Data.Vector as V
 import Data.Yaml as Yaml

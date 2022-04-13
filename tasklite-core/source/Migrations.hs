@@ -7,7 +7,7 @@ module Migrations where
 import Protolude as P
 
 import Database.SQLite.Simple
-import Data.Text.Prettyprint.Doc hiding ((<>))
+import Prettyprinter hiding ((<>))
 import Config
 
 

@@ -1,6 +1,6 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.34.6.
 --
 -- see: https://github.com/sol/hpack
 
@@ -42,6 +42,8 @@ library
       TaskView
       Utils
   other-modules:
+      Paths_tasklite_core
+  autogen-modules:
       Paths_tasklite_core
   hs-source-dirs:
       source
@@ -107,6 +109,8 @@ library
 executable tasklite
   main-is: Main.hs
   other-modules:
+      Paths_tasklite_core
+  autogen-modules:
       Paths_tasklite_core
   hs-source-dirs:
       app
@@ -174,6 +178,8 @@ test-suite tasklite-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Paths_tasklite_core
+  autogen-modules:
       Paths_tasklite_core
   hs-source-dirs:
       test
@@ -243,6 +249,8 @@ benchmark tasklite-bench
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      Paths_tasklite_core
+  autogen-modules:
       Paths_tasklite_core
   hs-source-dirs:
       benchmarks
