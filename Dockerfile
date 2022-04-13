@@ -1,4 +1,4 @@
-from haskell:9.2.2-buster as builder
+from haskell:9.0.2-buster as builder
 
 workdir tasklite
 
