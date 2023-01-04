@@ -129,10 +129,46 @@ Telegram's "Saved Messages" -- a.k.a. messages to oneself -- are a pretty
 convenient inbox. Here is how to move them to TaskLite afterwards:
 
 1. Install [Telegram Desktop](https://desktop.telegram.org/)
+    `brew install telegram-desktop`
 1. Go to "Saved Messages"
 1. Click on 3 dots in the upper right corner
+1. Click on "Export Chat History"
 1. Deselect all additional media and select "JSON" as output format
 1. Approve download on a mobile device
-1. Download the JSON file and clean it up
-1. Import data as described in the section for YAML files
+1. Download the JSON file
+    (if download window was closed, simply follow the previous steps again)
+1. Import JSON directly:
+    ```bash
+    cat result.json \
+    | jq -c '
+      .messages
+        | map(
+            (if (.text | type) == "string"
+            then .text
+            else (.text
+                | map(
+                    if (. | type) == "string"
+                    then .
+                    else .text end
+                  )
+                | join(", ")
+              )
+            end) as $body
+            | {
+              utc: .date,
+              body: $body,
+              tags: ["telegram"]
+            }
+          )
+        | .[]
+      '
+    | while read -r task
+      do
+        echo "$task" | tasklite importjson
+      done
+    ```
+    or convert it to YAML for easier cleanup:
+    ```sh
+    jq '.messages' result.json | yq --yaml-output > out.yaml
+    ```
 1. Clear chat history on Telegram

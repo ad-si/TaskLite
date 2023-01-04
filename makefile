@@ -1,3 +1,8 @@
+.PHONY: help
+help: makefile
+	@tail -n +4 makefile | grep ".PHONY"
+
+
 # Build the documentation
 docs: book.toml docs-source
 	mdbook build

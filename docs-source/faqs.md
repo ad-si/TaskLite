@@ -142,6 +142,7 @@ can transfer it to the community.
 Not locking you in is one of the most important aspects of TaskLite.
 Therefore it supports numerous export formats:
 
+- JSON - All tasks as one JSON array
 - [NDJSON](http://ndjson.org/) - One JSON object per task
 - CSV
 - SQL
@@ -159,18 +160,33 @@ For more information check out the
   <summary><small>Answer:</small></summary>
 
 All your data is stored in **your** TaskLite database on **your** computer.
-No analytics data or data of any other kind gets transfered to a third party
+No analytics data or data of any other kind gets transferred to a third party
 during the usage of TaskLite.
 
 </details>
 
 
-## How do you share / sell my data?
+## Do you share or sell my data?
 
 <details>
   <summary><small>Answer:</small></summary>
 
 We do not have access to any of your data!
+
+</details>
+
+
+## How do I keep up with any changes related to TaskLite?
+
+<details>
+  <summary><small>Answer:</small></summary>
+
+There are several ways to stay up to date:
+
+- Visit the [official changelog](/changelog)
+- Join our subreddit at [/r/TaskLite](https://www.reddit.com/r/TaskLite/)
+- Follow the
+  [releases page on GitHub](https://github.com/ad-si/TaskLite/releases)
 
 </details>
 
