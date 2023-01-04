@@ -157,10 +157,10 @@ main = do
     let now = timeFromElapsedP nowElapsed :: DateTime
     hspec $ testSuite defaultConfig now connection
 
-  -- | Does not delete database after tests for debugging
+  -- -- Does not delete database after tests for debugging
   -- filePath <- emptySystemTempFile "main.db"
   -- putStrLn $ "\nFilepath: " <> filePath
-  -- conf connection <- Sql.open filePath
+  -- connection <- Sql.open filePath
   -- nowElapsed <- timeCurrentP
   -- let now = timeFromElapsedP nowElapsed :: DateTime
-  -- hspec $ testSuite now conf connection
+  -- hspec $ testSuite defaultConfig now connection

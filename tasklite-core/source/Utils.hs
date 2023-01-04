@@ -6,6 +6,7 @@ module Utils where
 
 import Protolude as P
 
+import Control.Monad.Catch (catchAll)
 import Data.Text as T
 import Prettyprinter hiding ((<>))
 import Data.Colour.RGBSpace (RGB(..))
@@ -16,10 +17,7 @@ import Prettyprinter.Render.Terminal
 import Data.ULID
 import Data.ULID.Random
 import Data.ULID.TimeStamp
-import System.Console.ANSI (
-    ConsoleLayer(..),
-    getLayerColor,
-  )
+import System.Console.ANSI (ConsoleLayer(..), hGetLayerColor)
 import System.Process
 
 
@@ -217,7 +215,9 @@ executeHooks stdinText hooks = do
 
 applyColorMode :: Config -> IO Config
 applyColorMode conf = do
-  layerColorBgMb <- getLayerColor Background
+  layerColorBgMb <- catchAll
+    (hGetLayerColor stderr Background)
+    (\_ -> pure Nothing)
 
   let
     calcLuminance :: RGB Word16 -> Double
@@ -228,7 +228,7 @@ applyColorMode conf = do
 
     isLightMode = layerColorBgMb
       <&> calcLuminance
-      & fromMaybe 0
+      & fromMaybe 0  -- Default to dark mode
       & (> 0.5)
 
   pure $
