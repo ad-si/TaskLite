@@ -4,9 +4,10 @@ on: [push]
 
 jobs:
   linux:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Cache .stack-work
         uses: actions/cache@v2
@@ -20,6 +21,18 @@ jobs:
         with:
           enable-stack: true
           stack-no-global: true
+
+      - name: Cache Stack build files
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.stack
+            airsequel-cli/.stack-work
+          key: >-
+            ${{ runner.os }}-stack-${{
+            hashFiles('stack.yaml.lock', 'airsequel-cli/package.yaml') }}
+          restore-keys: |
+            ${{runner.os}}-stack
 
       - name: Install TaskLite CLI tool
         run: stack install tasklite-core
