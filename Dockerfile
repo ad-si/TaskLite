@@ -1,8 +1,8 @@
-from haskell:9.0.2-buster as builder
+from haskell:9.2.5-slim-buster as builder
 
 workdir tasklite
 
-copy docker-stack.yaml stack.yaml
+copy stack.yaml stack.yaml
 
 copy huzzy huzzy
 
@@ -39,11 +39,11 @@ run stack install tasklite-server
 
 
 # Same OS version as the builder image
-from debian:buster
+from haskell:9.2.5-slim-buster
 run apt-get update && \
     apt-get install -y libgmp10
 copy --from=builder /tasklite/tasklite-core/example-config.yaml /root/.config/tasklite/config.yaml
 copy --from=builder /root/.local/bin/tasklite /usr/local/bin/tasklite
 copy --from=builder /root/.local/bin/tasklite-server /usr/local/bin/tasklite-server
 
-cmd  ["tasklite"]
+entrypoint  ["tasklite"]
