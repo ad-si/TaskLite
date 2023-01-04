@@ -10,6 +10,8 @@ packages:
 extra-deps:
   - aeson-1.5.6.0
 
+  - ansi-terminal-0.11.4
+
   - iso8601-duration-0.1.1.0
 
   - portable-lines-0.1

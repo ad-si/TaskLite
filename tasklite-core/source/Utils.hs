@@ -8,6 +8,7 @@ import Protolude as P
 
 import Data.Text as T
 import Prettyprinter hiding ((<>))
+import Data.Colour.RGBSpace (RGB(..))
 import Data.Time (addUTCTime, UTCTime, ZonedTime, zonedTimeToUTC)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Data.Hourglass
@@ -15,7 +16,12 @@ import Prettyprinter.Render.Terminal
 import Data.ULID
 import Data.ULID.Random
 import Data.ULID.TimeStamp
+import System.Console.ANSI (
+    ConsoleLayer(..),
+    getLayerColor,
+  )
 import System.Process
+
 
 import Base32
 import Config
@@ -206,3 +212,26 @@ executeHooks stdinText hooks = do
     <&> T.pack
     & T.unlines
     & pretty
+
+
+
+applyColorMode :: Config -> IO Config
+applyColorMode conf = do
+  layerColorBgMb <- getLayerColor Background
+
+  let
+    calcLuminance :: RGB Word16 -> Double
+    calcLuminance (RGB {..}) =
+      (0.3 * fromIntegral channelRed +
+      0.6 * fromIntegral channelGreen +
+      0.1 * fromIntegral channelBlue) / 65536
+
+    isLightMode = layerColorBgMb
+      <&> calcLuminance
+      & fromMaybe 0
+      & (> 0.5)
+
+  pure $
+    if isLightMode
+    then conf { bodyStyle = colorDull Black }
+    else conf

@@ -1550,13 +1550,13 @@ formatTaskLine conf now taskUlidWidth task =
         annotate (dateStyle conf) (pretty taskDate) :
         (pretty $ case FullTask.review_utc task >>= parseUtc of
           Nothing -> "" :: Text
-          Just date_ -> if date_ < now then "🔎" else "") :
-        (if dueIn mempty { durationHours = 24 } && isOpen
-          then "⚠️️  "
-          else "") <>
-          (if dueIn mempty && isOpen
-            then annotate (color Red) (reflow body)
-            else grayOutIfDone (reflow body)) :
+          Just date_ -> if date_ < now then "🔎 " else "")
+          <> (if dueIn mempty { durationHours = 24 } && isOpen
+            then "⚠️️  "
+            else "") <>
+            (if dueIn mempty && isOpen
+              then annotate (color Red) (reflow body)
+              else grayOutIfDone (reflow body)) :
         annotate (dueStyle conf) (pretty dueUtcMaybe) :
         annotate (closedStyle conf) (pretty closedUtcMaybe) :
         hsep (tags <&> (formatTag conf)) :
@@ -1622,7 +1622,7 @@ headTasks conf now connection = do
     \where closed_utc is null \
     \order by priority desc, due_utc asc, ulid desc \
     \limit " <> show (headCount conf)
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 newTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -1631,7 +1631,7 @@ newTasks conf now connection = do
     "select * from `tasks_view` \
     \where closed_utc is null \
     \order by `ulid` desc limit " <> show (headCount conf)
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 listOldTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -1640,7 +1640,7 @@ listOldTasks conf now connection = do
     "select * from `tasks_view` \
     \where closed_utc is null \
     \order by `ulid` asc limit " <> show (headCount conf)
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 openTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -1649,7 +1649,7 @@ openTasks conf now connection = do
     "select * from `tasks_view` \
     \where closed_utc is null \
     \order by priority desc, due_utc asc, ulid desc"
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 modifiedTasks
@@ -1680,7 +1680,7 @@ modifiedTasks conf now connection listModifiedFlag = do
         AllItems -> tasks
         ModifiedItemsOnly -> filterModified tasks
 
-  pure $ formatTasks conf now filteredTasks
+  formatTasksColor conf now filteredTasks
 
 
 overdueTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -1689,7 +1689,7 @@ overdueTasks conf now connection = do
     "select * from `tasks_view` \
     \where closed_utc is null and due_utc < datetime('now') \
     \order by priority desc, due_utc asc, ulid desc"
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 doneTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -1698,7 +1698,7 @@ doneTasks conf now connection = do
     "select * from tasks_view \
     \where closed_utc is not null and state is 'Done' \
     \order by closed_utc desc limit " <> show (headCount conf)
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 obsoleteTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -1707,7 +1707,7 @@ obsoleteTasks conf now connection = do
     "select * from tasks_view \
     \where closed_utc is not null and state is 'Obsolete' \
     \order by ulid desc limit " <> show (headCount conf)
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 deletableTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -1716,7 +1716,7 @@ deletableTasks conf now connection = do
     "select * from tasks_view \
     \where closed_utc is not null and state is 'Deletable' \
     \order by ulid desc limit " <> show (headCount conf)
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 listRepeating :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -1726,7 +1726,7 @@ listRepeating conf now connection = do
     \where repetition_duration is not null \
     \order by repetition_duration desc"
 
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 listRecurring :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -1736,7 +1736,7 @@ listRecurring conf now connection = do
     \where recurrence_duration is not null \
     \order by recurrence_duration desc"
 
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 listReady :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -1749,7 +1749,7 @@ listReady conf now connection = do
     \order by priority desc, due_utc asc, ulid desc \
     \limit " <> show (headCount conf)
 
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 listWaiting :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -1760,15 +1760,14 @@ listWaiting conf now connection = do
       \and waiting_utc is not null \
       \and (review_utc > datetime('now') or review_utc is null) \
     \order by waiting_utc desc"
-
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 listAll :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listAll conf now connection = do
   tasks <- query_ connection
     "select * from tasks_view order by ulid asc"
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 listNoTag :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -1777,7 +1776,7 @@ listNoTag conf now connection = do
     "select * from tasks_view \
     \where closed_utc is null and tags is null \
     \order by priority desc, due_utc asc, ulid desc"
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 getWithTag :: Connection -> Maybe DerivedState -> [Text] -> IO [FullTask]
@@ -1817,14 +1816,14 @@ getWithTag connection stateMaybe tags = do
 listWithTag :: Config -> DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
 listWithTag conf now connection tags = do
   tasks <- getWithTag connection Nothing tags
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 queryTasks :: Config -> DateTime -> Connection -> Text -> IO (Doc AnsiStyle)
 queryTasks conf now connection sqlQuery = do
   tasks <- query_ connection $ Query $
     "select * from `tasks_view` where " <> sqlQuery
-  pure $ formatTasks conf now tasks
+  formatTasksColor conf now tasks
 
 
 runSql :: Config -> Text -> IO (Doc AnsiStyle)
@@ -1954,7 +1953,7 @@ runFilter conf now connection exps = do
       then
         dieWithError $ vsep (fmap ppInvalidFilter errors)
       else
-        pure $ formatTasks conf now tasks
+        formatTasksColor conf now tasks
 
     _ -> dieWithError filterHelp
 
@@ -2008,6 +2007,12 @@ formatTasks conf now tasks  =
       docHeader <>
       vsep (fmap (formatTaskLine conf now taskUlidWidth) tasks) <>
       line
+
+
+formatTasksColor :: Config -> DateTime -> [FullTask] -> IO (Doc AnsiStyle)
+formatTasksColor conf now tasks = do
+  confNorm <- applyColorMode conf
+  pure $ formatTasks confNorm now tasks
 
 
 getProgressBar :: Integer -> Double -> Doc AnsiStyle

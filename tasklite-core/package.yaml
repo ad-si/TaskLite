@@ -21,12 +21,14 @@ description: |
 
 dependencies:
   - aeson
+  - ansi-terminal
   - base >= 4.7 && < 5
   - beam-core
   - beam-migrate
   - beam-sqlite
   - bytestring
   - cassava
+  - colour
   - directory
   - file-embed
   - filepath

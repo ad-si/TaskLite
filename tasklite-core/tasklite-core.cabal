@@ -1,6 +1,6 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.34.6.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -70,12 +70,14 @@ library
   build-depends:
       QuickCheck
     , aeson
+    , ansi-terminal
     , base >=4.7 && <5
     , beam-core
     , beam-migrate
     , beam-sqlite
     , bytestring
     , cassava
+    , colour
     , directory
     , file-embed
     , filepath
@@ -137,12 +139,14 @@ executable tasklite
   build-depends:
       QuickCheck
     , aeson
+    , ansi-terminal
     , base >=4.7 && <5
     , beam-core
     , beam-migrate
     , beam-sqlite
     , bytestring
     , cassava
+    , colour
     , directory
     , file-embed
     , filepath
@@ -206,12 +210,14 @@ test-suite tasklite-test
   build-depends:
       QuickCheck
     , aeson
+    , ansi-terminal
     , base >=4.7 && <5
     , beam-core
     , beam-migrate
     , beam-sqlite
     , bytestring
     , cassava
+    , colour
     , directory
     , file-embed
     , filepath
@@ -277,12 +283,14 @@ benchmark tasklite-bench
   build-depends:
       QuickCheck
     , aeson
+    , ansi-terminal
     , base >=4.7 && <5
     , beam-core
     , beam-migrate
     , beam-sqlite
     , bytestring
     , cassava
+    , colour
     , criterion
     , directory
     , file-embed

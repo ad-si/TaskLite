@@ -27,7 +27,7 @@ import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import GitHash
 import Options.Applicative
 import Options.Applicative.Help.Core (parserHelp)
-import Paths_tasklite_core ()
+import Paths_tasklite_core ( version )  -- Special module provided by Cabal
 import System.Directory
   ( createDirectoryIfMissing
   , executable
@@ -46,7 +46,6 @@ import qualified Database.SQLite.Simple as SQLite
 import Config (Config(..), HookSet(..), HooksConfig(..), addHookFilesToConfig)
 import ImportExport
 import Migrations
-import Paths_tasklite_core (version)  -- Special module provided by Cabal
 import Utils
 
 
