@@ -40,7 +40,7 @@ data FullTask = FullTask
   , priority :: Maybe Float
   , user :: Text
   , metadata :: Maybe Aeson.Value
-  } deriving (Generic, Show)
+  } deriving (Generic, Show, Eq)
 
 
 -- For conversion from SQLite with SQLite.Simple

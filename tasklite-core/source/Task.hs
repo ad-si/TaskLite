@@ -7,16 +7,15 @@ module Task where
 import Protolude as P hiding ((%))
 
 import Data.Aeson as Aeson
+import Data.Aeson.Key as Key
+import Data.Aeson.KeyMap as KeyMap
 import Data.Aeson.Text as Aeson
-import qualified Data.HashMap.Lazy as HM
 import Data.Hourglass (DateTime, timePrint)
 import Data.Yaml as Yaml
 import qualified Data.ByteString.Lazy as BSL
 import Data.Csv as Csv
-import Data.HashMap.Lazy as HML
 import Data.Text as T
 import Prettyprinter hiding ((<>))
-import qualified Data.Vector as V
 import Database.Beam
 import Database.Beam.Backend.SQL
 import Database.Beam.Sqlite.Connection
@@ -31,29 +30,6 @@ import Test.QuickCheck.Instances.Text ()
 import Generic.Random
 
 import Config (utcFormat, defaultConfig)
-
-
--- From https://gist.github.com/chrisdone/7b0c4ebb5b9b94514959206df8992076
-instance Arbitrary Aeson.Value where
-  arbitrary = sized sizedArbitraryValue
-
-sizedArbitraryValue :: Int -> Gen Aeson.Value
-sizedArbitraryValue n
-  | n <= 0 = oneof [pure Aeson.Null, jsonBool, jsonNumber, jsonString]
-  | otherwise = resize nHalf $
-      oneof [ pure Aeson.Null, jsonBool, jsonNumber
-            , jsonString, jsonArray, jsonObject]
-  where
-    nHalf = n `div` 2
-    jsonBool = Aeson.Bool <$> arbitrary
-    jsonNumber =
-      (Aeson.Number . fromRational . toRational :: Double -> Aeson.Value)
-      <$> arbitrary
-    jsonString = (Aeson.String . T.pack) <$> arbitrary
-    jsonArray = (Aeson.Array . V.fromList) <$> arbitrary
-    jsonObject =
-      (Aeson.Object . HM.fromList . P.map (first T.pack))
-      <$> arbitrary
 
 
 data TaskState
@@ -325,8 +301,8 @@ setMetadataField :: Text -> Value -> Task -> Task
 setMetadataField fieldNameText value task =
   task {metadata = (case metadata task of
       Just (Object obj) ->
-        Just $ Object $ HML.insert fieldNameText value obj
+        Just $ Object $ KeyMap.insert (Key.fromText fieldNameText) value obj
       Nothing ->
-        Just $ Object $ HML.fromList [(fieldNameText, value)]
+        Just $ Object $ fromList [(Key.fromText fieldNameText, value)]
       _ -> metadata task)
   }

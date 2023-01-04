@@ -10,7 +10,7 @@ import Data.ULID
 data Note = Note
   { ulid :: Text
   , body :: Text
-  } deriving (Generic, Show)
+  } deriving (Generic, Show, Eq)
 
 instance ToJSON Note
 

@@ -5,44 +5,16 @@
 
 packages:
 - completed:
-    hackage: aeson-1.5.6.0@sha256:5003bb6fd260d2e2d5a51dee2bf5c8e8f29e4e0e0288fef805c22dcc80ecab06,6788
+    name: iso8601-duration
     pantry-tree:
-      sha256: 1f61b87807bfb4362a978a492e2f17be9e3ebfe32f983ee49863ddde970b32ce
-      size: 37981
+      sha256: dd24cbdc13e4aa8ae25125ad3fece2ea910ecb5fd0af4c31fce39d26aaa7930e
+      size: 724
+    sha256: 2645e7337c863d1dc7aa68ca79be6ca8efc79b508ad575336335d2d7cb7d5fca
+    size: 7309
+    url: https://github.com/ad-si/iso8601-duration/archive/15822155a51831fbcd75a3bb5cb608a731a0461b.tar.gz
+    version: 0.1.2.0
   original:
-    hackage: aeson-1.5.6.0
-- completed:
-    hackage: ansi-terminal-0.11.4@sha256:410737137c798e23339a08435a5511785ebf1db08700e37debbd7801cf73fc82,3584
-    pantry-tree:
-      sha256: 49bc6ef92292ee8b663a40cf5170af1efaaa4ed84155b65ad41eabf1faf9b18f
-      size: 1462
-  original:
-    hackage: ansi-terminal-0.11.4
-- completed:
-    hackage: iso8601-duration-0.1.1.0@sha256:0e9e7531e71b693c20115198186a0280aa3631dc29da226e84e55f0984bec1af,2210
-    pantry-tree:
-      sha256: 183be7ad7fded29b7dbf94bd57a58755abeab8f1d1d237ac47f95543a84a8ae7
-      size: 569
-  original:
-    hackage: iso8601-duration-0.1.1.0
-- completed:
-    hackage: portable-lines-0.1@sha256:21c3b905888a4b43f957cd8e8cdf2af00942bb161aa19a6b20db18b661de0510,1552
-    pantry-tree:
-      sha256: 2eeb1d9aefe4fb172dc56baa75f09aaaac824799d926922b4673188293f9f95c
-      size: 371
-  original:
-    hackage: portable-lines-0.1
-- completed:
-    name: ulid
-    pantry-tree:
-      sha256: a6d5edf44e0c3dbe23454e11b6c7db52373f852fe5e2ade6d23b9842a13be883
-      size: 1157
-    sha256: 42e6ebee9791e89b9490c3f92003e83a92401ed2635209b7d8a0f5da5d9b37f0
-    size: 10636
-    url: https://github.com/ad-si/ulid/archive/443b5d74d0f2abdc3879e8338cc4497d68e640df.tar.gz
-    version: 0.3.1.0
-  original:
-    url: https://github.com/ad-si/ulid/archive/443b5d74d0f2abdc3879e8338cc4497d68e640df.tar.gz
+    url: https://github.com/ad-si/iso8601-duration/archive/15822155a51831fbcd75a3bb5cb608a731a0461b.tar.gz
 - completed:
     name: simple-sql-parser
     pantry-tree:
@@ -54,20 +26,9 @@ packages:
     version: 0.5.0
   original:
     url: https://github.com/JakeWheat/simple-sql-parser/archive/00433a26e8303c9e61359f406da5a2dbf1293fc8.tar.gz
-- completed:
-    name: protolude
-    pantry-tree:
-      sha256: 685ed0191298da9540e772ffa746eb078d4f4a77ed8012a9933d3c79644b1054
-      size: 3146
-    sha256: 0642bfda8aaaa84477e030e26770a388e4facbce25f98b8781820c8b82f280e5
-    size: 33781
-    url: https://github.com/protolude/protolude/archive/3e249724fd0ead27370c8c297b1ecd38f92cbd5b.tar.gz
-    version: 0.3.1
-  original:
-    url: https://github.com/protolude/protolude/archive/3e249724fd0ead27370c8c297b1ecd38f92cbd5b.tar.gz
 snapshots:
 - completed:
-    sha256: a209d3455279ee76eb45f01f73bbb960ceaaa8dfad8891435384689df4dcb653
-    size: 617368
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/19/3.yaml
-  original: lts-19.3
+    sha256: a684cdbdf9304b325a503e0fe1d9648e9c18155ce4c7cfebbe8a7f93674e6295
+    size: 649106
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/20/5.yaml
+  original: lts-20.5

@@ -1,4 +1,4 @@
-resolver: lts-19.3
+resolver: lts-20.5
 packages:
   - huzzy
   - tasklite-core
@@ -8,22 +8,11 @@ packages:
   # - tasklite-web
 
 extra-deps:
-  - aeson-1.5.6.0
-
-  - ansi-terminal-0.11.4
-
-  - iso8601-duration-0.1.1.0
-
-  - portable-lines-0.1
-
-  - github: ad-si/ulid
-    commit: 443b5d74d0f2abdc3879e8338cc4497d68e640df
+  - github: ad-si/iso8601-duration
+    commit: 15822155a51831fbcd75a3bb5cb608a731a0461b
 
   - github: JakeWheat/simple-sql-parser
     commit: 00433a26e8303c9e61359f406da5a2dbf1293fc8
-
-  - github: protolude/protolude
-    commit: 3e249724fd0ead27370c8c297b1ecd38f92cbd5b
 
 extra-include-dirs:
   - /Library/Developer/CommandLineTools/SDKs/MacOSX12.sdk/usr/include/ffi

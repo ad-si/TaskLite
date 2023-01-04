@@ -49,22 +49,13 @@ library
       source
   default-extensions:
       DeriveAnyClass
-      DeriveGeneric
-      FlexibleContexts
-      FlexibleInstances
-      GADTs
+      GHC2021
       LambdaCase
-      MultiParamTypeClasses
       MultiWayIf
-      NamedFieldPuns
       NoImplicitPrelude
       OverloadedStrings
       RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      TypeApplications
       TypeFamilies
-      TypeSynonymInstances
       UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
   build-depends:
@@ -78,7 +69,9 @@ library
     , bytestring
     , cassava
     , colour
+    , containers
     , directory
+    , exceptions
     , file-embed
     , filepath
     , generic-random
@@ -118,22 +111,13 @@ executable tasklite
       app
   default-extensions:
       DeriveAnyClass
-      DeriveGeneric
-      FlexibleContexts
-      FlexibleInstances
-      GADTs
+      GHC2021
       LambdaCase
-      MultiParamTypeClasses
       MultiWayIf
-      NamedFieldPuns
       NoImplicitPrelude
       OverloadedStrings
       RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      TypeApplications
       TypeFamilies
-      TypeSynonymInstances
       UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
   build-depends:
@@ -147,7 +131,9 @@ executable tasklite
     , bytestring
     , cassava
     , colour
+    , containers
     , directory
+    , exceptions
     , file-embed
     , filepath
     , generic-random
@@ -189,22 +175,13 @@ test-suite tasklite-test
       test
   default-extensions:
       DeriveAnyClass
-      DeriveGeneric
-      FlexibleContexts
-      FlexibleInstances
-      GADTs
+      GHC2021
       LambdaCase
-      MultiParamTypeClasses
       MultiWayIf
-      NamedFieldPuns
       NoImplicitPrelude
       OverloadedStrings
       RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      TypeApplications
       TypeFamilies
-      TypeSynonymInstances
       UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
   build-depends:
@@ -218,7 +195,9 @@ test-suite tasklite-test
     , bytestring
     , cassava
     , colour
+    , containers
     , directory
+    , exceptions
     , file-embed
     , filepath
     , generic-random
@@ -262,22 +241,13 @@ benchmark tasklite-bench
       benchmarks
   default-extensions:
       DeriveAnyClass
-      DeriveGeneric
-      FlexibleContexts
-      FlexibleInstances
-      GADTs
+      GHC2021
       LambdaCase
-      MultiParamTypeClasses
       MultiWayIf
-      NamedFieldPuns
       NoImplicitPrelude
       OverloadedStrings
       RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      TypeApplications
       TypeFamilies
-      TypeSynonymInstances
       UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
   build-depends:
@@ -291,8 +261,10 @@ benchmark tasklite-bench
     , bytestring
     , cassava
     , colour
+    , containers
     , criterion
     , directory
+    , exceptions
     , file-embed
     , filepath
     , generic-random

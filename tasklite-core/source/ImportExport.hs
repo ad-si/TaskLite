@@ -7,11 +7,10 @@ module ImportExport where
 import Protolude as P hiding (state)
 
 import Data.Aeson as Aeson
+import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Csv as Csv
-import qualified Data.HashMap.Strict as HM
-import qualified Data.HashMap.Lazy as HML
 import Data.Hourglass
 import qualified Data.Text as T
 import qualified Data.Text.Lazy.Encoding as TL
@@ -44,7 +43,7 @@ import Config
 data Annotation = Annotation
   { entry :: Text
   , description :: Text
-  } deriving Generic
+  } deriving (Generic, Eq)
 
 instance Hashable Annotation
 
@@ -345,7 +344,7 @@ emailToImportTask email@(Message headerFields msgBody) =
       tags
 
     namesToJson names = Array $ V.fromList $ names
-      <&> (\(Email.NameAddr name emailAddress) -> Object $ HML.fromList $
+      <&> (\(Email.NameAddr name emailAddress) -> Object $ KeyMap.fromList $
               [ ("name", Aeson.String $ T.pack $ fromMaybe "" name)
               , ("email", Aeson.String $ T.pack emailAddress)
               ])
@@ -542,7 +541,7 @@ editTaskByTask _ connection taskToEdit = do
       parseMetadata :: Value -> Parser Bool
       parseMetadata val = case val of
           Object obj -> do
-            let mdataMaybe = HM.lookup "metadata" obj
+            let mdataMaybe = KeyMap.lookup "metadata" obj
 
             hasMdata <- pure $ case mdataMaybe of
               Just (Object _) -> True

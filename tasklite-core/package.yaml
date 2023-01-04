@@ -29,7 +29,9 @@ dependencies:
   - bytestring
   - cassava
   - colour
+  - containers
   - directory
+  - exceptions
   - file-embed
   - filepath
   - generic-random
@@ -61,22 +63,13 @@ dependencies:
 
 default-extensions:
   - DeriveAnyClass
-  - DeriveGeneric
-  - FlexibleContexts
-  - FlexibleInstances
-  - GADTs
+  - GHC2021
   - LambdaCase
-  - MultiParamTypeClasses
   - MultiWayIf
-  - NamedFieldPuns
   - NoImplicitPrelude
   - OverloadedStrings
   - RecordWildCards
-  - ScopedTypeVariables
-  - StandaloneDeriving
-  - TypeApplications
   - TypeFamilies
-  - TypeSynonymInstances
   - UndecidableInstances
 
 ghc-options:
