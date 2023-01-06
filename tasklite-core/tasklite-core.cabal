@@ -53,6 +53,7 @@ library
       LambdaCase
       MultiWayIf
       NoImplicitPrelude
+      OverloadedRecordDot
       OverloadedStrings
       RecordWildCards
       TypeFamilies
@@ -115,6 +116,7 @@ executable tasklite
       LambdaCase
       MultiWayIf
       NoImplicitPrelude
+      OverloadedRecordDot
       OverloadedStrings
       RecordWildCards
       TypeFamilies
@@ -179,6 +181,7 @@ test-suite tasklite-test
       LambdaCase
       MultiWayIf
       NoImplicitPrelude
+      OverloadedRecordDot
       OverloadedStrings
       RecordWildCards
       TypeFamilies
@@ -245,6 +248,7 @@ benchmark tasklite-bench
       LambdaCase
       MultiWayIf
       NoImplicitPrelude
+      OverloadedRecordDot
       OverloadedStrings
       RecordWildCards
       TypeFamilies

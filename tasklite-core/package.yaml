@@ -67,6 +67,7 @@ default-extensions:
   - LambdaCase
   - MultiWayIf
   - NoImplicitPrelude
+  - OverloadedRecordDot
   - OverloadedStrings
   - RecordWildCards
   - TypeFamilies

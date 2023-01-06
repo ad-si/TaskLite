@@ -190,18 +190,18 @@ executeHooks :: Text -> [Hook] -> IO (Doc AnsiStyle)
 executeHooks stdinText hooks = do
   let stdinStr = T.unpack stdinText
   cmdOutput <- forM hooks $ \hook ->
-    case (hook & filePath) of
+    case hook.filePath of
       Just fPath -> readProcess fPath [] stdinStr
       Nothing -> do
-        let ipret = hook & interpreter
+        let ipret = hook.interpreter
         if | ipret `P.elem` ["ruby", "rb"] ->
-              readProcess "ruby" ["-e", (T.unpack $ hook & body)] stdinStr
+              readProcess "ruby" ["-e", T.unpack hook.body] stdinStr
 
            | ipret `P.elem` ["javascript", "js", "node", "node.js"] ->
-              readProcess "node" ["-e", (T.unpack $ hook & body)] stdinStr
+              readProcess "node" ["-e", T.unpack hook.body] stdinStr
 
            | ipret `P.elem` ["python", "python3", "py"] ->
-              readProcess "python3" ["-c", (T.unpack $ hook & body)] stdinStr
+              readProcess "python3" ["-c", T.unpack hook.body] stdinStr
 
            | otherwise ->
               pure mempty

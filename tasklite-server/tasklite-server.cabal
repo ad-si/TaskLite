@@ -1,6 +1,6 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.34.6.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -33,25 +33,15 @@ executable tasklite-server
       source
   default-extensions:
       DataKinds
-      DeriveGeneric
-      DeriveGeneric
-      FlexibleContexts
-      FlexibleInstances
-      GADTs
-      GeneralizedNewtypeDeriving
+      DeriveAnyClass
+      GHC2021
       LambdaCase
-      MultiParamTypeClasses
       MultiWayIf
       NoImplicitPrelude
+      OverloadedRecordDot
       OverloadedStrings
-      RankNTypes
       RecordWildCards
-      ScopedTypeVariables
-      StandaloneDeriving
-      TypeApplications
       TypeFamilies
-      TypeOperators
-      TypeSynonymInstances
       UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -fno-warn-orphans
   build-depends:

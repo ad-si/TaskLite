@@ -76,7 +76,7 @@ app conf =
 
 startServer :: [Char] -> Config -> IO ()
 startServer appName config = do
-  let dataPath = config & dataDir
+  let dataPath = config.dataDir
 
   configNormDataDir <-
     if null dataPath
@@ -91,13 +91,13 @@ startServer appName config = do
           pure $ config { dataDir = homeDir </> T.unpack rest }
 
 
-  let hooksPath = configNormDataDir & hooks & directory
+  let hooksPath = configNormDataDir.hooks & directory
 
   configNormHookDir <-
     if null hooksPath
     then pure $
       configNormDataDir
-        { hooks = (configNormDataDir & hooks)
+        { hooks = (configNormDataDir.hooks)
           { directory = dataDir configNormDataDir </> "hooks" }
         }
     else
@@ -106,7 +106,7 @@ startServer appName config = do
         Just rest -> do
           homeDir <- getHomeDirectory
           pure $ configNormDataDir
-            { hooks = (configNormDataDir & hooks)
+            { hooks = (configNormDataDir.hooks)
               { directory = homeDir </> T.unpack rest }
             }
 
@@ -133,7 +133,7 @@ startServer appName config = do
 
   let configNorm = addHookFilesToConfig configNormHookDir hookFilesPermContent
 
-  preLaunchResult <- executeHooks "" (configNorm & hooks & launch & pre)
+  preLaunchResult <- executeHooks "" (configNorm.hooks & launch & pre)
   putDoc preLaunchResult
 
   connection <- setupConnection configNorm
@@ -153,7 +153,7 @@ startServer appName config = do
   args <- getArgs
   postLaunchResult <- executeHooks
     (TL.toStrict $ TL.decodeUtf8 $ Aeson.encode $ object ["arguments" .= args])
-    (configNorm & hooks & launch & post)
+    (configNorm.hooks & launch & post)
   putDoc postLaunchResult
 
 

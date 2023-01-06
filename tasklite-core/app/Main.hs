@@ -988,7 +988,7 @@ executeCLiCommand conf now connection = do
 
 printOutput :: [Char] -> Config -> IO ()
 printOutput appName config = do
-  let dataPath = config & dataDir
+  let dataPath = config.dataDir
 
   configNormDataDir <-
     if null dataPath
@@ -1045,7 +1045,7 @@ printOutput appName config = do
 
   let configNorm = addHookFilesToConfig configNormHookDir hookFilesPermContent
 
-  preLaunchResult <- executeHooks "" (configNorm & hooks & launch & pre)
+  preLaunchResult <- executeHooks "" (configNorm.hooks & launch & pre)
   putDoc preLaunchResult
 
   connection <- setupConnection configNorm
@@ -1062,7 +1062,7 @@ printOutput appName config = do
   args <- getArgs
   postLaunchResult <- executeHooks
     (TL.toStrict $ TL.decodeUtf8 $ Aeson.encode $ object ["arguments" .= args])
-    (configNorm & hooks & launch & post)
+    (configNorm.hooks & launch & post)
   putDoc postLaunchResult
 
   doc <- executeCLiCommand configNorm now connection

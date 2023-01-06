@@ -107,8 +107,8 @@ addHookFilesToConfig =
     addToHookSet :: Hook -> Text -> HookSet -> HookSet
     addToHookSet hook stage hookSet =
       case stage of
-        "pre"  -> hookSet { pre  = (hookSet & pre) <> [hook] }
-        "post" -> hookSet { post = (hookSet & post) <> [hook] }
+        "pre"  -> hookSet { pre  = hookSet.pre <> [hook] }
+        "post" -> hookSet { post = hookSet.post <> [hook] }
         _ -> hookSet
 
     addToHooksConfig :: Text -> Text -> Hook -> HooksConfig -> HooksConfig
@@ -130,7 +130,7 @@ addHookFilesToConfig =
           [stage, event] ->
             conf { hooks = addToHooksConfig event stage
               (buildHook filePath fileContent)
-              (conf & hooks)
+              conf.hooks
             }
 
           _ -> conf

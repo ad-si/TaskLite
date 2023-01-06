@@ -50,25 +50,15 @@ dependencies:
 
 default-extensions:
   - DataKinds
-  - DeriveGeneric
-  - DeriveGeneric
-  - FlexibleContexts
-  - FlexibleInstances
-  - GADTs
-  - GeneralizedNewtypeDeriving
+  - DeriveAnyClass
+  - GHC2021
   - LambdaCase
-  - MultiParamTypeClasses
   - MultiWayIf
   - NoImplicitPrelude
+  - OverloadedRecordDot
   - OverloadedStrings
-  - RankNTypes
   - RecordWildCards
-  - ScopedTypeVariables
-  - StandaloneDeriving
-  - TypeApplications
   - TypeFamilies
-  - TypeOperators
-  - TypeSynonymInstances
   - UndecidableInstances
 
 ghc-options:
