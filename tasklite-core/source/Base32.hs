@@ -1,15 +1,23 @@
 -- | Adapted from https://hackage.haskell.org/package/crockford
 module Base32 (decode) where
 
-import Protolude
-import Data.Char as C
-import Data.Text as T
+import Data.Char as C (Char, toUpper)
+import Data.Text as T (Text, unpack)
+import Protolude (
+  Applicative (pure),
+  Integral,
+  Maybe (..),
+  Traversable (mapM),
+  ($),
+ )
 
 import Data.ULID.Digits (unDigits)
 
 
--- | Decodes a Crockford-encoded String into an integer, if possible. Returns
---   Nothing if the string is not a valid Crockford-encoded value.
+{-|
+Decodes a Crockford-encoded `String` into an integer, if possible.
+Returns `Nothing` if the string is not a valid Crockford-encoded value.
+-}
 decode :: Integral i => Text -> Maybe i
 decode base32text = do
   numbers <- mapM decodeChar $ T.unpack base32text

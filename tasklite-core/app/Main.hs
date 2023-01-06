@@ -1,68 +1,251 @@
-{-|
-This is the main module which provides the CLI
--}
-
 -- Necessary to print git hash in help output
 -- and to embed example config file
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
+{-# HLINT ignore "Use camelCase" #-}
+
+{-|
+This is the main module which provides the CLI
+-}
 module Main where
 
-import Protolude
+import Protolude (
+  Alternative (some, (<|>)),
+  Applicative (pure, (<*>)),
+  Bool (True),
+  Char,
+  Either (..),
+  Eq ((==)),
+  FilePath,
+  Float,
+  Foldable (foldr, null),
+  Functor (fmap),
+  IO,
+  Maybe (..),
+  Monad ((>>=)),
+  Semigroup ((<>)),
+  Show,
+  Text,
+  Traversable (sequence),
+  die,
+  filter,
+  foldMap,
+  fst,
+  getArgs,
+  isPrefixOf,
+  isSpace,
+  not,
+  optional,
+  readFile,
+  show,
+  snd,
+  take,
+  writeFile,
+  ($),
+  (&),
+  (&&),
+  (.),
+  (<$>),
+  (<&>),
+  (||),
+ )
 
-import Lib
-import Data.Aeson as Aeson
+import Data.Aeson as Aeson (KeyValue ((.=)), encode, object)
 import Data.FileEmbed (embedStringFile, makeRelativeToProject)
-import Data.Hourglass
+import Data.Hourglass (
+  DateTime,
+  Time (timeFromElapsedP),
+  TimeFormat (toFormat),
+  timePrint,
+ )
 import Data.String (fromString)
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Encoding as TL
-import Prettyprinter hiding ((<>))
-import Prettyprinter.Render.Terminal
-import qualified Data.Time.ISO8601.Duration as Iso
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as TL
+import Data.Text.Lazy.Encoding qualified as TL
+import Data.Time.ISO8601.Duration qualified as Iso
 import Data.Version (showVersion)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
-import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import GitHash
-import Options.Applicative
-import Options.Applicative.Help.Core (parserHelp)
-import Paths_tasklite_core ( version )  -- Special module provided by Cabal
-import System.Directory
-  ( createDirectoryIfMissing
-  , executable
-  , getHomeDirectory
-  , getPermissions
-  , getXdgDirectory
-  , listDirectory
-  , Permissions
-  , XdgDirectory(..)
-  )
-import System.FilePath ((</>))
-import Time.System
-import Database.SQLite.Simple (Connection(..))
-import qualified Database.SQLite.Simple as SQLite
 
-import Config (Config(..), HookSet(..), HooksConfig(..), addHookFilesToConfig)
-import ImportExport
-import Migrations
-import Utils
+-- Special module provided by Cabal
+
+import Database.SQLite.Simple (Connection (..))
+import Database.SQLite.Simple qualified as SQLite
+import GHC.IO.Encoding (setLocaleEncoding, utf8)
+import GitHash (giDirty, giHash, tGitInfoCwd)
+import Lib (
+  addNote,
+  addTag,
+  addTask,
+  adjustPriority,
+  countTasks,
+  deletableTasks,
+  deleteTag,
+  deleteTasks,
+  doTasks,
+  doneTasks,
+  duplicateTasks,
+  endTasks,
+  findTask,
+  getStats,
+  headTasks,
+  infoTask,
+  listAll,
+  listNoTag,
+  listOldTasks,
+  listProjects,
+  listReady,
+  listRecurring,
+  listRepeating,
+  listTags,
+  listWaiting,
+  listWithTag,
+  logTask,
+  modifiedTasks,
+  newTasks,
+  nextTask,
+  obsoleteTasks,
+  openTasks,
+  overdueTasks,
+  queryTasks,
+  randomTask,
+  recurTasks,
+  repeatTasks,
+  reviewTasksIn,
+  runFilter,
+  runSql,
+  setDueUtc,
+  setReadyUtc,
+  setupConnection,
+  startTasks,
+  stopTasks,
+  trashTasks,
+  uncloseTasks,
+  undueTasks,
+  unmetaTasks,
+  unnoteTasks,
+  unprioTasks,
+  unreadyTasks,
+  unrecurTasks,
+  unrepeatTasks,
+  unreviewTasks,
+  untagTasks,
+  unwaitTasks,
+  unwakeTasks,
+  waitFor,
+  waitTasks,
+ )
+import Options.Applicative (
+  ArgumentFields,
+  CommandFields,
+  Mod,
+  Parser,
+  ParserHelp,
+  ParserInfo,
+  argument,
+  auto,
+  briefDesc,
+  command,
+  commandGroup,
+  defaultPrefs,
+  eitherReader,
+  execParser,
+  footerDoc,
+  fullDesc,
+  headerDoc,
+  help,
+  helper,
+  idm,
+  info,
+  internal,
+  long,
+  maybeReader,
+  metavar,
+  noIntersperse,
+  progDesc,
+  progDescDoc,
+  short,
+  strArgument,
+  subparser,
+  switch,
+ )
+import Options.Applicative.Help.Core (parserHelp)
+import Paths_tasklite_core (version)
+import Prettyprinter (
+  Doc,
+  Pretty (pretty),
+  annotate,
+  dquotes,
+  enclose,
+  hardline,
+  hcat,
+  indent,
+  parens,
+  (<+>),
+ )
+import Prettyprinter.Render.Terminal (
+  AnsiStyle,
+  Color (Black, Blue, Cyan, Yellow),
+  bold,
+  color,
+  colorDull,
+  putDoc,
+ )
+import System.Directory (
+  Permissions,
+  XdgDirectory (..),
+  createDirectoryIfMissing,
+  executable,
+  getHomeDirectory,
+  getPermissions,
+  getXdgDirectory,
+  listDirectory,
+ )
+import System.FilePath ((</>))
+import Time.System (timeCurrentP)
+
+import Config (
+  Config (..),
+  HookSet (..),
+  HooksConfig (..),
+  addHookFilesToConfig,
+ )
+import ImportExport (
+  backupDatabase,
+  dumpCsv,
+  dumpJson,
+  dumpNdjson,
+  dumpSql,
+  editTask,
+  importEml,
+  importFile,
+  importJson,
+  ingestFile,
+ )
+import Migrations (runMigrations)
+import Utils (
+  IdText,
+  ListModifiedFlag (AllItems, ModifiedItemsOnly),
+  TagText,
+  executeHooks,
+  parseUtc,
+  ulidTextToDateTime,
+ )
 
 
 data Command
-  {- Add -}
-  = AddTask   [Text]
-  | AddWrite  [Text]
-  | AddRead   [Text]
-  | AddIdea   [Text]
-  | AddWatch  [Text]
+  = {- Add -}
+    AddTask [Text]
+  | AddWrite [Text]
+  | AddRead [Text]
+  | AddIdea [Text]
+  | AddWatch [Text]
   | AddListen [Text]
-  | AddBuy    [Text]
-  | AddSell   [Text]
-  | AddPay    [Text]
-  | AddShip   [Text]
-  | LogTask   [Text]
-
+  | AddBuy [Text]
+  | AddSell [Text]
+  | AddPay [Text]
+  | AddShip [Text]
+  | LogTask [Text] --
   {- Modify -}
   | ReadyOn DateTime [IdText]
   | WaitTasks [IdText]
@@ -77,11 +260,10 @@ data Command
   | RepeatTasks Iso.Duration [IdText]
   | RecurTasks Iso.Duration [IdText]
   | BoostTasks [IdText]
-  | HushTasks [IdText]
-  -- | Modify [IdText] Text -- DSL for modifying a task
-
+  | HushTasks [IdText] --
   {- Modify With Parameter -}
-  | Prioritize Float [IdText]
+  | -- | Modify [IdText] Text -- DSL for modifying a task
+    Prioritize Float [IdText]
   | AddTag TagText [IdText]
   | DeleteTag TagText [IdText]
   | AddNote Text [IdText]
@@ -90,16 +272,14 @@ data Command
   | Stop [IdText]
   | Duplicate [IdText]
   | EditTask IdText -- Launch editor with YAML version of task
-  -- | Append -- Append words to a task description
-  -- | Prepend -- Prepend words to a task description
-  -- | Undo -- Revert last change
-
   {- Show -}
-  | InfoTask IdText
+  | -- \| Append -- Append words to a task description
+    -- \| Prepend -- Prepend words to a task description
+    -- \| Undo -- Revert last change
+    InfoTask IdText
   | NextTask
   | RandomTask
-  | FindTask Text
-
+  | FindTask Text --
   {- I/O -}
   | ImportFile FilePath
   | ImportJson
@@ -109,10 +289,9 @@ data Command
   | Json
   | Ndjson
   | Sql
-  | Backup
-  -- | Fork -- Create new SQLite database with the tasks of the specified query
-
+  | Backup --
   {- List -}
+  -- \| Fork -- Create new SQLite db with the tasks of the specified query
   | ListAll
   | ListHead
   | ListNew
@@ -133,18 +312,17 @@ data Command
   | CountFiltered (Maybe [Text])
   | QueryTasks Text
   | RunSql Text
-  | RunFilter [Text]
-  -- | Views -- List all available views
+  | RunFilter [Text] --
+  -- \| Views -- List all available views
   | Tags -- List all used tags
   | Projects -- List all active tags
   | Stats -- List statistics about tasks
-  -- | Active -- Started tasks
-  -- | Blocked -- Tasks that are blocked by other tasks (newest first)
-  -- | Blockers -- Tasks that block other tasks (newest first)
-  -- | Unblocked -- Tasks that are not blocked
-
   {- Unset -}
-  | UnCloseTasks [IdText]
+  | -- \| Active -- Started tasks
+    -- \| Blocked -- Tasks that are blocked by other tasks (newest first)
+    -- \| Blockers -- Tasks that block other tasks (newest first)
+    -- \| Unblocked -- Tasks that are not blocked
+    UnCloseTasks [IdText]
   | UnDueTasks [IdText]
   | UnWaitTasks [IdText]
   | UnWakeTasks [IdText]
@@ -155,17 +333,15 @@ data Command
   | UnTagTasks [IdText]
   | UnNoteTasks [IdText]
   | UnPrioTasks [IdText]
-  | UnMetaTasks [IdText]
-
+  | UnMetaTasks [IdText] --
   {- Misc -}
-  -- | Demo -- Switch to demo mode
-  | Version -- Show version
-  -- | License -- Show license
-  | Alias Text (Maybe [Text])
+  | -- \| Demo -- Switch to demo mode
+    Version -- Show version
+  | -- \| License -- Show license
+    Alias Text (Maybe [Text])
   | Help
   | PrintConfig
   | UlidToUtc Text
-
   deriving (Show, Eq)
 
 
@@ -176,28 +352,28 @@ data CliArgs = CliArgs
 
 
 nameToAliasList :: [(Text, Text)]
-nameToAliasList = (
-  ("annotate", "note") :
-  ("clone", "duplicate") :
-  ("close", "end") :
-  ("decrease", "hush") :
-  ("erase", "delete") :
-  ("finish", "do") :
-  ("fix", "do") :
-  ("implement", "do") :
-  ("inbox", "notag") :
-  ("increase", "boost") :
-  ("remove", "delete") :
-  ("reopen", "unclose") :
-  ("rm", "delete") :
-  ("search", "find") :
-  ("stop", "end") :
-  -- ("week", "sunday") :
-  -- ("latest", "newest") :
-  -- ("schedule", "activate") :
-  -- ("blocking", "blockers") :
-  -- ("denotate", "denote") :
-  [])
+nameToAliasList =
+  [ ("annotate", "note")
+  , ("clone", "duplicate")
+  , ("close", "end")
+  , ("decrease", "hush")
+  , ("erase", "delete")
+  , ("finish", "do")
+  , ("fix", "do")
+  , ("implement", "do")
+  , ("inbox", "notag")
+  , ("increase", "boost")
+  , ("remove", "delete")
+  , ("reopen", "unclose")
+  , ("rm", "delete")
+  , ("search", "find")
+  , ("stop", "end")
+  -- , ("week", "sunday")
+  -- , ("latest", "newest")
+  -- , ("schedule", "activate")
+  -- , ("blocking", "blockers")
+  -- , ("denotate", "denote")
+  ]
 
 
 {- Imitates output from `git describe` -}
@@ -207,33 +383,40 @@ versionSlug =
     gitInfo = $$tGitInfoCwd
   in
     fromString $
-      (showVersion version)
-      <> "+" <> take 8 (giHash gitInfo)
-      <> (if giDirty gitInfo then "-dirty" else "")
+      showVersion version
+        <> "+"
+        <> take 8 (giHash gitInfo)
+        <> (if giDirty gitInfo then "-dirty" else "")
 
 
 aliasWarning :: Text -> Doc AnsiStyle
 aliasWarning alias =
   "Invalid command."
-    <+> "Use" <+> dquotes (pretty alias) <+> "instead."
-    <> hardline
+    <+> "Use"
+    <+> dquotes (pretty alias)
+    <+> "instead."
+      <> hardline
 
 
 getCommand :: (Text, Text) -> Mod CommandFields Command
 getCommand (alias, commandName) =
-  command (T.unpack alias) $ info
-    ((pure $ Alias commandName) <*> (optional $ some $ strArgument idm))
-    (progDesc $ T.unpack $ alias <> "-> " <> commandName)
+  command (T.unpack alias) $
+    info
+      (Alias commandName <$> optional (some $ strArgument idm))
+      (progDesc $ T.unpack $ alias <> "-> " <> commandName)
 
 
 toParserInfo :: Parser a -> Text -> ParserInfo a
 toParserInfo parser description =
-  info (helper <*> parser) (fullDesc <> progDesc (T.unpack description))
+  info
+    (helper <*> parser)
+    (fullDesc <> progDesc (T.unpack description))
 
 
 idVar :: Mod ArgumentFields a
 idVar =
   metavar "TASK_ID" <> help "Id of the task (Ulid)"
+
 
 idsVar :: Mod ArgumentFields a
 idsVar =
@@ -241,34 +424,40 @@ idsVar =
 
 
 -- | Help Sections
-basic_sec, shortcut_sec, list_sec,
-  vis_sec, i_o_sec, advanced_sec,
-  alias_sec, unset_sec, utils_sec
-  :: (Text, Text)
-
-basic_sec    = ("{{basic_sec}}", "Basic Commands")
+basic_sec
+  , shortcut_sec
+  , list_sec
+  , vis_sec
+  , i_o_sec
+  , advanced_sec
+  , alias_sec
+  , unset_sec
+  , utils_sec
+    :: (Text, Text)
+basic_sec = ("{{basic_sec}}", "Basic Commands")
 shortcut_sec = ("{{shortcut_sec}}", "Shortcuts to Add a Task")
-list_sec     = ("{{list_sec}}", "List Commands")
-vis_sec      = ("{{vis_sec}}", "Visualizations")
-i_o_sec      = ("{{i_o_sec}}", "I/O Commands")
+list_sec = ("{{list_sec}}", "List Commands")
+vis_sec = ("{{vis_sec}}", "Visualizations")
+i_o_sec = ("{{i_o_sec}}", "I/O Commands")
 advanced_sec = ("{{advanced_sec}}", "Advanced Commands")
-alias_sec    = ("{{alias_sec}}", "Aliases")
-unset_sec    = ("{{unset_sec}}", "Unset Commands")
-utils_sec    = ("{{utils_sec}}", "Utils")
+alias_sec = ("{{alias_sec}}", "Aliases")
+unset_sec = ("{{unset_sec}}", "Unset Commands")
+utils_sec = ("{{utils_sec}}", "Utils")
 
 
 parseDurationString :: [Char] -> Either [Char] Iso.Duration
-parseDurationString text = text
-  & fromString
-  & Iso.parseDuration
+parseDurationString text =
+  text
+    & fromString
+    & Iso.parseDuration
 
-
+{- FOURMOLU_DISABLE -}
 commandParser :: Config -> Parser Command
 commandParser conf =
   let
     numTasks = show (headCount conf)
   in
-  (pure ListReady)
+  pure ListReady
   <|>
   (   subparser
     (  metavar (T.unpack $ snd basic_sec)
@@ -314,7 +503,7 @@ commandParser conf =
 
     <> command "do" (toParserInfo (DoOneTask
         <$> strArgument idsVar
-        <*> (optional $ some (strArgument (metavar "CLOSING_NOTE"
+        <*> optional (some (strArgument (metavar "CLOSING_NOTE"
               <> help "Final note to explain why and how it was done"))))
         "Mark a task as done and add optional closing note")
 
@@ -661,7 +850,7 @@ commandParser conf =
 
     <> command "count"
         (toParserInfo
-          (CountFiltered <$> (optional $ some
+          (CountFiltered <$> optional ( some
             (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions")))
         "Output total number of tasks filtered by the specified expressions")
 
@@ -729,7 +918,7 @@ commandParser conf =
         "Erase metadata")
     )
 
-  <|> subparser (internal <> fold (fmap getCommand nameToAliasList))
+  <|> subparser (internal <> foldMap getCommand nameToAliasList)
 
   <|> subparser
     ( metavar (T.unpack $ snd utils_sec)
@@ -757,20 +946,24 @@ commandParser conf =
     )
   )
 
+{- FOURMOLU_ENABLE -}
+
 
 runHelpSwitch :: Parser Bool
 runHelpSwitch =
   switch
     ( long "help"
-    <> short 'h'
-    <> help "Display current help page"
-    <> internal)
+        <> short 'h'
+        <> help "Display current help page"
+        <> internal
+    )
 
 
 cliArgsParser :: Config -> Parser CliArgs
-cliArgsParser conf = CliArgs
-  <$> commandParser conf
-  <*> runHelpSwitch
+cliArgsParser conf =
+  CliArgs
+    <$> commandParser conf
+    <*> runHelpSwitch
 
 
 parserInfo :: Config -> ParserInfo CliArgs
@@ -778,35 +971,40 @@ parserInfo conf =
   let
     versionDesc =
       "Version "
-      <> versionSlug
-      <> ", developed by <adriansieber.com>"
+        <> versionSlug
+        <> ", developed by <adriansieber.com>"
   in
     info
       (cliArgsParser conf)
-      (noIntersperse
-        <> briefDesc
-        <> headerDoc (Just "{{header}}")
-        <> progDescDoc (Just "{{examples}}")
-        <> footerDoc (Just $ fromString $ T.unpack versionDesc)
+      ( noIntersperse
+          <> briefDesc
+          <> headerDoc (Just "{{header}}")
+          <> progDescDoc (Just "{{examples}}")
+          <> footerDoc (Just $ fromString $ T.unpack versionDesc)
       )
 
 
 groupBySpace :: Text -> [Doc ann]
 groupBySpace =
-  fmap pretty . T.groupBy (\a b ->
-    isSpace a && isSpace b || not (isSpace a) && not (isSpace b))
+  fmap pretty
+    . T.groupBy
+      ( \a b ->
+          isSpace a && isSpace b || not (isSpace a) && not (isSpace b)
+      )
 
 
 replaceDoc :: Doc ann -> Doc ann -> [Doc ann] -> [Doc ann]
 replaceDoc oldDoc newDoc =
   fmap $ \doc ->
     if (show oldDoc :: Text) == (show doc :: Text)
-    then newDoc
-    else doc
+      then newDoc
+      else doc
 
 
--- | Because optparse-applicative uses an old pretty printer,
--- | this function is necessary to splice new Docs into the old Docs
+{-|
+Because optparse-applicative uses an old pretty printer,
+this function is necessary to splice new Docs into the old Docs
+-}
 spliceDocsIntoText :: [(Text, Doc AnsiStyle)] -> Text -> [Doc AnsiStyle]
 spliceDocsIntoText replacements renderedDoc =
   let
@@ -820,69 +1018,83 @@ examples :: Doc AnsiStyle
 examples =
   let
     mkBold = annotate bold . pretty . T.justifyRight 26 ' '
-    hiLite = (enclose "`" "`") . annotate (color Cyan)
-  in ""
-    <> hardline
-    <> indent 2
-      (  mkBold "Add an alias:" <+> hiLite "alias tl tasklite"
+    hiLite = enclose "`" "`" . annotate (color Cyan)
+  in
+    ""
       <> hardline
-
-      <> mkBold "Add a task with a tag:" <+> hiLite "tl add Buy milk +groceries"
-      <> hardline
-
-      <> mkBold "… or with the shortcut:" <+> hiLite "tl buy milk +groceries"
-      <> hardline
-
-      <> mkBold "List most important tasks:"
-        <+> hiLite "tl"
-        <+> parens ("same as" <+> hiLite "tl ready")
-      <> hardline
-
-      <> mkBold "Complete it:" <+> hiLite "tl do <id>"
-      )
+      <> indent
+        2
+        ( ( mkBold "Add an alias:"
+              <+> hiLite "alias tl tasklite"
+          )
+            <> hardline
+            <> ( mkBold "Add a task with a tag:"
+                  <+> hiLite "tl add Buy milk +groceries"
+               )
+            <> hardline
+            <> ( mkBold "… or with the shortcut:"
+                  <+> hiLite "tl buy milk +groceries"
+               )
+            <> hardline
+            <> ( mkBold "List most important tasks:"
+                  <+> hiLite "tl"
+                  <+> parens ("same as" <+> hiLite "tl ready")
+               )
+            <> hardline
+            <> ( mkBold "Complete it:"
+                  <+> hiLite "tl do <id>"
+               )
+        )
 
 
 helpReplacements :: [(Text, Doc AnsiStyle)]
 helpReplacements =
   let
     prettyVersion = annotate (color Black) (pretty $ showVersion version)
-  in (
-    -- ("add", annotate (colorDull Green) "add BODY") :
-    ("{{header}}",
-        (annotate (bold <> color Blue) "TaskLite") <+> prettyVersion
-        <> hardline <> hardline
-        <> annotate (color Blue)
-            "Task-list manager powered by Haskell and SQLite") :
-    ("{{examples}}", examples) :
-    fmap
-      (\(a, b) -> (a, annotate (colorDull Yellow) (pretty b <> ":")))
-      (
-        basic_sec :
-        shortcut_sec :
-        list_sec :
-        vis_sec :
-        i_o_sec :
-        advanced_sec :
-        alias_sec :
-        utils_sec :
-        unset_sec :
-      []))
+  in
+    ( -- ("add", annotate (colorDull Green) "add BODY") :
+      ( "{{header}}"
+      , annotate (bold <> color Blue) "TaskLite"
+          <+> prettyVersion
+            <> hardline
+            <> hardline
+            <> annotate
+              (color Blue)
+              "Task-list manager powered by Haskell and SQLite"
+      )
+        : ("{{examples}}", examples)
+        : fmap
+          (\(a, b) -> (a, annotate (colorDull Yellow) (pretty b <> ":")))
+          [ basic_sec
+          , shortcut_sec
+          , list_sec
+          , vis_sec
+          , i_o_sec
+          , advanced_sec
+          , alias_sec
+          , utils_sec
+          , unset_sec
+          ]
+    )
 
 
 extendHelp :: ParserHelp -> Doc AnsiStyle
-extendHelp theHelp = theHelp
-  & show
-  & spliceDocsIntoText helpReplacements
-  & hcat
+extendHelp theHelp =
+  theHelp
+    & show
+    & spliceDocsIntoText helpReplacements
+    & hcat
 
 
 executeCLiCommand :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 executeCLiCommand conf now connection = do
   let
     addTaskC = addTask conf connection
-    prettyUlid ulid = pretty $ fmap
-      (T.pack . timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])))
-      (ulidTextToDateTime ulid)
+    prettyUlid ulid =
+      pretty $
+        fmap
+          (T.pack . timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])))
+          (ulidTextToDateTime ulid)
     days3 = Iso.DurationDate (Iso.DurDateDay (Iso.DurDay 3) Nothing)
 
   cliArgs <- execParser (parserInfo conf)
@@ -890,9 +1102,8 @@ executeCLiCommand conf now connection = do
   -- [[sqliteVersion]] <- SQLite.query_ connection "select sqlite_version()"
 
   if runHelpCommand cliArgs
-  then pure $ extendHelp $ parserHelp defaultPrefs $ cliArgsParser conf
-  else
-    case cliCommand cliArgs of
+    then pure $ extendHelp $ parserHelp defaultPrefs $ cliArgsParser conf
+    else case cliCommand cliArgs of
       ListAll -> listAll conf now connection
       ListHead -> headTasks conf now connection
       ListNew -> newTasks conf now connection
@@ -964,7 +1175,6 @@ executeCLiCommand conf now connection = do
       SetDueUtc datetime ids -> setDueUtc conf connection datetime ids
       Duplicate ids -> duplicateTasks conf connection ids
       CountFiltered taskFilter -> countTasks conf connection taskFilter
-
       {- Unset -}
       UnCloseTasks ids -> uncloseTasks conf connection ids
       UnDueTasks ids -> undueTasks conf connection ids
@@ -978,7 +1188,6 @@ executeCLiCommand conf now connection = do
       UnNoteTasks ids -> unnoteTasks conf connection ids
       UnPrioTasks ids -> unprioTasks conf connection ids
       UnMetaTasks ids -> unmetaTasks conf connection ids
-
       Version -> pure $ pretty versionSlug <> hardline
       Help -> pure $ extendHelp $ parserHelp defaultPrefs $ cliArgsParser conf
       PrintConfig -> pure $ pretty conf
@@ -992,35 +1201,38 @@ printOutput appName config = do
 
   configNormDataDir <-
     if null dataPath
-    then do
-      xdgDataDir <- getXdgDirectory XdgData appName
-      pure $ config {dataDir = xdgDataDir}
-    else
-      case T.stripPrefix "~/" $ T.pack dataPath of
-        Nothing -> pure $ config
+      then do
+        xdgDataDir <- getXdgDirectory XdgData appName
+        pure $ config{dataDir = xdgDataDir}
+      else case T.stripPrefix "~/" $ T.pack dataPath of
+        Nothing -> pure config
         Just rest -> do
           homeDir <- getHomeDirectory
-          pure $ config { dataDir = homeDir </> T.unpack rest }
-
+          pure $ config{dataDir = homeDir </> T.unpack rest}
 
   let hooksPath = configNormDataDir & hooks & directory
 
   configNormHookDir <-
     if null hooksPath
-    then pure $
-      configNormDataDir
-        { hooks = (configNormDataDir & hooks)
-          { directory = dataDir configNormDataDir </> "hooks" }
-        }
-    else
-      case T.stripPrefix "~/" $ T.pack hooksPath of
-        Nothing -> pure $ configNormDataDir
+      then
+        pure $
+          configNormDataDir
+            { hooks =
+                (configNormDataDir & hooks)
+                  { directory = dataDir configNormDataDir </> "hooks"
+                  }
+            }
+      else case T.stripPrefix "~/" $ T.pack hooksPath of
+        Nothing -> pure configNormDataDir
         Just rest -> do
           homeDir <- getHomeDirectory
-          pure $ configNormDataDir
-            { hooks = (configNormDataDir & hooks)
-              { directory = homeDir </> T.unpack rest }
-            }
+          pure $
+            configNormDataDir
+              { hooks =
+                  (configNormDataDir & hooks)
+                    { directory = homeDir </> T.unpack rest
+                    }
+              }
 
   let hooksPathNorm = configNormHookDir & hooks & directory
 
@@ -1028,20 +1240,25 @@ printOutput appName config = do
 
   hookFiles <- listDirectory hooksPathNorm
 
-  hookFilesPerm :: [(FilePath, Permissions)] <- sequence $ hookFiles
-    & filter (\name ->
-        ("pre-" `isPrefixOf` name) || ("post-" `isPrefixOf` name))
-    <&> (hooksPathNorm </>)
-    <&> \path -> do
-            perm <- getPermissions path
-            pure (path, perm)
+  hookFilesPerm :: [(FilePath, Permissions)] <-
+    sequence $
+      hookFiles
+        & filter
+          ( \name ->
+              ("pre-" `isPrefixOf` name) || ("post-" `isPrefixOf` name)
+          )
+        <&> (hooksPathNorm </>)
+        <&> \path -> do
+          perm <- getPermissions path
+          pure (path, perm)
 
-  hookFilesPermContent <- sequence $ hookFilesPerm
-    & filter (\(_, perm) -> executable perm)
-    <&> \(filePath, perm) -> do
-            fileContent <- readFile filePath
-            pure (filePath, perm, fileContent)
-
+  hookFilesPermContent <-
+    sequence $
+      hookFilesPerm
+        & filter (\(_, perm) -> executable perm)
+        <&> \(filePath, perm) -> do
+          fileContent <- readFile filePath
+          pure (filePath, perm, fileContent)
 
   let configNorm = addHookFilesToConfig configNormHookDir hookFilesPermContent
 
@@ -1060,9 +1277,14 @@ printOutput appName config = do
     now = timeFromElapsedP nowElapsed :: DateTime
 
   args <- getArgs
-  postLaunchResult <- executeHooks
-    (TL.toStrict $ TL.decodeUtf8 $ Aeson.encode $ object ["arguments" .= args])
-    (configNorm.hooks & launch & post)
+  postLaunchResult <-
+    executeHooks
+      ( TL.toStrict $
+          TL.decodeUtf8 $
+            Aeson.encode $
+              object ["arguments" .= args]
+      )
+      (configNorm.hooks & launch & post)
   putDoc postLaunchResult
 
   doc <- executeCLiCommand configNorm now connection
@@ -1075,10 +1297,10 @@ printOutput appName config = do
 
 
 exampleConfig :: Text
-exampleConfig = $(
-    makeRelativeToProject "example-config.yaml"
-    >>= embedStringFile
-  )
+exampleConfig =
+  $( makeRelativeToProject "example-config.yaml"
+      >>= embedStringFile
+   )
 
 
 main :: IO ()
@@ -1097,17 +1319,15 @@ main = do
 
   case configResult of
     Left error -> do
-      if "file not found" `T.isInfixOf`
-            (T.pack $ prettyPrintParseException error)
-      then do
-        writeFile configPath exampleConfig
-        configResult2 <- decodeFileEither configPath
+      if "file not found"
+        `T.isInfixOf` T.pack (prettyPrintParseException error)
+        then do
+          writeFile configPath exampleConfig
+          configResult2 <- decodeFileEither configPath
 
-        case configResult2 of
-          Left error2 -> die $ T.pack $ prettyPrintParseException error2
-          Right configUser -> printOutput appName configUser
-      else
-        die $ T.pack $ prettyPrintParseException error
-
+          case configResult2 of
+            Left error2 -> die $ T.pack $ prettyPrintParseException error2
+            Right configUser -> printOutput appName configUser
+        else die $ T.pack $ prettyPrintParseException error
     Right configUser ->
       printOutput appName configUser

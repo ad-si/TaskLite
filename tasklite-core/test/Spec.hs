@@ -1,22 +1,70 @@
-{-|
-Unit and integration tests
--}
+-- Unit and integration tests
 
-import Protolude as P
+import Protolude as P (
+  Char,
+  Eq ((==)),
+  ExitCode (ExitFailure),
+  Functor (fmap),
+  IO,
+  Maybe (..),
+  Monad (return),
+  Show,
+  Text,
+  any,
+  show,
+  throwIO,
+  ($),
+ )
 
-import Test.Hspec
-import qualified Database.SQLite.Simple as Sql
-import Data.Hourglass
-import Data.Text as T
-import System.IO.Temp
-import System.IO.Error
-import Text.ParserCombinators.ReadP as ReadP
-import Time.System
+import Data.Hourglass (
+  DateTime,
+  Elapsed (Elapsed),
+  ElapsedP (ElapsedP),
+  Time (timeFromElapsedP),
+  timeGetDateTimeOfDay,
+ )
+import Data.Text as T (pack, unpack)
+import Database.SQLite.Simple qualified as Sql
+import System.IO.Error (userError)
+import System.IO.Temp (withSystemTempFile)
+import Test.Hspec (
+  SpecWith,
+  context,
+  describe,
+  hspec,
+  it,
+  shouldBe,
+  shouldContain,
+  shouldStartWith,
+  shouldThrow,
+ )
+import Text.ParserCombinators.ReadP as ReadP (
+  ReadP,
+  eof,
+  get,
+  many1,
+  manyTill,
+  munch1,
+  readP_to_S,
+  string,
+ )
+import Time.System (timeCurrentP)
 
-import Config (Config(..), defaultConfig)
-import Lib
-import Utils
-import Migrations
+import Config (Config (..), defaultConfig)
+import Lib (
+  addNote,
+  addTag,
+  addTask,
+  deleteTasks,
+  doTasks,
+  headTasks,
+  logTask,
+  nextTask,
+  runFilter,
+  setDueUtc,
+ )
+import Migrations (runMigrations)
+import Utils (parseUlidText, parseUlidUtcSection, parseUtc)
 
 
 base32Alphabet :: [Char]
@@ -46,80 +94,79 @@ withUlidFromBody body test =
     Just ulidText -> test (T.pack ulidText)
 
 
--- | The tests build up upon each other
--- | and therefore the order must not be changed
+{-|
+The tests build up upon each other
+and therefore the order must not be changed
+-}
 testSuite :: Config -> DateTime -> Sql.Connection -> SpecWith ()
 testSuite conf now connection = do
   describe "Utils" $ do
-    it "correctly parses beginning of UNIX epoch" $ do
-      (parseUlidUtcSection "0000000000")
-      `shouldBe`
-      (Just $ timeGetDateTimeOfDay $ Elapsed 0)
+    it "correctly parses beginning of UNIX epoch" $
+      do
+        parseUlidUtcSection "0000000000"
+        `shouldBe` Just (timeGetDateTimeOfDay $ Elapsed 0)
 
-    it "correctly parses 36 ms after UNIX epoch" $ do
-      (parseUlidUtcSection "0000000014")
-      `shouldBe`
-      (Just $ timeGetDateTimeOfDay $ ElapsedP 0 36000000)
+    it "correctly parses 36 ms after UNIX epoch" $
+      do
+        parseUlidUtcSection "0000000014"
+        `shouldBe` Just (timeGetDateTimeOfDay $ ElapsedP 0 36000000)
 
     it "correctly parses a ULID string" $ do
       let ulidText = "0000000014T4R3JR7HMQNREEW8" :: Text
 
-      (fmap show $ parseUlidText ulidText) `shouldBe` (Just ulidText)
-
+      fmap show (parseUlidText ulidText) `shouldBe` Just ulidText
 
   describe "TaskLite" $ do
     it "creates tables on initial run migrates tables to latest version" $ do
       migrationStatus <- runMigrations conf connection
       unpack (show migrationStatus) `shouldStartWith` "Migration succeeded"
 
-
     it "initially contains no tasks" $ do
       tasks <- headTasks conf now connection
       unpack (show tasks) `shouldStartWith` "No tasks available"
 
-
     it "adds a task" $ do
       result <- addTask conf connection ["Just a test"]
-      unpack (show result) `shouldStartWith`
-        "🆕 Added task \"Just a test\" with id"
-
+      unpack (show result)
+        `shouldStartWith` "🆕 Added task \"Just a test\" with id"
 
     context "When a task exists" $ do
       it "lists next task" $ do
         result <- nextTask conf connection
         unpack (show result) `shouldContain` "Just a test"
 
-
       it "adds a tag" $ do
         result <- nextTask conf connection
 
         withUlidFromBody result $ \ulidText -> do
           tagResult <- addTag conf connection "test" [ulidText]
-          unpack (show tagResult) `shouldStartWith`
-              "🏷  Added tag \"test\" to task"
-
+          unpack (show tagResult)
+            `shouldStartWith` "🏷  Added tag \"test\" to task"
 
       it "adds a note" $ do
         result <- nextTask conf connection
 
         withUlidFromBody result $ \ulidText -> do
-          tagResult <- addNote conf connection
-                        "Just a test note" [ulidText]
-          unpack (show tagResult) `shouldStartWith`
-            "🗒  Added a note to task"
-
+          tagResult <-
+            addNote
+              conf
+              connection
+              "Just a test note"
+              [ulidText]
+          unpack (show tagResult)
+            `shouldStartWith` "🗒  Added a note to task"
 
       it "sets due UTC" $ do
         resultTask <- nextTask conf connection
 
         withUlidFromBody resultTask $ \ulidText -> do
-          case (parseUtc "2087-03-21 17:43") of
+          case parseUtc "2087-03-21 17:43" of
             Nothing -> throwIO $ userError "Invalid UTC string"
             Just utcStamp -> do
               result <- setDueUtc conf connection utcStamp [ulidText]
-              unpack (show result) `shouldStartWith`
-                "📅 Set due UTC of task \"Just a test\" with id"
-
+              unpack (show result)
+                `shouldStartWith` "📅 Set due UTC of task \
+                                  \\"Just a test\" with id"
 
       it "completes it" $ do
         result <- nextTask conf connection
@@ -128,25 +175,25 @@ testSuite conf now connection = do
           doResult <- doTasks conf connection Nothing [ulidText]
           unpack (show doResult) `shouldStartWith` "✅ Finished task"
 
-
     it "adds a task with metadata and deletes it" $ do
-      _ <- addTask conf connection
-            ["Just a test +tag due:2082-10-03 +what"]
+      _ <-
+        addTask
+          conf
+          connection
+          ["Just a test +tag due:2082-10-03 +what"]
       result <- nextTask conf connection
 
       withUlidFromBody result $ \ulidText -> do
         deleteResult <- deleteTasks conf connection [ulidText]
         unpack (show deleteResult) `shouldStartWith` "❌ Deleted task"
 
-
     it "logs a task" $ do
       result <- logTask conf connection ["Just a test"]
-      unpack (show result) `shouldStartWith`
-        "📝 Logged task \"Just a test\" with id"
-
+      unpack (show result)
+        `shouldStartWith` "📝 Logged task \"Just a test\" with id"
 
     it "dies on invalid filter expressions" $ do
-      (runFilter conf now connection [" "]) `shouldThrow` (== ExitFailure 1)
+      runFilter conf now connection [" "] `shouldThrow` (== ExitFailure 1)
 
 
 main :: IO ()
@@ -157,10 +204,10 @@ main = do
     let now = timeFromElapsedP nowElapsed :: DateTime
     hspec $ testSuite defaultConfig now connection
 
-  -- -- Does not delete database after tests for debugging
-  -- filePath <- emptySystemTempFile "main.db"
-  -- putStrLn $ "\nFilepath: " <> filePath
-  -- connection <- Sql.open filePath
-  -- nowElapsed <- timeCurrentP
-  -- let now = timeFromElapsedP nowElapsed :: DateTime
-  -- hspec $ testSuite defaultConfig now connection
+-- -- Does not delete database after tests for debugging
+-- filePath <- emptySystemTempFile "main.db"
+-- putStrLn $ "\nFilepath: " <> filePath
+-- connection <- Sql.open filePath
+-- nowElapsed <- timeCurrentP
+-- let now = timeFromElapsedP nowElapsed :: DateTime
+-- hspec $ testSuite defaultConfig now connection

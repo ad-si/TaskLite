@@ -16,11 +16,12 @@ extra-source-files:
   - README.md
 
 dependencies:
-  - base >= 4.7 && < 5
+  - base
   - monoid-subclasses
   - protolude
 
 default-extensions:
+  - ImportQualifiedPost
   - NoImplicitPrelude
 
 ghc-options:

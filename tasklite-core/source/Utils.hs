@@ -1,35 +1,102 @@
 {-|
 Several utility functions (e.g for parsing & serializing UTC stamps)
 -}
-
 module Utils where
 
-import Protolude as P
+import Protolude as P (
+  Alternative ((<|>)),
+  Applicative (pure),
+  Char,
+  Double,
+  Eq,
+  Foldable (elem),
+  Fractional (fromRational, (/)),
+  Functor (fmap),
+  IO,
+  Int,
+  Integer,
+  Integral (div, mod),
+  Maybe (..),
+  Monoid (mempty),
+  Num ((*), (+)),
+  Ord ((<), (>)),
+  Rational,
+  Real (toRational),
+  RealFrac (properFraction, truncate),
+  Semigroup ((<>)),
+  Show,
+  Word16,
+  flip,
+  forM,
+  fromIntegral,
+  fromMaybe,
+  fst,
+  otherwise,
+  readMaybe,
+  realToFrac,
+  show,
+  stderr,
+  ($),
+  (&),
+  (.),
+  (<&>),
+ )
 
 import Control.Monad.Catch (catchAll)
-import Data.Text as T
-import Prettyprinter hiding ((<>))
-import Data.Colour.RGBSpace (RGB(..))
-import Data.Time (addUTCTime, UTCTime, ZonedTime, zonedTimeToUTC)
+import Data.Colour.RGBSpace (RGB (..))
+import Data.Hourglass (
+  DateTime,
+  Elapsed (Elapsed),
+  ElapsedP (..),
+  ISO8601_DateAndTime (ISO8601_DateAndTime),
+  NanoSeconds (NanoSeconds),
+  Seconds (Seconds),
+  Time (timeFromElapsedP),
+  TimeFormat (toFormat),
+  TimeFormatString,
+  Timeable (timeGetElapsedP),
+  timeGetDateTimeOfDay,
+  timeParse,
+ )
+import Data.Text as T (
+  Text,
+  chunksOf,
+  drop,
+  intercalate,
+  pack,
+  take,
+  toLower,
+  unlines,
+  unpack,
+ )
+import Data.Time (UTCTime, ZonedTime, addUTCTime, zonedTimeToUTC)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
-import Data.Hourglass
-import Prettyprinter.Render.Terminal
-import Data.ULID
-import Data.ULID.Random
-import Data.ULID.TimeStamp
-import System.Console.ANSI (ConsoleLayer(..), hGetLayerColor)
-import System.Process
+import Data.ULID (ULID (ULID, random))
+import Data.ULID.Random (ULIDRandom)
+import Data.ULID.TimeStamp (ULIDTimeStamp, mkULIDTimeStamp)
+import Prettyprinter (Doc, Pretty (pretty), softline)
+import Prettyprinter.Render.Terminal (
+  AnsiStyle,
+  Color (Black),
+  colorDull,
+ )
+import System.Console.ANSI (ConsoleLayer (..), hGetLayerColor)
+import System.Process (readProcess)
 
-
-import Base32
-import Config
+import Base32 (decode)
+import Config (
+  Config (bodyStyle),
+  Hook (body, filePath, interpreter),
+ )
 
 
 type IdText = Text
 type TagText = Text
 
+
 data Filter a = NoFilter | Only a
   deriving (Eq, Ord, Show)
+
 
 data ListModifiedFlag = AllItems | ModifiedItemsOnly
   deriving (Eq, Show)
@@ -70,18 +137,18 @@ parseUtc utcText =
       timeParse (toFormat formatString) utcString
   in
     -- From long (specific) to short (unspecific)
-        (timeParse ISO8601_DateAndTime utcString)
-    <|> (tParse "YYYY-MM-DDtH:MI:S")
-    <|> (tParse "YYYY-MM-DDtH:MI")
-    <|> (tParse "YYYYMMDDtHMIS")
-    <|> (tParse "YYYY-MM-DD H:MI:S")
-    <|> (tParse "YYYY-MM-DD H:MI")
-    <|> (tParse "YYYY-MM-DD")
-    <|> timeParse
-          (toFormat unixMicro)
-          (unpack $ (addSpaceAfter10 . addSpaceAfter13) utcText)
-    <|> timeParse (toFormat unixMilli) (unpack $ addSpaceAfter10 utcText)
-    <|> (tParse "EPOCH")
+    timeParse ISO8601_DateAndTime utcString
+      <|> tParse "YYYY-MM-DDtH:MI:S"
+      <|> tParse "YYYY-MM-DDtH:MI"
+      <|> tParse "YYYYMMDDtHMIS"
+      <|> tParse "YYYY-MM-DD H:MI:S"
+      <|> tParse "YYYY-MM-DD H:MI"
+      <|> tParse "YYYY-MM-DD"
+      <|> timeParse
+        (toFormat unixMicro)
+        (unpack $ (addSpaceAfter10 . addSpaceAfter13) utcText)
+      <|> timeParse (toFormat unixMilli) (unpack $ addSpaceAfter10 utcText)
+      <|> tParse "EPOCH"
 
 
 parseUlidUtcSection :: Text -> Maybe DateTime
@@ -100,7 +167,7 @@ parseUlidUtcSection encodedUtc = do
 
 ulidTextToDateTime :: Text -> Maybe DateTime
 ulidTextToDateTime =
-    parseUlidUtcSection . T.take 10
+  parseUlidUtcSection . T.take 10
 
 
 parseUlidText :: Text -> Maybe ULID
@@ -111,7 +178,7 @@ parseUlidText ulidText = do
     mkUlidRandomMaybe :: Text -> Maybe ULIDRandom
     mkUlidRandomMaybe = readMaybe . T.unpack . T.drop 10
 
-  ulidTime   <- mkUlidTimeMaybe ulidText
+  ulidTime <- mkUlidTimeMaybe ulidText
   ulidRandom <- mkUlidRandomMaybe ulidText
   pure $ ULID ulidTime ulidRandom
 
@@ -120,13 +187,13 @@ parseUlidText ulidText = do
 rationalToElapsedP :: Rational -> ElapsedP
 rationalToElapsedP secondsFrac =
   let (sec, nanoSec) = properFraction secondsFrac
-  in ElapsedP (Elapsed (Seconds sec)) (NanoSeconds $ truncate $ nanoSec * 1e9)
+  in  ElapsedP (Elapsed (Seconds sec)) (NanoSeconds $ truncate $ nanoSec * 1e9)
 
 
 -- TODO: Remove after https://github.com/vincenthz/hs-hourglass/issues/45
 elapsedPToRational :: ElapsedP -> Rational
 elapsedPToRational (ElapsedP (Elapsed (Seconds s)) (NanoSeconds ns)) =
-  ((1e9 * (fromIntegral s)) + (fromIntegral ns)) / 1e9
+  ((1e9 * fromIntegral s) + fromIntegral ns) / 1e9
 
 
 toUlidTime :: DateTime -> ULIDTimeStamp
@@ -141,37 +208,39 @@ setDateTime ulid dateTime =
     (random ulid)
 
 
--- | Currently not needed
--- addStartUtc :: DateTime -> Iso8601.Interval -> Iso8601.Interval
--- addStartUtc utc interval = case interval of
---   Iso8601.Interval (Iso8601.JustDuration duration) ->
---     Iso8601.Interval (Iso8601.StartDuration (dateTimeToUtcTime utc) duration)
---   _ -> interval
-
-
+{-| Currently not needed
+ addStartUtc :: DateTime -> Iso8601.Interval -> Iso8601.Interval
+ addStartUtc utc interval = case interval of
+   Iso8601.Interval (Iso8601.JustDuration duration) ->
+     Iso8601.Interval (Iso8601.StartDuration (dateTimeToUtcTime utc) duration)
+   _ -> interval
+-}
 zonedTimeToDateTime :: ZonedTime -> DateTime
-zonedTimeToDateTime zTime = zTime
-  & zonedTimeToUTC
-  & utcTimeToPOSIXSeconds
-  & toRational
-  & rationalToElapsedP
-  & timeFromElapsedP
+zonedTimeToDateTime zTime =
+  zTime
+    & zonedTimeToUTC
+    & utcTimeToPOSIXSeconds
+    & toRational
+    & rationalToElapsedP
+    & timeFromElapsedP
 
 
 utcTimeToDateTime :: UTCTime -> DateTime
-utcTimeToDateTime utcTime = utcTime
-  & utcTimeToPOSIXSeconds
-  & toRational
-  & rationalToElapsedP
-  & timeFromElapsedP
+utcTimeToDateTime utcTime =
+  utcTime
+    & utcTimeToPOSIXSeconds
+    & toRational
+    & rationalToElapsedP
+    & timeFromElapsedP
 
 
 dateTimeToUtcTime :: DateTime -> UTCTime
-dateTimeToUtcTime dateTime = dateTime
-  & timeGetElapsedP
-  & elapsedPToRational
-  & fromRational
-  & flip addUTCTime (posixSecondsToUTCTime 0)
+dateTimeToUtcTime dateTime =
+  dateTime
+    & timeGetElapsedP
+    & elapsedPToRational
+    & fromRational
+    & flip addUTCTime (posixSecondsToUTCTime 0)
 
 
 -- From https://mail.haskell.org/pipermail/haskell-cafe/2009-August/065854.html
@@ -179,9 +248,10 @@ numDigits :: Integer -> Integer -> Integer
 numDigits base num =
   let
     ilog b n
-     | n < b     = (0, n)
-     | otherwise = let (e, r) = ilog (b * b) n
-                   in  if r < b then (2 * e, r) else (2 * e+1, r `div` b)
+      | n < b = (0, n)
+      | otherwise =
+          let (e, r) = ilog (b * b) n
+          in  if r < b then (2 * e, r) else (2 * e + 1, r `div` b)
   in
     1 + fst (ilog base num)
 
@@ -194,44 +264,46 @@ executeHooks stdinText hooks = do
       Just fPath -> readProcess fPath [] stdinStr
       Nothing -> do
         let ipret = hook.interpreter
-        if | ipret `P.elem` ["ruby", "rb"] ->
-              readProcess "ruby" ["-e", T.unpack hook.body] stdinStr
+        if
+            | ipret `P.elem` ["ruby", "rb"] ->
+                readProcess "ruby" ["-e", T.unpack hook.body] stdinStr
+            | ipret `P.elem` ["javascript", "js", "node", "node.js"] ->
+                readProcess "node" ["-e", T.unpack hook.body] stdinStr
+            | ipret `P.elem` ["python", "python3", "py"] ->
+                readProcess "python3" ["-c", T.unpack hook.body] stdinStr
+            | otherwise ->
+                pure mempty
 
-           | ipret `P.elem` ["javascript", "js", "node", "node.js"] ->
-              readProcess "node" ["-e", T.unpack hook.body] stdinStr
-
-           | ipret `P.elem` ["python", "python3", "py"] ->
-              readProcess "python3" ["-c", T.unpack hook.body] stdinStr
-
-           | otherwise ->
-              pure mempty
-
-  pure $ cmdOutput
-    <&> T.pack
-    & T.unlines
-    & pretty
-
+  pure $
+    cmdOutput
+      <&> T.pack
+      & T.unlines
+      & pretty
 
 
 applyColorMode :: Config -> IO Config
 applyColorMode conf = do
-  layerColorBgMb <- catchAll
-    (hGetLayerColor stderr Background)
-    (\_ -> pure Nothing)
+  layerColorBgMb <-
+    catchAll
+      (hGetLayerColor stderr Background)
+      (\_ -> pure Nothing)
 
   let
     calcLuminance :: RGB Word16 -> Double
-    calcLuminance (RGB {..}) =
-      (0.3 * fromIntegral channelRed +
-      0.6 * fromIntegral channelGreen +
-      0.1 * fromIntegral channelBlue) / 65536
+    calcLuminance (RGB{..}) =
+      ( 0.3 * fromIntegral channelRed
+          + 0.6 * fromIntegral channelGreen
+          + 0.1 * fromIntegral channelBlue
+      )
+        / 65536
 
-    isLightMode = layerColorBgMb
-      <&> calcLuminance
-      & fromMaybe 0  -- Default to dark mode
-      & (> 0.5)
+    isLightMode =
+      layerColorBgMb
+        <&> calcLuminance
+        & fromMaybe 0 -- Default to dark mode
+        & (> 0.5)
 
   pure $
     if isLightMode
-    then conf { bodyStyle = colorDull Black }
-    else conf
+      then conf{bodyStyle = colorDull Black}
+      else conf

@@ -1,6 +1,6 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.34.6.
+-- This file has been generated from package.yaml by hpack version 0.35.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -29,10 +29,11 @@ library
   hs-source-dirs:
       src
   default-extensions:
+      ImportQualifiedPost
       NoImplicitPrelude
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -fno-warn-orphans
   build-depends:
-      base >=4.7 && <5
+      base
     , monoid-subclasses
     , protolude
   default-language: Haskell2010
@@ -47,6 +48,7 @@ test-suite huzzy-test
   hs-source-dirs:
       tests
   default-extensions:
+      ImportQualifiedPost
       NoImplicitPrelude
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -fno-warn-orphans
   build-depends:

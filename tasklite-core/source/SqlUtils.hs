@@ -1,20 +1,63 @@
 {-|
 Utils to simplify creation of SQL queries
 -}
-
 module SqlUtils where
 
-import Protolude as P
+import Protolude as P (
+  Applicative (pure),
+  Bool (False),
+  Either (..),
+  Eq ((==)),
+  Float,
+  Foldable (fold),
+  Functor (fmap),
+  IO,
+  Integer,
+  Maybe (..),
+  Semigroup ((<>)),
+  Show,
+  Text,
+  show,
+  take,
+  try,
+  unlines,
+  unwords,
+  words,
+  ($),
+ )
 
-import Data.Text as T
-import Database.SQLite.Simple as Sql hiding (columnName)
+import Data.Text as T (
+  intercalate,
+  isSuffixOf,
+  pack,
+  unlines,
+  unpack,
+ )
+import Database.SQLite.Simple as Sql (
+  Connection,
+  Query (..),
+  SQLError (sqlErrorDetails),
+  execute_,
+ )
+import Language.SQL.SimpleSQL.Syntax (
+  Alias (..),
+  Direction (Asc, Desc),
+  GroupingExpr (SimpleGroup),
+  JoinCondition (JoinOn),
+  JoinType (JLeft),
+  Name (..),
+  NullsOrder (NullsOrderDefault),
+  ScalarExpr (App, BinOp, Cast, Iden, NumLit, PostfixOp),
+  SortSpec (..),
+  TableRef (TRAlias, TRJoin, TRSimple),
+  TypeName (TypeName),
+ )
 import Prettyprinter (Doc, pretty)
-import Language.SQL.SimpleSQL.Syntax
 
 
 id :: Name -> ScalarExpr
 id columnName =
-  Iden [ columnName ]
+  Iden [columnName]
 
 
 ids :: [Name] -> ScalarExpr
@@ -34,14 +77,14 @@ col column =
 count :: ScalarExpr -> ScalarExpr
 count column =
   App
-    [ Name Nothing "count" ]
-    [ column ]
+    [Name Nothing "count"]
+    [column]
 
 
 ifNull :: Name -> Text -> ScalarExpr
 ifNull ifValue thenValue =
   App
-    [ Name Nothing "ifnull" ]
+    [Name Nothing "ifnull"]
     [ Iden [ifValue]
     , NumLit $ T.unpack thenValue
     ]
@@ -54,25 +97,26 @@ dot item subItem =
 
 is :: ScalarExpr -> ScalarExpr -> ScalarExpr
 is exprA =
-  BinOp exprA [ Name Nothing "is" ]
+  BinOp exprA [Name Nothing "is"]
 
 
 isNotNull :: Name -> ScalarExpr
 isNotNull columnName =
   PostfixOp
-    [ Name Nothing "is not null" ]
-    ( Iden [ columnName ] )
+    [Name Nothing "is not null"]
+    (Iden [columnName])
 
 
 as :: ScalarExpr -> Name -> (ScalarExpr, Maybe Name)
 as column aliasName@(Name _ theAlias) =
   ( column
   , if theAlias == ""
-    then Nothing
-    else Just aliasName
+      then Nothing
+      else Just aliasName
   )
--- as column otherAlias = (column, Just otherAlias)
 
+
+-- as column otherAlias = (column, Just otherAlias)
 
 groupBy :: ScalarExpr -> GroupingExpr
 groupBy = SimpleGroup
@@ -91,11 +135,11 @@ orderByDesc column =
 leftJoinOn :: Name -> Name -> ScalarExpr -> TableRef
 leftJoinOn tableA tableB joinOnExpr =
   TRJoin
-    ( TRSimple [ tableA ] )
+    (TRSimple [tableA])
     False
     JLeft
-    ( TRSimple [ tableB ] )
-    ( Just ( JoinOn joinOnExpr ) )
+    (TRSimple [tableB])
+    (Just (JoinOn joinOnExpr))
 
 
 leftTRJoinOn :: TableRef -> TableRef -> ScalarExpr -> TableRef
@@ -105,7 +149,7 @@ leftTRJoinOn tableA tableB joinOnExpr =
     False
     JLeft
     tableB
-    ( Just ( JoinOn joinOnExpr ) )
+    (Just (JoinOn joinOnExpr))
 
 
 castTo :: ScalarExpr -> Text -> ScalarExpr
@@ -131,9 +175,9 @@ div valueA =
 
 
 roundTo :: Integer -> ScalarExpr -> ScalarExpr
-roundTo numOfDigits column  =
+roundTo numOfDigits column =
   App
-    [ Name Nothing "round" ]
+    [Name Nothing "round"]
     [ column
     , NumLit $ show numOfDigits
     ]
@@ -157,36 +201,44 @@ getValue value =
 
 
 getTable :: Text -> [Text] -> Query
-getTable tableName columns = Query $ T.unlines (
-  "create table `" <> tableName <> "` (" :
-  (T.intercalate ",\n" columns) :
-  ");" :
-  [])
+getTable tableName columns =
+  Query $
+    T.unlines
+      [ "create table `" <> tableName <> "` ("
+      , T.intercalate ",\n" columns
+      , ");"
+      ]
 
 
 getColumns :: Text -> [Text] -> Query
-getColumns tableName columns  = Query $ unlines (
-  "select" :
-  "  " <> T.intercalate ",\n  " columns <> "\n" :
-  "from `" <> tableName <> "`;" :
-  [])
+getColumns tableName columns =
+  Query $
+    unlines
+      [ "select"
+      , "  " <> T.intercalate ",\n  " columns <> "\n"
+      , "from `" <> tableName <> "`;"
+      ]
 
 
 getSelect :: [Text] -> Text -> Text -> Query
-getSelect selectLines fromStatement groupByColumn = Query $ T.unlines (
-  "select" :
-  (T.intercalate ",\n" selectLines) :
-  "from" :
-  fromStatement :
-  "group by " <> groupByColumn <> ";":
-  [])
+getSelect selectLines fromStatement groupByColumn =
+  Query $
+    T.unlines
+      [ "select"
+      , T.intercalate ",\n" selectLines
+      , "from"
+      , fromStatement
+      , "group by " <> groupByColumn <> ";"
+      ]
 
 
 getView :: Text -> Query -> Query
-getView viewName selectQuery = Query $ T.unlines (
-  "create view `" <> viewName <> "` as" :
-  fromQuery selectQuery :
-  [])
+getView viewName selectQuery =
+  Query $
+    T.unlines
+      [ "create view `" <> viewName <> "` as"
+      , fromQuery selectQuery
+      ]
 
 
 createWithQuery :: Connection -> Query -> IO (Doc ann)
@@ -196,9 +248,9 @@ createWithQuery connection theQuery = do
   let
     output = case result :: Either SQLError () of
       Left errorMessage ->
-        if "already exists" `T.isSuffixOf` (sqlErrorDetails errorMessage)
-        then ""
-        else T.pack $ (show errorMessage) <> "\n"
+        if "already exists" `T.isSuffixOf` sqlErrorDetails errorMessage
+          then ""
+          else T.pack $ show errorMessage <> "\n"
       Right _ ->
         "🆕 " <> unwords (P.take 3 $ words $ show theQuery) <> "… \n"
 
@@ -212,9 +264,9 @@ createTableWithQuery connection aTableName theQuery = do
   let
     output = case result :: Either SQLError () of
       Left errorMessage ->
-        if "already exists" `T.isSuffixOf` (sqlErrorDetails errorMessage)
-        then ""
-        else T.pack $ (show errorMessage) <> "\n"
+        if "already exists" `T.isSuffixOf` sqlErrorDetails errorMessage
+          then ""
+          else T.pack $ show errorMessage <> "\n"
       Right _ -> "🆕 Create table \"" <> aTableName <> "\"\n"
 
   pure $ pretty output
@@ -227,7 +279,7 @@ replaceTableWithQuery connection aTableName theQuery = do
 
   let
     output = case result :: Either SQLError () of
-      Left errorMessage -> T.pack $ (show errorMessage) <> "\n"
+      Left errorMessage -> T.pack $ show errorMessage <> "\n"
       Right _ -> "🆕 Replace table \"" <> aTableName <> "\"\n"
 
   pure $ pretty output
@@ -236,21 +288,33 @@ replaceTableWithQuery connection aTableName theQuery = do
 getCase :: Maybe Text -> [(Text, Float)] -> Text
 getCase fieldNameMaybe valueMap =
   "case "
-  <> case fieldNameMaybe of
+    <> case fieldNameMaybe of
       Nothing -> ""
       Just fName -> "`" <> fName <> "`"
-  <> P.fold (fmap
-      (\(key, val) -> "  when " <> key <> " then " <> show val <> "\n")
-      valueMap)
-  <> " end "
+    <> P.fold
+      ( fmap
+          (\(key, val) -> "  when " <> key <> " then " <> show val <> "\n")
+          valueMap
+      )
+    <> " end "
 
 
 createTriggerAfterUpdate :: Text -> Text -> Text -> Text -> Query
-createTriggerAfterUpdate name tableName whenBlock body = Query $ "\
-    \create trigger `" <> name <> "_after_update`\n\
-    \after update on `" <> tableName <> "`\n\
-    \when " <> whenBlock <> "\n\
-    \begin\n\
-    \  " <> body <> ";\n\
-    \end;\n\
-    \"
+createTriggerAfterUpdate name tableName whenBlock body =
+  Query $
+    "\
+    \create trigger `"
+      <> name
+      <> "_after_update`\n\
+         \after update on `"
+      <> tableName
+      <> "`\n\
+         \when "
+      <> whenBlock
+      <> "\n\
+         \begin\n\
+         \  "
+      <> body
+      <> ";\n\
+         \end;\n\
+         \"

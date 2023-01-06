@@ -1,58 +1,108 @@
 {-|
 The default config primarily defines the styling and formatting
 -}
-
 module Config where
 
-import Protolude as P hiding (modify)
+import Protolude as P (
+  Applicative (pure),
+  Char,
+  Eq ((==)),
+  FilePath,
+  Foldable (foldl),
+  Functor (fmap),
+  Generic,
+  Int,
+  Maybe (..),
+  Semigroup ((<>)),
+  Show,
+  Text,
+  decodeUtf8,
+  fromMaybe,
+  lines,
+  show,
+  unlines,
+  ($),
+  (&),
+  (.),
+ )
 
-import Data.Aeson
-import System.FilePath (takeBaseName)
-import Data.Hourglass
-import Data.Text as T
-import Prettyprinter.Render.Terminal
-import Prettyprinter.Render.Terminal.Internal (ansiForeground)
-import Prettyprinter.Internal
+import Data.Aeson (
+  FromJSON (parseJSON),
+  ToJSON (toJSON),
+  Value (String),
+  withObject,
+  withText,
+  (.!=),
+  (.:?),
+ )
+import Data.Hourglass (TimeFormat (toFormat), TimeFormatString)
+import Data.Text as T (
+  dropEnd,
+  isInfixOf,
+  pack,
+  replace,
+  split,
+  strip,
+  stripPrefix,
+ )
 import Data.Yaml (encode)
+import Prettyprinter.Internal (Pretty (pretty))
+import Prettyprinter.Render.Terminal (
+  AnsiStyle,
+  Color (..),
+  color,
+  colorDull,
+ )
+import Prettyprinter.Render.Terminal.Internal (ansiForeground)
+import System.FilePath (takeBaseName)
 
 
 data Hook = Hook
   { filePath :: Maybe FilePath
   , interpreter :: Text
   , body :: Text
-  } deriving (Generic, Show)
+  }
+  deriving (Generic, Show)
+
 
 instance ToJSON Hook
 instance FromJSON Hook
 
+
 emptyHook :: Hook
-emptyHook = Hook
-  { filePath = Nothing
-  , interpreter = ""
-  , body = ""
-  }
+emptyHook =
+  Hook
+    { filePath = Nothing
+    , interpreter = ""
+    , body = ""
+    }
 
 
 data HookSet = HookSet
   { pre :: [Hook]
   , post :: [Hook]
-  } deriving (Generic, Show)
+  }
+  deriving (Generic, Show)
+
 
 instance ToJSON HookSet
+
 
 -- | Necessary to make fields optional without using a Maybe type
 instance FromJSON HookSet where
   parseJSON = withObject "hookSet" $ \o -> do
-    pre   <- o .:? "pre" .!= pre emptyHookSet
-    post  <- o .:? "post".!= post emptyHookSet
+    pre <- o .:? "pre" .!= pre emptyHookSet
+    post <- o .:? "post" .!= post emptyHookSet
 
-    pure $ HookSet {..}
+    pure $ HookSet{..}
+
 
 emptyHookSet :: HookSet
-emptyHookSet = HookSet
-  { pre = []
-  , post = []
-  }
+emptyHookSet =
+  HookSet
+    { pre = []
+    , post = []
+    }
 
 
 data HooksConfig = HooksConfig
@@ -62,78 +112,96 @@ data HooksConfig = HooksConfig
   , modify :: HookSet
   , exit :: HookSet
   -- TODO: , delete :: HookSet
-  } deriving (Generic, Show)
+  }
+  deriving (Generic, Show)
+
 
 instance ToJSON HooksConfig
+
 
 -- | Necessary to make fields optional without using a Maybe type
 instance FromJSON HooksConfig where
   parseJSON = withObject "hooksConfig" $ \o -> do
-    directory  <- o .:? "directory" .!= directory defaultHooksConfig
-    launch     <- o .:? "launch".!= launch defaultHooksConfig
-    add        <- o .:? "add" .!= add defaultHooksConfig
-    modify     <- o .:? "modify" .!= modify defaultHooksConfig
-    exit       <- o .:? "exit" .!= exit defaultHooksConfig
+    directory <- o .:? "directory" .!= directory defaultHooksConfig
+    launch <- o .:? "launch" .!= launch defaultHooksConfig
+    add <- o .:? "add" .!= add defaultHooksConfig
+    modify <- o .:? "modify" .!= modify defaultHooksConfig
+    exit <- o .:? "exit" .!= exit defaultHooksConfig
 
-    pure $ HooksConfig {..}
+    pure $ HooksConfig{..}
+
 
 defaultHooksConfig :: HooksConfig
-defaultHooksConfig = HooksConfig
-  { directory = ""
-  , launch = emptyHookSet
-  , add = emptyHookSet
-  , modify = emptyHookSet
-  , exit = emptyHookSet
-  }
+defaultHooksConfig =
+  HooksConfig
+    { directory = ""
+    , launch = emptyHookSet
+    , add = emptyHookSet
+    , modify = emptyHookSet
+    , exit = emptyHookSet
+    }
 
 
-addHookFilesToConfig :: Config -> [(FilePath, b, Text)]  -> Config
+addHookFilesToConfig :: Config -> [(FilePath, b, Text)] -> Config
 addHookFilesToConfig =
   let
     buildHook :: FilePath -> Text -> Hook
     buildHook filePath content =
       case lines content of
-        firstLine : rest -> Hook
-          { filePath = Just filePath
-          , interpreter = firstLine
-              & T.replace "#!" ""
-              & T.strip
-          , body = rest
-              & unlines
-              & T.strip
-          }
+        firstLine : rest ->
+          Hook
+            { filePath = Just filePath
+            , interpreter =
+                firstLine
+                  & T.replace "#!" ""
+                  & T.strip
+            , body =
+                rest
+                  & unlines
+                  & T.strip
+            }
         _ -> emptyHook
 
     addToHookSet :: Hook -> Text -> HookSet -> HookSet
     addToHookSet hook stage hookSet =
       case stage of
-        "pre"  -> hookSet { pre  = hookSet.pre <> [hook] }
-        "post" -> hookSet { post = hookSet.post <> [hook] }
+        "pre" -> hookSet{pre = hookSet.pre <> [hook]}
+        "post" -> hookSet{post = hookSet.post <> [hook]}
         _ -> hookSet
 
     addToHooksConfig :: Text -> Text -> Hook -> HooksConfig -> HooksConfig
     addToHooksConfig event stage hook hConfig =
       case event of
-        "launch" -> hConfig
-          { launch = addToHookSet hook stage (hConfig & launch) }
-        "add"    -> hConfig
-          { add = addToHookSet hook stage (hConfig & add) }
-        "modify" -> hConfig
-          { modify = addToHookSet hook stage (hConfig & modify) }
-        "exit"   -> hConfig
-          { exit = addToHookSet hook stage (hConfig & exit) }
+        "launch" ->
+          hConfig
+            { launch = addToHookSet hook stage (hConfig & launch)
+            }
+        "add" ->
+          hConfig
+            { add = addToHookSet hook stage (hConfig & add)
+            }
+        "modify" ->
+          hConfig
+            { modify = addToHookSet hook stage (hConfig & modify)
+            }
+        "exit" ->
+          hConfig
+            { exit = addToHookSet hook stage (hConfig & exit)
+            }
         _ -> hConfig
-
   in
     P.foldl $ \conf (filePath, _, fileContent) ->
-        case split (== '-') $ pack $ takeBaseName filePath of
-          [stage, event] ->
-            conf { hooks = addToHooksConfig event stage
-              (buildHook filePath fileContent)
-              conf.hooks
+      case split (== '-') $ pack $ takeBaseName filePath of
+        [stage, event] ->
+          conf
+            { hooks =
+                addToHooksConfig
+                  event
+                  stage
+                  (buildHook filePath fileContent)
+                  conf.hooks
             }
-
-          _ -> conf
+        _ -> conf
 
 
 data Config = Config
@@ -158,46 +226,51 @@ data Config = Config
   , maxWidth :: Int
   , progressBarWidth :: Int
   , hooks :: HooksConfig
-  } deriving (Generic, Show)
+  }
+  deriving (Generic, Show)
 
 
 -- | Necessary to make fields optional without using a Maybe type
+{- FOURMOLU_DISABLE -}
 instance FromJSON Config where
   parseJSON = withObject "config" $ \o -> do
-    idStyle         <- o .:? "idStyle" .!= idStyle defaultConfig
-    priorityStyle   <- o .:? "priorityStyle".!= priorityStyle defaultConfig
-    tableName       <- o .:? "tableName" .!= tableName defaultConfig
-    dateStyle       <- o .:? "dateStyle" .!= dateStyle defaultConfig
-    bodyStyle       <- o .:? "bodyStyle" .!= bodyStyle defaultConfig
-    bodyClosedStyle <- o .:? "bodyClosedStyle".!= bodyClosedStyle defaultConfig
-    closedStyle     <- o .:? "closedStyle" .!= closedStyle defaultConfig
-    dueStyle        <- o .:? "dueStyle" .!= dueStyle defaultConfig
-    overdueStyle    <- o .:? "overdueStyle" .!= overdueStyle defaultConfig
-    tagStyle        <- o .:? "tagStyle" .!= tagStyle defaultConfig
-    utcFormat       <- o .:? "utcFormat" .!= utcFormat defaultConfig
-    utcFormatShort  <- o .:? "utcFormatShort" .!= utcFormatShort defaultConfig
-    dataDir         <- o .:? "dataDir" .!= dataDir defaultConfig
-    dbName          <- o .:? "dbName" .!= dbName defaultConfig
-    dateWidth       <- o .:? "dateWidth" .!= dateWidth defaultConfig
-    bodyWidth       <- o .:? "bodyWidth" .!= bodyWidth defaultConfig
-    prioWidth       <- o .:? "prioWidth" .!= prioWidth defaultConfig
-    headCount       <- o .:? "headCount" .!= headCount defaultConfig
-    maxWidth        <- o .:? "maxWidth" .!= maxWidth defaultConfig
+    idStyle         <- o .:? "idStyle" .!= defaultConfig.idStyle
+    priorityStyle   <- o .:? "priorityStyle".!= defaultConfig.priorityStyle
+    tableName       <- o .:? "tableName" .!= defaultConfig.tableName
+    dateStyle       <- o .:? "dateStyle" .!= defaultConfig.dateStyle
+    bodyStyle       <- o .:? "bodyStyle" .!= defaultConfig.bodyStyle
+    bodyClosedStyle <- o .:? "bodyClosedStyle".!= defaultConfig.bodyClosedStyle
+    closedStyle     <- o .:? "closedStyle" .!= defaultConfig.closedStyle
+    dueStyle        <- o .:? "dueStyle" .!= defaultConfig.dueStyle
+    overdueStyle    <- o .:? "overdueStyle" .!= defaultConfig.overdueStyle
+    tagStyle        <- o .:? "tagStyle" .!= defaultConfig.tagStyle
+    utcFormat       <- o .:? "utcFormat" .!= defaultConfig.utcFormat
+    utcFormatShort  <- o .:? "utcFormatShort" .!= defaultConfig.utcFormatShort
+    dataDir         <- o .:? "dataDir" .!= defaultConfig.dataDir
+    dbName          <- o .:? "dbName" .!= defaultConfig.dbName
+    dateWidth       <- o .:? "dateWidth" .!= defaultConfig.dateWidth
+    bodyWidth       <- o .:? "bodyWidth" .!= defaultConfig.bodyWidth
+    prioWidth       <- o .:? "prioWidth" .!= defaultConfig.prioWidth
+    headCount       <- o .:? "headCount" .!= defaultConfig.headCount
+    maxWidth        <- o .:? "maxWidth" .!= defaultConfig.maxWidth
     progressBarWidth <- o .:? "progressBarWidth"
-                                  .!= progressBarWidth defaultConfig
-    hooks           <- o .:? "hooks" .!= hooks defaultConfig
+                                .!= defaultConfig.progressBarWidth
+    hooks           <- o .:? "hooks" .!= defaultConfig.hooks
 
+    pure $ Config{..}
 
-    pure $ Config {..}
+{- FOURMOLU_ENABLE -}
 
 
 instance ToJSON Config
 
+
 instance Pretty Config where
-  pretty = pretty
-    . dropEnd 1 -- Drop trailing newline to maybe add it later
-    . decodeUtf8
-    . Data.Yaml.encode
+  pretty =
+    pretty
+      . dropEnd 1 -- Drop trailing newline to maybe add it later
+      . decodeUtf8
+      . Data.Yaml.encode
 
 
 parseColor :: Text -> Maybe Color
@@ -205,14 +278,14 @@ parseColor colorTxt =
   let
     colorOnly = fromMaybe colorTxt $ stripPrefix "dull " colorTxt
     colorToType = \case
-      "black"   -> Just Black
-      "red"     -> Just Red
-      "green"   -> Just Green
-      "yellow"  -> Just Yellow
-      "blue"    -> Just Blue
+      "black" -> Just Black
+      "red" -> Just Red
+      "green" -> Just Green
+      "yellow" -> Just Yellow
+      "blue" -> Just Blue
       "magenta" -> Just Magenta
-      "cyan"    -> Just Cyan
-      "white"   -> Just White
+      "cyan" -> Just Cyan
+      "white" -> Just White
       _ -> Nothing
   in
     colorToType colorOnly
@@ -221,9 +294,10 @@ parseColor colorTxt =
 parseAnsiStyle :: Text -> Maybe AnsiStyle
 parseAnsiStyle colorTxt =
   let
-    func = if "dull" `T.isInfixOf` colorTxt
-      then colorDull
-      else color
+    func =
+      if "dull" `T.isInfixOf` colorTxt
+        then colorDull
+        else color
     colorMaybe = parseColor colorTxt
   in
     fmap func colorMaybe
@@ -233,47 +307,52 @@ instance FromJSON AnsiStyle where
   parseJSON = withText "AnsiStyle" $ \value -> do
     pure $ fromMaybe (color Black) $ parseAnsiStyle value
 
+
 instance ToJSON AnsiStyle where
   toJSON style = String $ show $ ansiForeground style
+
 
 instance FromJSON TimeFormatString where
   parseJSON = withText "TimeFormatString" $ \_ -> do
     pure (toFormat ("YYYY-MM-DD H:MI:S" :: [Char]))
 
+
 instance ToJSON TimeFormatString where
   toJSON = pure "YYYY-MM-DD H:MI:S"
+
 
 -- instance Pretty AnsiStyle where
 --   pretty = pretty . (\_ -> ". " :: Text)
 
-
 defaultConfig :: Config
-defaultConfig = Config
-  { tableName = "tasks"
-  , idStyle = color Green
-  , priorityStyle = color Magenta
-  , dateStyle = color Black
-  , bodyStyle = color White
-  , bodyClosedStyle = color Black
-  , closedStyle = colorDull Black
-  , dueStyle = color Yellow
-  , overdueStyle = color Red
-  , tagStyle = color Blue
-  , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
-  , utcFormatShort = toFormat ("YYYY-MM-DD H:MI" :: [Char])
-  , dataDir = ""
-  , dbName = "main.db"
-  , dateWidth = 10
-  , bodyWidth = 10
-  , prioWidth = 4
-  , headCount = 20
-  , maxWidth = 120
-  , progressBarWidth = 24
-  , hooks = HooksConfig
-      { directory = ""
-      , launch = emptyHookSet
-      , add = emptyHookSet
-      , modify = emptyHookSet
-      , exit = emptyHookSet
-      }
-  }
+defaultConfig =
+  Config
+    { tableName = "tasks"
+    , idStyle = color Green
+    , priorityStyle = color Magenta
+    , dateStyle = color Black
+    , bodyStyle = color White
+    , bodyClosedStyle = color Black
+    , closedStyle = colorDull Black
+    , dueStyle = color Yellow
+    , overdueStyle = color Red
+    , tagStyle = color Blue
+    , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
+    , utcFormatShort = toFormat ("YYYY-MM-DD H:MI" :: [Char])
+    , dataDir = ""
+    , dbName = "main.db"
+    , dateWidth = 10
+    , bodyWidth = 10
+    , prioWidth = 4
+    , headCount = 20
+    , maxWidth = 120
+    , progressBarWidth = 24
+    , hooks =
+        HooksConfig
+          { directory = ""
+          , launch = emptyHookSet
+          , add = emptyHookSet
+          , modify = emptyHookSet
+          , exit = emptyHookSet
+          }
+    }

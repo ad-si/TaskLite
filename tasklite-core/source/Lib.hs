@@ -1,55 +1,343 @@
 {-|
 Functions to create, update, and delete tasks / tags / notes
 -}
-
 module Lib where
 
-import Protolude as P
+import Protolude as P (
+  Applicative (liftA2, pure),
+  Bool (..),
+  Char,
+  Double,
+  Down (Down),
+  Either,
+  Eq (..),
+  FilePath,
+  Float,
+  Floating (logBase),
+  Foldable (foldMap, length, maximum, null),
+  Fractional ((/)),
+  Functor (fmap),
+  Generic,
+  IO,
+  Int,
+  Int64,
+  Integer,
+  Integral (toInteger),
+  Maybe (..),
+  Monad (return, (>>=)),
+  MonadIO (liftIO),
+  Monoid (mconcat, mempty),
+  Num (abs, fromInteger, (*), (+), (-)),
+  Ord (compare, max, (<), (>)),
+  Read,
+  RealFrac (ceiling, floor),
+  Semigroup ((<>)),
+  Show,
+  Text,
+  any,
+  catMaybes,
+  const,
+  decodeUtf8,
+  dropWhile,
+  either,
+  encodeUtf8,
+  exitFailure,
+  filter,
+  forM,
+  fromIntegral,
+  fromMaybe,
+  fst,
+  getArgs,
+  head,
+  identity,
+  intersperse,
+  isJust,
+  isNothing,
+  isSpace,
+  lastMay,
+  listToMaybe,
+  maybe,
+  maybeToEither,
+  not,
+  on,
+  otherwise,
+  print,
+  realToFrac,
+  repeat,
+  reverse,
+  show,
+  snd,
+  sortBy,
+  sortOn,
+  stderr,
+  take,
+  takeWhile,
+  unlines,
+  unwords,
+  ($),
+  (&),
+  (&&),
+  (.),
+  (<$>),
+  (<&>),
+  (||),
+ )
 
-import Data.Aeson as Aeson
-import Data.Hourglass
-import Data.Text as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Encoding as TL
-import qualified Data.Time.ISO8601.Duration as Iso
+import Data.Aeson as Aeson (KeyValue ((.=)), encode, object)
+import Data.Coerce (coerce)
+import Data.Hourglass (
+  DateTime (dtTime),
+  Duration (durationHours, durationMinutes),
+  ElapsedP,
+  ISO8601_Date (ISO8601_Date),
+  Minutes (Minutes),
+  Time (timeFromElapsedP),
+  TimeOfDay (todNSec),
+  timeAdd,
+  timePrint,
+ )
+import Data.Text as T (
+  breakOn,
+  dropEnd,
+  intercalate,
+  isPrefixOf,
+  justifyRight,
+  length,
+  pack,
+  replace,
+  replicate,
+  take,
+  takeEnd,
+  toLower,
+  unpack,
+  unwords,
+  words,
+ )
+import Data.Text.Lazy qualified as TL
+import Data.Text.Lazy.Encoding qualified as TL
 import Data.Time.Clock (UTCTime)
-import Data.ULID
-import Data.Coerce
-import Data.Yaml as Yaml
-import Database.Beam hiding (char)
-import Database.Beam.Sqlite
-import Database.Beam.Schema.Tables
-import Database.SQLite.Simple as Sql
+import Data.Time.ISO8601.Duration qualified as Iso
+import Data.ULID (ULID, getULID)
+import Data.Yaml as Yaml (encode)
+import Database.Beam (
+  Database,
+  DatabaseSettings,
+  SqlEq ((/=.), (==.)),
+  SqlValable (val_),
+  Table (primaryKey),
+  TableEntity,
+  allFromView_,
+  all_,
+  dbModification,
+  defaultDbSettings,
+  delete,
+  desc_,
+  fieldNamed,
+  filter_,
+  insert,
+  insertFrom,
+  insertValues,
+  limit_,
+  modifyEntityName,
+  modifyTableFields,
+  orderBy_,
+  runDelete,
+  runInsert,
+  runSelectReturningList,
+  runSelectReturningOne,
+  runUpdate,
+  save,
+  select,
+  tableModification,
+  update,
+  withDbModification,
+  (&&.),
+  (<-.),
+ )
+import Database.Beam.Schema.Tables (ViewEntity)
+import Database.Beam.Sqlite (runBeamSqlite)
+import Database.SQLite.Simple as Sql (
+  Connection,
+  FromRow (..),
+  Query (Query),
+  changes,
+  execute,
+  field,
+  open,
+  query,
+  query_,
+  withConnection,
+ )
 import Numeric (showFFloat)
-import System.Directory
+import Prettyprinter as Pp (
+  Doc,
+  Pretty (pretty),
+  align,
+  annotate,
+  concatWith,
+  dquotes,
+  fill,
+  hang,
+  hardline,
+  hsep,
+  indent,
+  line,
+  punctuate,
+  vcat,
+  vsep,
+  (<+>),
+ )
+import Prettyprinter.Render.Terminal (
+  AnsiStyle,
+  Color (Black, Green, Red),
+  bgColorDull,
+  bold,
+  color,
+  colorDull,
+  hPutDoc,
+  putDoc,
+  underlined,
+ )
+import Prettyprinter.Util (reflow)
+import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
-import System.IO as SIO
-import System.Process (readProcess)
+import System.IO as SIO (appendFile)
 import System.Posix.User (getEffectiveUserName)
-import qualified Text.Huzzy as Huzzy
-import Text.ParserCombinators.ReadP as ReadP
-import Time.System
-import Prettyprinter as Pp hiding ((<>))
-import Prettyprinter.Util
-import Prettyprinter.Render.Terminal
+import System.Process (readProcess)
+import Text.Huzzy qualified as Huzzy
+import Text.ParserCombinators.ReadP as ReadP (
+  ReadP,
+  char,
+  eof,
+  munch,
+  munch1,
+  readP_to_S,
+  sepBy1,
+  skipSpaces,
+  string,
+  (<++),
+ )
+import Time.System (dateCurrent, timeCurrentP)
 
-import Utils
-import Task
-import TaskView
-import FullTask
-import Note
-import TaskToNote
-import TaskToTag
-import Config
+import Config (
+  Config (
+    bodyClosedStyle,
+    bodyStyle,
+    bodyWidth,
+    closedStyle,
+    dataDir,
+    dateStyle,
+    dateWidth,
+    dbName,
+    dueStyle,
+    headCount,
+    hooks,
+    idStyle,
+    prioWidth,
+    priorityStyle,
+    progressBarWidth,
+    tableName,
+    tagStyle,
+    utcFormat,
+    utcFormatShort
+  ),
+  HookSet (pre),
+  HooksConfig (add),
+  defaultConfig,
+ )
+import FullTask (
+  FullTask (
+    body,
+    closed_utc,
+    due_utc,
+    modified_utc,
+    notes,
+    priority,
+    review_utc,
+    tags,
+    ulid
+  ),
+  selectQuery,
+ )
+import Note (Note (body, ulid))
+import Task (
+  DerivedState (IsOpen),
+  PrimaryKey (TaskUlid),
+  Task,
+  TaskState (..),
+  TaskT (
+    awake_utc,
+    body,
+    closed_utc,
+    due_utc,
+    group_ulid,
+    metadata,
+    modified_utc,
+    priority_adjustment,
+    ready_utc,
+    recurrence_duration,
+    repetition_duration,
+    review_utc,
+    state,
+    ulid,
+    user,
+    waiting_utc
+  ),
+  TaskUlid,
+  derivedStateToQuery,
+  getStateHierarchy,
+  textToDerivedState,
+  zeroTask,
+ )
+import TaskToNote (TaskToNote, TaskToNoteT (..))
+import TaskToTag (TaskToTag, TaskToTagT (..))
+import TaskView (
+  TaskView,
+  TaskViewT (
+    awake_utc,
+    body,
+    closed_utc,
+    due_utc,
+    group_ulid,
+    metadata,
+    modified_utc,
+    priority,
+    ready_utc,
+    recurrence_duration,
+    repetition_duration,
+    review_utc,
+    ulid,
+    user,
+    waiting_utc
+  ),
+  cpTimesAndState,
+ )
+import Utils (
+  IdText,
+  ListModifiedFlag (..),
+  applyColorMode,
+  dateTimeToUtcTime,
+  executeHooks,
+  numDigits,
+  parseUlidText,
+  parseUtc,
+  setDateTime,
+  ulidTextToDateTime,
+  utcFormatReadable,
+  utcTimeToDateTime,
+  (<++>),
+ )
 
 
 noTasksWarning :: Text
-noTasksWarning = "No tasks available. "
-  <> "Run `tasklite help` to learn how to create tasks."
+noTasksWarning =
+  "No tasks available. "
+    <> "Run `tasklite help` to learn how to create tasks."
 
 
 newtype NumRows = NumRows Integer
   deriving (Eq, Ord, Read, Show)
+
 
 instance FromRow NumRows where
   fromRow = NumRows <$> field
@@ -60,79 +348,93 @@ data TaskLiteDb f = TaskLiteDb
   , _tldbTaskToTag :: f (TableEntity TaskToTagT)
   , _tldbTaskToNote :: f (TableEntity TaskToNoteT)
   , _tldbTasksView :: f (ViewEntity TaskViewT)
-  } deriving Generic
+  }
+  deriving (Generic)
+
 
 instance Database be TaskLiteDb
 
 
 taskLiteDb :: DatabaseSettings be TaskLiteDb
-taskLiteDb = defaultDbSettings `withDbModification`
-  dbModification
-    { _tldbTaskToTag = modifyTable identity $
-        tableModification
-          { TaskToTag.task_ulid = TaskUlid (fieldNamed "task_ulid") }
-    , _tldbTaskToNote = modifyTable identity $
-        tableModification
-          { TaskToNote.task_ulid = TaskUlid (fieldNamed "task_ulid") }
-    }
+taskLiteDb =
+  defaultDbSettings
+    `withDbModification` dbModification
+      { _tldbTaskToTag =
+          modifyEntityName identity
+            <> modifyTableFields
+              tableModification
+                { TaskToTag.task_ulid = TaskUlid (fieldNamed "task_ulid")
+                }
+      , _tldbTaskToNote =
+          modifyEntityName identity
+            <> modifyTableFields
+              tableModification
+                { TaskToNote.task_ulid = TaskUlid (fieldNamed "task_ulid")
+                }
+      }
 
 
 getDbPath :: Config -> IO FilePath
 getDbPath conf = do
-  pure $ (dataDir conf) </> (dbName conf)
+  pure $ conf.dataDir </> conf.dbName
 
 
 setupConnection :: Config -> IO Connection
 setupConnection conf = do
   createDirectoryIfMissing True $ dataDir conf
-  open $ (dataDir conf) </> (dbName conf)
+  open $ conf.dataDir </> conf.dbName
 
 
 execWithConn :: Config -> (Connection -> IO a) -> IO a
 execWithConn conf func = do
   createDirectoryIfMissing True $ dataDir conf
   withConnection
-    ((dataDir conf) </> (dbName conf))
+    (conf.dataDir </> conf.dbName)
     func
 
 
 -- | For use with `runBeamSqliteDebug`
 writeToLog :: Config -> [Char] -> IO ()
 writeToLog conf message = do
-  let logFile = (dataDir conf) </> "log.sql"
+  let logFile = conf.dataDir </> "log.sql"
   -- Use System.IO so it doesn't have to be converted to Text first
   SIO.appendFile logFile $ message <> "\n"
 
 
 insertTask :: Connection -> Task -> IO ()
 insertTask connection task = do
-  runBeamSqlite connection $ runInsert $
-    insert taskLiteDb._tldbTasks $
-    insertValues [task]
+  runBeamSqlite connection $
+    runInsert $
+      insert taskLiteDb._tldbTasks $
+        insertValues [task]
 
 
 replaceTask :: Connection -> Task -> IO ()
 replaceTask connection task = do
-  runBeamSqlite connection $ runUpdate $
-    save taskLiteDb._tldbTasks task
+  runBeamSqlite connection $
+    runUpdate $
+      save taskLiteDb._tldbTasks task
 
 
 insertTags :: Connection -> Maybe DateTime -> TaskUlid -> [Text] -> IO ()
 insertTags connection mbCreatedUtc taskUlid tags = do
   taskToTags <- forM tags $ \tag -> do
     tagUlid <- getULID
-    pure $ TaskToTag
-      (mbCreatedUtc
-          <&> setDateTime tagUlid
-          & fromMaybe tagUlid
-          & show
-          & T.toLower)
-      taskUlid
-      tag
+    pure $
+      TaskToTag
+        ( mbCreatedUtc
+            <&> setDateTime tagUlid
+            & fromMaybe tagUlid
+            & show
+            & T.toLower
+        )
+        taskUlid
+        tag
 
-  runBeamSqlite connection $ runInsert $
-    insert taskLiteDb._tldbTaskToTag $
-    insertValues taskToTags
+  runBeamSqlite connection $
+    runInsert $
+      insert taskLiteDb._tldbTaskToTag $
+        insertValues taskToTags
 
 
 insertNotes :: Connection -> Maybe DateTime -> TaskUlid -> [Note] -> IO ()
@@ -140,21 +442,23 @@ insertNotes connection mbCreatedUtc primKey notes = do
   taskToNotes <- forM notes $ \theNote -> do
     let
       noteUlidTxt = Note.ulid theNote
-      mbNoteUlid = parseUlidText $ noteUlidTxt
+      mbNoteUlid = parseUlidText noteUlidTxt
       mbNewUlid = do
         createdUtc <- mbCreatedUtc
         noteUlid <- mbNoteUlid
 
         pure $ show $ setDateTime noteUlid createdUtc
 
-    pure $ TaskToNote
-      (T.toLower $ fromMaybe noteUlidTxt mbNewUlid)
-      primKey
-      (Note.body theNote)
+    pure $
+      TaskToNote
+        (T.toLower $ fromMaybe noteUlidTxt mbNewUlid)
+        primKey
+        (Note.body theNote)
 
-  runBeamSqlite connection $ runInsert $
-    insert taskLiteDb._tldbTaskToNote $
-    insertValues taskToNotes
+  runBeamSqlite connection $
+    runInsert $
+      insert taskLiteDb._tldbTaskToNote $
+        insertValues taskToNotes
 
 
 -- | Tuple is (Maybe createdUtc, noteBody)
@@ -162,18 +466,21 @@ insertNoteTuples :: Connection -> TaskUlid -> [(Maybe DateTime, Text)] -> IO ()
 insertNoteTuples connection taskUlid notes = do
   taskToNotes <- forM notes $ \(mbCreatedUtc, noteBody) -> do
     noteUlid <- getULID
-    pure $ TaskToNote
-      (mbCreatedUtc
-          <&> setDateTime noteUlid
-          & fromMaybe noteUlid
-          & show
-          & T.toLower)
-      taskUlid
-      noteBody
+    pure $
+      TaskToNote
+        ( mbCreatedUtc
+            <&> setDateTime noteUlid
+            & fromMaybe noteUlid
+            & show
+            & T.toLower
+        )
+        taskUlid
+        noteBody
 
-  runBeamSqlite connection $ runInsert $
-    insert taskLiteDb._tldbTaskToNote $
-    insertValues taskToNotes
+  runBeamSqlite connection $
+    runInsert $
+      insert taskLiteDb._tldbTaskToNote $
+        insertValues taskToNotes
 
 
 formatElapsedP :: Config -> IO ElapsedP -> IO Text
@@ -186,9 +493,10 @@ formatUlid =
   fmap (T.toLower . show)
 
 
--- | Parses the body of the tasks and extracts all meta data
--- | Returns a tuple (body, tags, dueUtcMb, createdUtcMb)
--- TODO: Replace with parsec implementation
+{-| Parses the body of the tasks and extracts all meta data
+ | Returns a tuple (body, tags, dueUtcMb, createdUtcMb)
+ TODO: Replace with parsec implementation
+-}
 parseTaskBody :: [Text] -> (Text, [Text], Maybe Text, Maybe DateTime)
 parseTaskBody bodyWords =
   let
@@ -198,25 +506,29 @@ parseTaskBody bodyWords =
     isMeta word = isTag word || isDueUtc word || isCreatedUtc word
     -- Handle case when word is actually a text
     bodyWordsReversed = bodyWords & T.unwords & T.words & P.reverse
-    body = bodyWordsReversed
-      & P.dropWhile isMeta
-      & P.reverse
-      & unwords
-    metadata = bodyWordsReversed
-      & P.takeWhile isMeta
-      & P.reverse
+    body =
+      bodyWordsReversed
+        & P.dropWhile isMeta
+        & P.reverse
+        & unwords
+    metadata =
+      bodyWordsReversed
+        & P.takeWhile isMeta
+        & P.reverse
     tags = fmap (T.replace "+" "") (P.filter isTag metadata)
-    dueUtcMb = metadata
-      & P.filter isDueUtc
-      <&> T.replace "due:" ""
-      & P.lastMay
-      >>= parseUtc
-      <&> pack . timePrint utcFormatReadable
-    createdUtcMb = metadata
-      & P.filter isCreatedUtc
-      <&> T.replace "created:" ""
-      & P.lastMay
-      >>= parseUtc
+    dueUtcMb =
+      metadata
+        & P.filter isDueUtc
+        <&> T.replace "due:" ""
+        & P.lastMay
+        >>= parseUtc
+        <&> pack . timePrint utcFormatReadable
+    createdUtcMb =
+      metadata
+        & P.filter isCreatedUtc
+        <&> T.replace "created:" ""
+        & P.lastMay
+        >>= parseUtc
   in
     (body, tags, dueUtcMb, createdUtcMb)
 
@@ -236,31 +548,39 @@ addTask conf connection bodyWords = do
   (ulid, modified_utc, effectiveUserName) <- getTriple conf
   let
     (body, tags, dueUtcMb, createdUtcMb) = parseTaskBody bodyWords
-    task = zeroTask
-      { Task.ulid = T.toLower $ show $ case createdUtcMb of
-          Nothing -> ulid
-          Just createdUtc -> setDateTime ulid createdUtc
-      , Task.body = body
-      , Task.due_utc = dueUtcMb
-      , Task.modified_utc = modified_utc
-      , Task.user = T.pack effectiveUserName
-      }
+    task =
+      zeroTask
+        { Task.ulid = T.toLower $ show $ case createdUtcMb of
+            Nothing -> ulid
+            Just createdUtc -> setDateTime ulid createdUtc
+        , Task.body = body
+        , Task.due_utc = dueUtcMb
+        , Task.modified_utc = modified_utc
+        , Task.user = T.pack effectiveUserName
+        }
 
   args <- getArgs
-  preAddResult <- executeHooks
-    (TL.toStrict $ TL.decodeUtf8 $ Aeson.encode $ object
-      ["arguments" .= args
-      ,"taskToAdd" .= task
-      -- TODO: Add tags and notes to task
-      ])
-    (conf.hooks & add & pre)
+  preAddResult <-
+    executeHooks
+      ( TL.toStrict $
+          TL.decodeUtf8 $
+            Aeson.encode $
+              object
+                [ "arguments" .= args
+                , "taskToAdd" .= task
+                -- TODO: Add tags and notes to task
+                ]
+      )
+      (conf.hooks & add & pre)
   putDoc preAddResult
 
   insertTask connection task
   insertTags connection Nothing (primaryKey task) tags
   pure $
-    "🆕 Added task" <+> dquotes (pretty $ task.body)
-    <+> "with id" <+> dquotes (pretty $ task.ulid)
+    "🆕 Added task"
+      <+> dquotes (pretty $ task.body)
+      <+> "with id"
+      <+> dquotes (pretty $ task.ulid)
 
 
 logTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
@@ -269,72 +589,93 @@ logTask conf connection bodyWords = do
   let
     (body, extractedTags, dueUtcMb, createdUtcMb) = parseTaskBody bodyWords
     tags = extractedTags <> ["log"]
-    task = zeroTask
-      { Task.ulid = T.toLower $ show $ case createdUtcMb of
-          Nothing -> ulid
-          Just createdUtc -> setDateTime ulid createdUtc
-      , Task.body = body
-      , Task.state = Just Done
-      , Task.due_utc = dueUtcMb
-      , Task.closed_utc = Just modified_utc
-      , Task.user = T.pack effectiveUserName
-      , Task.modified_utc = modified_utc
-      }
+    task =
+      zeroTask
+        { Task.ulid = T.toLower $ show $ case createdUtcMb of
+            Nothing -> ulid
+            Just createdUtc -> setDateTime ulid createdUtc
+        , Task.body = body
+        , Task.state = Just Done
+        , Task.due_utc = dueUtcMb
+        , Task.closed_utc = Just modified_utc
+        , Task.user = T.pack effectiveUserName
+        , Task.modified_utc = modified_utc
+        }
 
   insertTask connection task
   insertTags connection Nothing (primaryKey task) tags
   pure $
-    "📝 Logged task" <+> dquotes (pretty $ task.body)
-    <+> "with id" <+> dquotes (pretty $ task.ulid)
+    "📝 Logged task"
+      <+> dquotes (pretty $ task.body)
+      <+> "with id"
+      <+> dquotes (pretty $ task.ulid)
 
 
-execWithTask ::
-  Config -> Connection -> Text
-  -> (Task -> IO (Doc AnsiStyle)) -> IO (Doc AnsiStyle)
+execWithTask
+  :: Config
+  -> Connection
+  -> Text
+  -> (Task -> IO (Doc AnsiStyle))
+  -> IO (Doc AnsiStyle)
 execWithTask conf connection idSubstr callback = do
-  tasks <- (query connection
-      (Query $ "select * from " <> tableName conf <> " where `ulid` like ?")
-      ["%"  <> idSubstr :: Text]
-    ) :: IO [Task]
+  tasks <-
+    query
+      connection
+      (Query $ "select * from " <> conf.tableName <> " where `ulid` like ?")
+      ["%" <> idSubstr :: Text]
+      :: IO [Task]
 
   let
     numOfTasks = P.length tasks
     ulidLength = 26
-    prefix = if (T.length idSubstr) == ulidLength then "" else "…"
+    prefix = if T.length idSubstr == ulidLength then "" else "…"
     quote = dquotes . pretty
 
   if
-    | numOfTasks == 0 -> pure $
-        "⚠️  Task" <+> quote (prefix <> idSubstr) <+> "does not exist"
-    | numOfTasks == 1 ->
-        callback $ fromMaybe zeroTask $ P.head tasks
-    | numOfTasks > 1 -> pure $
-        "⚠️  Id slice" <+> (quote idSubstr) <+> "is not unique."
-        <+> "It could refer to one of the following tasks:"
-        <++> (P.foldMap
-            (\task ->
-              (annotate conf.idStyle (pretty $ task.ulid))
-              <++> (pretty $ task.body) <> hardline)
-            tasks
-          )
-    | otherwise -> pure "This case should not be possible"
+      | numOfTasks == 0 ->
+          pure $
+            "⚠️  Task" <+> quote (prefix <> idSubstr) <+> "does not exist"
+      | numOfTasks == 1 ->
+          callback $ fromMaybe zeroTask $ P.head tasks
+      | numOfTasks > 1 ->
+          pure $
+            "⚠️  Id slice"
+              <+> quote idSubstr
+              <+> "is not unique."
+              <+> "It could refer to one of the following tasks:"
+              <++> P.foldMap
+                ( \task ->
+                    annotate conf.idStyle (pretty task.ulid)
+                      <++> pretty task.body
+                      <> hardline
+                )
+                tasks
+      | otherwise -> pure "This case should not be possible"
 
 
 setStateAndClosed :: Connection -> TaskUlid -> Maybe TaskState -> IO ()
 setStateAndClosed connection taskUlid theTaskState = do
-  runBeamSqlite connection $ runUpdate $
-    update taskLiteDb._tldbTasks
-      (\task -> mconcat
-                [ (Task.state task) <-. val_ theTaskState
-                , (Task.review_utc task) <-. val_ Nothing
-                -- closed_utc is set via an SQL trigger
-                ])
-      (\task -> primaryKey task ==. val_ taskUlid &&.
-                (Task.state task) /=. val_ theTaskState)
+  runBeamSqlite connection $
+    runUpdate $
+      update
+        taskLiteDb._tldbTasks
+        ( \task ->
+            mconcat
+              [ Task.state task <-. val_ theTaskState
+              , Task.review_utc task <-. val_ Nothing
+              -- closed_utc is set via an SQL trigger
+              ]
+        )
+        ( \task ->
+            primaryKey task
+              ==. val_ taskUlid
+              &&. task.state
+              /=. val_ theTaskState
+        )
 
 
-setReadyUtc ::
-  Config -> Connection -> DateTime -> [IdText] -> IO (Doc AnsiStyle)
+setReadyUtc
+  :: Config -> Connection -> DateTime -> [IdText] -> IO (Doc AnsiStyle)
 setReadyUtc conf connection datetime ids = do
   let
     utcText :: Text
@@ -347,16 +688,22 @@ setReadyUtc conf connection datetime ids = do
         prettyBody = dquotes (pretty $ task.body)
         prettyId = dquotes (pretty idText)
 
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat [(Task.ready_utc task_) <-. val_ (Just utcText)])
-          (\task_ -> primaryKey task_ ==. val_ taskUlid)
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            (\task_ -> mconcat [Task.ready_utc task_ <-. val_ (Just utcText)])
+            (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
-        -- TODO: Update modified_utc via SQL trigger
+      -- TODO: Update modified_utc via SQL trigger
 
-      pure $ "📅 Set ready UTC of task" <+> prettyBody
-            <+> "with id" <+> prettyId
-            <+> "to" <+> dquotes (pretty utcText)
+      pure $
+        "📅 Set ready UTC of task"
+          <+> prettyBody
+          <+> "with id"
+          <+> prettyId
+          <+> "to"
+          <+> dquotes (pretty utcText)
 
   pure $ vsep docs
 
@@ -370,28 +717,42 @@ waitFor conf connection duration ids = do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
         nowAsText = (pack . timePrint conf.utcFormat) now
-        threeDays = (pack . timePrint conf.utcFormat)
-          (utcTimeToDateTime $ Iso.addDuration duration $
-            dateTimeToUtcTime $ timeFromElapsedP now)
+        threeDays =
+          (pack . timePrint conf.utcFormat)
+            ( utcTimeToDateTime $
+                Iso.addDuration duration $
+                  dateTimeToUtcTime $
+                    timeFromElapsedP now
+            )
         prettyBody = dquotes (pretty $ task.body)
         prettyId = dquotes (pretty idText)
 
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\theTask ->
-            mconcat [ (Task.waiting_utc theTask) <-. val_ (Just nowAsText)
-            , (Task.review_utc theTask) <-. val_ (Just threeDays)
-            ]
-          )
-          (\theTask -> primaryKey theTask ==. val_ taskUlid)
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            ( \theTask ->
+                mconcat
+                  [ Task.waiting_utc theTask <-. val_ (Just nowAsText)
+                  , Task.review_utc theTask <-. val_ (Just threeDays)
+                  ]
+            )
+            (\theTask -> primaryKey theTask ==. val_ taskUlid)
 
       numOfChanges <- changes connection
 
-      pure $ if numOfChanges == 0
-        then "⚠️  An error occurred while moving task"
-              <+> prettyBody <> "with id" <+> prettyId <+> "into waiting mode"
-        else "⏳  Set waiting UTC and review UTC for task"
-              <+> prettyBody <+> "with id" <+> prettyId
+      pure $
+        if numOfChanges == 0
+          then
+            "⚠️  An error occurred while moving task"
+              <+> prettyBody <> "with id"
+              <+> prettyId
+              <+> "into waiting mode"
+          else
+            "⏳  Set waiting UTC and review UTC for task"
+              <+> prettyBody
+              <+> "with id"
+              <+> prettyId
 
   pure $ vsep docs
 
@@ -402,49 +763,60 @@ waitTasks conf connection =
     Iso.DurationDate (Iso.DurDateDay (Iso.DurDay 3) Nothing)
 
 
-reviewTasksIn :: Config -> Connection
-  -> Iso.Duration -> [Text] -> IO (Doc AnsiStyle)
+reviewTasksIn
+  :: Config
+  -> Connection
+  -> Iso.Duration
+  -> [Text]
+  -> IO (Doc AnsiStyle)
 reviewTasksIn conf connection duration ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
       now <- timeCurrentP
       let
         taskUlid@(TaskUlid idText) = primaryKey task
-        xDays = (pack . timePrint conf.utcFormat)
-          (utcTimeToDateTime $ Iso.addDuration duration $
-            dateTimeToUtcTime $ timeFromElapsedP now)
+        xDays =
+          (pack . timePrint conf.utcFormat)
+            ( utcTimeToDateTime $
+                Iso.addDuration duration $
+                  dateTimeToUtcTime $
+                    timeFromElapsedP now
+            )
         prettyBody = dquotes (pretty $ task.body)
         prettyId = dquotes (pretty idText)
         warningStart = "⚠️  Task" <+> prettyBody <+> "with id" <+> prettyId
 
-      if Task.closed_utc task /= Nothing
-      then pure $ warningStart <+> "is already closed"
-      else do
-        runBeamSqlite connection $ runUpdate $
-          update taskLiteDb._tldbTasks
-            (\theTask -> (Task.review_utc theTask) <-. val_ (Just xDays))
-            (\theTask -> primaryKey theTask ==. val_ taskUlid)
+      if isJust task.closed_utc
+        then pure $ warningStart <+> "is already closed"
+        else do
+          runBeamSqlite connection $
+            runUpdate $
+              update
+                taskLiteDb._tldbTasks
+                (\theTask -> Task.review_utc theTask <-. val_ (Just xDays))
+                (\theTask -> primaryKey theTask ==. val_ taskUlid)
 
-        numOfChanges <- changes connection
+          numOfChanges <- changes connection
 
-        pure $
-          if numOfChanges == 0
-          then warningStart <+> "could not be reviewed"
-          else getResultMsg "🔎 Finished review" task
+          pure $
+            if numOfChanges == 0
+              then warningStart <+> "could not be reviewed"
+              else getResultMsg "🔎 Finished review" task
 
   pure $ vsep docs
 
 
 showDateTime :: Config -> DateTime -> Text
 showDateTime conf =
-    pack . timePrint conf.utcFormat
+  pack . timePrint conf.utcFormat
 
 
 showEither :: Config -> Either a UTCTime -> Maybe Text
-showEither conf e = e
-  & (either (const Nothing) Just)
-  <&> utcTimeToDateTime
-  <&> (showDateTime conf)
+showEither conf e =
+  e
+    & either (const Nothing) Just
+    <&> utcTimeToDateTime
+    <&> showDateTime conf
 
 
 -- TODO: Eliminate code duplication with createNextRecurrence
@@ -455,18 +827,23 @@ createNextRepetition conf connection task = do
   let
     taskUlid = primaryKey task
     nowMb = ulidTextToDateTime newUlidText
-    durTextEither = maybeToEither
-                        "Task has no repetition duration"
-                        task.repetition_duration
+    durTextEither =
+      maybeToEither
+        "Task has no repetition duration"
+        task.repetition_duration
     isoDurEither =
       durTextEither
-      <&> encodeUtf8
-      >>= Iso.parseDuration
+        <&> encodeUtf8
+        >>= Iso.parseDuration
 
-    nextDueMb = liftA2 Iso.addDuration isoDurEither
-      (maybeToEither
-        "ULID can't be converted to UTC time"
-        (nowMb <&> dateTimeToUtcTime))
+    nextDueMb =
+      liftA2
+        Iso.addDuration
+        isoDurEither
+        ( maybeToEither
+            "ULID can't be converted to UTC time"
+            (nowMb <&> dateTimeToUtcTime)
+        )
 
   -- TODO: Investigate why this isn't working and replace afterwards
   -- runBeamSqlite connection $ runInsert $
@@ -479,48 +856,68 @@ createNextRepetition conf connection task = do
 
   runBeamSqlite connection $ do
     runInsert $ insert taskLiteDb._tldbTasks $ insertFrom $ do
-      originalTask <- filter_
-        (\theTask -> primaryKey theTask ==. val_ taskUlid)
-        (all_ $ taskLiteDb._tldbTasks)
+      originalTask <-
+        filter_
+          (\theTask -> primaryKey theTask ==. val_ taskUlid)
+          (all_ $ taskLiteDb._tldbTasks)
 
-      pure originalTask
-        { Task.ulid = val_ newUlidText
-        , Task.due_utc = val_ $ nextDueMb & showEither conf
-        , Task.closed_utc = val_ Nothing
-        , Task.state = val_ Nothing
-
-        , Task.awake_utc = val_ $
-            (liftA2 Iso.addDuration isoDurEither
-              (maybeToEither "Task has no awake UTC"
-                (task.awake_utc >>= parseUtc <&> dateTimeToUtcTime)))
-            & showEither conf
-
-        , Task.ready_utc = val_ $
-            (liftA2 Iso.addDuration isoDurEither
-              (maybeToEither "Task has no ready UTC"
-                (task.ready_utc >>= parseUtc <&> dateTimeToUtcTime)))
-            & showEither conf
-
-        , Task.modified_utc = val_ $ fromMaybe "" $ nowMb
-            <&> timePrint conf.utcFormat
-            <&> pack
-        }
+      pure
+        originalTask
+          { Task.ulid = val_ newUlidText
+          , Task.due_utc = val_ $ nextDueMb & showEither conf
+          , Task.closed_utc = val_ Nothing
+          , Task.state = val_ Nothing
+          , Task.awake_utc =
+              val_ $
+                liftA2
+                  Iso.addDuration
+                  isoDurEither
+                  ( maybeToEither
+                      "Task has no awake UTC"
+                      (task.awake_utc >>= parseUtc <&> dateTimeToUtcTime)
+                  )
+                  & showEither conf
+          , Task.ready_utc =
+              val_ $
+                liftA2
+                  Iso.addDuration
+                  isoDurEither
+                  ( maybeToEither
+                      "Task has no ready UTC"
+                      (task.ready_utc >>= parseUtc <&> dateTimeToUtcTime)
+                  )
+                  & showEither conf
+          , Task.modified_utc =
+              val_ $
+                fromMaybe "" $
+                  nowMb
+                    <&> timePrint conf.utcFormat
+                    <&> pack
+          }
 
     -- Duplicate tags
-    tags <- runSelectReturningList $ select $
-      filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
-      all_ taskLiteDb._tldbTaskToTag
+    tags <-
+      runSelectReturningList $
+        select $
+          filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
+            all_ taskLiteDb._tldbTaskToTag
 
-    liftIO $ insertTags
-      connection
-      Nothing
-      (TaskUlid newUlidText)
-      (fmap TaskToTag.tag tags)
+    liftIO $
+      insertTags
+        connection
+        Nothing
+        (TaskUlid newUlidText)
+        (fmap TaskToTag.tag tags)
 
-  liftIO $ pure $ Just $ "➡️  Created next task"
-    <+> dquotes (pretty $ task.body)
-    <+> "in repetition series" <+> dquotes (pretty $ Task.group_ulid task)
-    <+> "with id" <+> dquotes (pretty newUlidText)
+  liftIO $
+    pure $
+      Just $
+        "➡️  Created next task"
+          <+> dquotes (pretty $ task.body)
+          <+> "in repetition series"
+          <+> dquotes (pretty $ Task.group_ulid task)
+          <+> "with id"
+          <+> dquotes (pretty newUlidText)
 
 
 -- TODO: Eliminate code duplication with createNextRepetition
@@ -530,63 +927,86 @@ createNextRecurrence conf connection task = do
   newUlidText <- formatUlid getULID
   let
     taskUlid = primaryKey task
-    dueUtcMb = (Task.due_utc task) >>= parseUtc
-    durTextEither = maybeToEither
-                        "Task has no recurrence duration"
-                        task.recurrence_duration
+    dueUtcMb = task.due_utc >>= parseUtc
+    durTextEither =
+      maybeToEither
+        "Task has no recurrence duration"
+        task.recurrence_duration
     isoDurEither =
       durTextEither
-      <&> encodeUtf8
-      >>= Iso.parseDuration
+        <&> encodeUtf8
+        >>= Iso.parseDuration
 
-    nextDueMb = liftA2 Iso.addDuration isoDurEither
-      (maybeToEither "Task has no due UTC" (dueUtcMb <&> dateTimeToUtcTime))
+    nextDueMb =
+      liftA2
+        Iso.addDuration
+        isoDurEither
+        (maybeToEither "Task has no due UTC" (dueUtcMb <&> dateTimeToUtcTime))
 
   runBeamSqlite connection $ do
     runInsert $ insert taskLiteDb._tldbTasks $ insertFrom $ do
-      originalTask <- filter_
-        (\theTask -> primaryKey theTask ==. val_ taskUlid)
-        (all_ $ taskLiteDb._tldbTasks)
+      originalTask <-
+        filter_
+          (\theTask -> primaryKey theTask ==. val_ taskUlid)
+          (all_ $ taskLiteDb._tldbTasks)
 
-      pure originalTask
-        { Task.ulid = val_ newUlidText
-        , Task.due_utc = val_ $ nextDueMb & showEither conf
-        , Task.closed_utc = val_ Nothing
-        , Task.state = val_ Nothing
-
-        , Task.awake_utc = val_ $
-            (liftA2 Iso.addDuration isoDurEither
-              (maybeToEither "Task has no awake UTC"
-                (task.awake_utc >>= parseUtc <&> dateTimeToUtcTime)))
-            & showEither conf
-
-        , Task.ready_utc = val_ $
-            (liftA2 Iso.addDuration isoDurEither
-              (maybeToEither "Task has no ready UTC"
-                (task.ready_utc >>= parseUtc <&> dateTimeToUtcTime)))
-            & showEither conf
-
-        , Task.modified_utc = val_ $ fromMaybe ""
-            $ ulidTextToDateTime newUlidText
-            <&> timePrint conf.utcFormat
-            <&> pack
-        }
+      pure
+        originalTask
+          { Task.ulid = val_ newUlidText
+          , Task.due_utc = val_ $ nextDueMb & showEither conf
+          , Task.closed_utc = val_ Nothing
+          , Task.state = val_ Nothing
+          , Task.awake_utc =
+              val_ $
+                liftA2
+                  Iso.addDuration
+                  isoDurEither
+                  ( maybeToEither
+                      "Task has no awake UTC"
+                      (task.awake_utc >>= parseUtc <&> dateTimeToUtcTime)
+                  )
+                  & showEither conf
+          , Task.ready_utc =
+              val_ $
+                liftA2
+                  Iso.addDuration
+                  isoDurEither
+                  ( maybeToEither
+                      "Task has no ready UTC"
+                      (task.ready_utc >>= parseUtc <&> dateTimeToUtcTime)
+                  )
+                  & showEither conf
+          , Task.modified_utc =
+              val_ $
+                fromMaybe "" $
+                  ulidTextToDateTime newUlidText
+                    <&> timePrint conf.utcFormat
+                    <&> pack
+          }
 
     -- Duplicate tags
-    tags <- runSelectReturningList $ select $
-      filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
-      all_ taskLiteDb._tldbTaskToTag
+    tags <-
+      runSelectReturningList $
+        select $
+          filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
+            all_ taskLiteDb._tldbTaskToTag
 
-    liftIO $ insertTags
-      connection
-      Nothing
-      (TaskUlid newUlidText)
-      (fmap TaskToTag.tag tags)
+    liftIO $
+      insertTags
+        connection
+        Nothing
+        (TaskUlid newUlidText)
+        (fmap TaskToTag.tag tags)
 
-  liftIO $ pure $ Just $ "➡️  Created next task"
-    <+> dquotes (pretty $ task.body)
-    <+> "in recurrence series" <+> dquotes (pretty $ Task.group_ulid task)
-    <+> "with id" <+> dquotes (pretty newUlidText)
+  liftIO $
+    pure $
+      Just $
+        "➡️  Created next task"
+          <+> dquotes (pretty $ task.body)
+          <+> "in recurrence series"
+          <+> dquotes (pretty $ Task.group_ulid task)
+          <+> "with id"
+          <+> dquotes (pretty newUlidText)
 
 
 doTasks :: Config -> Connection -> Maybe [Text] -> [Text] -> IO (Doc AnsiStyle)
@@ -596,30 +1016,32 @@ doTasks conf connection noteWordsMaybe ids = do
       let
         taskUlid@(TaskUlid idText) = primaryKey task
 
-      if Task.closed_utc task /= Nothing
-      then pure $ "⚠️  Task" <+> dquotes (pretty idText) <+> "is already done"
-      else do
-        logMessageMaybe <-
-          if task.repetition_duration /= Nothing
-          then createNextRepetition conf connection task
-          else
-            if Task.recurrence_duration task /= Nothing
-            then createNextRecurrence conf connection task
-            else pure Nothing
+      if isJust task.closed_utc
+        then pure $ "⚠️  Task" <+> dquotes (pretty idText) <+> "is already done"
+        else do
+          logMessageMaybe <-
+            if isJust task.repetition_duration
+              then createNextRepetition conf connection task
+              else
+                if isJust task.recurrence_duration
+                  then createNextRecurrence conf connection task
+                  else pure Nothing
 
-        noteMessageMaybe <- case noteWordsMaybe of
-          Nothing -> pure Nothing
-          Just noteWords -> liftIO $
-            addNote conf connection (unwords noteWords) ids
-            >>= pure . Just
+          noteMessageMaybe <- case noteWordsMaybe of
+            Nothing -> pure Nothing
+            Just noteWords ->
+              liftIO $
+                addNote conf connection (unwords noteWords) ids <&> Just
 
-        setStateAndClosed connection taskUlid $ Just Done
+          setStateAndClosed connection taskUlid $ Just Done
 
-        pure $
-          (fromMaybe "" $ noteMessageMaybe <&> (<> hardline))
-          <> "✅ Finished task" <+> dquotes (pretty $ task.body)
-          <+> "with id" <+> dquotes (pretty idText)
-          <> (fromMaybe "" $ logMessageMaybe <&> (hardline <>))
+          pure $
+            fromMaybe "" (noteMessageMaybe <&> (<> hardline))
+              <> "✅ Finished task"
+              <+> dquotes (pretty $ task.body)
+              <+> "with id"
+              <+> dquotes (pretty idText)
+                <> fromMaybe "" (logMessageMaybe <&> (hardline <>))
 
   pure $ vsep docs
 
@@ -637,10 +1059,19 @@ endTasks conf connection ids = do
 
       numOfChanges <- changes connection
 
-      pure $ if numOfChanges == 0
-        then "⚠️  Task" <+> prettyBody <+> "with id" <+> prettyId
+      pure $
+        if numOfChanges == 0
+          then
+            "⚠️  Task"
+              <+> prettyBody
+              <+> "with id"
+              <+> prettyId
               <+> "is already marked as obsolete"
-        else "⏹  Marked task" <+> prettyBody <+> "with id" <+> prettyId
+          else
+            "⏹  Marked task"
+              <+> prettyBody
+              <+> "with id"
+              <+> prettyId
               <+> "as obsolete"
 
   pure $ vsep docs
@@ -659,10 +1090,19 @@ trashTasks conf connection ids = do
 
       numOfChanges <- changes connection
 
-      pure $ if numOfChanges == 0
-        then "⚠️  Task" <+> prettyBody <+> "with id" <+> prettyId
+      pure $
+        if numOfChanges == 0
+          then
+            "⚠️  Task"
+              <+> prettyBody
+              <+> "with id"
+              <+> prettyId
               <+> "is already marked as deletable"
-        else "🗑  Marked task" <+> prettyBody <+> "with id" <+> prettyId
+          else
+            "🗑  Marked task"
+              <+> prettyBody
+              <+> "with id"
+              <+> prettyId
               <+> "as deletable"
 
   pure $ vsep docs
@@ -678,17 +1118,20 @@ deleteTasks conf connection ids = do
         prettyId = dquotes (pretty idText)
 
       runBeamSqlite connection $ do
-        runDelete $ delete
-          taskLiteDb._tldbTasks
-          (\theTask -> primaryKey theTask ==. val_ taskUlid)
+        runDelete $
+          delete
+            taskLiteDb._tldbTasks
+            (\theTask -> primaryKey theTask ==. val_ taskUlid)
 
-        runDelete $ delete
-          taskLiteDb._tldbTaskToTag
-          (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid)
+        runDelete $
+          delete
+            taskLiteDb._tldbTaskToTag
+            (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid)
 
-        runDelete $ delete
-          taskLiteDb._tldbTaskToNote
-          (\noteValue -> TaskToNote.task_ulid noteValue ==. val_ taskUlid)
+        runDelete $
+          delete
+            taskLiteDb._tldbTaskToNote
+            (\noteValue -> TaskToNote.task_ulid noteValue ==. val_ taskUlid)
 
         pure $ "❌ Deleted task" <+> prettyBody <+> "with id" <+> prettyId
 
@@ -697,11 +1140,11 @@ deleteTasks conf connection ids = do
 
 durationToIso :: Duration -> Text
 durationToIso dur =
-  "PT" <> (show $ (coerce (durationMinutes dur) :: Int64)) <> "M"
+  "PT" <> show (coerce (durationMinutes dur) :: Int64) <> "M"
 
 
-repeatTasks ::
-  Config -> Connection -> Iso.Duration -> [IdText] -> IO (Doc AnsiStyle)
+repeatTasks
+  :: Config -> Connection -> Iso.Duration -> [IdText] -> IO (Doc AnsiStyle)
 repeatTasks conf connection duration ids = do
   let durationIsoText = decodeUtf8 $ Iso.formatDuration duration
 
@@ -714,37 +1157,51 @@ repeatTasks conf connection duration ids = do
 
       groupUlid <- formatUlid getULID
 
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat
-            [ (Task.repetition_duration task_) <-. val_ (Just durationIsoText)
-            , (Task.group_ulid task_) <-. val_ (Just groupUlid)
-            ])
-          (\task_ -> primaryKey task_ ==. val_ taskUlid)
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            ( \task_ ->
+                mconcat
+                  [ Task.repetition_duration task_
+                      <-. val_ (Just durationIsoText)
+                  , Task.group_ulid task_ <-. val_ (Just groupUlid)
+                  ]
+            )
+            (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
       -- If repetition is set for already closed task,
       -- next task in series must be created immediately
-      creationMb <- if Task.closed_utc task /= Nothing
-                    then liftIO $ createNextRepetition conf connection $ task
-                            { Task.repetition_duration = Just durationIsoText
-                            , Task.group_ulid = Just groupUlid
-                            }
-                    else pure $ Just mempty
+      creationMb <-
+        if isJust task.closed_utc
+          then
+            liftIO $
+              createNextRepetition conf connection $
+                task
+                  { Task.repetition_duration = Just durationIsoText
+                  , Task.group_ulid = Just groupUlid
+                  }
+          else pure $ Just mempty
 
-      let creationResult = fromMaybe
-            "⚠️ Next task in repetition series could not be created!"
-            creationMb
+      let creationResult =
+            fromMaybe
+              "⚠️ Next task in repetition series could not be created!"
+              creationMb
 
-      pure $ "📅 Set repeat duration of task" <+> prettyBody
-        <+> "with id" <+> prettyId
-        <+> "to" <+> dquotes (pretty $ durationIsoText)
-        <++> creationResult
+      pure $
+        "📅 Set repeat duration of task"
+          <+> prettyBody
+          <+> "with id"
+          <+> prettyId
+          <+> "to"
+          <+> dquotes (pretty durationIsoText)
+          <++> creationResult
 
   pure $ vsep docs
 
 
-recurTasks ::
-  Config -> Connection -> Iso.Duration -> [IdText] -> IO (Doc AnsiStyle)
+recurTasks
+  :: Config -> Connection -> Iso.Duration -> [IdText] -> IO (Doc AnsiStyle)
 recurTasks conf connection duration ids = do
   let durationIsoText = decodeUtf8 $ Iso.formatDuration duration
 
@@ -757,37 +1214,51 @@ recurTasks conf connection duration ids = do
 
       groupUlid <- formatUlid getULID
 
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat
-            [ (Task.recurrence_duration task_) <-. val_ (Just durationIsoText)
-            , (Task.group_ulid task_) <-. val_ (Just groupUlid)
-            ])
-          (\task_ -> primaryKey task_ ==. val_ taskUlid)
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            ( \task_ ->
+                mconcat
+                  [ Task.recurrence_duration task_
+                      <-. val_ (Just durationIsoText)
+                  , Task.group_ulid task_ <-. val_ (Just groupUlid)
+                  ]
+            )
+            (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
       -- If recurrence is set for already closed task,
       -- next task in series must be created immediately
-      creationMb <- if Task.closed_utc task /= Nothing
-                    then liftIO $ createNextRecurrence conf connection $ task
-                            { Task.recurrence_duration = Just durationIsoText
-                            , Task.group_ulid = Just groupUlid
-                            }
-                    else pure $ Just mempty
+      creationMb <-
+        if isJust task.closed_utc
+          then
+            liftIO $
+              createNextRecurrence conf connection $
+                task
+                  { Task.recurrence_duration = Just durationIsoText
+                  , Task.group_ulid = Just groupUlid
+                  }
+          else pure $ Just mempty
 
-      let creationResult = fromMaybe
-            "⚠️ Next task in recurrence series could not be created!"
-            creationMb
+      let creationResult =
+            fromMaybe
+              "⚠️ Next task in recurrence series could not be created!"
+              creationMb
 
-      pure $ "📅 Set recurrence duration of task" <+> prettyBody
-        <+> "with id" <+> prettyId
-        <+> "to" <+> dquotes (pretty $ durationIsoText)
-        <++> creationResult
+      pure $
+        "📅 Set recurrence duration of task"
+          <+> prettyBody
+          <+> "with id"
+          <+> prettyId
+          <+> "to"
+          <+> dquotes (pretty durationIsoText)
+          <++> creationResult
 
   pure $ vsep docs
 
 
 adjustPriority :: Config -> Float -> [IdText] -> IO (Doc AnsiStyle)
-adjustPriority conf adjustment ids  = do
+adjustPriority conf adjustment ids = do
   dbPath <- getDbPath conf
   withConnection dbPath $ \connection -> do
     docs <- forM ids $ \idSubstr -> do
@@ -805,20 +1276,31 @@ adjustPriority conf adjustment ids  = do
         --     ])
         --     (\task -> primaryKey task ==. val_ taskUlid)
 
-        execute connection
-          (Query "update `tasks` \
-            \set `priority_adjustment` = ifnull(`priority_adjustment`, 0) + ? \
-            \where `ulid` == ?")
+        execute
+          connection
+          ( Query
+              "update `tasks` \
+              \set \
+              \  `priority_adjustment` = ifnull(`priority_adjustment`, 0) + ? \
+              \where `ulid` == ?"
+          )
           (adjustment, idText :: Text)
 
         numOfChanges <- changes connection
 
-        pure $ if numOfChanges == 0
-          then "⚠️ An error occurred while adjusting the priority of task"
+        pure $
+          if numOfChanges == 0
+            then
+              "⚠️ An error occurred while adjusting the priority of task"
                 <+> prettyBody
-          else (if adjustment > 0 then "⬆️  Increased" else "⬇️  Decreased")
-                <+> "priority of task" <+> prettyBody <+> "with id"
-                <+> prettyId <+> "by" <+> (pretty $ abs adjustment)
+            else
+              (if adjustment > 0 then "⬆️  Increased" else "⬇️  Decreased")
+                <+> "priority of task"
+                <+> prettyBody
+                <+> "with id"
+                <+> prettyId
+                <+> "by"
+                <+> pretty (abs adjustment)
 
     pure $ vsep docs
 
@@ -827,20 +1309,24 @@ startTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 startTasks conf connection ids = do
   logMessage <- addNote conf connection "start" ids
 
-  pure $ pretty $ T.replace
-    "📝  Added a note to"
-    "⏳ Started"
-    (show logMessage)
+  pure $
+    pretty $
+      T.replace
+        "📝  Added a note to"
+        "⏳ Started"
+        (show logMessage)
 
 
 stopTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 stopTasks conf connection ids = do
   logMessages <- addNote conf connection "stop" ids
 
-  pure $ pretty $ T.replace
-    "📝  Added a note to"
-    "⌛️ Stopped"
-    (show logMessages)
+  pure $
+    pretty $
+      T.replace
+        "📝  Added a note to"
+        "⌛️ Stopped"
+        (show logMessages)
 
 
 formatTaskForInfo
@@ -853,24 +1339,32 @@ formatTaskForInfo conf now (taskV, tags, notes) =
     mkGreen = annotate (color Green)
     grayOut = annotate (colorDull Black)
     stateHierarchy = getStateHierarchy now $ cpTimesAndState taskV
-    mbCreatedUtc = fmap
-      (pack . (timePrint $ utcFormat defaultConfig))
-      (ulidTextToDateTime $ TaskView.ulid taskV)
-    tagsPretty = tags
-      <&> (\t -> (annotate (tagStyle conf) (pretty $ TaskToTag.tag t))
-                  <++> (fromMaybe mempty $ fmap
-                        (grayOut . pretty . pack . timePrint conf.utcFormat)
-                        (ulidTextToDateTime $ TaskToTag.ulid t))
-                  <++> (grayOut $ pretty $ TaskToTag.ulid t)
-          )
-    notesPretty = notes
-      <&> (\n -> (fromMaybe mempty $ fmap
+    mbCreatedUtc =
+      fmap
+        (pack . timePrint (utcFormat defaultConfig))
+        (ulidTextToDateTime taskV.ulid)
+    tagsPretty =
+      tags
+        <&> ( \t ->
+                annotate (tagStyle conf) (pretty t.tag)
+                  <++> maybe
+                    mempty
                     (grayOut . pretty . pack . timePrint conf.utcFormat)
-                    (ulidTextToDateTime $ TaskToNote.ulid n))
-                  <++> (grayOut $ pretty $ TaskToNote.ulid n) <> hardline
-                  <> (indent 2 $ reflow $ TaskToNote.note n)
+                    (ulidTextToDateTime t.ulid)
+                  <++> grayOut (pretty t.ulid)
+            )
+    notesPretty =
+      notes
+        <&> ( \n ->
+                maybe
+                  mempty
+                  (grayOut . pretty . pack . timePrint conf.utcFormat)
+                  (ulidTextToDateTime n.ulid)
+                  <++> grayOut (pretty n.ulid)
                   <> hardline
-          )
+                  <> indent 2 (reflow n.note)
+                  <> hardline
+            )
 
     mbAwakeUtc = TaskView.awake_utc taskV
     mbReadyUtc = TaskView.ready_utc taskV
@@ -881,104 +1375,130 @@ formatTaskForInfo conf now (taskV, tags, notes) =
     mbModifiedUtc = Just $ TaskView.modified_utc taskV
 
     printIf :: Doc AnsiStyle -> Maybe Text -> Maybe (Doc AnsiStyle)
-    printIf name value = fmap
-      (\v -> name <+> (annotate (dueStyle conf) $ pretty v) <> hardline)
-      value
+    printIf name =
+      fmap
+        ( \v ->
+            name
+              <+> annotate (dueStyle conf) (pretty v)
+                <> hardline
+        )
   in
-       hardline
-    <> annotate bold (reflow $ TaskView.body taskV) <> hardline
-    <> hardline
-    <> (if P.null tags
-        then mempty
-        else (hsep $ (tags <&> TaskToTag.tag) <&> (formatTag conf)) <> hardline
-              <> hardline
-        )
-
-    <> (if P.null notes
-        then mempty
-        else (notes
-              <&> (\n -> (fromMaybe mempty $ fmap
-                    (grayOut . pretty . pack . timePrint (utcFormatShort conf))
-                    (ulidTextToDateTime $ TaskToNote.ulid n))
-                    <++> (align $ reflow $ TaskToNote.note n)
-                  )
-              & vsep)
-              <> hardline
-              <> hardline
-        )
-
-    <> "   State:" <+> mkGreen (pretty stateHierarchy) <> hardline
-    <> "Priority:" <+> annotate (priorityStyle conf)
-          (pretty $ TaskView.priority taskV) <> hardline
-    <> "    ULID:" <+> grayOut (pretty $ TaskView.ulid taskV)
+    hardline
+      <> annotate bold (reflow $ TaskView.body taskV)
+      <> hardline
+      <> hardline
+      <> ( if P.null tags
+            then mempty
+            else
+              hsep ((tags <&> TaskToTag.tag) <&> formatTag conf)
+                <> hardline
+                <> hardline
+         )
+      <> ( if P.null notes
+            then mempty
+            else
+              ( notes
+                  <&> ( \n ->
+                          maybe
+                            mempty
+                            ( grayOut
+                                . pretty
+                                . pack
+                                . timePrint
+                                  (utcFormatShort conf)
+                            )
+                            (ulidTextToDateTime n.ulid)
+                            <++> align (reflow n.note)
+                      )
+                  & vsep
+              )
+                <> hardline
+                <> hardline
+         )
+      <> "   State:"
+      <+> mkGreen (pretty stateHierarchy)
         <> hardline
-
-    <> hardline
-
-    <> ((
-          (printIf "🆕  Created  ", mbCreatedUtc) :
-          (printIf "☀️   Awake   ", mbAwakeUtc) :
-          (printIf "📅   Ready   ", mbReadyUtc) :
-          (printIf "⏳  Waiting  ", mbWaitingUtc) :
-          (printIf "🔎  Review   ", mbReviewUtc) :
-          (printIf "📅    Due    ", mbDueUtc) :
-          (printIf "✅   Done    ", mbClosedUtc) :
-          (printIf "✏️   Modified ", mbModifiedUtc) :
-        [])
-        & sortBy (compare `on` snd)
-        <&> (\tup -> (fst tup) (snd tup))
-        & catMaybes
-        & punctuate (pretty ("       ⬇" :: Text))
-        & vsep
-      )
-
-    <> hardline
-
-    <> (fromMaybe mempty $ (fmap
-          (\value -> "Repetition Duration:" <+> (mkGreen $ pretty value)
-              <> hardline)
+        <> "Priority:"
+      <+> annotate
+        (priorityStyle conf)
+        (pretty $ TaskView.priority taskV)
+        <> hardline
+        <> "    ULID:"
+      <+> grayOut (pretty $ TaskView.ulid taskV)
+        <> hardline
+        <> hardline
+        <> ( [ (printIf "🆕  Created  ", mbCreatedUtc)
+             , (printIf "☀️   Awake   ", mbAwakeUtc)
+             , (printIf "📅   Ready   ", mbReadyUtc)
+             , (printIf "⏳  Waiting  ", mbWaitingUtc)
+             , (printIf "🔎  Review   ", mbReviewUtc)
+             , (printIf "📅    Due    ", mbDueUtc)
+             , (printIf "✅   Done    ", mbClosedUtc)
+             , (printIf "✏️   Modified ", mbModifiedUtc)
+             ]
+              & sortBy (compare `on` snd)
+              <&> (\tup -> fst tup (snd tup))
+              & catMaybes
+              & punctuate (pretty ("       ⬇" :: Text))
+              & vsep
+           )
+        <> hardline
+        <> maybe
+          mempty
+          ( \value ->
+              "Repetition Duration:"
+                <+> mkGreen (pretty value)
+                  <> hardline
+          )
           (TaskView.repetition_duration taskV)
-        ))
-
-    <> (fromMaybe mempty $ (fmap
-          (\value -> "Recurrence Duration:" <+> (mkGreen $ pretty value)
-              <> hardline)
+        <> maybe
+          mempty
+          ( \value ->
+              "Recurrence Duration:"
+                <+> mkGreen (pretty value)
+                  <> hardline
+          )
           (TaskView.recurrence_duration taskV)
-        ))
-
-    <> (fromMaybe mempty $ (fmap
-          (\value -> "Group Ulid:"
-              <+> (grayOut $ pretty value)
-              <> hardline)
+        <> maybe
+          mempty
+          ( \value ->
+              "Group Ulid:"
+                <+> grayOut (pretty value)
+                  <> hardline
+          )
           (TaskView.group_ulid taskV)
-        ))
-
-    <> "User:" <+> (mkGreen $ pretty $ TaskView.user taskV) <> hardline
-
-    <> hardline
-
-    <> (fromMaybe mempty $ (fmap
-          (\value -> "Metadata:" <> hardline
-              <> indent 2 (pretty $ decodeUtf8 $ Yaml.encode value)
-              <> hardline
+        <> "User:"
+      <+> mkGreen (pretty $ TaskView.user taskV)
+        <> hardline
+        <> hardline
+        <> maybe
+          mempty
+          ( \value ->
+              "Metadata:"
+                <> hardline
+                <> indent 2 (pretty $ decodeUtf8 $ Yaml.encode value)
+                <> hardline
           )
           (TaskView.metadata taskV)
-        ))
-
-    <> (if P.null tags
-        then mempty
-        else (annotate underlined "Tags Detailed:") <> hardline
-              <> hardline
-              <> vsep tagsPretty <> hardline
-              <> hardline
-        )
-
-    <> (if P.null notes
-        then mempty
-        else (annotate underlined "Notes Detailed:") <> hardline
-              <> hardline
-              <> vsep notesPretty <> hardline
-        )
+        <> ( if P.null tags
+              then mempty
+              else
+                annotate underlined "Tags Detailed:"
+                  <> hardline
+                  <> hardline
+                  <> vsep tagsPretty
+                  <> hardline
+                  <> hardline
+           )
+        <> ( if P.null notes
+              then mempty
+              else
+                annotate underlined "Notes Detailed:"
+                  <> hardline
+                  <> hardline
+                  <> vsep notesPretty
+                  <> hardline
+           )
 
 
 infoTask :: Config -> Connection -> Text -> IO (Doc AnsiStyle)
@@ -990,17 +1510,24 @@ infoTask conf connection idSubstr = do
     now <- dateCurrent
 
     runBeamSqlite connection $ do
-      (mbFullTask :: Maybe TaskView) <- runSelectReturningOne $ select $
-        filter_ (\tsk -> TaskView.ulid tsk ==. val_ idText) $
-        allFromView_ taskLiteDb._tldbTasksView
+      (mbFullTask :: Maybe TaskView) <-
+        runSelectReturningOne $
+          select $
+            filter_ (\tsk -> TaskView.ulid tsk ==. val_ idText) $
+              allFromView_ taskLiteDb._tldbTasksView
 
-      tags <- runSelectReturningList $ select $
-        filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
-        all_ taskLiteDb._tldbTaskToTag
+      tags <-
+        runSelectReturningList $
+          select $
+            filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
+              all_ taskLiteDb._tldbTaskToTag
 
-      notes <- runSelectReturningList $ select $
-        filter_ (\theNote -> TaskToNote.task_ulid theNote ==. val_ taskUlid) $
-        all_ taskLiteDb._tldbTaskToNote
+      notes <-
+        runSelectReturningList
+          $ select
+          $ filter_
+            (\theNote -> TaskToNote.task_ulid theNote ==. val_ taskUlid)
+          $ all_ taskLiteDb._tldbTaskToNote
 
       pure $ case mbFullTask of
         Nothing -> pretty noTasksWarning
@@ -1012,24 +1539,36 @@ nextTask conf connection = do
   now <- dateCurrent
 
   runBeamSqlite connection $ do
-    (mbFullTask :: Maybe TaskView) <- runSelectReturningOne $ select $
-      limit_ 1  $
-      orderBy_ (desc_ . TaskView.priority) $
-      filter_ (\tsk -> TaskView.closed_utc tsk ==. val_ Nothing) $
-      allFromView_ taskLiteDb._tldbTasksView
+    (mbFullTask :: Maybe TaskView) <-
+      runSelectReturningOne $
+        select $
+          limit_ 1 $
+            orderBy_ (desc_ . TaskView.priority) $
+              filter_ (\tsk -> TaskView.closed_utc tsk ==. val_ Nothing) $
+                allFromView_ taskLiteDb._tldbTasksView
 
     case mbFullTask of
       Nothing -> pure $ pretty noTasksWarning
       Just fullTask -> do
-        tags <- runSelectReturningList $ select $
-          filter_ (\tag -> TaskToTag.task_ulid tag ==.
-            (val_ $ TaskUlid $ TaskView.ulid fullTask)) $
-          all_ taskLiteDb._tldbTaskToTag
+        tags <-
+          runSelectReturningList
+            $ select
+            $ filter_
+              ( \tag ->
+                  TaskToTag.task_ulid tag
+                    ==. val_ (TaskUlid $ TaskView.ulid fullTask)
+              )
+            $ all_ taskLiteDb._tldbTaskToTag
 
-        notes <- runSelectReturningList $ select $
-          filter_ (\theNote -> TaskToNote.task_ulid theNote ==.
-            (val_ $ TaskUlid $ TaskView.ulid fullTask)) $
-          all_ taskLiteDb._tldbTaskToNote
+        notes <-
+          runSelectReturningList
+            $ select
+            $ filter_
+              ( \theNote ->
+                  TaskToNote.task_ulid theNote
+                    ==. val_ (TaskUlid $ TaskView.ulid fullTask)
+              )
+            $ all_ taskLiteDb._tldbTaskToNote
 
         pure $ formatTaskForInfo conf now (fullTask, tags, notes)
 
@@ -1038,11 +1577,13 @@ nextTask conf connection = do
 --       https://github.com/haskell-beam/beam/issues/557
 randomTask :: Config -> Connection -> IO (Doc AnsiStyle)
 randomTask conf connection = do
-  (tasks :: [FullTask]) <- query_ connection $ Query
-    "select * from `tasks_view` \
-    \where closed_utc is null \
-    \order by random() \
-    \limit 1"
+  (tasks :: [FullTask]) <-
+    query_ connection $
+      Query
+        "select * from `tasks_view` \
+        \where closed_utc is null \
+        \order by random() \
+        \limit 1"
 
   case tasks of
     [fullTask] -> infoTask conf connection fullTask.ulid
@@ -1051,74 +1592,85 @@ randomTask conf connection = do
 
 findTask :: Connection -> Text -> IO (Doc AnsiStyle)
 findTask connection aPattern = do
-  tasks :: [(Text, Text, Maybe [Text], Maybe [Text], Maybe Text)]
-    <- query_ connection $ Query
-      "select ulid, body, tags, notes, metadata from tasks_view"
+  tasks :: [(Text, Text, Maybe [Text], Maybe [Text], Maybe Text)] <-
+    query_ connection $
+      Query
+        "select ulid, body, tags, notes, metadata from tasks_view"
 
   let
     ulidWidth = 5
     numOfResults = 8
     minimumScore = 4
     ulidColor = Green
-    preTag = "\x1b[4m\x1b[34m"  -- Set color to blue and underline text
-    postTag = "\x1b[0m"  -- Reset styling
-    metaNorm metadata = metadata
-      & fromMaybe ""
-      & T.replace ",\"" ", \""
-      & T.replace "\":" "\": "
-      & T.replace "\"" ""
-    matchFunc = Huzzy.match
-      Huzzy.IgnoreCase
-      (preTag, postTag)
-      identity
-      aPattern
+    preTag = "\x1b[4m\x1b[34m" -- Set color to blue and underline text
+    postTag = "\x1b[0m" -- Reset styling
+    metaNorm metadata =
+      metadata
+        & fromMaybe ""
+        & T.replace ",\"" ", \""
+        & T.replace "\":" "\": "
+        & T.replace "\"" ""
+    matchFunc =
+      Huzzy.match
+        Huzzy.IgnoreCase
+        (preTag, postTag)
+        identity
+        aPattern
 
-    -- | Calculate fuzzy score for each part individually
+    -- Calculate fuzzy score for each part individually
     -- and pick the highest one
-    scoreFunc = \(ulid, theBody, _, mbNotes, mbMetadata) ->
+    scoreFunc (ulid, theBody, _, mbNotes, mbMetadata) =
       let
         scoreParts =
           [ matchFunc theBody
           , matchFunc (maybe "" unwords mbNotes)
-          -- TODO: Find good way to include tags
-          -- , matchFunc (maybe "" unwords mbTags)
-          , matchFunc (metaNorm mbMetadata)
+          , -- TODO: Find good way to include tags
+            -- , matchFunc (maybe "" unwords mbTags)
+            matchFunc (metaNorm mbMetadata)
           , matchFunc ulid
           ]
         highestScore = P.maximum $ 0 : (catMaybes scoreParts <&> Huzzy.score)
-        combinedText = vcat $ P.intersperse mempty $ (catMaybes scoreParts)
-          <&> Huzzy.rendered
-          <&> reflow
+        combinedText =
+          vcat $
+            P.intersperse mempty $
+              catMaybes scoreParts
+                <&> Huzzy.rendered
+                <&> reflow
       in
         (highestScore, ulid, combinedText)
 
     fstOf3 (x, _, _) = x
-    tasksScored = tasks
-      <&> scoreFunc
-      & P.filter ((> minimumScore) . fstOf3)
-      & sortOn (Down . fstOf3)
-    moreResults = (P.length tasksScored) - numOfResults
+    tasksScored =
+      tasks
+        <&> scoreFunc
+        & P.filter ((> minimumScore) . fstOf3)
+        & sortOn (Down . fstOf3)
+    moreResults = P.length tasksScored - numOfResults
     header =
-      annotate (underlined <> color ulidColor) (fill ulidWidth "ULID") <++>
-      annotate (underlined) (fill 20 "Task") <>
-      hardline
+      annotate (underlined <> color ulidColor) (fill ulidWidth "ULID")
+        <++> annotate underlined (fill 20 "Task")
+        <> hardline
     body =
       tasksScored
         & P.take numOfResults
-        <&> (\(_, ulid, combinedText) ->
-              annotate (color ulidColor)
-                (fill ulidWidth $ pretty $ T.takeEnd ulidWidth ulid)
-              <> (indent 2 combinedText))
+        <&> ( \(_, ulid, combinedText) ->
+                annotate
+                  (color ulidColor)
+                  (fill ulidWidth $ pretty $ T.takeEnd ulidWidth ulid)
+                  <> indent 2 combinedText
+            )
         & P.intersperse mempty
         & vsep
     footer =
       if moreResults > 0
-      then hardline
-        <> hardline
-        <> annotate (color Red)
-            ("There are " <> pretty moreResults <> " more results available")
-        <> hardline
-      else hardline
+        then
+          hardline
+            <> hardline
+            <> annotate
+              (color Red)
+              ("There are " <> pretty moreResults <> " more results available")
+            <> hardline
+        else hardline
 
   pure $ header <> body <> footer
 
@@ -1127,7 +1679,6 @@ findTask connection aPattern = do
 -- withConnectCont :: Text -> ContT a IO Connection
 -- withConnectCont dbPath =
 --     ContT $ withConnection dbPath
-
 
 addTag :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
 addTag conf connection tag ids = do
@@ -1143,17 +1694,25 @@ addTag conf connection tag ids = do
 
       let taskToTag = TaskToTag ulid taskUlid tag
 
-      runBeamSqlite connection $ runInsert $
-        insert taskLiteDb._tldbTaskToTag $
-        insertValues [taskToTag]
+      runBeamSqlite connection $
+        runInsert $
+          insert taskLiteDb._tldbTaskToTag $
+            insertValues [taskToTag]
 
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat [(Task.modified_utc task_) <-. val_ now])
-          (\task_ -> primaryKey task_ ==. val_ taskUlid)
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            (\task_ -> mconcat [Task.modified_utc task_ <-. val_ now])
+            (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
-      pure $ "🏷  Added tag" <+> dquotes (pretty tag)
-            <+> "to task" <+> prettyBody <+> "with id" <+> prettyId
+      pure $
+        "🏷  Added tag"
+          <+> dquotes (pretty tag)
+          <+> "to task"
+          <+> prettyBody
+          <+> "with id"
+          <+> prettyId
 
   pure $ vsep docs
 
@@ -1162,14 +1721,17 @@ deleteTag :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
 deleteTag conf connection tag ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runDelete $ delete
-        taskLiteDb._tldbTaskToTag
-        (\tagRecord ->
-            TaskToTag.task_ulid tagRecord ==. val_ (primaryKey task) &&.
-            (TaskToTag.tag tagRecord ==. val_ tag)
-        )
+      runBeamSqlite connection $
+        runDelete $
+          delete
+            taskLiteDb._tldbTaskToTag
+            ( \tagRecord ->
+                TaskToTag.task_ulid tagRecord
+                  ==. val_ (primaryKey task)
+                  &&. (TaskToTag.tag tagRecord ==. val_ tag)
+            )
 
-      pure $ getResultMsg ("💥 Removed tag \"" <> pretty tag <> "\"")  task
+      pure $ getResultMsg ("💥 Removed tag \"" <> pretty tag <> "\"") task
 
   pure $ vsep docs
 
@@ -1188,17 +1750,23 @@ addNote conf connection noteBody ids = do
 
       let taskToNote = TaskToNote ulid taskUlid noteBody
 
-      runBeamSqlite connection $ runInsert $
-        insert taskLiteDb._tldbTaskToNote $
-        insertValues [taskToNote]
+      runBeamSqlite connection $
+        runInsert $
+          insert taskLiteDb._tldbTaskToNote $
+            insertValues [taskToNote]
 
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat [(Task.modified_utc task_) <-. val_ now])
-          (\task_ -> primaryKey task_ ==. val_ taskUlid)
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            (\task_ -> mconcat [Task.modified_utc task_ <-. val_ now])
+            (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
-      pure $ "🗒  Added a note to task" <+> prettyBody
-            <+> "with id" <+> prettyId
+      pure $
+        "🗒  Added a note to task"
+          <+> prettyBody
+          <+> "with id"
+          <+> prettyId
 
   pure $ vsep docs
 
@@ -1216,15 +1784,22 @@ setDueUtc conf connection datetime ids = do
         prettyBody = dquotes (pretty $ task.body)
         prettyId = dquotes (pretty idText)
 
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat [(Task.due_utc task_) <-. val_ (Just utcText)])
-          (\task_ -> primaryKey task_ ==. val_ taskUlid)
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            (\task_ -> mconcat [Task.due_utc task_ <-. val_ (Just utcText)])
+            (\task_ -> primaryKey task_ ==. val_ taskUlid)
 
-        -- TODO: Update modified_utc via SQL trigger
+      -- TODO: Update modified_utc via SQL trigger
 
-      pure $ "📅 Set due UTC of task" <+> prettyBody <+> "with id" <+> prettyId
-            <+> "to" <+> dquotes (pretty utcText)
+      pure $
+        "📅 Set due UTC of task"
+          <+> prettyBody
+          <+> "with id"
+          <+> prettyId
+          <+> "to"
+          <+> dquotes (pretty utcText)
 
   pure $ vsep docs
 
@@ -1243,14 +1818,17 @@ uncloseTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 uncloseTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat
-              [ (Task.closed_utc task_) <-. (val_ Nothing)
-              , (Task.state task_) <-. (val_ Nothing)
-              ]
-          )
-          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            ( \task_ ->
+                mconcat
+                  [ Task.closed_utc task_ <-. val_ Nothing
+                  , Task.state task_ <-. val_ Nothing
+                  ]
+            )
+            (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
       pure $ getResultMsg "💥 Removed close timestamp and state field" task
 
@@ -1261,10 +1839,12 @@ undueTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 undueTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat [(Task.due_utc task_) <-. (val_ Nothing)])
-          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            (\task_ -> mconcat [Task.due_utc task_ <-. val_ Nothing])
+            (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
       pure $ getResultMsg "💥 Removed due timestamp" task
 
@@ -1275,14 +1855,17 @@ unwaitTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unwaitTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat
-            [ (Task.waiting_utc task_) <-. (val_ Nothing)
-            , (Task.review_utc task_) <-. (val_ Nothing)
-            ]
-          )
-          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            ( \task_ ->
+                mconcat
+                  [ Task.waiting_utc task_ <-. val_ Nothing
+                  , Task.review_utc task_ <-. val_ Nothing
+                  ]
+            )
+            (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
       pure $ getResultMsg "💥 Removed waiting and review timestamps" task
 
@@ -1293,10 +1876,12 @@ unwakeTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unwakeTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat [(Task.awake_utc task_) <-. (val_ Nothing)])
-          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            (\task_ -> mconcat [Task.awake_utc task_ <-. val_ Nothing])
+            (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
       pure $ getResultMsg "💥 Removed awake timestamp" task
 
@@ -1307,10 +1892,12 @@ unreadyTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unreadyTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat [(Task.ready_utc task_) <-. (val_ Nothing)])
-          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            (\task_ -> mconcat [Task.ready_utc task_ <-. val_ Nothing])
+            (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
       pure $ getResultMsg "💥 Removed ready timestamp" task
 
@@ -1321,10 +1908,12 @@ unreviewTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unreviewTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat [(Task.review_utc task_) <-. (val_ Nothing)])
-          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            (\task_ -> mconcat [Task.review_utc task_ <-. val_ Nothing])
+            (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
       pure $ getResultMsg "💥 Removed review timestamp" task
 
@@ -1335,11 +1924,15 @@ unrepeatTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unrepeatTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat
-              [(Task.repetition_duration task_) <-. (val_ Nothing)])
-          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            ( \task_ ->
+                mconcat
+                  [Task.repetition_duration task_ <-. val_ Nothing]
+            )
+            (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
       pure $ getResultMsg "💥 Removed repetition duration" task
 
@@ -1350,11 +1943,15 @@ unrecurTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unrecurTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat
-              [(Task.recurrence_duration task_) <-. (val_ Nothing)])
-          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            ( \task_ ->
+                mconcat
+                  [Task.recurrence_duration task_ <-. val_ Nothing]
+            )
+            (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
       pure $ getResultMsg "💥 Removed recurrence duration" task
 
@@ -1365,9 +1962,11 @@ untagTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 untagTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runDelete $ delete
-        taskLiteDb._tldbTaskToTag
-        (\tag -> TaskToTag.task_ulid tag ==. val_ (primaryKey task))
+      runBeamSqlite connection $
+        runDelete $
+          delete
+            taskLiteDb._tldbTaskToTag
+            (\tag -> TaskToTag.task_ulid tag ==. val_ (primaryKey task))
 
       pure $ getResultMsg "💥 Removed all tags" task
 
@@ -1378,11 +1977,13 @@ unnoteTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unnoteTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runDelete $ delete
-        taskLiteDb._tldbTaskToNote
-        (\noteValue ->
-            TaskToNote.task_ulid noteValue ==. val_ (primaryKey task)
-        )
+      runBeamSqlite connection $
+        runDelete $
+          delete
+            taskLiteDb._tldbTaskToNote
+            ( \noteValue ->
+                TaskToNote.task_ulid noteValue ==. val_ (primaryKey task)
+            )
 
       pure $ getResultMsg "💥 Removed all notes" task
 
@@ -1393,11 +1994,15 @@ unprioTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unprioTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat
-              [(Task.priority_adjustment task_) <-. (val_ Nothing)])
-          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            ( \task_ ->
+                mconcat
+                  [Task.priority_adjustment task_ <-. val_ Nothing]
+            )
+            (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
       pure $ getResultMsg "💥 Removed priority adjustment" task
 
@@ -1408,10 +2013,12 @@ unmetaTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unmetaTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      runBeamSqlite connection $ runUpdate $
-        update taskLiteDb._tldbTasks
-          (\task_ -> mconcat [(Task.metadata task_) <-. (val_ Nothing)])
-          (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
+      runBeamSqlite connection $
+        runUpdate $
+          update
+            taskLiteDb._tldbTasks
+            (\task_ -> mconcat [Task.metadata task_ <-. val_ Nothing])
+            (\task_ -> primaryKey task_ ==. val_ (primaryKey task))
 
       pure $ getResultMsg "💥 Removed metadata" task
 
@@ -1433,58 +2040,77 @@ duplicateTasks conf connection ids = do
 
       -- Duplicate task
       runBeamSqlite connection $ do
-        runInsert $ insert taskLiteDb._tldbTasks  $ insertFrom $ do
+        runInsert $ insert taskLiteDb._tldbTasks $ insertFrom $ do
           -- TODO: Remove as original task is already in scope
-          originalTask <- filter_
-            (\task_ -> primaryKey task_ ==. val_ taskUlid)
-            (all_ taskLiteDb._tldbTasks)
+          originalTask <-
+            filter_
+              (\task_ -> primaryKey task_ ==. val_ taskUlid)
+              (all_ taskLiteDb._tldbTasks)
 
-          pure originalTask
-            { Task.ulid = val_ dupeUlid
-            , Task.due_utc = val_ Nothing
-            , Task.awake_utc = val_ Nothing
-            , Task.closed_utc = val_ Nothing
-            , Task.modified_utc = val_ modified_utc
-            , Task.state = val_ Nothing
-            }
+          pure
+            originalTask
+              { Task.ulid = val_ dupeUlid
+              , Task.due_utc = val_ Nothing
+              , Task.awake_utc = val_ Nothing
+              , Task.closed_utc = val_ Nothing
+              , Task.modified_utc = val_ modified_utc
+              , Task.state = val_ Nothing
+              }
 
         -- Duplicate tags
-        tags <- runSelectReturningList $ select $
-          filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
-          all_ taskLiteDb._tldbTaskToTag
+        tags <-
+          runSelectReturningList $
+            select $
+              filter_ (\tag -> TaskToTag.task_ulid tag ==. val_ taskUlid) $
+                all_ taskLiteDb._tldbTaskToTag
 
-        liftIO $ insertTags
-          connection
-          Nothing
-          (TaskUlid dupeUlid)
-          (fmap TaskToTag.tag tags)
+        liftIO $
+          insertTags
+            connection
+            Nothing
+            (TaskUlid dupeUlid)
+            (fmap TaskToTag.tag tags)
 
         -- Duplicate notes
-        notes <- runSelectReturningList $ select $
-          filter_ (\theNote -> TaskToNote.task_ulid theNote ==. val_ taskUlid) $
-          all_ taskLiteDb._tldbTaskToNote
+        notes <-
+          runSelectReturningList $
+            select $
+              filter_ (\theNote -> TaskToNote.task_ulid theNote ==. val_ taskUlid) $
+                all_ taskLiteDb._tldbTaskToNote
 
         let
-          noteTuples = fmap
-            (\theNote ->
-              ( ulidTextToDateTime (TaskToNote.ulid theNote)
-              , TaskToNote.note theNote)
+          noteTuples =
+            fmap
+              ( \theNote ->
+                  ( ulidTextToDateTime (TaskToNote.ulid theNote)
+                  , TaskToNote.note theNote
+                  )
               )
-            notes
-        liftIO $ insertNoteTuples
-          connection
-          (TaskUlid dupeUlid)
-          noteTuples
-
+              notes
+        liftIO $
+          insertNoteTuples
+            connection
+            (TaskUlid dupeUlid)
+            noteTuples
 
       numOfChanges <- changes connection
 
-      pure $ if numOfChanges == 0
-        then "⚠️  Task" <+> prettyBody <+> "with id" <+> prettyId
+      pure $
+        if numOfChanges == 0
+          then
+            "⚠️  Task"
+              <+> prettyBody
+              <+> "with id"
+              <+> prettyId
               <+> "could not be duplicated"
-        else "👯  Created a duplicate of task" <+> prettyBody
-              <+> "(id:" <+> (pretty idText) <+> ")"
-              <+> "with id" <+> (pretty dupeUlid)
+          else
+            "👯  Created a duplicate of task"
+              <+> prettyBody
+              <+> "(id:"
+              <+> pretty idText
+              <+> ")"
+              <+> "with id"
+              <+> pretty dupeUlid
 
   pure $ vsep docs
 
@@ -1493,78 +2119,105 @@ showAtPrecision :: Int -> Double -> Text
 showAtPrecision numOfDigits number =
   let
     tuple = breakOn "." (show number)
-    clipDecimalPart = if snd tuple == ".0"
-      then T.replace ".0" (T.replicate (1 + numOfDigits) " ")
-      else T.take (1 + numOfDigits)
+    clipDecimalPart =
+      if snd tuple == ".0"
+        then T.replace ".0" (T.replicate (1 + numOfDigits) " ")
+        else T.take (1 + numOfDigits)
   in
-    fst tuple <> if numOfDigits /= 0
-      then (clipDecimalPart . snd) tuple
-      else ""
+    fst tuple
+      <> if numOfDigits /= 0
+        then (clipDecimalPart . snd) tuple
+        else ""
 
 
 formatTag :: Pretty a => Config -> a -> Doc AnsiStyle
 formatTag conf =
   annotate (tagStyle conf)
-  . (annotate (color Black) "+" <>)
-  . pretty
+    . (annotate (color Black) "+" <>)
+    . pretty
 
 
 formatTaskLine :: Config -> DateTime -> Int -> FullTask -> Doc AnsiStyle
 formatTaskLine conf now taskUlidWidth task =
   let
     id = pretty $ T.takeEnd taskUlidWidth $ task.ulid
-    createdUtc = fmap
-      (pack . timePrint ISO8601_Date)
-      (ulidTextToDateTime task.ulid)
+    createdUtc =
+      fmap
+        (pack . timePrint ISO8601_Date)
+        (ulidTextToDateTime task.ulid)
     tags = fromMaybe [] task.tags
-    closedUtcMaybe = task.closed_utc
-      >>= parseUtc
-      <&> timePrint conf.utcFormat
-    dueUtcMaybe = task.due_utc
-      >>= parseUtc
-      <&> T.replace " 00:00:00" "" . T.pack . timePrint conf.utcFormat
+    closedUtcMaybe =
+      task.closed_utc
+        >>= parseUtc
+        <&> timePrint conf.utcFormat
+    dueUtcMaybe =
+      task.due_utc
+        >>= parseUtc
+        <&> T.replace " 00:00:00" "" . T.pack . timePrint conf.utcFormat
     dueIn offset =
       let dateMaybe = (task.due_utc) >>= parseUtc
-      in isJust dateMaybe && dateMaybe < Just (now `timeAdd` offset)
+      in  isJust dateMaybe && dateMaybe < Just (now `timeAdd` offset)
     multilineIndent = 2
-    hangWidth = taskUlidWidth + 2
-      + (dateWidth conf) + 2
-      + (prioWidth conf) + 2
-      + multilineIndent
+    hangWidth =
+      taskUlidWidth
+        + 2
+        + dateWidth conf
+        + 2
+        + prioWidth conf
+        + 2
+        + multilineIndent
     hhsep = concatWith (<++>)
-    isEmptyDoc doc = (show doc) /= ("" :: Text)
+    isEmptyDoc doc = show doc /= ("" :: Text)
     isOpen = isNothing $ task.closed_utc
-    grayOutIfDone doc = if isOpen
-      then annotate (bodyStyle conf) doc
-      else annotate (bodyClosedStyle conf) doc
+    grayOutIfDone doc =
+      if isOpen
+        then annotate (bodyStyle conf) doc
+        else annotate (bodyClosedStyle conf) doc
     -- redOut onTime doc = if onTime
     --   then annotate (bodyStyle conf) doc
     --   else annotate (color Red) doc
-    taskLine = createdUtc <&> \taskDate ->
-      hang hangWidth $ hhsep $ P.filter isEmptyDoc (
-        annotate conf.idStyle id :
-        annotate (priorityStyle conf) (pretty $ justifyRight 4 ' '
-          $ showAtPrecision 1 $ realToFrac
-          $ fromMaybe 0 (task.priority)) :
-        annotate (dateStyle conf) (pretty taskDate) :
-        (pretty $ case task.review_utc >>= parseUtc of
-          Nothing -> "" :: Text
-          Just date_ -> if date_ < now then "🔎 " else "")
-          <> (if dueIn mempty { durationHours = 24 } && isOpen
-            then "⚠️️  "
-            else "") <>
-            (if dueIn mempty && isOpen
-              then annotate (color Red) (reflow task.body)
-              else grayOutIfDone (reflow task.body)) :
-        annotate (dueStyle conf) (pretty dueUtcMaybe) :
-        annotate (closedStyle conf) (pretty closedUtcMaybe) :
-        hsep (tags <&> (formatTag conf)) :
-        (if (not $ P.null $ task.notes) then "📝" else "") :
-        [])
+    taskLine =
+      createdUtc <&> \taskDate ->
+        hang hangWidth $
+          hhsep $
+            P.filter
+              isEmptyDoc
+              [ annotate conf.idStyle id
+              , annotate
+                  (priorityStyle conf)
+                  ( pretty $
+                      justifyRight 4 ' ' $
+                        showAtPrecision 1 $
+                          realToFrac $
+                            fromMaybe 0 (task.priority)
+                  )
+              , annotate (dateStyle conf) (pretty taskDate)
+              , pretty
+                  ( case task.review_utc >>= parseUtc of
+                      Nothing -> "" :: Text
+                      Just date_ -> if date_ < now then "🔎 " else ""
+                  )
+                  <> ( if dueIn mempty{durationHours = 24} && isOpen
+                        then "⚠️️  "
+                        else ""
+                     )
+                  <> ( if dueIn mempty && isOpen
+                        then annotate (color Red) (reflow task.body)
+                        else grayOutIfDone (reflow task.body)
+                     )
+              , annotate (dueStyle conf) (pretty dueUtcMaybe)
+              , annotate (closedStyle conf) (pretty closedUtcMaybe)
+              , hsep (tags <&> formatTag conf)
+              , if not (P.null $ task.notes)
+                  then "📝"
+                  else ""
+              ]
   in
     fromMaybe
-      ("Id" <+> dquotes (pretty $ task.ulid) <+>
-        "is an invalid ulid and could not be converted to a datetime")
+      ( "Id"
+          <+> dquotes (pretty $ task.ulid)
+          <+> "is an invalid ulid and could not be converted to a datetime"
+      )
       taskLine
 
 
@@ -1572,8 +2225,8 @@ getIdLength :: Float -> Int
 getIdLength numOfItems =
   -- TODO: Calculate idLength by total number of tasks, not just of the viewed
   let
-    targetCollisionChance = 0.01  -- Targeted likelihood of id collisions
-    sizeOfAlphabet = 32  -- Crockford's base 32 alphabet
+    targetCollisionChance = 0.01 -- Targeted likelihood of id collisions
+    sizeOfAlphabet = 32 -- Crockford's base 32 alphabet
   in
     ceiling (logBase sizeOfAlphabet (numOfItems / targetCollisionChance)) + 1
 
@@ -1581,30 +2234,35 @@ getIdLength numOfItems =
 countTasks :: Config -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
 countTasks conf connection filterExpression = do
   let
-    parserResults = readP_to_S filterExpsParser $
-      T.unpack (unwords $ fromMaybe [""] filterExpression)
+    parserResults =
+      readP_to_S filterExpsParser $
+        T.unpack (unwords $ fromMaybe [""] filterExpression)
     filterMay = listToMaybe parserResults
 
   case filterMay of
     Nothing -> do
-      [NumRows taskCount] <- query_ connection $ Query $
-        "select count(1) from `" <> tableName conf <> "`"
+      [NumRows taskCount] <-
+        query_ connection $
+          Query $
+            "select count(1) from `" <> tableName conf <> "`"
 
       pure $ pretty taskCount
-
     Just (filterExps, _) -> do
       let
         ppInvalidFilter = \case
           (InvalidFilter error) ->
-              (dquotes $ pretty error) <+> "is an invalid filter"
+            dquotes (pretty error) <+> "is an invalid filter"
           (HasStatus Nothing) -> "Filter contains an invalid state value"
           _ -> "The functions should not be called with a valid function"
         errors = P.filter (not . isValidFilter) filterExps
-        errorsDoc = if (P.length errors) > 0
-          then Just $
-            vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
-            <> hardline <> hardline
-          else Nothing
+        errorsDoc =
+          if P.length errors > 0
+            then
+              Just $
+                vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
+                  <> hardline
+                  <> hardline
+            else Nothing
 
       -- TODO: Increase performance of this query
       tasks <- query_ connection (getFilterQuery filterExps)
@@ -1615,39 +2273,50 @@ countTasks conf connection filterExpression = do
 -- TODO: Print number of remaining tasks and how to display them at the bottom
 headTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 headTasks conf now connection = do
-  tasks <- query_ connection $ Query $
-    -- TODO: Add `wait_utc` < datetime('now')"
-    "select * from tasks_view \
-    \where closed_utc is null \
-    \order by priority desc, due_utc asc, ulid desc \
-    \limit " <> show (headCount conf)
+  tasks <-
+    query_ connection $
+      Query $
+        -- TODO: Add `wait_utc` < datetime('now')"
+        "select * from tasks_view \
+        \where closed_utc is null \
+        \order by priority desc, due_utc asc, ulid desc \
+        \limit "
+          <> show (headCount conf)
   formatTasksColor conf now tasks
 
 
 newTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 newTasks conf now connection = do
-  tasks <- query_ connection $ Query $
-    "select * from `tasks_view` \
-    \where closed_utc is null \
-    \order by `ulid` desc limit " <> show (headCount conf)
+  tasks <-
+    query_ connection $
+      Query $
+        "select * from `tasks_view` \
+        \where closed_utc is null \
+        \order by `ulid` desc limit "
+          <> show (headCount conf)
   formatTasksColor conf now tasks
 
 
 listOldTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listOldTasks conf now connection = do
-  tasks <- query_ connection $ Query $
-    "select * from `tasks_view` \
-    \where closed_utc is null \
-    \order by `ulid` asc limit " <> show (headCount conf)
+  tasks <-
+    query_ connection $
+      Query $
+        "select * from `tasks_view` \
+        \where closed_utc is null \
+        \order by `ulid` asc limit "
+          <> show (headCount conf)
   formatTasksColor conf now tasks
 
 
 openTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 openTasks conf now connection = do
-  tasks <- query_ connection $ Query
-    "select * from `tasks_view` \
-    \where closed_utc is null \
-    \order by priority desc, due_utc asc, ulid desc"
+  tasks <-
+    query_ connection $
+      Query
+        "select * from `tasks_view` \
+        \where closed_utc is null \
+        \order by priority desc, due_utc asc, ulid desc"
   formatTasksColor conf now tasks
 
 
@@ -1658,20 +2327,25 @@ modifiedTasks
   -> ListModifiedFlag
   -> IO (Doc AnsiStyle)
 modifiedTasks conf now connection listModifiedFlag = do
-  tasks <- query_ connection $ Query
-    "select * from `tasks_view` \
-    \order by `modified_utc` desc"
+  tasks <-
+    query_ connection $
+      Query
+        "select * from `tasks_view` \
+        \order by `modified_utc` desc"
   let
     filterModified =
-      P.filter (\task ->
-        (removeNSec $ ulidTextToDateTime $ task.ulid)
-        /= (parseUtc $ task.modified_utc))
+      P.filter
+        ( \task ->
+            removeNSec (ulidTextToDateTime task.ulid)
+              /= parseUtc task.modified_utc
+        )
 
     removeNSec :: Maybe DateTime -> Maybe DateTime
     removeNSec mDateTime =
       case mDateTime of
-        Just dateTime -> Just $
-          dateTime { dtTime = (dtTime dateTime) { todNSec = 0 } }
+        Just dateTime ->
+          Just $
+            dateTime{dtTime = (dtTime dateTime){todNSec = 0}}
         Nothing -> Nothing
 
     filteredTasks =
@@ -1684,97 +2358,121 @@ modifiedTasks conf now connection listModifiedFlag = do
 
 overdueTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 overdueTasks conf now connection = do
-  tasks <- query_ connection $ Query
-    "select * from `tasks_view` \
-    \where closed_utc is null and due_utc < datetime('now') \
-    \order by priority desc, due_utc asc, ulid desc"
+  tasks <-
+    query_ connection $
+      Query
+        "select * from `tasks_view` \
+        \where closed_utc is null and due_utc < datetime('now') \
+        \order by priority desc, due_utc asc, ulid desc"
   formatTasksColor conf now tasks
 
 
 doneTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 doneTasks conf now connection = do
-  tasks <- query_ connection $ Query $
-    "select * from tasks_view \
-    \where closed_utc is not null and state is 'Done' \
-    \order by closed_utc desc limit " <> show (headCount conf)
+  tasks <-
+    query_ connection $
+      Query $
+        "select * from tasks_view \
+        \where closed_utc is not null and state is 'Done' \
+        \order by closed_utc desc limit "
+          <> show (headCount conf)
   formatTasksColor conf now tasks
 
 
 obsoleteTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 obsoleteTasks conf now connection = do
-  tasks <- query_ connection $ Query $
-    "select * from tasks_view \
-    \where closed_utc is not null and state is 'Obsolete' \
-    \order by ulid desc limit " <> show (headCount conf)
+  tasks <-
+    query_ connection $
+      Query $
+        "select * from tasks_view \
+        \where closed_utc is not null and state is 'Obsolete' \
+        \order by ulid desc limit "
+          <> show (headCount conf)
   formatTasksColor conf now tasks
 
 
 deletableTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 deletableTasks conf now connection = do
-  tasks <- query_ connection $ Query $
-    "select * from tasks_view \
-    \where closed_utc is not null and state is 'Deletable' \
-    \order by ulid desc limit " <> show (headCount conf)
+  tasks <-
+    query_ connection $
+      Query $
+        "select * from tasks_view \
+        \where closed_utc is not null and state is 'Deletable' \
+        \order by ulid desc limit "
+          <> show (headCount conf)
   formatTasksColor conf now tasks
 
 
 listRepeating :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listRepeating conf now connection = do
-  tasks <- query_ connection $ Query $
-    "select * from tasks_view \
-    \where repetition_duration is not null \
-    \order by repetition_duration desc"
+  tasks <-
+    query_ connection $
+      Query
+        "select * from tasks_view \
+        \where repetition_duration is not null \
+        \order by repetition_duration desc"
 
   formatTasksColor conf now tasks
 
 
 listRecurring :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listRecurring conf now connection = do
-  tasks <- query_ connection $ Query $
-    "select * from tasks_view \
-    \where recurrence_duration is not null \
-    \order by recurrence_duration desc"
+  tasks <-
+    query_ connection $
+      Query
+        "select * from tasks_view \
+        \where recurrence_duration is not null \
+        \order by recurrence_duration desc"
 
   formatTasksColor conf now tasks
 
 
 listReady :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listReady conf now connection = do
-  tasks <- query_ connection $ Query $
-    "select * from tasks_view \
-    \where (ready_utc is null \
-    \or (ready_utc is not null and ready_utc < datetime('now'))) \
-    \and closed_utc is null \
-    \order by priority desc, due_utc asc, ulid desc \
-    \limit " <> show (headCount conf)
+  tasks <-
+    query_ connection $
+      Query $
+        "select * from tasks_view \
+        \where (ready_utc is null \
+        \or (ready_utc is not null and ready_utc < datetime('now'))) \
+        \and closed_utc is null \
+        \order by priority desc, due_utc asc, ulid desc \
+        \limit "
+          <> show (headCount conf)
 
   formatTasksColor conf now tasks
 
 
 listWaiting :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listWaiting conf now connection = do
-  tasks <- query_ connection
-    "select * from tasks_view \
-    \where closed_utc is null \
+  tasks <-
+    query_
+      connection
+      "select * from tasks_view \
+      \where closed_utc is null \
       \and waiting_utc is not null \
       \and (review_utc > datetime('now') or review_utc is null) \
-    \order by waiting_utc desc"
+      \order by waiting_utc desc"
   formatTasksColor conf now tasks
 
 
 listAll :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listAll conf now connection = do
-  tasks <- query_ connection
-    "select * from tasks_view order by ulid asc"
+  tasks <-
+    query_
+      connection
+      "select * from tasks_view order by ulid asc"
   formatTasksColor conf now tasks
 
 
 listNoTag :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listNoTag conf now connection = do
-  tasks <-  query_ connection
-    "select * from tasks_view \
-    \where closed_utc is null and tags is null \
-    \order by priority desc, due_utc asc, ulid desc"
+  tasks <-
+    query_
+      connection
+      "select * from tasks_view \
+      \where closed_utc is null and tags is null \
+      \order by priority desc, due_utc asc, ulid desc"
   formatTasksColor conf now tasks
 
 
@@ -1783,30 +2481,41 @@ getWithTag connection stateMaybe tags = do
   let
     tagQuery = case tags of
       [] -> ""
-      _ -> tags
-        <&> (\t -> "tag like '" <> t <> "'")
-        & (T.intercalate " or ")
-        & ("and " <>)
+      _ ->
+        tags
+          <&> (\t -> "tag like '" <> t <> "'")
+          & T.intercalate " or "
+          & ("and " <>)
 
     stateQuery = case stateMaybe of
       Nothing -> ""
       Just derivedState -> "and " <> derivedStateToQuery derivedState
 
     -- `where true` simplifies adding additional filters with "and"
-    ulidsQuery = "\
+    ulidsQuery =
+      "\
       \select tasks.ulid \
       \from tasks \
       \left join task_to_tag on tasks.ulid is task_to_tag.task_ulid \
       \where true \
-      \" <> tagQuery <> " \
-      \" <> stateQuery <> " \
-      \group by tasks.ulid \
-      \having count(tag) = " <> show (P.length tags)
+      \"
+        <> tagQuery
+        <> " \
+           \"
+        <> stateQuery
+        <> " \
+           \group by tasks.ulid \
+           \having count(tag) = "
+        <> show (P.length tags)
 
-    mainQuery = FullTask.selectQuery <> "\
-      \from (" <> ulidsQuery <> ") tasks1\n\
-      \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
-      \order by priority desc, due_utc asc, ulid desc"
+    mainQuery =
+      FullTask.selectQuery
+        <> "\
+           \from ("
+        <> ulidsQuery
+        <> ") tasks1\n\
+           \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
+           \order by priority desc, due_utc asc, ulid desc"
 
   -- TODO: Use beam to execute query
   query_ connection $ Query mainQuery
@@ -1820,21 +2529,25 @@ listWithTag conf now connection tags = do
 
 queryTasks :: Config -> DateTime -> Connection -> Text -> IO (Doc AnsiStyle)
 queryTasks conf now connection sqlQuery = do
-  tasks <- query_ connection $ Query $
-    "select * from `tasks_view` where " <> sqlQuery
+  tasks <-
+    query_ connection $
+      Query $
+        "select * from `tasks_view` where " <> sqlQuery
   formatTasksColor conf now tasks
 
 
 runSql :: Config -> Text -> IO (Doc AnsiStyle)
 runSql conf sqlQuery = do
-  result <- readProcess "sqlite3"
-    [ (dataDir conf) </> (dbName conf)
-    , ".headers on"
-    , ".mode csv"
-    , ".separator , '\n'"
-    , T.unpack sqlQuery
-    ]
-    []
+  result <-
+    readProcess
+      "sqlite3"
+      [ conf.dataDir </> conf.dbName
+      , ".headers on"
+      , ".mode csv"
+      , ".separator , '\n'"
+      , T.unpack sqlQuery
+      ]
+      []
   -- Remove trailing newline
   pure $ pretty (T.dropEnd 1 $ T.pack result)
 
@@ -1845,7 +2558,8 @@ data FilterExp
   | HasDue Text
   | HasStatus (Maybe DerivedState) -- Should be `Either`
   | InvalidFilter Text
-  deriving Show
+  deriving (Show)
+
 
 tagParser :: ReadP FilterExp
 tagParser = do
@@ -1876,12 +2590,13 @@ stateParser = do
 
 
 filterExpParser :: ReadP FilterExp
-filterExpParser = do
-      tagParser
-  <++ notTagParser
-  <++ dueParser
-  <++ stateParser
-  <++ ((InvalidFilter . pack) <$> munch1 (not . isSpace))
+filterExpParser =
+  do
+    tagParser
+    <++ notTagParser
+    <++ dueParser
+    <++ stateParser
+    <++ (InvalidFilter . pack <$> munch1 (not . isSpace))
 
 
 filterExpsParser :: ReadP [FilterExp]
@@ -1896,17 +2611,18 @@ parseFilterExps input =
   P.print $ readP_to_S filterExpsParser $ T.unpack input
 
 
--- | Returns (operator, where-query) tuple
--- TODO: Should be `FilterExp -> Maybe (Text, Text)`
+{-| Returns (operator, where-query) tuple
+ TODO: Should be `FilterExp -> Maybe (Text, Text)`
+-}
 filterToSql :: FilterExp -> (Text, Text)
 filterToSql = \case
-  HasTag tag          -> ("intersect", "tag like '" <> tag <> "'")
-  NotTag tag          -> ("except", "tag like '" <> tag <> "'")
-  HasDue utc          -> ("intersect", "due_utc < datetime('" <> utc <>"')")
+  HasTag tag -> ("intersect", "tag like '" <> tag <> "'")
+  NotTag tag -> ("except", "tag like '" <> tag <> "'")
+  HasDue utc -> ("intersect", "due_utc < datetime('" <> utc <> "')")
   HasStatus (Just taskState) -> ("intersect", derivedStateToQuery taskState)
   -- Following cases should never be called, as they are filtered out
-  HasStatus Nothing   -> ("", "")
-  InvalidFilter _     -> ("", "")
+  HasStatus Nothing -> ("", "")
+  InvalidFilter _ -> ("", "")
 
 
 isValidFilter :: FilterExp -> Bool
@@ -1922,7 +2638,7 @@ runFilter conf now connection exps = do
     parserResults = readP_to_S filterExpsParser $ T.unpack $ unwords exps
     filterHelp =
       "Filter expressions must be a list of key[:value] entries."
-      <> hardline
+        <> hardline
     dieWithError err = do
       hPutDoc stderr $ annotate (color Red) err
       exitFailure
@@ -1932,8 +2648,10 @@ runFilter conf now connection exps = do
       let
         ppInvalidFilter = \case
           (InvalidFilter error) ->
-            (dquotes $ pretty error) <+> "is an invalid filter." <> hardline
-            <> filterHelp
+            dquotes (pretty error)
+              <+> "is an invalid filter."
+                <> hardline
+                <> filterHelp
           (HasStatus Nothing) ->
             "Filter contains an invalid state value"
           _ ->
@@ -1942,18 +2660,15 @@ runFilter conf now connection exps = do
         isStateExp = \case (HasStatus _) -> True; _ -> False
         updatedFilterExps =
           if P.any isStateExp filterExps
-          then filterExps
-          else (HasStatus $ Just IsOpen) : filterExps
+            then filterExps
+            else HasStatus (Just IsOpen) : filterExps
         sqlQuery = getFilterQuery updatedFilterExps
 
       tasks <- query_ connection sqlQuery
 
-      if (P.length errors) > 0
-      then
-        dieWithError $ vsep (fmap ppInvalidFilter errors)
-      else
-        formatTasksColor conf now tasks
-
+      if P.length errors > 0
+        then dieWithError $ vsep (fmap ppInvalidFilter errors)
+        else formatTasksColor conf now tasks
     _ -> dieWithError filterHelp
 
 
@@ -1963,49 +2678,60 @@ getFilterQuery filterExps =
   let
     filterTuple = filterToSql <$> P.filter isValidFilter filterExps
 
-    queries = filterTuple <&> \(operator, whereQuery) ->
-      operator <> "\n\
-      \select tasks.ulid\n\
-      \from tasks\n\
-      \left join task_to_tag on tasks.ulid is task_to_tag.task_ulid\n\
-      \where " <> whereQuery <> "\n\
-      \group by tasks.ulid"
+    queries =
+      filterTuple <&> \(operator, whereQuery) ->
+        operator
+          <> "\n\
+             \select tasks.ulid\n\
+             \from tasks\n\
+             \left join task_to_tag on tasks.ulid is task_to_tag.task_ulid\n\
+             \where "
+          <> whereQuery
+          <> "\n\
+             \group by tasks.ulid"
 
-    ulidsQuery
-      =  "select tasks.ulid from tasks\n"
-      <> unlines queries
+    ulidsQuery =
+      "select tasks.ulid from tasks\n"
+        <> unlines queries
 
-    mainQuery = FullTask.selectQuery <> "\
-      \from (" <> ulidsQuery <> ") tasks1\n\
-      \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
-      \order by priority desc, due_utc asc, ulid desc"
+    mainQuery =
+      FullTask.selectQuery
+        <> "\
+           \from ("
+        <> ulidsQuery
+        <> ") tasks1\n\
+           \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
+           \order by priority desc, due_utc asc, ulid desc"
   in
     Query mainQuery
 
 
-
 formatTasks :: Config -> DateTime -> [FullTask] -> Doc AnsiStyle
-formatTasks conf now tasks  =
+formatTasks conf now tasks =
   if P.length tasks == 0
-  then pretty noTasksWarning
-  else
-    let
-      strong = bold <> underlined
-      taskUlidWidth = getIdLength $ fromIntegral $ P.length tasks
-      docHeader =
-             annotate (idStyle conf <> strong)
-                (fill taskUlidWidth "Id")
-        <++> annotate (priorityStyle conf <> strong)
-                (fill (prioWidth conf) "Prio")
-        <++> annotate (dateStyle conf <> strong)
-                (fill (dateWidth conf) "Opened UTC")
-        <++> annotate (bodyStyle conf <> strong)
-                (fill (bodyWidth conf) "Body")
-        <++> line
-    in
-      docHeader <>
-      vsep (fmap (formatTaskLine conf now taskUlidWidth) tasks) <>
-      line
+    then pretty noTasksWarning
+    else
+      let
+        strong = bold <> underlined
+        taskUlidWidth = getIdLength $ fromIntegral $ P.length tasks
+        docHeader =
+          annotate
+            (idStyle conf <> strong)
+            (fill taskUlidWidth "Id")
+            <++> annotate
+              (priorityStyle conf <> strong)
+              (fill (prioWidth conf) "Prio")
+            <++> annotate
+              (dateStyle conf <> strong)
+              (fill (dateWidth conf) "Opened UTC")
+            <++> annotate
+              (bodyStyle conf <> strong)
+              (fill (bodyWidth conf) "Body")
+            <++> line
+      in
+        docHeader
+          <> vsep (fmap (formatTaskLine conf now taskUlidWidth) tasks)
+          <> line
 
 
 formatTasksColor :: Config -> DateTime -> [FullTask] -> IO (Doc AnsiStyle)
@@ -2017,50 +2743,57 @@ formatTasksColor conf now tasks = do
 getProgressBar :: Integer -> Double -> Doc AnsiStyle
 getProgressBar maxWidthInChars progress =
   let
-    barWidth = floor (progress * (fromInteger maxWidthInChars))
+    barWidth = floor (progress * fromInteger maxWidthInChars)
     remainingWidth = fromIntegral $ maxWidthInChars - barWidth
   in
-    annotate (bgColorDull Green <> colorDull Green)
-      (pretty $ P.take (fromIntegral barWidth) $ P.repeat '#') <>
-    -- (annotate (bgColorDull Green) $ fill (fromIntegral barWidth) "" <>
-    annotate (bgColorDull Black) (fill remainingWidth "")
+    annotate
+      (bgColorDull Green <> colorDull Green)
+      (pretty $ P.take (fromIntegral barWidth) $ P.repeat '#')
+      <>
+      -- (annotate (bgColorDull Green) $ fill (fromIntegral barWidth) "" <>
+      annotate (bgColorDull Black) (fill remainingWidth "")
 
 
-formatTagLine ::
-  Config -> Int -> (Text, Integer, Integer, Double) -> Doc AnsiStyle
+formatTagLine
+  :: Config -> Int -> (Text, Integer, Integer, Double) -> Doc AnsiStyle
 formatTagLine conf maxTagLength (tag, open_count, closed_count, progress) =
   let
     barWidth = toInteger $ progressBarWidth conf
     progressPercentage =
       if progress == 0
-      then "     "
-      else
-        pretty (justifyRight 3 ' ' $ T.pack $
-          showFFloat (Just 0) (progress * 100) "")
-        <+> "%"
+        then "     "
+        else
+          pretty
+            ( justifyRight 3 ' ' $
+                T.pack $
+                  showFFloat (Just 0) (progress * 100) ""
+            )
+            <+> "%"
   in
     fill maxTagLength (pretty tag)
-    <++> pretty (justifyRight (T.length "open") ' ' $ show open_count)
-    <++> pretty (justifyRight (T.length "closed") ' ' $ show closed_count)
-    <++> progressPercentage <+> (getProgressBar barWidth progress)
+      <++> pretty (justifyRight (T.length "open") ' ' $ show open_count)
+      <++> pretty (justifyRight (T.length "closed") ' ' $ show closed_count)
+      <++> progressPercentage
+      <+> getProgressBar barWidth progress
 
 
 formatTags :: Config -> [(Text, Integer, Integer, Double)] -> Doc AnsiStyle
 formatTags conf tagTuples =
   let
-    percWidth = 6  -- Width of e.g. 100 %
-    progressWith = (progressBarWidth conf) + percWidth
+    percWidth = 6 -- Width of e.g. 100 %
+    progressWith = conf.progressBarWidth + percWidth
     firstOf4 (a, _, _, _) = a
-    maxTagLength = tagTuples
-      <&> (T.length . firstOf4)
-      & P.maximum
+    maxTagLength =
+      tagTuples
+        <&> (T.length . firstOf4)
+        & P.maximum
   in
     annotate (bold <> underlined) (fill maxTagLength "Tag")
-    <++> (annotate (bold <> underlined) "Open")
-    <++> (annotate (bold <> underlined) "Closed")
-    <++> annotate (bold <> underlined) (fill progressWith "Progress")
-    <> line
-    <> vsep (fmap (formatTagLine conf maxTagLength) tagTuples)
+      <++> annotate (bold <> underlined) "Open"
+      <++> annotate (bold <> underlined) "Closed"
+      <++> annotate (bold <> underlined) (fill progressWith "Progress")
+      <> line
+      <> vsep (fmap (formatTagLine conf maxTagLength) tagTuples)
 
 
 listTags :: Config -> Connection -> IO (Doc AnsiStyle)
@@ -2072,26 +2805,33 @@ listTags conf connection = do
 
 listProjects :: Config -> Connection -> IO (Doc AnsiStyle)
 listProjects conf connection = do
-  tags <- query_ connection $
-    Query "select * from tags where open > 0 and closed > 0"
+  tags <-
+    query_ connection $
+      Query "select * from tags where open > 0 and closed > 0"
 
   pure $ formatTags conf tags
 
 
 getStats :: Config -> Connection -> IO (Doc AnsiStyle)
 getStats _ connection = do
-  [NumRows numOfTasksTotal] <- query_ connection $
-    Query "select count(1) from tasks"
-  [NumRows numOfTasksOpen] <- query_ connection $
-    Query "select count(1) from tasks where closed_utc is null"
-  [NumRows numOfTasksClosed] <- query_ connection $
-    Query "select count(1) from tasks where closed_utc is not null"
-  [NumRows numOfTasksDone] <- query_ connection $
-    Query "select count(1) from tasks where state is 'Done'"
-  [NumRows numOfTasksObsolete] <- query_ connection $
-    Query "select count(1) from tasks where state is 'Obsolete'"
-  [NumRows numOfTasksDeletable] <- query_ connection $
-    Query "select count(1) from tasks where state is 'Deletable'"
+  [NumRows numOfTasksTotal] <-
+    query_ connection $
+      Query "select count(1) from tasks"
+  [NumRows numOfTasksOpen] <-
+    query_ connection $
+      Query "select count(1) from tasks where closed_utc is null"
+  [NumRows numOfTasksClosed] <-
+    query_ connection $
+      Query "select count(1) from tasks where closed_utc is not null"
+  [NumRows numOfTasksDone] <-
+    query_ connection $
+      Query "select count(1) from tasks where state is 'Done'"
+  [NumRows numOfTasksObsolete] <-
+    query_ connection $
+      Query "select count(1) from tasks where state is 'Obsolete'"
+  [NumRows numOfTasksDeletable] <-
+    query_ connection $
+      Query "select count(1) from tasks where state is 'Deletable'"
 
   let
     widthKey = 12
@@ -2103,20 +2843,21 @@ getStats _ connection = do
         share = T.pack $ showFFloat (Just 3) (numTasksInt / numTotalInt) ""
       in
         fill widthKey (pretty name)
-        <++> fill widthValue
-              (pretty $ justifyRight widthValue ' ' $ show numTasks)
-        <++> pretty share
+          <++> fill
+            widthValue
+            (pretty $ justifyRight widthValue ' ' $ show numTasks)
+          <++> pretty share
 
   pure $
-         annotate (bold <> underlined) (fill widthKey "State")
-    <++> annotate (bold <> underlined) (fill widthValue "Value")
-    <++> annotate (bold <> underlined) "Share"
-    <> line
-    <> vsep (
-        formatLine "Any"          numOfTasksTotal :
-        formatLine "Open"         numOfTasksOpen :
-        formatLine "Closed"       numOfTasksClosed :
-        formatLine "└─ Done"      numOfTasksDone :
-        formatLine "└─ Obsolete"  numOfTasksObsolete :
-        formatLine "└─ Deletable" numOfTasksDeletable :
-        [])
+    annotate (bold <> underlined) (fill widthKey "State")
+      <++> annotate (bold <> underlined) (fill widthValue "Value")
+      <++> annotate (bold <> underlined) "Share"
+      <> line
+      <> vsep
+        [ formatLine "Any" numOfTasksTotal
+        , formatLine "Open" numOfTasksOpen
+        , formatLine "Closed" numOfTasksClosed
+        , formatLine "└─ Done" numOfTasksDone
+        , formatLine "└─ Obsolete" numOfTasksObsolete
+        , formatLine "└─ Deletable" numOfTasksDeletable
+        ]

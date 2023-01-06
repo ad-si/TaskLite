@@ -1,35 +1,96 @@
 {-|
 Datatype to represent a task as stored in the `tasks` table
 -}
-
 module Task where
 
-import Protolude as P hiding ((%))
+import Protolude as P (
+  Applicative ((<*>)),
+  Char,
+  Either (Left, Right),
+  Enum (toEnum),
+  Eq ((==)),
+  Float,
+  Foldable (elem),
+  Functor (fmap),
+  Hashable,
+  Maybe (..),
+  Ord ((<), (>)),
+  Read,
+  Semigroup ((<>)),
+  Show,
+  decodeUtf8,
+  encodeUtf8,
+  fst,
+  otherwise,
+  show,
+  snd,
+  toStrict,
+  ($),
+  (&),
+  (&&),
+  (.),
+  (<$>),
+  (<&>),
+ )
 
-import Data.Aeson as Aeson
-import Data.Aeson.Key as Key
-import Data.Aeson.KeyMap as KeyMap
-import Data.Aeson.Text as Aeson
+import Data.Aeson as Aeson (
+  FromJSON,
+  ToJSON,
+  Value (Object),
+  eitherDecode,
+ )
+import Data.Aeson.Key as Key (fromText)
+import Data.Aeson.KeyMap as KeyMap (fromList, insert)
+import Data.Aeson.Text as Aeson (encodeToLazyText)
+import Data.ByteString.Lazy qualified as BSL
+import Data.Csv as Csv (ToField (..), ToNamedRecord, ToRecord)
 import Data.Hourglass (DateTime, timePrint)
-import Data.Yaml as Yaml
-import qualified Data.ByteString.Lazy as BSL
-import Data.Csv as Csv
-import Data.Text as T
-import Prettyprinter hiding ((<>))
-import Database.Beam
-import Database.Beam.Backend.SQL
-import Database.Beam.Sqlite.Connection
+import Data.Text as T (
+  Text,
+  dropEnd,
+  intercalate,
+  pack,
+  replace,
+  toLower,
+  unpack,
+ )
+import Data.Yaml as Yaml (encode)
+import Database.Beam (
+  Beamable,
+  Columnar,
+  FromBackendRow,
+  Generic,
+  HasSqlEqualityCheck,
+  Identity,
+  Table (..),
+ )
+import Database.Beam.Backend.SQL (
+  HasSqlValueSyntax (..),
+  autoSqlValueSyntax,
+ )
+import Database.Beam.Sqlite.Connection (Sqlite)
 import Database.Beam.Sqlite.Syntax (SqliteValueSyntax)
-import Database.SQLite.Simple as Sql
-import Database.SQLite.Simple.FromField as Sql.FromField
-import Database.SQLite.Simple.ToField as Sql.ToField
-import Database.SQLite.Simple.Internal hiding (result)
-import Database.SQLite.Simple.Ok
-import Test.QuickCheck
+import Database.SQLite.Simple as Sql (
+  FromRow (..),
+  ResultError (ConversionFailed),
+  SQLData (SQLText),
+  field,
+ )
+import Database.SQLite.Simple.FromField as Sql.FromField (
+  FromField (..),
+  returnError,
+ )
+import Database.SQLite.Simple.Internal (Field (Field))
+import Database.SQLite.Simple.Ok (Ok (Ok))
+import Database.SQLite.Simple.ToField as Sql.ToField (
+  ToField (..),
+ )
+import Generic.Random (genericArbitrary, genericArbitraryU, (%))
+import Prettyprinter (Pretty (pretty))
+import Test.QuickCheck (Arbitrary (arbitrary))
 import Test.QuickCheck.Instances.Text ()
-import Generic.Random
 
-import Config (utcFormat, defaultConfig)
+import Config (defaultConfig, utcFormat)
 
 
 data TaskState
@@ -38,43 +99,61 @@ data TaskState
   | Deletable
   deriving (Eq, Enum, Generic, Ord, Read, Show)
 
+
 instance Arbitrary TaskState where
   arbitrary = genericArbitrary (4 % 2 % 1 % ())
 
+
 instance Sql.FromField.FromField TaskState where
-  fromField f@(Field (SQLText txt) _) = case (textToTaskState txt) of
-    Just val -> Ok val
-    Nothing -> returnError ConversionFailed f $ T.unpack $
-      "expecting a valid TaskState and not \"" <> txt <> "\""
-  fromField f = returnError ConversionFailed f "expecting SQLText column type"
+  fromField f@(Field (SQLText txt) _) =
+    case textToTaskState txt of
+      Just val -> Ok val
+      Nothing ->
+        returnError ConversionFailed f $
+          T.unpack $
+            "expecting a valid TaskState and not \"" <> txt <> "\""
+  fromField f =
+    returnError ConversionFailed f "expecting SQLText column type"
+
 
 instance Sql.ToField.ToField TaskState where
   toField = SQLText . show
 
+
 instance HasSqlValueSyntax be [Char] => HasSqlValueSyntax be TaskState where
   sqlValueSyntax = autoSqlValueSyntax
 
+
 instance FromBackendRow Sqlite TaskState
 
+
 instance HasSqlEqualityCheck Sqlite TaskState
+
 
 instance FromJSON TaskState
 instance ToJSON TaskState
 
+
 instance ToRecord TaskState
 instance ToNamedRecord TaskState
+
 
 instance Csv.ToField TaskState where
   toField = show
 
+
 instance Hashable TaskState
 
+
 stateDefault :: TaskState
-stateDefault = (toEnum 0) :: TaskState
+stateDefault = toEnum 0
+
 
 stateOptions :: Text
-stateOptions = T.intercalate "," $
-  fmap (("'" <>) . (<> "'") . show) [stateDefault ..]
+stateOptions =
+  T.intercalate "," $
+    fmap (("'" <>) . (<> "'") . show) [stateDefault ..]
+
 
 textToTaskState :: Text -> Maybe TaskState
 textToTaskState txt =
@@ -82,8 +161,13 @@ textToTaskState txt =
     func t
       | t `P.elem` ["done", "completed", "finished", "fixed"] = Just Done
       | t `P.elem` ["obsolete"] = Just Obsolete
-      | t `P.elem` [ "deletable", "deleted"
-                 , "removable", "removed"] = Just Deletable
+      | t
+          `P.elem` [ "deletable"
+                   , "deleted"
+                   , "removable"
+                   , "removed"
+                   ] =
+          Just Deletable
       | otherwise = Nothing
     txtLower = T.toLower txt
   in
@@ -104,23 +188,27 @@ data DerivedState
   | IsBlocked
   deriving (Eq, Generic, Show)
 
+
 instance Arbitrary DerivedState where
   arbitrary = genericArbitraryU
 
 
--- | A tuple of (Primary State, Secondary State)
--- | Check out tasklite.org/concepts for a
--- | detailed explanation of the different states
--- | and how they relate to each other
+{-| A tuple of (Primary State, Secondary State)
+ | Check out tasklite.org/concepts for a
+ | detailed explanation of the different states
+ | and how they relate to each other
+-}
 type StateHierachy = (DerivedState, DerivedState)
 
+
 instance {-# OVERLAPS #-} Pretty StateHierachy where
-  pretty stateH = (
-    if fst stateH == snd stateH
-    then show $ fst stateH
-    else [fst stateH, snd stateH]
-      <&> show
-      & T.intercalate " and "
+  pretty stateH =
+    ( if fst stateH == snd stateH
+        then show $ fst stateH
+        else
+          [fst stateH, snd stateH]
+            <&> show
+            & T.intercalate " and "
     )
       & T.replace "Is" ""
       & pretty
@@ -128,43 +216,48 @@ instance {-# OVERLAPS #-} Pretty StateHierachy where
 
 textToDerivedState :: Text -> Maybe DerivedState
 textToDerivedState = \case
-  "open"      -> Just IsOpen
-  "closed"    -> Just IsClosed
-  "asleep"    -> Just IsAsleep
-  "awake"     -> Just IsAwake
-  "ready"     -> Just IsReady
-  "waiting"   -> Just IsWaiting
-  "review"    -> Just IsReview
-  "done"      -> Just IsDone
-  "obsolete"  -> Just IsObsolete
+  "open" -> Just IsOpen
+  "closed" -> Just IsClosed
+  "asleep" -> Just IsAsleep
+  "awake" -> Just IsAwake
+  "ready" -> Just IsReady
+  "waiting" -> Just IsWaiting
+  "review" -> Just IsReview
+  "done" -> Just IsDone
+  "obsolete" -> Just IsObsolete
   "deletable" -> Just IsDeletable
-  "blocked"   -> Just IsBlocked
+  "blocked" -> Just IsBlocked
   _ -> Nothing
 
 
 derivedStateToQuery :: DerivedState -> Text
 derivedStateToQuery = \case
-  IsOpen      -> "closed_utc is null"
-  IsClosed    -> "closed_utc is not null"
-  IsAsleep    -> "awake_utc > datetime('now') and \
-                  \(ready_utc is null or ready_utc > datetime('now')) \
-                  \and closed_utc is null"
-  IsAwake     -> "awake_utc < datetime('now') and \
-                  \(ready_utc is null or ready_utc > datetime('now')) \
-                  \and closed_utc is null"
-  IsReady     -> "(awake_utc is null or awake_utc < datetime('now')) \
-                  \and ready_utc < datetime('now') \
-                  \and closed_utc is null"
-  IsWaiting   -> "waiting_utc is not null and \
-                  \(review_utc is null or review_utc > datetime('now')) \
-                  \and closed_utc is null"
-  IsReview    -> "waiting_utc is not null and \
-                  \(review_utc is null or review_utc < datetime('now')) \
-                  \and closed_utc is null"
-  IsDone      -> "closed_utc is not null and state is 'Done'"
-  IsObsolete  -> "closed_utc is not null and state is 'Obsolete'"
+  IsOpen -> "closed_utc is null"
+  IsClosed -> "closed_utc is not null"
+  IsAsleep ->
+    "awake_utc > datetime('now') and \
+    \(ready_utc is null or ready_utc > datetime('now')) \
+    \and closed_utc is null"
+  IsAwake ->
+    "awake_utc < datetime('now') and \
+    \(ready_utc is null or ready_utc > datetime('now')) \
+    \and closed_utc is null"
+  IsReady ->
+    "(awake_utc is null or awake_utc < datetime('now')) \
+    \and ready_utc < datetime('now') \
+    \and closed_utc is null"
+  IsWaiting ->
+    "waiting_utc is not null and \
+    \(review_utc is null or review_utc > datetime('now')) \
+    \and closed_utc is null"
+  IsReview ->
+    "waiting_utc is not null and \
+    \(review_utc is null or review_utc < datetime('now')) \
+    \and closed_utc is null"
+  IsDone -> "closed_utc is not null and state is 'Done'"
+  IsObsolete -> "closed_utc is not null and state is 'Obsolete'"
   IsDeletable -> "closed_utc is not null and state is 'Deletable'"
-  IsBlocked   -> "" -- TODO
+  IsBlocked -> "" -- TODO
 
 
 getStateHierarchy :: DateTime -> Task -> StateHierachy
@@ -179,19 +272,20 @@ getStateHierarchy now task =
       Nothing -> case closed_utc task of
         Just _ -> (IsClosed, IsClosed)
         Nothing -> case review_utc task of
-          Just val -> if val > nowTxt
-            then (IsOpen, IsWaiting)
-            else (IsOpen, IsReview)
+          Just val ->
+            if val > nowTxt
+              then (IsOpen, IsWaiting)
+              else (IsOpen, IsReview)
           Nothing -> case waiting_utc task of
             Just _ -> (IsOpen, IsWaiting)
             Nothing -> case (ready_utc task, awake_utc task) of
               (Just readyUtc, Just awakeUtc) ->
                 if readyUtc < nowTxt && awakeUtc < nowTxt
-                then (IsOpen, IsReady)
-                else
-                  if readyUtc > nowTxt && awakeUtc < nowTxt
-                  then (IsOpen, IsAwake)
-                  else (IsOpen, IsAsleep)
+                  then (IsOpen, IsReady)
+                  else
+                    if readyUtc > nowTxt && awakeUtc < nowTxt
+                      then (IsOpen, IsAwake)
+                      else (IsOpen, IsAsleep)
               (Just readyUtc, Nothing) | readyUtc < nowTxt -> (IsOpen, IsReady)
               (Nothing, Just awakeUtc) | awakeUtc < nowTxt -> (IsOpen, IsAwake)
               (Nothing, Just awakeUtc) | awakeUtc > nowTxt -> (IsOpen, IsAsleep)
@@ -200,8 +294,10 @@ getStateHierarchy now task =
 
 newtype Ulid = Ulid Text
 
--- | Uses _ to match Beam's defaults
--- | (http://tathougies.github.io/beam/user-guide/models/#defaults)
+
+{-| Uses _ to match Beam's defaults
+ | (http://tathougies.github.io/beam/user-guide/models/#defaults)
+-}
 data TaskT f = Task
   { ulid :: Columnar f Text -- Ulid
   , body :: Columnar f Text
@@ -219,41 +315,61 @@ data TaskT f = Task
   , priority_adjustment :: Columnar f (Maybe Float)
   , user :: Columnar f Text
   , metadata :: Columnar f (Maybe Aeson.Value)
-  } deriving Generic
+  }
+  deriving (Generic)
 
 
 -- Beam related instances
 type Task = TaskT Identity
 type TaskUlid = PrimaryKey TaskT Identity
 
+
 deriving instance Show TaskUlid
 deriving instance Show Task
 deriving instance Eq Task
+
 
 instance HasSqlValueSyntax SqliteValueSyntax Value where
   sqlValueSyntax =
     sqlValueSyntax . toStrict . Aeson.encodeToLazyText
 
+
 instance FromBackendRow Sqlite Value
+
 
 instance Beamable TaskT
 
+
 instance Table TaskT where
-  data PrimaryKey TaskT f = TaskUlid (Columnar f Text) deriving Generic
+  data PrimaryKey TaskT f = TaskUlid (Columnar f Text) deriving (Generic)
   primaryKey = TaskUlid . ulid
 instance Beamable (PrimaryKey TaskT)
 
+
 -- For conversion from SQLite with SQLite.Simple
 instance FromRow Task where
-  fromRow = Task
-    <$> field <*> field <*> field
-    <*> field <*> field <*> field
-    <*> field <*> field <*> field
-    <*> field <*> field <*> field
-    <*> field <*> field <*> field
-    <*> field
+  fromRow =
+    Task
+      <$> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+
 
 instance Hashable Task
+
 
 instance Sql.FromField.FromField Value where
   fromField aField@(Field (SQLText txt) _) =
@@ -262,47 +378,54 @@ instance Sql.FromField.FromField Value where
       Right value -> Ok value
   fromField f = returnError ConversionFailed f "expecting SQLText column type"
 
+
 -- For conversion to JSON
 instance ToJSON Task
 instance ToJSON (PrimaryKey TaskT Identity)
 
+
 instance Pretty Task where
-  pretty = pretty
-    . T.dropEnd 1 -- Drop trailing newline to maybe add it later
-    . decodeUtf8
-    . Yaml.encode
+  pretty =
+    pretty
+      . T.dropEnd 1 -- Drop trailing newline to maybe add it later
+      . decodeUtf8
+      . Yaml.encode
+
 
 instance Arbitrary Task where
   arbitrary = genericArbitraryU
 
 
 zeroTask :: Task
-zeroTask = Task
-  { ulid = ""
-  , body = ""
-  , modified_utc = ""
-  , awake_utc = Nothing
-  , ready_utc = Nothing
-  , waiting_utc = Nothing
-  , review_utc = Nothing
-  , due_utc = Nothing
-  , closed_utc = Nothing
-  , state = Nothing
-  , group_ulid = Nothing
-  , repetition_duration = Nothing
-  , recurrence_duration = Nothing
-  , priority_adjustment = Nothing
-  , user = ""
-  , metadata = Nothing
-  }
+zeroTask =
+  Task
+    { ulid = ""
+    , body = ""
+    , modified_utc = ""
+    , awake_utc = Nothing
+    , ready_utc = Nothing
+    , waiting_utc = Nothing
+    , review_utc = Nothing
+    , due_utc = Nothing
+    , closed_utc = Nothing
+    , state = Nothing
+    , group_ulid = Nothing
+    , repetition_duration = Nothing
+    , recurrence_duration = Nothing
+    , priority_adjustment = Nothing
+    , user = ""
+    , metadata = Nothing
+    }
 
 
 setMetadataField :: Text -> Value -> Task -> Task
 setMetadataField fieldNameText value task =
-  task {metadata = (case metadata task of
-      Just (Object obj) ->
-        Just $ Object $ KeyMap.insert (Key.fromText fieldNameText) value obj
-      Nothing ->
-        Just $ Object $ fromList [(Key.fromText fieldNameText, value)]
-      _ -> metadata task)
-  }
+  task
+    { metadata =
+        case metadata task of
+          Just (Object obj) ->
+            Just $ Object $ KeyMap.insert (Key.fromText fieldNameText) value obj
+          Nothing ->
+            Just $ Object $ fromList [(Key.fromText fieldNameText, value)]
+          _ -> metadata task
+    }
