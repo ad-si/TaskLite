@@ -10,7 +10,6 @@ import Browser
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html
 import Html.Styled
     exposing
         ( button
@@ -29,7 +28,6 @@ import Html.Styled.Attributes
         ( checked
         , css
         , disabled
-        , style
         , type_
         , value
         )
@@ -60,6 +58,8 @@ type alias TodoItem =
     { ulid : Maybe String
     , body : Maybe String
     , closed_utc : Maybe String
+    , due_utc : Maybe String
+    , tags : Maybe String
     }
 
 
@@ -131,6 +131,19 @@ viewError error =
                         ]
 
 
+viewMaybe :
+    Maybe val
+    -> (val -> Html.Styled.Html Msg)
+    -> Html.Styled.Html Msg
+viewMaybe maybeValue viewFunc =
+    case maybeValue of
+        Nothing ->
+            text ""
+
+        Just value ->
+            viewFunc value
+
+
 viewTodo : TodoItem -> Html.Styled.Html Msg
 viewTodo todo =
     div
@@ -145,29 +158,66 @@ viewTodo todo =
             , items_center
             ]
         ]
-        [ input
-            [ type_ "checkbox"
-            , checked
-                (case todo.closed_utc of
-                    Just _ ->
-                        True
+        [ div
+            [ css [ flex_1, items_center ] ]
+            [ input
+                [ type_ "checkbox"
+                , checked
+                    (case todo.closed_utc of
+                        Just _ ->
+                            True
 
-                    _ ->
-                        False
+                        _ ->
+                            False
+                    )
+                , case todo.ulid of
+                    Nothing ->
+                        disabled True
+
+                    Just ulid ->
+                        onCheck (SetCompleted ulid)
+                ]
+                []
+            , span
+                [ css [ inline_block, mr_4 ] ]
+                [ text (todo.body |> Maybe.withDefault "") ]
+            , viewMaybe todo.due_utc
+                (\due_utc ->
+                    span
+                        [ css [ text_color yellow_500, text_sm, mr_4 ] ]
+                        [ text due_utc ]
                 )
-            , case todo.ulid of
-                Nothing ->
-                    disabled True
-
-                Just ulid ->
-                    onCheck (SetCompleted ulid)
+            , viewMaybe todo.tags
+                (\tagsStr ->
+                    span []
+                        (tagsStr
+                            |> String.split ","
+                            |> List.map
+                                (\tag ->
+                                    span
+                                        [ css [ text_color blue_400, mr_2 ] ]
+                                        [ text <| "+" ++ tag ]
+                                )
+                        )
+                )
             ]
-            []
-        , span [] [ text (todo.body |> Maybe.withDefault "") ]
+        , div
+            [ css
+                [ text_xs
+                , text_color gray_300
+                , font_mono
+                , mr_1
+                ]
+            ]
+            [ text
+                (todo.ulid
+                    |> Maybe.withDefault ""
+                    |> String.right 4
+                )
+            ]
         , button
             [ css
-                [ ml_1
-                , cursor_pointer
+                [ cursor_pointer
                 , rounded_full
                 , border
                 , border_solid
@@ -190,7 +240,7 @@ viewBody : Model -> Html.Styled.Html Msg
 viewBody model =
     div
         [ css [ h_full, bg_color gray_100, font_sans ] ]
-        [ main_ [ css [ max_w_2xl, mx_auto, px_4, py_8 ] ]
+        [ main_ [ css [ max_w_3xl, mx_auto, px_4, py_8 ] ]
             [ h1 [] [ text "TaskLite" ]
             , let
                 inputForm =
@@ -264,10 +314,12 @@ view model =
 
 todosSelection : SelectionSet TodoItem Tasks_head_row
 todosSelection =
-    SelectionSet.map3 TodoItem
+    SelectionSet.map5 TodoItem
         Tasks_head_row.ulid
         Tasks_head_row.body
         Tasks_head_row.closed_utc
+        Tasks_head_row.due_utc
+        Tasks_head_row.tags
 
 
 getTodos : Cmd Msg
@@ -318,7 +370,7 @@ insertTodo now ulid body =
 
 
 setTodoCompleted : String -> Bool -> Cmd Msg
-setTodoCompleted ulid value =
+setTodoCompleted ulid _ =
     Mutation.update_tasks
         { filter =
             { ulid =
@@ -455,16 +507,18 @@ update msg model =
         InsertAffectedRowsResponse response ->
             ( { model
                 | remoteTodos =
-                    RemoteData.map
-                        (\todos ->
-                            todos
-                                ++ [ { ulid = Nothing
-                                     , body = Just "Loading …"
-                                     , closed_utc = Nothing
-                                     }
-                                   ]
-                        )
-                        model.remoteTodos
+                    model.remoteTodos
+                        |> RemoteData.map
+                            (\todos ->
+                                todos
+                                    ++ [ { ulid = Nothing
+                                         , body = Just "Loading …"
+                                         , closed_utc = Nothing
+                                         , due_utc = Nothing
+                                         , tags = Nothing
+                                         }
+                                       ]
+                            )
                 , submissionStatus = response
               }
             , getTodos
@@ -473,19 +527,19 @@ update msg model =
         SetCompleted ulid value ->
             ( { model
                 | remoteTodos =
-                    RemoteData.map
-                        (\todos ->
-                            List.map
-                                (\todo ->
-                                    if todo.ulid == Just ulid then
-                                        { todo | closed_utc = Just "TODO" }
+                    model.remoteTodos
+                        |> RemoteData.map
+                            (\todos ->
+                                List.map
+                                    (\todo ->
+                                        if todo.ulid == Just ulid then
+                                            { todo | closed_utc = Just "TODO" }
 
-                                    else
-                                        todo
-                                )
-                                todos
-                        )
-                        model.remoteTodos
+                                        else
+                                            todo
+                                    )
+                                    todos
+                            )
               }
             , setTodoCompleted ulid value
             )
