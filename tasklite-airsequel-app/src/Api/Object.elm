@@ -27,6 +27,14 @@ type Task_to_tag_row
     = Task_to_tag_row
 
 
+type Tasks_head_mutation_response
+    = Tasks_head_mutation_response
+
+
+type Tasks_head_row
+    = Tasks_head_row
+
+
 type Tasks_mutation_response
     = Tasks_mutation_response
 

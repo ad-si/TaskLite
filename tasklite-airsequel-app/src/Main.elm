@@ -1,23 +1,46 @@
 module Main exposing (..)
 
 import Api.Mutation as Mutation
-import Api.Object exposing (Tasks_view_row)
+import Api.Object exposing (Tasks_head_row)
+import Api.Object.Tasks_head_row as Tasks_head_row exposing (body)
 import Api.Object.Tasks_mutation_response
-import Api.Object.Tasks_view_row as Tasks_view_row exposing (body)
 import Api.Query as Query
 import Api.Scalar exposing (Id(..))
 import Browser
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
-import Html exposing (button, div, form, h1, input, p, span, text)
-import Html.Attributes exposing (checked, disabled, style, type_, value)
-import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
+import Html
+import Html.Styled
+    exposing
+        ( button
+        , div
+        , form
+        , h1
+        , input
+        , main_
+        , p
+        , span
+        , text
+        , toUnstyled
+        )
+import Html.Styled.Attributes
+    exposing
+        ( checked
+        , css
+        , disabled
+        , style
+        , type_
+        , value
+        )
+import Html.Styled.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Iso8601
 import Json.Decode
 import List exposing (map)
 import Random
 import RemoteData exposing (RemoteData(..))
+import Tailwind.Theme exposing (..)
+import Tailwind.Utilities exposing (..)
 import Task
 import Time exposing (Posix)
 import Ulid exposing (Ulid, ulidGenerator)
@@ -71,7 +94,7 @@ type alias Flags =
     ()
 
 
-viewError : Graphql.Http.Error a -> Html.Html Msg
+viewError : Graphql.Http.Error a -> Html.Styled.Html Msg
 viewError error =
     case error of
         Graphql.Http.GraphqlError _ graphqlErrors ->
@@ -108,9 +131,20 @@ viewError error =
                         ]
 
 
-viewTodo : TodoItem -> Html.Html Msg
+viewTodo : TodoItem -> Html.Styled.Html Msg
 viewTodo todo =
-    p []
+    div
+        [ css
+            [ bg_color white
+            , px_3
+            , py_2
+            , mb_1
+            , rounded_md
+            , shadow
+            , flex
+            , items_center
+            ]
+        ]
         [ input
             [ type_ "checkbox"
             , checked
@@ -131,8 +165,16 @@ viewTodo todo =
             []
         , span [] [ text (todo.body |> Maybe.withDefault "") ]
         , button
-            [ style "margin-left" "1em"
-            , style "cursor" "pointer"
+            [ css
+                [ ml_1
+                , cursor_pointer
+                , rounded_full
+                , border
+                , border_solid
+                , bg_color gray_100
+                , border_color gray_300
+                , text_color gray_400
+                ]
             , case todo.ulid of
                 Nothing ->
                     disabled True
@@ -144,35 +186,29 @@ viewTodo todo =
         ]
 
 
-view : Model -> Browser.Document Msg
-view model =
-    { title = "Todo App"
-    , body =
-        [ div
-            [ style "font-family" "sans-serif"
-            , style "max-width" "50em"
-            , style "margin" "0 auto"
-            ]
+viewBody : Model -> Html.Styled.Html Msg
+viewBody model =
+    div
+        [ css [ h_full, bg_color gray_100, font_sans ] ]
+        [ main_ [ css [ max_w_2xl, mx_auto, px_4, py_8 ] ]
             [ h1 [] [ text "TaskLite" ]
-            , case model.remoteTodos of
-                NotAsked ->
-                    p [] [ text "Initializing …" ]
-
-                Loading ->
-                    p [] [ text "Loading …" ]
-
-                Success todos ->
-                    div [] (todos |> map viewTodo)
-
-                Failure error ->
-                    viewError error
             , let
                 inputForm =
-                    form [ onSubmit AddTaskNow ]
+                    form [ onSubmit AddTaskNow, css [ flex, mb_3 ] ]
                         [ input
                             [ type_ "text"
                             , onInput NewTask
                             , value model.newTask
+                            , css
+                                [ flex_1
+                                , mr_2
+                                , px_3
+                                , py_2
+                                , rounded
+                                , border
+                                , border_solid
+                                , border_color gray_400
+                                ]
                             ]
                             []
                         , input
@@ -198,22 +234,45 @@ view model =
 
                 Success _ ->
                     inputForm
+            , case model.remoteTodos of
+                NotAsked ->
+                    p [] [ text "Initializing …" ]
+
+                Loading ->
+                    p [] [ text "Loading …" ]
+
+                Success todos ->
+                    div []
+                        (todos
+                            -- TODO: Remove after order is fixed in Airsequel
+                            |> List.reverse
+                            |> map viewTodo
+                        )
+
+                Failure error ->
+                    viewError error
             ]
         ]
+
+
+view : Model -> Browser.Document Msg
+view model =
+    { title = "Todo App"
+    , body = [ toUnstyled <| viewBody model ]
     }
 
 
-todosSelection : SelectionSet TodoItem Tasks_view_row
+todosSelection : SelectionSet TodoItem Tasks_head_row
 todosSelection =
     SelectionSet.map3 TodoItem
-        Tasks_view_row.ulid
-        Tasks_view_row.body
-        Tasks_view_row.closed_utc
+        Tasks_head_row.ulid
+        Tasks_head_row.body
+        Tasks_head_row.closed_utc
 
 
 getTodos : Cmd Msg
 getTodos =
-    Query.tasks_view identity todosSelection
+    Query.tasks_head identity todosSelection
         |> Graphql.Http.queryRequest graphqlApiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> GotTasksResponse)
 

@@ -22,6 +22,28 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Json.Decode as Decode exposing (Decoder)
 import Graphql.Internal.Encode as Encode exposing (Value)
 
+type alias TasksHeadOptionalArguments = { filter : OptionalArgument Api.InputObject.Tasks_head_filter }
+
+{-| Rows from the table "tasks_head"
+
+  - filter - Filter to select specific rows
+
+-}
+tasks_head : (TasksHeadOptionalArguments -> TasksHeadOptionalArguments)
+ -> SelectionSet decodesTo Api.Object.Tasks_head_row
+ -> SelectionSet (List decodesTo) RootQuery
+tasks_head fillInOptionals____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { filter = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTasks_head_filter) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "tasks_head" optionalArgs____ (object____) (Basics.identity >> Decode.list)
+
+
 type alias TagsOptionalArguments = { filter : OptionalArgument Api.InputObject.Tags_filter }
 
 {-| Rows from the table "tags"

@@ -22,6 +22,50 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Json.Decode as Decode exposing (Decoder)
 import Graphql.Internal.Encode as Encode exposing (Value)
 
+type alias DeleteTasksHeadRequiredArguments = { filter : Api.InputObject.Tasks_head_filter }
+
+{-| Delete rows in table "tasks_head"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_head : DeleteTasksHeadRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_head_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_head requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_head" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_head_filter) ] (object____) (Basics.identity)
+
+
+type alias UpdateTasksHeadRequiredArguments = { filter : Api.InputObject.Tasks_head_filter
+ , set : Api.InputObject.Tasks_head_set_input }
+
+{-| Update rows in table "tasks_head"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_head : UpdateTasksHeadRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_head_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_head requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_head" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_head_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_head_set_input) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksHeadRequiredArguments = { objects : (List Api.InputObject.Tasks_head_insert_input) }
+
+{-| Insert new rows in table "tasks_head"
+
+  - objects - Rows to be inserted
+
+-}
+insert_tasks_head : InsertTasksHeadRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_head_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_head requiredArgs____ object____ =
+      Object.selectionForCompositeField "insert_tasks_head" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_head_insert_input |> Encode.list) ] (object____) (Basics.identity)
+
+
 type alias DeleteTagsRequiredArguments = { filter : Api.InputObject.Tags_filter }
 
 {-| Delete rows in table "tags"
