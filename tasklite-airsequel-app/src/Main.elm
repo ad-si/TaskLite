@@ -1,5 +1,6 @@
 module Main exposing (..)
 
+import Api.InputObject exposing (buildStringComparison, buildTasks_filter)
 import Api.Mutation as Mutation
 import Api.Object exposing (Tasks_head_row)
 import Api.Object.Tasks_head_row as Tasks_head_row exposing (body)
@@ -7,6 +8,7 @@ import Api.Object.Tasks_mutation_response
 import Api.Query as Query
 import Api.Scalar exposing (Id(..))
 import Browser
+import Css
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
@@ -60,6 +62,8 @@ type alias TodoItem =
     , closed_utc : Maybe String
     , due_utc : Maybe String
     , tags : Maybe String
+    , repetition_duration : Maybe String
+    , recurrence_duration : Maybe String
     }
 
 
@@ -74,10 +78,12 @@ type Msg
     | AddTaskAt Posix
     | AddTask Posix Ulid
     | InsertAffectedRowsResponse (RemoteData (Graphql.Http.Error Int) Int)
-    | SetCompleted String Bool
+    | SetCompletedNow String
+    | SetCompletedAt Posix String
     | CompleteAffectedRowsResponse (RemoteData (Graphql.Http.Error Int) Int)
     | DeleteTask String
     | DeleteAffectedRowsResponse (RemoteData (Graphql.Http.Error Int) Int)
+    | NoOp
 
 
 type alias Model =
@@ -162,6 +168,7 @@ viewTodo todo =
             [ css [ flex_1, items_center ] ]
             [ input
                 [ type_ "checkbox"
+                , css [ mr_2, relative, Css.top (Css.px 1.5) ]
                 , checked
                     (case todo.closed_utc of
                         Just _ ->
@@ -175,7 +182,26 @@ viewTodo todo =
                         disabled True
 
                     Just ulid ->
-                        onCheck (SetCompleted ulid)
+                        case
+                            ( todo.repetition_duration
+                            , todo.recurrence_duration
+                            )
+                        of
+                            ( Nothing, Nothing ) ->
+                                onCheck
+                                    (\bool ->
+                                        if bool then
+                                            SetCompletedNow ulid
+
+                                        else
+                                            -- TODO: Implement
+                                            NoOp
+                                    )
+
+                            _ ->
+                                -- TODO: Show checkbox when Airsequel supports
+                                --       several filters simulatenously
+                                disabled True
                 ]
                 []
             , span
@@ -263,6 +289,7 @@ viewBody model =
                             []
                         , input
                             [ type_ "submit"
+                            , css [ cursor_pointer ]
                             , if model.newTask == "" then
                                 disabled True
 
@@ -314,12 +341,14 @@ view model =
 
 todosSelection : SelectionSet TodoItem Tasks_head_row
 todosSelection =
-    SelectionSet.map5 TodoItem
+    SelectionSet.map7 TodoItem
         Tasks_head_row.ulid
         Tasks_head_row.body
         Tasks_head_row.closed_utc
         Tasks_head_row.due_utc
         Tasks_head_row.tags
+        Tasks_head_row.repetition_duration
+        Tasks_head_row.recurrence_duration
 
 
 getTodos : Cmd Msg
@@ -369,38 +398,35 @@ insertTodo now ulid body =
             (RemoteData.fromResult >> InsertAffectedRowsResponse)
 
 
-setTodoCompleted : String -> Bool -> Cmd Msg
-setTodoCompleted ulid _ =
+{-| Set task as completed (aka set `closed_utc`)
+TODO: Allow completing repetition and recurrence tasks
+-}
+setTodoCompleted : Posix -> String -> Cmd Msg
+setTodoCompleted closedUtc ulid =
     Mutation.update_tasks
         { filter =
-            { ulid =
-                Present
-                    { eq = Present ulid
-                    , gt = Absent
-                    , gte = Absent
-                    , lt = Absent
-                    , lte = Absent
-                    , neq = Absent
+            buildTasks_filter
+                (\f ->
+                    { f
+                        | ulid =
+                            Present <|
+                                buildStringComparison
+                                    (\c -> { c | eq = Present ulid })
+
+                        -- TODO: Add when Airsequel supports
+                        --       several filters simulatenously
+                        -- recurrence_duration =
+                        --     Present <|
+                        --         buildStringComparison
+                        --             (\c -> { c | eq = Present "0" })
+                        -- repetition_duration =
+                        --     Present <|
+                        --         buildStringComparison
+                        --             (\c -> { c | eq = Present "0" })
                     }
-            , body = Absent
-            , closed_utc = Absent
-            , awake_utc = Absent
-            , due_utc = Absent
-            , group_ulid = Absent
-            , metadata = Absent
-            , modified_utc = Absent
-            , priority_adjustment = Absent
-            , ready_utc = Absent
-            , recurrence_duration = Absent
-            , repetition_duration = Absent
-            , review_utc = Absent
-            , rowid = Absent
-            , state = Absent
-            , user = Absent
-            , waiting_utc = Absent
-            }
+                )
         , set =
-            { closed_utc = Present "TODO"
+            { closed_utc = Present (Iso8601.fromTime closedUtc)
 
             --
             , awake_utc = Absent
@@ -429,17 +455,13 @@ setTodoCompleted ulid _ =
 
 deleteTodo : String -> Cmd Msg
 deleteTodo ulid =
+    -- TODO: Also delete tags and notes
     Mutation.delete_tasks
         { filter =
             { ulid =
-                Present
-                    { eq = Present ulid
-                    , gt = Absent
-                    , gte = Absent
-                    , lt = Absent
-                    , lte = Absent
-                    , neq = Absent
-                    }
+                Present <|
+                    buildStringComparison
+                        (\c -> { c | eq = Present ulid })
             , body = Absent
             , closed_utc = Absent
 
@@ -516,6 +538,8 @@ update msg model =
                                          , closed_utc = Nothing
                                          , due_utc = Nothing
                                          , tags = Nothing
+                                         , repetition_duration = Nothing
+                                         , recurrence_duration = Nothing
                                          }
                                        ]
                             )
@@ -524,24 +548,31 @@ update msg model =
             , getTodos
             )
 
-        SetCompleted ulid value ->
+        SetCompletedNow ulid ->
+            ( { model | submissionStatus = RemoteData.Loading }
+            , Task.perform (\time -> SetCompletedAt time ulid) Time.now
+            )
+
+        SetCompletedAt time ulid ->
             ( { model
                 | remoteTodos =
                     model.remoteTodos
                         |> RemoteData.map
-                            (\todos ->
-                                List.map
-                                    (\todo ->
-                                        if todo.ulid == Just ulid then
-                                            { todo | closed_utc = Just "TODO" }
+                            (List.map
+                                (\todo ->
+                                    if todo.ulid == Just ulid then
+                                        { todo
+                                            | closed_utc =
+                                                Just <|
+                                                    Iso8601.fromTime time
+                                        }
 
-                                        else
-                                            todo
-                                    )
-                                    todos
+                                    else
+                                        todo
+                                )
                             )
               }
-            , setTodoCompleted ulid value
+            , setTodoCompleted time ulid
             )
 
         CompleteAffectedRowsResponse response ->
@@ -567,6 +598,9 @@ update msg model =
             ( { model | submissionStatus = response }
             , getTodos
             )
+
+        NoOp ->
+            ( model, Cmd.none )
 
 
 main : Platform.Program Flags Model Msg
