@@ -1,11 +1,8 @@
-resolver: lts-20.5
+resolver: lts-20.25
 packages:
   - huzzy
   - tasklite-core
-  - tasklite-server
-  # - tasklite-api
   # - tasklite-app
-  # - tasklite-web
 
 extra-deps:
   - github: ad-si/iso8601-duration

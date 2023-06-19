@@ -28,7 +28,7 @@ packages:
     url: https://github.com/JakeWheat/simple-sql-parser/archive/00433a26e8303c9e61359f406da5a2dbf1293fc8.tar.gz
 snapshots:
 - completed:
-    sha256: a684cdbdf9304b325a503e0fe1d9648e9c18155ce4c7cfebbe8a7f93674e6295
-    size: 649106
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/20/5.yaml
-  original: lts-20.5
+    sha256: e63b43d506918278d05cd1448bd19352ab2faa9b8e9d64ce527b56f1a7fba149
+    size: 650255
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/20/25.yaml
+  original: lts-20.25
