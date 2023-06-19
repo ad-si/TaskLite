@@ -8,7 +8,7 @@ import Api.Object.Tasks_mutation_response
 import Api.Query as Query
 import Api.Scalar exposing (Id(..))
 import Browser
-import Css
+import Css exposing (hover)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
@@ -249,7 +249,9 @@ viewTodo todo =
                 , border_solid
                 , bg_color gray_100
                 , border_color gray_300
-                , text_color gray_400
+                , text_color gray_300
+                , px_1_dot_5
+                , hover [ text_color gray_500, border_color gray_500 ]
                 ]
             , case todo.ulid of
                 Nothing ->
@@ -258,16 +260,16 @@ viewTodo todo =
                 Just ulid ->
                     onClick (DeleteTask ulid)
             ]
-            [ text "x" ]
+            [ text "✕" ]
         ]
 
 
 viewBody : Model -> Html.Styled.Html Msg
 viewBody model =
     div
-        [ css [ h_full, bg_color gray_100, font_sans ] ]
+        [ css [ h_full, font_sans ] ]
         [ main_ [ css [ max_w_3xl, mx_auto, px_4, py_8 ] ]
-            [ h1 [] [ text "TaskLite" ]
+            [ h1 [ css [ mb_4 ] ] [ text "TaskLite" ]
             , let
                 inputForm =
                     form [ onSubmit AddTaskNow, css [ flex, mb_3 ] ]
@@ -289,7 +291,15 @@ viewBody model =
                             []
                         , input
                             [ type_ "submit"
-                            , css [ cursor_pointer ]
+                            , css
+                                [ cursor_pointer
+                                , px_3
+                                , py_2
+                                , rounded
+                                , border
+                                , border_solid
+                                , border_color gray_400
+                                ]
                             , if model.newTask == "" then
                                 disabled True
 

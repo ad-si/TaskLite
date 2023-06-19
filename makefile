@@ -3,6 +3,12 @@ help: makefile
 	@tail -n +4 makefile | grep ".PHONY"
 
 
+.PHONY: start-app
+start-app:
+	cd tasklite-airsequel-app \
+	&& npx elm-app start
+
+
 .PHONY: test
 test:
 	stack test

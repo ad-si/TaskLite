@@ -4,6 +4,7 @@
     "elm-format": "^0.8.5"
   },
   "devDependencies": {
-    "@dillonkearns/elm-graphql": "^4.3.0"
+    "@dillonkearns/elm-graphql": "^4.3.0",
+    "create-elm-app": "^5.22.0"
   }
 }
