@@ -89,7 +89,7 @@ jobs:
           name: tasklite_macos_x86_64.zip
 
   docker:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout Git Repository
         uses: actions/checkout@v2
