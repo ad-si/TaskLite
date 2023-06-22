@@ -20,6 +20,7 @@ import Html.Styled
         , h1
         , input
         , main_
+        , nav
         , p
         , span
         , text
@@ -68,7 +69,9 @@ type alias TodoItem =
 
 
 type Msg
-    = GotTasksResponse
+    = ReceivedTime Posix
+    | ReloadTasks
+    | GotTasksResponse
         (RemoteData
             (Graphql.Http.Error (List TodoItem))
             (List TodoItem)
@@ -93,6 +96,7 @@ type alias Model =
             (List TodoItem)
     , newTask : String
     , submissionStatus : RemoteData (Graphql.Http.Error Int) Int
+    , now : Posix
     }
 
 
@@ -150,8 +154,8 @@ viewMaybe maybeValue viewFunc =
             viewFunc value
 
 
-viewTodo : TodoItem -> Html.Styled.Html Msg
-viewTodo todo =
+viewTodo : Posix -> TodoItem -> Html.Styled.Html Msg
+viewTodo now todo =
     div
         [ css
             [ bg_color white
@@ -205,7 +209,21 @@ viewTodo todo =
                 ]
                 []
             , span
-                [ css [ inline_block, mr_4 ] ]
+                [ css
+                    [ inline_block
+                    , mr_4
+                    , case todo.due_utc of
+                        Just due_utc ->
+                            if due_utc < Iso8601.fromTime now then
+                                text_color red_600
+
+                            else
+                                text_color inherit
+
+                        Nothing ->
+                            text_color inherit
+                    ]
+                ]
                 [ text (todo.body |> Maybe.withDefault "") ]
             , viewMaybe todo.due_utc
                 (\due_utc ->
@@ -268,8 +286,23 @@ viewBody : Model -> Html.Styled.Html Msg
 viewBody model =
     div
         [ css [ h_full, font_sans ] ]
-        [ main_ [ css [ max_w_3xl, mx_auto, px_4, py_8 ] ]
-            [ h1 [ css [ mb_4 ] ] [ text "TaskLite" ]
+        [ main_
+            [ css [ max_w_3xl, mx_auto, px_4, py_8 ] ]
+            [ nav [ css [ flex ] ]
+                [ h1
+                    [ css [ mb_4, inline_block, mr_4, flex_1 ] ]
+                    [ text "TaskLite" ]
+                , button
+                    [ css
+                        [ mb_4
+                        , border_none
+                        , text_2xl
+                        , cursor_pointer
+                        ]
+                    , onClick ReloadTasks
+                    ]
+                    [ text "🔁" ]
+                ]
             , let
                 inputForm =
                     form [ onSubmit AddTaskNow, css [ flex, mb_3 ] ]
@@ -333,7 +366,7 @@ viewBody model =
                         (todos
                             -- TODO: Remove after order is fixed in Airsequel
                             |> List.reverse
-                            |> map viewTodo
+                            |> map (viewTodo model.now)
                         )
 
                 Failure error ->
@@ -503,14 +536,29 @@ init _ =
     ( { remoteTodos = RemoteData.Loading
       , newTask = ""
       , submissionStatus = RemoteData.NotAsked
+      , now = Time.millisToPosix 0
       }
-    , getTodos
+    , Cmd.batch
+        [ getTodos
+        , Task.perform ReceivedTime Time.now
+        ]
     )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        ReceivedTime time ->
+            ( { model | now = time }, Cmd.none )
+
+        ReloadTasks ->
+            ( { model
+                | remoteTodos = RemoteData.Loading
+                , submissionStatus = RemoteData.NotAsked
+              }
+            , getTodos
+            )
+
         GotTasksResponse response ->
             ( { model | remoteTodos = response }, Cmd.none )
 
