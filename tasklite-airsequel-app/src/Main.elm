@@ -31,6 +31,7 @@ import Html.Styled.Attributes
         ( checked
         , css
         , disabled
+        , title
         , type_
         , value
         )
@@ -62,9 +63,23 @@ type alias TodoItem =
     , body : Maybe String
     , closed_utc : Maybe String
     , due_utc : Maybe String
+    , review_utc : Maybe String
     , tags : Maybe String
     , repetition_duration : Maybe String
     , recurrence_duration : Maybe String
+    }
+
+
+emptyTodo : TodoItem
+emptyTodo =
+    { ulid = Nothing
+    , body = Nothing
+    , closed_utc = Nothing
+    , due_utc = Nothing
+    , review_utc = Nothing
+    , tags = Nothing
+    , repetition_duration = Nothing
+    , recurrence_duration = Nothing
     }
 
 
@@ -208,6 +223,18 @@ viewTodo now todo =
                                 disabled True
                 ]
                 []
+            , viewMaybe todo.review_utc
+                (\review_utc ->
+                    if review_utc < Iso8601.fromTime now then
+                        span
+                            [ css [ text_color green_500, text_sm, mr_4 ]
+                            , title "Must be reviewed"
+                            ]
+                            [ text "🔎" ]
+
+                    else
+                        text ""
+                )
             , span
                 [ css
                     [ inline_block
@@ -384,11 +411,12 @@ view model =
 
 todosSelection : SelectionSet TodoItem Tasks_head_row
 todosSelection =
-    SelectionSet.map7 TodoItem
+    SelectionSet.map8 TodoItem
         Tasks_head_row.ulid
         Tasks_head_row.body
         Tasks_head_row.closed_utc
         Tasks_head_row.due_utc
+        Tasks_head_row.review_utc
         Tasks_head_row.tags
         Tasks_head_row.repetition_duration
         Tasks_head_row.recurrence_duration
@@ -591,13 +619,8 @@ update msg model =
                         |> RemoteData.map
                             (\todos ->
                                 todos
-                                    ++ [ { ulid = Nothing
-                                         , body = Just "Loading …"
-                                         , closed_utc = Nothing
-                                         , due_utc = Nothing
-                                         , tags = Nothing
-                                         , repetition_duration = Nothing
-                                         , recurrence_duration = Nothing
+                                    ++ [ { emptyTodo
+                                            | body = Just "Loading …"
                                          }
                                        ]
                             )
