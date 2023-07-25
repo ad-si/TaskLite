@@ -16,6 +16,7 @@ import Api.Scalar exposing (Id(..))
 import Browser
 import Browser.Navigation exposing (Key, load, pushUrl)
 import Css exposing (hover, url)
+import Css.Media exposing (withMediaQuery)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
@@ -67,6 +68,11 @@ dbId =
 graphqlApiUrl : String
 graphqlApiUrl =
     "http://localhost:4185/dbs/" ++ dbId ++ "/graphql"
+
+
+dark : List Css.Style -> Css.Style
+dark =
+    withMediaQuery [ "(prefers-color-scheme: dark)" ]
 
 
 type alias TodoItem =
@@ -185,6 +191,26 @@ viewMaybe maybeValue viewFunc =
 
 viewTodo : Posix -> TodoItem -> Html.Styled.Html Msg
 viewTodo now todo =
+    let
+        ifDisabledElse disabledValue elseValue =
+            case todo.ulid of
+                Nothing ->
+                    disabledValue
+
+                Just ulid ->
+                    case
+                        ( todo.repetition_duration
+                        , todo.recurrence_duration
+                        )
+                    of
+                        ( Nothing, Nothing ) ->
+                            elseValue ulid
+
+                        _ ->
+                            -- TODO: Show checkbox when Airsequel supports
+                            --       several filters simulatenously
+                            disabledValue
+    in
     div
         [ css
             [ bg_color white
@@ -195,13 +221,27 @@ viewTodo now todo =
             , shadow
             , flex
             , items_center
+            , dark [ bg_color neutral_800, text_color neutral_300 ]
             ]
         ]
         [ div
             [ css [ flex_1, items_center ] ]
             [ input
                 [ type_ "checkbox"
-                , css [ mr_2, relative, Css.top (Css.px 1.5) ]
+                , css
+                    [ mr_2
+                    , relative
+                    , Css.top (Css.px 1.5)
+                    , ifDisabledElse
+                        (Css.batch [ opacity_10, cursor_not_allowed ])
+                        (\_ -> Css.batch [ opacity_60, cursor_pointer ])
+                    ]
+                , ifDisabledElse
+                    (title <|
+                        "Currenly not supported.\n"
+                            ++ "Please use the CLI to complete this task."
+                    )
+                    (\_ -> css [])
                 , checked
                     (case todo.closed_utc of
                         Just _ ->
@@ -210,31 +250,19 @@ viewTodo now todo =
                         _ ->
                             False
                     )
-                , case todo.ulid of
-                    Nothing ->
-                        disabled True
+                , ifDisabledElse
+                    (disabled True)
+                    (\ulid ->
+                        onCheck
+                            (\bool ->
+                                if bool then
+                                    SetCompletedNow ulid
 
-                    Just ulid ->
-                        case
-                            ( todo.repetition_duration
-                            , todo.recurrence_duration
+                                else
+                                    -- TODO: Implement
+                                    NoOp
                             )
-                        of
-                            ( Nothing, Nothing ) ->
-                                onCheck
-                                    (\bool ->
-                                        if bool then
-                                            SetCompletedNow ulid
-
-                                        else
-                                            -- TODO: Implement
-                                            NoOp
-                                    )
-
-                            _ ->
-                                -- TODO: Show checkbox when Airsequel supports
-                                --       several filters simulatenously
-                                disabled True
+                    )
                 ]
                 []
             , viewMaybe todo.review_utc
@@ -256,7 +284,10 @@ viewTodo now todo =
                     , case todo.due_utc of
                         Just due_utc ->
                             if due_utc < Iso8601.fromTime now then
-                                text_color red_600
+                                Css.batch
+                                    [ text_color red_600
+                                    , dark [ text_color red_400 ]
+                                    ]
 
                             else
                                 text_color inherit
@@ -269,7 +300,13 @@ viewTodo now todo =
             , viewMaybe todo.due_utc
                 (\due_utc ->
                     span
-                        [ css [ text_color yellow_500, text_sm, mr_4 ] ]
+                        [ css
+                            [ text_color yellow_500
+                            , text_sm
+                            , mr_4
+                            , dark [ text_color yellow_200 ]
+                            ]
+                        ]
                         [ text due_utc ]
                 )
             , viewMaybe todo.tags
@@ -280,7 +317,10 @@ viewTodo now todo =
                             |> List.map
                                 (\tag ->
                                     a
-                                        [ css [ text_color blue_400, mr_2 ]
+                                        [ css
+                                            [ text_color blue_400
+                                            , mr_2
+                                            ]
                                         , href <| "/tags/" ++ tag
                                         ]
                                         [ text <| "+" ++ tag ]
@@ -294,6 +334,7 @@ viewTodo now todo =
                 , text_color gray_300
                 , font_mono
                 , mr_1
+                , dark [ text_color neutral_600 ]
                 ]
             ]
             [ text
@@ -313,6 +354,16 @@ viewTodo now todo =
                 , text_color gray_300
                 , px_1_dot_5
                 , hover [ text_color gray_500, border_color gray_500 ]
+                , dark
+                    [ bg_color neutral_800
+                    , border_color neutral_600
+                    , text_color neutral_600
+                    , hover
+                        [ bg_color neutral_600
+                        , border_color neutral_400
+                        , text_color neutral_400
+                        ]
+                    ]
                 ]
             , case todo.ulid of
                 Nothing ->
@@ -329,8 +380,9 @@ viewBody : Model -> Html.Styled.Html Msg
 viewBody model =
     div
         [ css
-            [ h_full
+            [ min_h_full
             , font_sans
+            , dark [ bg_color neutral_900, text_color neutral_300 ]
             ]
         ]
         [ main_
@@ -340,7 +392,11 @@ viewBody model =
                     [ css [ mb_4, inline_block, mr_4, flex_1 ] ]
                     [ a
                         [ href "/"
-                        , css [ no_underline, text_color inherit ]
+                        , css
+                            [ no_underline
+                            , text_color inherit
+                            , dark [ text_color neutral_300 ]
+                            ]
                         ]
                         [ text "TaskLite" ]
                     ]
@@ -350,6 +406,8 @@ viewBody model =
                         , border_none
                         , text_2xl
                         , cursor_pointer
+                        , bg_color transparent
+                        , dark [ opacity_60, hover [ opacity_100 ] ]
                         ]
                     , onClick ReloadTasks
                     ]
@@ -371,6 +429,11 @@ viewBody model =
                                 , border
                                 , border_solid
                                 , border_color gray_400
+                                , dark
+                                    [ bg_color neutral_800
+                                    , border_color neutral_500
+                                    , text_color neutral_500
+                                    ]
                                 ]
                             ]
                             []
@@ -384,6 +447,20 @@ viewBody model =
                                 , border
                                 , border_solid
                                 , border_color gray_400
+                                , hover
+                                    [ bg_color gray_200
+                                    , border_color gray_600
+                                    ]
+                                , dark
+                                    [ bg_color neutral_800
+                                    , border_color neutral_500
+                                    , text_color neutral_500
+                                    , hover
+                                        [ bg_color neutral_600
+                                        , border_color neutral_300
+                                        , text_color neutral_300
+                                        ]
+                                    ]
                                 ]
                             , if model.newTask == "" then
                                 disabled True
