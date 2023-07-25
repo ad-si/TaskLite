@@ -22,6 +22,50 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Json.Decode as Decode exposing (Decoder)
 import Graphql.Internal.Encode as Encode exposing (Value)
 
+type alias DeleteClosedTasksHistogramRequiredArguments = { filter : Api.InputObject.Closed_tasks_histogram_filter }
+
+{-| Delete rows in table "closed_tasks_histogram"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_closed_tasks_histogram : DeleteClosedTasksHistogramRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_closed_tasks_histogram requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_closed_tasks_histogram" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeClosed_tasks_histogram_filter) ] (object____) (Basics.identity)
+
+
+type alias UpdateClosedTasksHistogramRequiredArguments = { filter : Api.InputObject.Closed_tasks_histogram_filter
+ , set : Api.InputObject.Closed_tasks_histogram_set_input }
+
+{-| Update rows in table "closed_tasks_histogram"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_closed_tasks_histogram : UpdateClosedTasksHistogramRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_closed_tasks_histogram requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_closed_tasks_histogram" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeClosed_tasks_histogram_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeClosed_tasks_histogram_set_input) ] (object____) (Basics.identity)
+
+
+type alias InsertClosedTasksHistogramRequiredArguments = { objects : (List Api.InputObject.Closed_tasks_histogram_insert_input) }
+
+{-| Insert new rows in table "closed_tasks_histogram"
+
+  - objects - Rows to be inserted
+
+-}
+insert_closed_tasks_histogram : InsertClosedTasksHistogramRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_closed_tasks_histogram requiredArgs____ object____ =
+      Object.selectionForCompositeField "insert_closed_tasks_histogram" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeClosed_tasks_histogram_insert_input |> Encode.list) ] (object____) (Basics.identity)
+
+
 type alias DeleteTasksHeadRequiredArguments = { filter : Api.InputObject.Tasks_head_filter }
 
 {-| Delete rows in table "tasks_head"

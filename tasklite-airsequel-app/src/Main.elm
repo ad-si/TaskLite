@@ -1,20 +1,28 @@
 module Main exposing (..)
 
-import Api.InputObject exposing (buildStringComparison, buildTasks_filter)
+import Api.InputObject
+    exposing
+        ( buildStringComparison
+        , buildTasks_filter
+        , buildTasks_view_filter
+        )
 import Api.Mutation as Mutation
-import Api.Object exposing (Tasks_head_row)
+import Api.Object exposing (Tasks_head_row, Tasks_view_row)
 import Api.Object.Tasks_head_row as Tasks_head_row exposing (body)
 import Api.Object.Tasks_mutation_response
+import Api.Object.Tasks_view_row as Tasks_view_row exposing (body)
 import Api.Query as Query
 import Api.Scalar exposing (Id(..))
 import Browser
-import Css exposing (hover)
+import Browser.Navigation exposing (Key, load, pushUrl)
+import Css exposing (hover, url)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Html.Styled
     exposing
-        ( button
+        ( a
+        , button
         , div
         , form
         , h1
@@ -31,6 +39,7 @@ import Html.Styled.Attributes
         ( checked
         , css
         , disabled
+        , href
         , title
         , type_
         , value
@@ -46,6 +55,8 @@ import Tailwind.Utilities exposing (..)
 import Task
 import Time exposing (Posix)
 import Ulid exposing (Ulid, ulidGenerator)
+import Url exposing (Url)
+import Url.Parser exposing ((</>), Parser, map, oneOf, parse, s, string)
 
 
 dbId : String
@@ -101,11 +112,14 @@ type Msg
     | CompleteAffectedRowsResponse (RemoteData (Graphql.Http.Error Int) Int)
     | DeleteTask String
     | DeleteAffectedRowsResponse (RemoteData (Graphql.Http.Error Int) Int)
+    | UrlChanged Url
+    | ClickedLink Browser.UrlRequest
     | NoOp
 
 
 type alias Model =
-    { remoteTodos :
+    { key : Key
+    , remoteTodos :
         RemoteData
             (Graphql.Http.Error (List TodoItem))
             (List TodoItem)
@@ -265,8 +279,10 @@ viewTodo now todo =
                             |> String.split ","
                             |> List.map
                                 (\tag ->
-                                    span
-                                        [ css [ text_color blue_400, mr_2 ] ]
+                                    a
+                                        [ css [ text_color blue_400, mr_2 ]
+                                        , href <| "/tags/" ++ tag
+                                        ]
                                         [ text <| "+" ++ tag ]
                                 )
                         )
@@ -312,13 +328,22 @@ viewTodo now todo =
 viewBody : Model -> Html.Styled.Html Msg
 viewBody model =
     div
-        [ css [ h_full, font_sans ] ]
+        [ css
+            [ h_full
+            , font_sans
+            ]
+        ]
         [ main_
             [ css [ max_w_3xl, mx_auto, px_4, py_8 ] ]
             [ nav [ css [ flex ] ]
                 [ h1
                     [ css [ mb_4, inline_block, mr_4, flex_1 ] ]
-                    [ text "TaskLite" ]
+                    [ a
+                        [ href "/"
+                        , css [ no_underline, text_color inherit ]
+                        ]
+                        [ text "TaskLite" ]
+                    ]
                 , button
                     [ css
                         [ mb_4
@@ -389,12 +414,7 @@ viewBody model =
                     p [] [ text "Loading …" ]
 
                 Success todos ->
-                    div []
-                        (todos
-                            -- TODO: Remove after order is fixed in Airsequel
-                            |> List.reverse
-                            |> map (viewTodo model.now)
-                        )
+                    div [] (todos |> List.map (viewTodo model.now))
 
                 Failure error ->
                     viewError error
@@ -409,8 +429,8 @@ view model =
     }
 
 
-todosSelection : SelectionSet TodoItem Tasks_head_row
-todosSelection =
+tasksHeadSelection : SelectionSet TodoItem Tasks_head_row
+tasksHeadSelection =
     SelectionSet.map8 TodoItem
         Tasks_head_row.ulid
         Tasks_head_row.body
@@ -422,9 +442,47 @@ todosSelection =
         Tasks_head_row.recurrence_duration
 
 
+tasksViewSelection : SelectionSet TodoItem Tasks_view_row
+tasksViewSelection =
+    SelectionSet.map8 TodoItem
+        Tasks_view_row.ulid
+        Tasks_view_row.body
+        Tasks_view_row.closed_utc
+        Tasks_view_row.due_utc
+        Tasks_view_row.review_utc
+        Tasks_view_row.tags
+        Tasks_view_row.repetition_duration
+        Tasks_view_row.recurrence_duration
+
+
 getTodos : Cmd Msg
 getTodos =
-    Query.tasks_head identity todosSelection
+    Query.tasks_head identity tasksHeadSelection
+        |> Graphql.Http.queryRequest graphqlApiUrl
+        |> Graphql.Http.send (RemoteData.fromResult >> GotTasksResponse)
+
+
+getTodosWithTag : String -> Cmd Msg
+getTodosWithTag tag =
+    let
+        setTags filter =
+            { filter
+                | tags =
+                    Present <|
+                        buildStringComparison
+                            (\c ->
+                                { c
+                                    | like =
+                                        Present <| "%" ++ tag ++ "%"
+                                }
+                            )
+                , closed_utc =
+                    Present <| buildStringComparison (\c -> { c | eq = Null })
+            }
+    in
+    Query.tasks_view
+        (\_ -> { filter = Present <| buildTasks_view_filter setTags })
+        tasksViewSelection
         |> Graphql.Http.queryRequest graphqlApiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> GotTasksResponse)
 
@@ -559,17 +617,59 @@ deleteTodo ulid =
             (RemoteData.fromResult >> DeleteAffectedRowsResponse)
 
 
-init : Flags -> ( Model, Cmd Msg )
-init _ =
-    ( { remoteTodos = RemoteData.Loading
+type Route
+    = Home
+    | Tags String
+    | New
+    | NotFound
+
+
+routeParser : Parser (Route -> a) a
+routeParser =
+    oneOf
+        [ Url.Parser.top |> Url.Parser.map Home
+        , (s "tags" </> string) |> Url.Parser.map Tags
+        , s "new" |> Url.Parser.map New
+        ]
+
+
+handleUrl : Url -> Cmd Msg
+handleUrl url =
+    let
+        route =
+            url
+                |> parse routeParser
+                |> Maybe.withDefault NotFound
+    in
+    case Debug.log "route" route of
+        Home ->
+            Cmd.batch
+                [ getTodos
+                , Task.perform ReceivedTime Time.now
+                ]
+
+        Tags tag ->
+            Cmd.batch
+                [ getTodosWithTag tag
+                , Task.perform ReceivedTime Time.now
+                ]
+
+        New ->
+            Cmd.none
+
+        NotFound ->
+            Cmd.none
+
+
+init : Flags -> Url -> Key -> ( Model, Cmd Msg )
+init _ url key =
+    ( { key = key
+      , remoteTodos = RemoteData.Loading
       , newTask = ""
       , submissionStatus = RemoteData.NotAsked
       , now = Time.millisToPosix 0
       }
-    , Cmd.batch
-        [ getTodos
-        , Task.perform ReceivedTime Time.now
-        ]
+    , handleUrl url
     )
 
 
@@ -680,15 +780,28 @@ update msg model =
             , getTodos
             )
 
+        UrlChanged url ->
+            ( { model | remoteTodos = RemoteData.Loading }, handleUrl url )
+
+        ClickedLink urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, pushUrl model.key (Url.toString url) )
+
+                Browser.External url ->
+                    ( model, load url )
+
         NoOp ->
             ( model, Cmd.none )
 
 
 main : Platform.Program Flags Model Msg
 main =
-    Browser.document
+    Browser.application
         { init = init
+        , view = view
         , update = update
         , subscriptions = \_ -> Sub.none
-        , view = view
+        , onUrlRequest = ClickedLink
+        , onUrlChange = UrlChanged
         }

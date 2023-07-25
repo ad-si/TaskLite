@@ -1,10 +1,10 @@
 {
   "dependencies": {
     "elm": "^0.19.1-5",
-    "elm-format": "^0.8.5"
+    "elm-format": "^0.8.7"
   },
   "devDependencies": {
-    "@dillonkearns/elm-graphql": "^4.3.0",
+    "@dillonkearns/elm-graphql": "^4.3.1",
     "create-elm-app": "^5.22.0"
   }
 }

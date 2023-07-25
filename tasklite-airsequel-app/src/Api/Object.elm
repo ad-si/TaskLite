@@ -3,6 +3,14 @@
 module Api.Object exposing (..)
 
 
+type Closed_tasks_histogram_mutation_response
+    = Closed_tasks_histogram_mutation_response
+
+
+type Closed_tasks_histogram_row
+    = Closed_tasks_histogram_row
+
+
 type Tags_mutation_response
     = Tags_mutation_response
 

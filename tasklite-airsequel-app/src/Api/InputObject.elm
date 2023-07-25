@@ -26,13 +26,15 @@ buildBooleanComparison fillOptionals____ =
         optionals____ =
             
             fillOptionals____
-                { lte = Absent, lt = Absent, gte = Absent, gt = Absent, neq = Absent, eq = Absent }
+                { ilike = Absent, like = Absent, lte = Absent, lt = Absent, gte = Absent, gt = Absent, neq = Absent, eq = Absent }
     in
-    { lte = optionals____.lte, lt = optionals____.lt, gte = optionals____.gte, gt = optionals____.gt, neq = optionals____.neq, eq = optionals____.eq }
+    { ilike = optionals____.ilike, like = optionals____.like, lte = optionals____.lte, lt = optionals____.lt, gte = optionals____.gte, gt = optionals____.gt, neq = optionals____.neq, eq = optionals____.eq }
 
 
 type alias BooleanComparisonOptionalFields =
-    { lte : (OptionalArgument Bool)
+    { ilike : (OptionalArgument Bool)
+ , like : (OptionalArgument Bool)
+ , lte : (OptionalArgument Bool)
  , lt : (OptionalArgument Bool)
  , gte : (OptionalArgument Bool)
  , gt : (OptionalArgument Bool)
@@ -43,7 +45,9 @@ type alias BooleanComparisonOptionalFields =
 {-| Type for the BooleanComparison input object.
 -}
 type alias BooleanComparison =
-    { lte : (OptionalArgument Bool)
+    { ilike : (OptionalArgument Bool)
+ , like : (OptionalArgument Bool)
+ , lte : (OptionalArgument Bool)
  , lt : (OptionalArgument Bool)
  , gte : (OptionalArgument Bool)
  , gt : (OptionalArgument Bool)
@@ -56,7 +60,106 @@ type alias BooleanComparison =
 encodeBooleanComparison : BooleanComparison -> Value
 encodeBooleanComparison input____ =
     Encode.maybeObject
-        [ ( "lte", (Encode.bool)  |> Encode.optional input____.lte ), ( "lt", (Encode.bool)  |> Encode.optional input____.lt ), ( "gte", (Encode.bool)  |> Encode.optional input____.gte ), ( "gt", (Encode.bool)  |> Encode.optional input____.gt ), ( "neq", (Encode.bool)  |> Encode.optional input____.neq ), ( "eq", (Encode.bool)  |> Encode.optional input____.eq ) ]
+        [ ( "ilike", (Encode.bool)  |> Encode.optional input____.ilike ), ( "like", (Encode.bool)  |> Encode.optional input____.like ), ( "lte", (Encode.bool)  |> Encode.optional input____.lte ), ( "lt", (Encode.bool)  |> Encode.optional input____.lt ), ( "gte", (Encode.bool)  |> Encode.optional input____.gte ), ( "gt", (Encode.bool)  |> Encode.optional input____.gt ), ( "neq", (Encode.bool)  |> Encode.optional input____.neq ), ( "eq", (Encode.bool)  |> Encode.optional input____.eq ) ]
+
+
+buildClosed_tasks_histogram_filter : (Closed_tasks_histogram_filterOptionalFields -> Closed_tasks_histogram_filterOptionalFields)
+ -> Closed_tasks_histogram_filter
+buildClosed_tasks_histogram_filter fillOptionals____ =
+
+    let
+        optionals____ =
+            
+            fillOptionals____
+                { date_short = Absent, num_of_closed_tasks = Absent }
+    in
+    { date_short = optionals____.date_short, num_of_closed_tasks = optionals____.num_of_closed_tasks }
+
+
+type alias Closed_tasks_histogram_filterOptionalFields =
+    { date_short : (OptionalArgument StringComparison)
+ , num_of_closed_tasks : (OptionalArgument StringComparison) }
+
+
+{-| Type for the Closed_tasks_histogram_filter input object.
+-}
+type alias Closed_tasks_histogram_filter =
+    { date_short : (OptionalArgument StringComparison)
+ , num_of_closed_tasks : (OptionalArgument StringComparison) }
+    
+
+{-| Encode a Closed_tasks_histogram_filter into a value that can be used as an argument.
+-}
+encodeClosed_tasks_histogram_filter : Closed_tasks_histogram_filter -> Value
+encodeClosed_tasks_histogram_filter input____ =
+    Encode.maybeObject
+        [ ( "date_short", (encodeStringComparison)  |> Encode.optional input____.date_short ), ( "num_of_closed_tasks", (encodeStringComparison)  |> Encode.optional input____.num_of_closed_tasks ) ]
+
+
+buildClosed_tasks_histogram_insert_input : (Closed_tasks_histogram_insert_inputOptionalFields -> Closed_tasks_histogram_insert_inputOptionalFields)
+ -> Closed_tasks_histogram_insert_input
+buildClosed_tasks_histogram_insert_input fillOptionals____ =
+
+    let
+        optionals____ =
+            
+            fillOptionals____
+                { date_short = Absent, num_of_closed_tasks = Absent }
+    in
+    { date_short = optionals____.date_short, num_of_closed_tasks = optionals____.num_of_closed_tasks }
+
+
+type alias Closed_tasks_histogram_insert_inputOptionalFields =
+    { date_short : (OptionalArgument String)
+ , num_of_closed_tasks : (OptionalArgument String) }
+
+
+{-| Type for the Closed_tasks_histogram_insert_input input object.
+-}
+type alias Closed_tasks_histogram_insert_input =
+    { date_short : (OptionalArgument String)
+ , num_of_closed_tasks : (OptionalArgument String) }
+    
+
+{-| Encode a Closed_tasks_histogram_insert_input into a value that can be used as an argument.
+-}
+encodeClosed_tasks_histogram_insert_input : Closed_tasks_histogram_insert_input -> Value
+encodeClosed_tasks_histogram_insert_input input____ =
+    Encode.maybeObject
+        [ ( "date_short", (Encode.string)  |> Encode.optional input____.date_short ), ( "num_of_closed_tasks", (Encode.string)  |> Encode.optional input____.num_of_closed_tasks ) ]
+
+
+buildClosed_tasks_histogram_set_input : (Closed_tasks_histogram_set_inputOptionalFields -> Closed_tasks_histogram_set_inputOptionalFields)
+ -> Closed_tasks_histogram_set_input
+buildClosed_tasks_histogram_set_input fillOptionals____ =
+
+    let
+        optionals____ =
+            
+            fillOptionals____
+                { date_short = Absent, num_of_closed_tasks = Absent }
+    in
+    { date_short = optionals____.date_short, num_of_closed_tasks = optionals____.num_of_closed_tasks }
+
+
+type alias Closed_tasks_histogram_set_inputOptionalFields =
+    { date_short : (OptionalArgument String)
+ , num_of_closed_tasks : (OptionalArgument String) }
+
+
+{-| Type for the Closed_tasks_histogram_set_input input object.
+-}
+type alias Closed_tasks_histogram_set_input =
+    { date_short : (OptionalArgument String)
+ , num_of_closed_tasks : (OptionalArgument String) }
+    
+
+{-| Encode a Closed_tasks_histogram_set_input into a value that can be used as an argument.
+-}
+encodeClosed_tasks_histogram_set_input : Closed_tasks_histogram_set_input -> Value
+encodeClosed_tasks_histogram_set_input input____ =
+    Encode.maybeObject
+        [ ( "date_short", (Encode.string)  |> Encode.optional input____.date_short ), ( "num_of_closed_tasks", (Encode.string)  |> Encode.optional input____.num_of_closed_tasks ) ]
 
 
 buildFloatComparison : (FloatComparisonOptionalFields -> FloatComparisonOptionalFields)
@@ -67,13 +170,15 @@ buildFloatComparison fillOptionals____ =
         optionals____ =
             
             fillOptionals____
-                { lte = Absent, lt = Absent, gte = Absent, gt = Absent, neq = Absent, eq = Absent }
+                { ilike = Absent, like = Absent, lte = Absent, lt = Absent, gte = Absent, gt = Absent, neq = Absent, eq = Absent }
     in
-    { lte = optionals____.lte, lt = optionals____.lt, gte = optionals____.gte, gt = optionals____.gt, neq = optionals____.neq, eq = optionals____.eq }
+    { ilike = optionals____.ilike, like = optionals____.like, lte = optionals____.lte, lt = optionals____.lt, gte = optionals____.gte, gt = optionals____.gt, neq = optionals____.neq, eq = optionals____.eq }
 
 
 type alias FloatComparisonOptionalFields =
-    { lte : (OptionalArgument Float)
+    { ilike : (OptionalArgument Float)
+ , like : (OptionalArgument Float)
+ , lte : (OptionalArgument Float)
  , lt : (OptionalArgument Float)
  , gte : (OptionalArgument Float)
  , gt : (OptionalArgument Float)
@@ -84,7 +189,9 @@ type alias FloatComparisonOptionalFields =
 {-| Type for the FloatComparison input object.
 -}
 type alias FloatComparison =
-    { lte : (OptionalArgument Float)
+    { ilike : (OptionalArgument Float)
+ , like : (OptionalArgument Float)
+ , lte : (OptionalArgument Float)
  , lt : (OptionalArgument Float)
  , gte : (OptionalArgument Float)
  , gt : (OptionalArgument Float)
@@ -97,7 +204,7 @@ type alias FloatComparison =
 encodeFloatComparison : FloatComparison -> Value
 encodeFloatComparison input____ =
     Encode.maybeObject
-        [ ( "lte", (Encode.float)  |> Encode.optional input____.lte ), ( "lt", (Encode.float)  |> Encode.optional input____.lt ), ( "gte", (Encode.float)  |> Encode.optional input____.gte ), ( "gt", (Encode.float)  |> Encode.optional input____.gt ), ( "neq", (Encode.float)  |> Encode.optional input____.neq ), ( "eq", (Encode.float)  |> Encode.optional input____.eq ) ]
+        [ ( "ilike", (Encode.float)  |> Encode.optional input____.ilike ), ( "like", (Encode.float)  |> Encode.optional input____.like ), ( "lte", (Encode.float)  |> Encode.optional input____.lte ), ( "lt", (Encode.float)  |> Encode.optional input____.lt ), ( "gte", (Encode.float)  |> Encode.optional input____.gte ), ( "gt", (Encode.float)  |> Encode.optional input____.gt ), ( "neq", (Encode.float)  |> Encode.optional input____.neq ), ( "eq", (Encode.float)  |> Encode.optional input____.eq ) ]
 
 
 buildIntComparison : (IntComparisonOptionalFields -> IntComparisonOptionalFields)
@@ -108,13 +215,15 @@ buildIntComparison fillOptionals____ =
         optionals____ =
             
             fillOptionals____
-                { lte = Absent, lt = Absent, gte = Absent, gt = Absent, neq = Absent, eq = Absent }
+                { ilike = Absent, like = Absent, lte = Absent, lt = Absent, gte = Absent, gt = Absent, neq = Absent, eq = Absent }
     in
-    { lte = optionals____.lte, lt = optionals____.lt, gte = optionals____.gte, gt = optionals____.gt, neq = optionals____.neq, eq = optionals____.eq }
+    { ilike = optionals____.ilike, like = optionals____.like, lte = optionals____.lte, lt = optionals____.lt, gte = optionals____.gte, gt = optionals____.gt, neq = optionals____.neq, eq = optionals____.eq }
 
 
 type alias IntComparisonOptionalFields =
-    { lte : (OptionalArgument Int)
+    { ilike : (OptionalArgument Int)
+ , like : (OptionalArgument Int)
+ , lte : (OptionalArgument Int)
  , lt : (OptionalArgument Int)
  , gte : (OptionalArgument Int)
  , gt : (OptionalArgument Int)
@@ -125,7 +234,9 @@ type alias IntComparisonOptionalFields =
 {-| Type for the IntComparison input object.
 -}
 type alias IntComparison =
-    { lte : (OptionalArgument Int)
+    { ilike : (OptionalArgument Int)
+ , like : (OptionalArgument Int)
+ , lte : (OptionalArgument Int)
  , lt : (OptionalArgument Int)
  , gte : (OptionalArgument Int)
  , gt : (OptionalArgument Int)
@@ -138,7 +249,7 @@ type alias IntComparison =
 encodeIntComparison : IntComparison -> Value
 encodeIntComparison input____ =
     Encode.maybeObject
-        [ ( "lte", (Encode.int)  |> Encode.optional input____.lte ), ( "lt", (Encode.int)  |> Encode.optional input____.lt ), ( "gte", (Encode.int)  |> Encode.optional input____.gte ), ( "gt", (Encode.int)  |> Encode.optional input____.gt ), ( "neq", (Encode.int)  |> Encode.optional input____.neq ), ( "eq", (Encode.int)  |> Encode.optional input____.eq ) ]
+        [ ( "ilike", (Encode.int)  |> Encode.optional input____.ilike ), ( "like", (Encode.int)  |> Encode.optional input____.like ), ( "lte", (Encode.int)  |> Encode.optional input____.lte ), ( "lt", (Encode.int)  |> Encode.optional input____.lt ), ( "gte", (Encode.int)  |> Encode.optional input____.gte ), ( "gt", (Encode.int)  |> Encode.optional input____.gt ), ( "neq", (Encode.int)  |> Encode.optional input____.neq ), ( "eq", (Encode.int)  |> Encode.optional input____.eq ) ]
 
 
 buildStringComparison : (StringComparisonOptionalFields -> StringComparisonOptionalFields)
@@ -149,13 +260,15 @@ buildStringComparison fillOptionals____ =
         optionals____ =
             
             fillOptionals____
-                { lte = Absent, lt = Absent, gte = Absent, gt = Absent, neq = Absent, eq = Absent }
+                { ilike = Absent, like = Absent, lte = Absent, lt = Absent, gte = Absent, gt = Absent, neq = Absent, eq = Absent }
     in
-    { lte = optionals____.lte, lt = optionals____.lt, gte = optionals____.gte, gt = optionals____.gt, neq = optionals____.neq, eq = optionals____.eq }
+    { ilike = optionals____.ilike, like = optionals____.like, lte = optionals____.lte, lt = optionals____.lt, gte = optionals____.gte, gt = optionals____.gt, neq = optionals____.neq, eq = optionals____.eq }
 
 
 type alias StringComparisonOptionalFields =
-    { lte : (OptionalArgument String)
+    { ilike : (OptionalArgument String)
+ , like : (OptionalArgument String)
+ , lte : (OptionalArgument String)
  , lt : (OptionalArgument String)
  , gte : (OptionalArgument String)
  , gt : (OptionalArgument String)
@@ -166,7 +279,9 @@ type alias StringComparisonOptionalFields =
 {-| Type for the StringComparison input object.
 -}
 type alias StringComparison =
-    { lte : (OptionalArgument String)
+    { ilike : (OptionalArgument String)
+ , like : (OptionalArgument String)
+ , lte : (OptionalArgument String)
  , lt : (OptionalArgument String)
  , gte : (OptionalArgument String)
  , gt : (OptionalArgument String)
@@ -179,7 +294,7 @@ type alias StringComparison =
 encodeStringComparison : StringComparison -> Value
 encodeStringComparison input____ =
     Encode.maybeObject
-        [ ( "lte", (Encode.string)  |> Encode.optional input____.lte ), ( "lt", (Encode.string)  |> Encode.optional input____.lt ), ( "gte", (Encode.string)  |> Encode.optional input____.gte ), ( "gt", (Encode.string)  |> Encode.optional input____.gt ), ( "neq", (Encode.string)  |> Encode.optional input____.neq ), ( "eq", (Encode.string)  |> Encode.optional input____.eq ) ]
+        [ ( "ilike", (Encode.string)  |> Encode.optional input____.ilike ), ( "like", (Encode.string)  |> Encode.optional input____.like ), ( "lte", (Encode.string)  |> Encode.optional input____.lte ), ( "lt", (Encode.string)  |> Encode.optional input____.lt ), ( "gte", (Encode.string)  |> Encode.optional input____.gte ), ( "gt", (Encode.string)  |> Encode.optional input____.gt ), ( "neq", (Encode.string)  |> Encode.optional input____.neq ), ( "eq", (Encode.string)  |> Encode.optional input____.eq ) ]
 
 
 buildTags_filter : (Tags_filterOptionalFields -> Tags_filterOptionalFields)

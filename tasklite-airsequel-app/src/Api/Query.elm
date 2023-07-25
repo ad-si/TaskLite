@@ -22,6 +22,28 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Json.Decode as Decode exposing (Decoder)
 import Graphql.Internal.Encode as Encode exposing (Value)
 
+type alias ClosedTasksHistogramOptionalArguments = { filter : OptionalArgument Api.InputObject.Closed_tasks_histogram_filter }
+
+{-| Rows from the table "closed_tasks_histogram"
+
+  - filter - Filter to select specific rows
+
+-}
+closed_tasks_histogram : (ClosedTasksHistogramOptionalArguments -> ClosedTasksHistogramOptionalArguments)
+ -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_row
+ -> SelectionSet (List decodesTo) RootQuery
+closed_tasks_histogram fillInOptionals____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { filter = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeClosed_tasks_histogram_filter) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "closed_tasks_histogram" optionalArgs____ (object____) (Basics.identity >> Decode.list)
+
+
 type alias TasksHeadOptionalArguments = { filter : OptionalArgument Api.InputObject.Tasks_head_filter }
 
 {-| Rows from the table "tasks_head"
