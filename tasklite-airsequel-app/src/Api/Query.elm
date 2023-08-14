@@ -22,143 +22,13 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Json.Decode as Decode exposing (Decoder)
 import Graphql.Internal.Encode as Encode exposing (Value)
 
-type alias ClosedTasksHistogramOptionalArguments = { filter : OptionalArgument Api.InputObject.Closed_tasks_histogram_filter }
-
-{-| Rows from the table "closed_tasks_histogram"
-
-  - filter - Filter to select specific rows
-
--}
-closed_tasks_histogram : (ClosedTasksHistogramOptionalArguments -> ClosedTasksHistogramOptionalArguments)
- -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_row
- -> SelectionSet (List decodesTo) RootQuery
-closed_tasks_histogram fillInOptionals____ object____ =
-    let
-        filledInOptionals____ =
-            fillInOptionals____ { filter = Absent }
-
-        optionalArgs____ =
-            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeClosed_tasks_histogram_filter) ]
-                |> List.filterMap Basics.identity
-    in
-      Object.selectionForCompositeField "closed_tasks_histogram" optionalArgs____ (object____) (Basics.identity >> Decode.list)
-
-
-type alias TasksHeadOptionalArguments = { filter : OptionalArgument Api.InputObject.Tasks_head_filter }
-
-{-| Rows from the table "tasks_head"
-
-  - filter - Filter to select specific rows
-
--}
-tasks_head : (TasksHeadOptionalArguments -> TasksHeadOptionalArguments)
- -> SelectionSet decodesTo Api.Object.Tasks_head_row
- -> SelectionSet (List decodesTo) RootQuery
-tasks_head fillInOptionals____ object____ =
-    let
-        filledInOptionals____ =
-            fillInOptionals____ { filter = Absent }
-
-        optionalArgs____ =
-            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTasks_head_filter) ]
-                |> List.filterMap Basics.identity
-    in
-      Object.selectionForCompositeField "tasks_head" optionalArgs____ (object____) (Basics.identity >> Decode.list)
-
-
-type alias TagsOptionalArguments = { filter : OptionalArgument Api.InputObject.Tags_filter }
-
-{-| Rows from the table "tags"
-
-  - filter - Filter to select specific rows
-
--}
-tags : (TagsOptionalArguments -> TagsOptionalArguments)
- -> SelectionSet decodesTo Api.Object.Tags_row
- -> SelectionSet (List decodesTo) RootQuery
-tags fillInOptionals____ object____ =
-    let
-        filledInOptionals____ =
-            fillInOptionals____ { filter = Absent }
-
-        optionalArgs____ =
-            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTags_filter) ]
-                |> List.filterMap Basics.identity
-    in
-      Object.selectionForCompositeField "tags" optionalArgs____ (object____) (Basics.identity >> Decode.list)
-
-
-type alias TasksViewOptionalArguments = { filter : OptionalArgument Api.InputObject.Tasks_view_filter }
-
-{-| Rows from the table "tasks_view"
-
-  - filter - Filter to select specific rows
-
--}
-tasks_view : (TasksViewOptionalArguments -> TasksViewOptionalArguments)
- -> SelectionSet decodesTo Api.Object.Tasks_view_row
- -> SelectionSet (List decodesTo) RootQuery
-tasks_view fillInOptionals____ object____ =
-    let
-        filledInOptionals____ =
-            fillInOptionals____ { filter = Absent }
-
-        optionalArgs____ =
-            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTasks_view_filter) ]
-                |> List.filterMap Basics.identity
-    in
-      Object.selectionForCompositeField "tasks_view" optionalArgs____ (object____) (Basics.identity >> Decode.list)
-
-
-type alias TasksOptionalArguments = { filter : OptionalArgument Api.InputObject.Tasks_filter }
-
-{-| Rows from the table "tasks"
-
-  - filter - Filter to select specific rows
-
--}
-tasks : (TasksOptionalArguments -> TasksOptionalArguments)
- -> SelectionSet decodesTo Api.Object.Tasks_row
- -> SelectionSet (List decodesTo) RootQuery
-tasks fillInOptionals____ object____ =
-    let
-        filledInOptionals____ =
-            fillInOptionals____ { filter = Absent }
-
-        optionalArgs____ =
-            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTasks_filter) ]
-                |> List.filterMap Basics.identity
-    in
-      Object.selectionForCompositeField "tasks" optionalArgs____ (object____) (Basics.identity >> Decode.list)
-
-
-type alias TaskToNoteOptionalArguments = { filter : OptionalArgument Api.InputObject.Task_to_note_filter }
-
-{-| Rows from the table "task_to_note"
-
-  - filter - Filter to select specific rows
-
--}
-task_to_note : (TaskToNoteOptionalArguments -> TaskToNoteOptionalArguments)
- -> SelectionSet decodesTo Api.Object.Task_to_note_row
- -> SelectionSet (List decodesTo) RootQuery
-task_to_note fillInOptionals____ object____ =
-    let
-        filledInOptionals____ =
-            fillInOptionals____ { filter = Absent }
-
-        optionalArgs____ =
-            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTask_to_note_filter) ]
-                |> List.filterMap Basics.identity
-    in
-      Object.selectionForCompositeField "task_to_note" optionalArgs____ (object____) (Basics.identity >> Decode.list)
-
-
-type alias TaskToTagOptionalArguments = { filter : OptionalArgument Api.InputObject.Task_to_tag_filter }
+type alias TaskToTagOptionalArguments = { filter : OptionalArgument Api.InputObject.Task_to_tag_filter
+ , order_by : OptionalArgument Api.InputObject.Task_to_tag_order_by }
 
 {-| Rows from the table "task_to_tag"
 
   - filter - Filter to select specific rows
+  - order_by - Columns used to sort the data
 
 -}
 task_to_tag : (TaskToTagOptionalArguments -> TaskToTagOptionalArguments)
@@ -167,10 +37,154 @@ task_to_tag : (TaskToTagOptionalArguments -> TaskToTagOptionalArguments)
 task_to_tag fillInOptionals____ object____ =
     let
         filledInOptionals____ =
-            fillInOptionals____ { filter = Absent }
+            fillInOptionals____ { filter = Absent, order_by = Absent }
 
         optionalArgs____ =
-            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTask_to_tag_filter) ]
+            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTask_to_tag_filter), Argument.optional "order_by" filledInOptionals____.order_by (Api.InputObject.encodeTask_to_tag_order_by) ]
                 |> List.filterMap Basics.identity
     in
       Object.selectionForCompositeField "task_to_tag" optionalArgs____ (object____) (Basics.identity >> Decode.list)
+
+
+type alias TaskToNoteOptionalArguments = { filter : OptionalArgument Api.InputObject.Task_to_note_filter
+ , order_by : OptionalArgument Api.InputObject.Task_to_note_order_by }
+
+{-| Rows from the table "task_to_note"
+
+  - filter - Filter to select specific rows
+  - order_by - Columns used to sort the data
+
+-}
+task_to_note : (TaskToNoteOptionalArguments -> TaskToNoteOptionalArguments)
+ -> SelectionSet decodesTo Api.Object.Task_to_note_row
+ -> SelectionSet (List decodesTo) RootQuery
+task_to_note fillInOptionals____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { filter = Absent, order_by = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTask_to_note_filter), Argument.optional "order_by" filledInOptionals____.order_by (Api.InputObject.encodeTask_to_note_order_by) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "task_to_note" optionalArgs____ (object____) (Basics.identity >> Decode.list)
+
+
+type alias TasksOptionalArguments = { filter : OptionalArgument Api.InputObject.Tasks_filter
+ , order_by : OptionalArgument Api.InputObject.Tasks_order_by }
+
+{-| Rows from the table "tasks"
+
+  - filter - Filter to select specific rows
+  - order_by - Columns used to sort the data
+
+-}
+tasks : (TasksOptionalArguments -> TasksOptionalArguments)
+ -> SelectionSet decodesTo Api.Object.Tasks_row
+ -> SelectionSet (List decodesTo) RootQuery
+tasks fillInOptionals____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { filter = Absent, order_by = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTasks_filter), Argument.optional "order_by" filledInOptionals____.order_by (Api.InputObject.encodeTasks_order_by) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "tasks" optionalArgs____ (object____) (Basics.identity >> Decode.list)
+
+
+type alias TasksViewOptionalArguments = { filter : OptionalArgument Api.InputObject.Tasks_view_filter
+ , order_by : OptionalArgument Api.InputObject.Tasks_view_order_by }
+
+{-| Rows from the table "tasks_view"
+
+  - filter - Filter to select specific rows
+  - order_by - Columns used to sort the data
+
+-}
+tasks_view : (TasksViewOptionalArguments -> TasksViewOptionalArguments)
+ -> SelectionSet decodesTo Api.Object.Tasks_view_row
+ -> SelectionSet (List decodesTo) RootQuery
+tasks_view fillInOptionals____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { filter = Absent, order_by = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTasks_view_filter), Argument.optional "order_by" filledInOptionals____.order_by (Api.InputObject.encodeTasks_view_order_by) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "tasks_view" optionalArgs____ (object____) (Basics.identity >> Decode.list)
+
+
+type alias TagsOptionalArguments = { filter : OptionalArgument Api.InputObject.Tags_filter
+ , order_by : OptionalArgument Api.InputObject.Tags_order_by }
+
+{-| Rows from the table "tags"
+
+  - filter - Filter to select specific rows
+  - order_by - Columns used to sort the data
+
+-}
+tags : (TagsOptionalArguments -> TagsOptionalArguments)
+ -> SelectionSet decodesTo Api.Object.Tags_row
+ -> SelectionSet (List decodesTo) RootQuery
+tags fillInOptionals____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { filter = Absent, order_by = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTags_filter), Argument.optional "order_by" filledInOptionals____.order_by (Api.InputObject.encodeTags_order_by) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "tags" optionalArgs____ (object____) (Basics.identity >> Decode.list)
+
+
+type alias TasksHeadOptionalArguments = { filter : OptionalArgument Api.InputObject.Tasks_head_filter
+ , order_by : OptionalArgument Api.InputObject.Tasks_head_order_by }
+
+{-| Rows from the table "tasks_head"
+
+  - filter - Filter to select specific rows
+  - order_by - Columns used to sort the data
+
+-}
+tasks_head : (TasksHeadOptionalArguments -> TasksHeadOptionalArguments)
+ -> SelectionSet decodesTo Api.Object.Tasks_head_row
+ -> SelectionSet (List decodesTo) RootQuery
+tasks_head fillInOptionals____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { filter = Absent, order_by = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeTasks_head_filter), Argument.optional "order_by" filledInOptionals____.order_by (Api.InputObject.encodeTasks_head_order_by) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "tasks_head" optionalArgs____ (object____) (Basics.identity >> Decode.list)
+
+
+type alias ClosedTasksHistogramOptionalArguments = { filter : OptionalArgument Api.InputObject.Closed_tasks_histogram_filter
+ , order_by : OptionalArgument Api.InputObject.Closed_tasks_histogram_order_by }
+
+{-| Rows from the table "closed_tasks_histogram"
+
+  - filter - Filter to select specific rows
+  - order_by - Columns used to sort the data
+
+-}
+closed_tasks_histogram : (ClosedTasksHistogramOptionalArguments -> ClosedTasksHistogramOptionalArguments)
+ -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_row
+ -> SelectionSet (List decodesTo) RootQuery
+closed_tasks_histogram fillInOptionals____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { filter = Absent, order_by = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "filter" filledInOptionals____.filter (Api.InputObject.encodeClosed_tasks_histogram_filter), Argument.optional "order_by" filledInOptionals____.order_by (Api.InputObject.encodeClosed_tasks_histogram_order_by) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "closed_tasks_histogram" optionalArgs____ (object____) (Basics.identity >> Decode.list)

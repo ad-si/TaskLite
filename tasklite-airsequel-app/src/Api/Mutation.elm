@@ -22,282 +22,18 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Json.Decode as Decode exposing (Decoder)
 import Graphql.Internal.Encode as Encode exposing (Value)
 
-type alias DeleteClosedTasksHistogramRequiredArguments = { filter : Api.InputObject.Closed_tasks_histogram_filter }
+type alias InsertTaskToTagRequiredArguments = { objects : (List Api.InputObject.Task_to_tag_insert_input) }
 
-{-| Delete rows in table "closed_tasks_histogram"
-
-  - filter - Filter to select rows to be deleted
-
--}
-delete_closed_tasks_histogram : DeleteClosedTasksHistogramRequiredArguments
- -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_mutation_response
- -> SelectionSet decodesTo RootMutation
-delete_closed_tasks_histogram requiredArgs____ object____ =
-      Object.selectionForCompositeField "delete_closed_tasks_histogram" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeClosed_tasks_histogram_filter) ] (object____) (Basics.identity)
-
-
-type alias UpdateClosedTasksHistogramRequiredArguments = { filter : Api.InputObject.Closed_tasks_histogram_filter
- , set : Api.InputObject.Closed_tasks_histogram_set_input }
-
-{-| Update rows in table "closed_tasks_histogram"
-
-  - filter - Filter to select rows to be updated
-  - set - Fields to be updated
-
--}
-update_closed_tasks_histogram : UpdateClosedTasksHistogramRequiredArguments
- -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_mutation_response
- -> SelectionSet decodesTo RootMutation
-update_closed_tasks_histogram requiredArgs____ object____ =
-      Object.selectionForCompositeField "update_closed_tasks_histogram" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeClosed_tasks_histogram_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeClosed_tasks_histogram_set_input) ] (object____) (Basics.identity)
-
-
-type alias InsertClosedTasksHistogramRequiredArguments = { objects : (List Api.InputObject.Closed_tasks_histogram_insert_input) }
-
-{-| Insert new rows in table "closed_tasks_histogram"
+{-| Insert new rows in table "task_to_tag"
 
   - objects - Rows to be inserted
 
 -}
-insert_closed_tasks_histogram : InsertClosedTasksHistogramRequiredArguments
- -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_mutation_response
- -> SelectionSet decodesTo RootMutation
-insert_closed_tasks_histogram requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_closed_tasks_histogram" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeClosed_tasks_histogram_insert_input |> Encode.list) ] (object____) (Basics.identity)
-
-
-type alias DeleteTasksHeadRequiredArguments = { filter : Api.InputObject.Tasks_head_filter }
-
-{-| Delete rows in table "tasks_head"
-
-  - filter - Filter to select rows to be deleted
-
--}
-delete_tasks_head : DeleteTasksHeadRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_head_mutation_response
- -> SelectionSet decodesTo RootMutation
-delete_tasks_head requiredArgs____ object____ =
-      Object.selectionForCompositeField "delete_tasks_head" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_head_filter) ] (object____) (Basics.identity)
-
-
-type alias UpdateTasksHeadRequiredArguments = { filter : Api.InputObject.Tasks_head_filter
- , set : Api.InputObject.Tasks_head_set_input }
-
-{-| Update rows in table "tasks_head"
-
-  - filter - Filter to select rows to be updated
-  - set - Fields to be updated
-
--}
-update_tasks_head : UpdateTasksHeadRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_head_mutation_response
- -> SelectionSet decodesTo RootMutation
-update_tasks_head requiredArgs____ object____ =
-      Object.selectionForCompositeField "update_tasks_head" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_head_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_head_set_input) ] (object____) (Basics.identity)
-
-
-type alias InsertTasksHeadRequiredArguments = { objects : (List Api.InputObject.Tasks_head_insert_input) }
-
-{-| Insert new rows in table "tasks_head"
-
-  - objects - Rows to be inserted
-
--}
-insert_tasks_head : InsertTasksHeadRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_head_mutation_response
- -> SelectionSet decodesTo RootMutation
-insert_tasks_head requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_tasks_head" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_head_insert_input |> Encode.list) ] (object____) (Basics.identity)
-
-
-type alias DeleteTagsRequiredArguments = { filter : Api.InputObject.Tags_filter }
-
-{-| Delete rows in table "tags"
-
-  - filter - Filter to select rows to be deleted
-
--}
-delete_tags : DeleteTagsRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tags_mutation_response
- -> SelectionSet decodesTo RootMutation
-delete_tags requiredArgs____ object____ =
-      Object.selectionForCompositeField "delete_tags" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTags_filter) ] (object____) (Basics.identity)
-
-
-type alias UpdateTagsRequiredArguments = { filter : Api.InputObject.Tags_filter
- , set : Api.InputObject.Tags_set_input }
-
-{-| Update rows in table "tags"
-
-  - filter - Filter to select rows to be updated
-  - set - Fields to be updated
-
--}
-update_tags : UpdateTagsRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tags_mutation_response
- -> SelectionSet decodesTo RootMutation
-update_tags requiredArgs____ object____ =
-      Object.selectionForCompositeField "update_tags" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTags_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTags_set_input) ] (object____) (Basics.identity)
-
-
-type alias InsertTagsRequiredArguments = { objects : (List Api.InputObject.Tags_insert_input) }
-
-{-| Insert new rows in table "tags"
-
-  - objects - Rows to be inserted
-
--}
-insert_tags : InsertTagsRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tags_mutation_response
- -> SelectionSet decodesTo RootMutation
-insert_tags requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_tags" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTags_insert_input |> Encode.list) ] (object____) (Basics.identity)
-
-
-type alias DeleteTasksViewRequiredArguments = { filter : Api.InputObject.Tasks_view_filter }
-
-{-| Delete rows in table "tasks_view"
-
-  - filter - Filter to select rows to be deleted
-
--}
-delete_tasks_view : DeleteTasksViewRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_view_mutation_response
- -> SelectionSet decodesTo RootMutation
-delete_tasks_view requiredArgs____ object____ =
-      Object.selectionForCompositeField "delete_tasks_view" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_view_filter) ] (object____) (Basics.identity)
-
-
-type alias UpdateTasksViewRequiredArguments = { filter : Api.InputObject.Tasks_view_filter
- , set : Api.InputObject.Tasks_view_set_input }
-
-{-| Update rows in table "tasks_view"
-
-  - filter - Filter to select rows to be updated
-  - set - Fields to be updated
-
--}
-update_tasks_view : UpdateTasksViewRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_view_mutation_response
- -> SelectionSet decodesTo RootMutation
-update_tasks_view requiredArgs____ object____ =
-      Object.selectionForCompositeField "update_tasks_view" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_view_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_view_set_input) ] (object____) (Basics.identity)
-
-
-type alias InsertTasksViewRequiredArguments = { objects : (List Api.InputObject.Tasks_view_insert_input) }
-
-{-| Insert new rows in table "tasks_view"
-
-  - objects - Rows to be inserted
-
--}
-insert_tasks_view : InsertTasksViewRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_view_mutation_response
- -> SelectionSet decodesTo RootMutation
-insert_tasks_view requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_tasks_view" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_view_insert_input |> Encode.list) ] (object____) (Basics.identity)
-
-
-type alias DeleteTasksRequiredArguments = { filter : Api.InputObject.Tasks_filter }
-
-{-| Delete rows in table "tasks"
-
-  - filter - Filter to select rows to be deleted
-
--}
-delete_tasks : DeleteTasksRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_mutation_response
- -> SelectionSet decodesTo RootMutation
-delete_tasks requiredArgs____ object____ =
-      Object.selectionForCompositeField "delete_tasks" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_filter) ] (object____) (Basics.identity)
-
-
-type alias UpdateTasksRequiredArguments = { filter : Api.InputObject.Tasks_filter
- , set : Api.InputObject.Tasks_set_input }
-
-{-| Update rows in table "tasks"
-
-  - filter - Filter to select rows to be updated
-  - set - Fields to be updated
-
--}
-update_tasks : UpdateTasksRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_mutation_response
- -> SelectionSet decodesTo RootMutation
-update_tasks requiredArgs____ object____ =
-      Object.selectionForCompositeField "update_tasks" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_set_input) ] (object____) (Basics.identity)
-
-
-type alias InsertTasksRequiredArguments = { objects : (List Api.InputObject.Tasks_insert_input) }
-
-{-| Insert new rows in table "tasks"
-
-  - objects - Rows to be inserted
-
--}
-insert_tasks : InsertTasksRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_mutation_response
- -> SelectionSet decodesTo RootMutation
-insert_tasks requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_tasks" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_insert_input |> Encode.list) ] (object____) (Basics.identity)
-
-
-type alias DeleteTaskToNoteRequiredArguments = { filter : Api.InputObject.Task_to_note_filter }
-
-{-| Delete rows in table "task_to_note"
-
-  - filter - Filter to select rows to be deleted
-
--}
-delete_task_to_note : DeleteTaskToNoteRequiredArguments
- -> SelectionSet decodesTo Api.Object.Task_to_note_mutation_response
- -> SelectionSet decodesTo RootMutation
-delete_task_to_note requiredArgs____ object____ =
-      Object.selectionForCompositeField "delete_task_to_note" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTask_to_note_filter) ] (object____) (Basics.identity)
-
-
-type alias UpdateTaskToNoteRequiredArguments = { filter : Api.InputObject.Task_to_note_filter
- , set : Api.InputObject.Task_to_note_set_input }
-
-{-| Update rows in table "task_to_note"
-
-  - filter - Filter to select rows to be updated
-  - set - Fields to be updated
-
--}
-update_task_to_note : UpdateTaskToNoteRequiredArguments
- -> SelectionSet decodesTo Api.Object.Task_to_note_mutation_response
- -> SelectionSet decodesTo RootMutation
-update_task_to_note requiredArgs____ object____ =
-      Object.selectionForCompositeField "update_task_to_note" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTask_to_note_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTask_to_note_set_input) ] (object____) (Basics.identity)
-
-
-type alias InsertTaskToNoteRequiredArguments = { objects : (List Api.InputObject.Task_to_note_insert_input) }
-
-{-| Insert new rows in table "task_to_note"
-
-  - objects - Rows to be inserted
-
--}
-insert_task_to_note : InsertTaskToNoteRequiredArguments
- -> SelectionSet decodesTo Api.Object.Task_to_note_mutation_response
- -> SelectionSet decodesTo RootMutation
-insert_task_to_note requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_task_to_note" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTask_to_note_insert_input |> Encode.list) ] (object____) (Basics.identity)
-
-
-type alias DeleteTaskToTagRequiredArguments = { filter : Api.InputObject.Task_to_tag_filter }
-
-{-| Delete rows in table "task_to_tag"
-
-  - filter - Filter to select rows to be deleted
-
--}
-delete_task_to_tag : DeleteTaskToTagRequiredArguments
+insert_task_to_tag : InsertTaskToTagRequiredArguments
  -> SelectionSet decodesTo Api.Object.Task_to_tag_mutation_response
  -> SelectionSet decodesTo RootMutation
-delete_task_to_tag requiredArgs____ object____ =
-      Object.selectionForCompositeField "delete_task_to_tag" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTask_to_tag_filter) ] (object____) (Basics.identity)
+insert_task_to_tag requiredArgs____ object____ =
+      Object.selectionForCompositeField "insert_task_to_tag" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTask_to_tag_insert_input |> Encode.list) ] (object____) (Basics.identity)
 
 
 type alias UpdateTaskToTagRequiredArguments = { filter : Api.InputObject.Task_to_tag_filter
@@ -316,15 +52,279 @@ update_task_to_tag requiredArgs____ object____ =
       Object.selectionForCompositeField "update_task_to_tag" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTask_to_tag_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTask_to_tag_set_input) ] (object____) (Basics.identity)
 
 
-type alias InsertTaskToTagRequiredArguments = { objects : (List Api.InputObject.Task_to_tag_insert_input) }
+type alias DeleteTaskToTagRequiredArguments = { filter : Api.InputObject.Task_to_tag_filter }
 
-{-| Insert new rows in table "task_to_tag"
+{-| Delete rows in table "task_to_tag"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_task_to_tag : DeleteTaskToTagRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Task_to_tag_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_task_to_tag requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_task_to_tag" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTask_to_tag_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTaskToNoteRequiredArguments = { objects : (List Api.InputObject.Task_to_note_insert_input) }
+
+{-| Insert new rows in table "task_to_note"
 
   - objects - Rows to be inserted
 
 -}
-insert_task_to_tag : InsertTaskToTagRequiredArguments
- -> SelectionSet decodesTo Api.Object.Task_to_tag_mutation_response
+insert_task_to_note : InsertTaskToNoteRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Task_to_note_mutation_response
  -> SelectionSet decodesTo RootMutation
-insert_task_to_tag requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_task_to_tag" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTask_to_tag_insert_input |> Encode.list) ] (object____) (Basics.identity)
+insert_task_to_note requiredArgs____ object____ =
+      Object.selectionForCompositeField "insert_task_to_note" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTask_to_note_insert_input |> Encode.list) ] (object____) (Basics.identity)
+
+
+type alias UpdateTaskToNoteRequiredArguments = { filter : Api.InputObject.Task_to_note_filter
+ , set : Api.InputObject.Task_to_note_set_input }
+
+{-| Update rows in table "task_to_note"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_task_to_note : UpdateTaskToNoteRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Task_to_note_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_task_to_note requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_task_to_note" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTask_to_note_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTask_to_note_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTaskToNoteRequiredArguments = { filter : Api.InputObject.Task_to_note_filter }
+
+{-| Delete rows in table "task_to_note"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_task_to_note : DeleteTaskToNoteRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Task_to_note_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_task_to_note requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_task_to_note" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTask_to_note_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksRequiredArguments = { objects : (List Api.InputObject.Tasks_insert_input) }
+
+{-| Insert new rows in table "tasks"
+
+  - objects - Rows to be inserted
+
+-}
+insert_tasks : InsertTasksRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks requiredArgs____ object____ =
+      Object.selectionForCompositeField "insert_tasks" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_insert_input |> Encode.list) ] (object____) (Basics.identity)
+
+
+type alias UpdateTasksRequiredArguments = { filter : Api.InputObject.Tasks_filter
+ , set : Api.InputObject.Tasks_set_input }
+
+{-| Update rows in table "tasks"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks : UpdateTasksRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksRequiredArguments = { filter : Api.InputObject.Tasks_filter }
+
+{-| Delete rows in table "tasks"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks : DeleteTasksRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksViewRequiredArguments = { objects : (List Api.InputObject.Tasks_view_insert_input) }
+
+{-| Insert new rows in table "tasks_view"
+
+  - objects - Rows to be inserted
+
+-}
+insert_tasks_view : InsertTasksViewRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_view_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_view requiredArgs____ object____ =
+      Object.selectionForCompositeField "insert_tasks_view" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_view_insert_input |> Encode.list) ] (object____) (Basics.identity)
+
+
+type alias UpdateTasksViewRequiredArguments = { filter : Api.InputObject.Tasks_view_filter
+ , set : Api.InputObject.Tasks_view_set_input }
+
+{-| Update rows in table "tasks_view"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_view : UpdateTasksViewRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_view_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_view requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_view" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_view_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_view_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksViewRequiredArguments = { filter : Api.InputObject.Tasks_view_filter }
+
+{-| Delete rows in table "tasks_view"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_view : DeleteTasksViewRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_view_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_view requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_view" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_view_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTagsRequiredArguments = { objects : (List Api.InputObject.Tags_insert_input) }
+
+{-| Insert new rows in table "tags"
+
+  - objects - Rows to be inserted
+
+-}
+insert_tags : InsertTagsRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tags_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tags requiredArgs____ object____ =
+      Object.selectionForCompositeField "insert_tags" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTags_insert_input |> Encode.list) ] (object____) (Basics.identity)
+
+
+type alias UpdateTagsRequiredArguments = { filter : Api.InputObject.Tags_filter
+ , set : Api.InputObject.Tags_set_input }
+
+{-| Update rows in table "tags"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tags : UpdateTagsRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tags_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tags requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tags" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTags_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTags_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTagsRequiredArguments = { filter : Api.InputObject.Tags_filter }
+
+{-| Delete rows in table "tags"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tags : DeleteTagsRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tags_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tags requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tags" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTags_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksHeadRequiredArguments = { objects : (List Api.InputObject.Tasks_head_insert_input) }
+
+{-| Insert new rows in table "tasks_head"
+
+  - objects - Rows to be inserted
+
+-}
+insert_tasks_head : InsertTasksHeadRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_head_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_head requiredArgs____ object____ =
+      Object.selectionForCompositeField "insert_tasks_head" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_head_insert_input |> Encode.list) ] (object____) (Basics.identity)
+
+
+type alias UpdateTasksHeadRequiredArguments = { filter : Api.InputObject.Tasks_head_filter
+ , set : Api.InputObject.Tasks_head_set_input }
+
+{-| Update rows in table "tasks_head"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_head : UpdateTasksHeadRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_head_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_head requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_head" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_head_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_head_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksHeadRequiredArguments = { filter : Api.InputObject.Tasks_head_filter }
+
+{-| Delete rows in table "tasks_head"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_head : DeleteTasksHeadRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_head_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_head requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_head" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_head_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertClosedTasksHistogramRequiredArguments = { objects : (List Api.InputObject.Closed_tasks_histogram_insert_input) }
+
+{-| Insert new rows in table "closed_tasks_histogram"
+
+  - objects - Rows to be inserted
+
+-}
+insert_closed_tasks_histogram : InsertClosedTasksHistogramRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_closed_tasks_histogram requiredArgs____ object____ =
+      Object.selectionForCompositeField "insert_closed_tasks_histogram" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeClosed_tasks_histogram_insert_input |> Encode.list) ] (object____) (Basics.identity)
+
+
+type alias UpdateClosedTasksHistogramRequiredArguments = { filter : Api.InputObject.Closed_tasks_histogram_filter
+ , set : Api.InputObject.Closed_tasks_histogram_set_input }
+
+{-| Update rows in table "closed_tasks_histogram"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_closed_tasks_histogram : UpdateClosedTasksHistogramRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_closed_tasks_histogram requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_closed_tasks_histogram" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeClosed_tasks_histogram_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeClosed_tasks_histogram_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteClosedTasksHistogramRequiredArguments = { filter : Api.InputObject.Closed_tasks_histogram_filter }
+
+{-| Delete rows in table "closed_tasks_histogram"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_closed_tasks_histogram : DeleteClosedTasksHistogramRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_closed_tasks_histogram requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_closed_tasks_histogram" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeClosed_tasks_histogram_filter) ] (object____) (Basics.identity)

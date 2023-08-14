@@ -1,10 +1,12 @@
 module Main exposing (..)
 
+import Api.Enum.OrderingTerm exposing (OrderingTerm(..))
 import Api.InputObject
     exposing
         ( buildStringComparison
         , buildTasks_filter
         , buildTasks_view_filter
+        , buildTasks_view_order_by
         )
 import Api.Mutation as Mutation
 import Api.Object exposing (Tasks_head_row, Tasks_view_row)
@@ -207,8 +209,6 @@ viewTodo now todo =
                             elseValue ulid
 
                         _ ->
-                            -- TODO: Show checkbox when Airsequel supports
-                            --       several filters simulatenously
                             disabledValue
     in
     div
@@ -233,7 +233,7 @@ viewTodo now todo =
                     , relative
                     , Css.top (Css.px 1.5)
                     , ifDisabledElse
-                        (Css.batch [ opacity_10, cursor_not_allowed ])
+                        (Css.batch [ opacity_50, cursor_not_allowed ])
                         (\_ -> Css.batch [ opacity_60, cursor_pointer ])
                     ]
                 , ifDisabledElse
@@ -558,7 +558,14 @@ getTodosWithTag tag =
             }
     in
     Query.tasks_view
-        (\_ -> { filter = Present <| buildTasks_view_filter setTags })
+        (\_ ->
+            { filter = Present <| buildTasks_view_filter setTags
+            , order_by =
+                Present <|
+                    buildTasks_view_order_by
+                        (\o -> { o | priority = Present Desc })
+            }
+        )
         tasksViewSelection
         |> Graphql.Http.queryRequest graphqlApiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> GotTasksResponse)
