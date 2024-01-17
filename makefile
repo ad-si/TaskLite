@@ -6,7 +6,8 @@ help: makefile
 .PHONY: start-app
 start-app:
 	cd tasklite-airsequel-app \
-	&& npx elm-app start
+	&& NODE_OPTIONS=--openssl-legacy-provider \
+	npx elm-app start
 
 
 .PHONY: test
