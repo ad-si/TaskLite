@@ -143,7 +143,7 @@ Not locking you in is one of the most important aspects of TaskLite.
 Therefore it supports numerous export formats:
 
 - JSON - All tasks as one JSON array
-- [NDJSON](http://ndjson.org/) - One JSON object per task
+- [JSON Lines](https://jsonlines.org) - One JSON object per task
 - CSV
 - SQL
 - Direct access to the SQLite database

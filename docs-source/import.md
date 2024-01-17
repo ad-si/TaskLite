@@ -132,12 +132,14 @@ convenient inbox. Here is how to move them to TaskLite afterwards:
     `brew install telegram-desktop`
 1. Go to "Saved Messages"
 1. Click on 3 dots in the upper right corner
-1. Click on "Export Chat History"
+1. Click on "Export chat history"
 1. Deselect all additional media and select "JSON" as output format
 1. Approve download on a mobile device
 1. Download the JSON file
     (if download window was closed, simply follow the previous steps again)
-1. Import JSON directly:
+1. Either import it directly as JSON or convert it first to YAML for cleanup.
+
+    Import JSON directly:
     ```bash
     cat result.json \
     | jq -c '
@@ -161,14 +163,75 @@ convenient inbox. Here is how to move them to TaskLite afterwards:
             }
           )
         | .[]
-      '
+      ' \
     | while read -r task
       do
         echo "$task" | tasklite importjson
       done
     ```
-    or convert it to YAML for easier cleanup:
+
+    Convert it to YAML for easier cleanup:
     ```sh
     jq '.messages' result.json | yq --yaml-output > out.yaml
     ```
 1. Clear chat history on Telegram
+
+
+## Apple Reminders
+
+Use following Apple Script to display the reminders
+including their creation timestamp.
+Seen at https://discussions.apple.com/thread/8570915.
+
+```applescript
+use scripting additions
+
+set rnames to {}
+set cdates to {}
+set fmt to ""
+
+tell application "Reminders"
+  launch
+
+  try
+    set theRemList to text returned of (¬
+      display dialog "Enter the Reminder list name" ¬
+        default answer "" with icon note¬
+    )
+
+  on error errmsg number errnbr
+    if errnbr is equal to -128 then
+      display alert "User cancelled... ending." giving up after 10
+    end if
+
+    return
+  end try
+
+  set {rnames, cdates} to {name, creation date}¬
+    of every reminder of list theRemList
+end tell
+
+
+repeat with i from 1 to number of items in rnames
+  set fmt to fmt & (item i of rnames) & " : " & (item i of cdates) & return
+end repeat
+
+
+tell application "System Events"
+  display dialog fmt as text with title "Reminder Items Creation Dates"
+end tell
+
+return
+```
+
+1. Copy and paste it into a `tasks.json` file
+2. Format it as proper JSON and manually add notes, and tags fields
+3. Import JSON file:
+    ```bash
+    cat tasks.json \
+    | jq -c '.[]' \
+    | while read -r task
+      do
+        echo $task | tasklite importjson
+      done
+    ```

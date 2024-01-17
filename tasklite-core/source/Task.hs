@@ -296,7 +296,7 @@ newtype Ulid = Ulid Text
 
 
 {-| Uses _ to match Beam's defaults
- | (http://tathougies.github.io/beam/user-guide/models/#defaults)
+ | (https://haskell-beam.github.io/beam/user-guide/models/#defaults)
 -}
 data TaskT f = Task
   { ulid :: Columnar f Text -- Ulid

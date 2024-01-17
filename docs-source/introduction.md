@@ -28,10 +28,9 @@ The Code is available on [GitHub].
 [GitHub]: https://github.com/ad-si/tasklite
 
 
-For help please come visit us on one of the following sites:
+For help and ideas please come visit us at our [GitHub Discussions]!
 
-- [Reddit](https://www.reddit.com/r/TaskLite/)
-- [Matrix](matrix:r/tasklite:matrix.feram.io) (#tasklite:matrix.feram.io)
+[GitHub Discussions]: https://github.com/ad-si/TaskLite/discussions
 
 
 ### Latest Versions
