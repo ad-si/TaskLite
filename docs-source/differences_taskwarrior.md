@@ -45,32 +45,32 @@
 
 ### Command Comparison
 
-TW Command | TL Command | Description & Differences
------------|------------|---------------------------
-[add]      | add        | Add a new task
-annotate   | note       | Add a note / comment / annotation to a task
-[append]   | -          | Append words to a task description
-[calc]     | -          | Expression calculator
-config     | config     | TL only displays it, TW allows modification
-context    | -          | Manage contexts. TL uses tags instead.
-[count]    | count      | Count the tasks matching a filter
-delete     | trash      | Mark a task as deletable
-denotate   | unnote     | Remove an annotation from a task
-[done]     | do         | Complete a task
-duplicate  | duplicate  | Clone an existing task
-edit       | edit       | Launch your text editor to modify a task
-execute    | -          | Execute an external command
-[export]   | ndjson     | Export tasks in NDJSON instead of JSON format
-help       | help       | Show high-level help, a cheat-sheet
-import     | import     | Additionally to JSON supports Email files (.eml)
-[log]      | log        | Record an already-completed task
-logo       | -          | Show the Taskwarrior logo
-[modify]   | -          | Modify one or more tasks
-[prepend]  | -          | Prepend words to a task description
-purge      | delete     | Completely remove task, rather than just change status
-start      | start      | Start working on a task, make active
-stop       | stop       | Stop working on a task, no longer active
-[synchronize]| -        | Syncs tasks with Taskserver
+TaskWarrior  | TaskLite   | Description & Differences
+-------------|------------|--------------------------
+[add]        | add        | Add a new task
+annotate     | note       | Add a note / comment / annotation to a task
+[append]     | - (edit)   | Append words to a task description
+[calc]       | -          | Expression calculator
+config       | config     | TL only displays it, TW allows modification
+context      | -          | Manage contexts. TL uses tags instead.
+[count]      | count      | Count the tasks matching a filter
+delete       | trash      | Mark a task as deletable
+denotate     | unnote     | Remove an annotation from a task
+[done]       | do         | Complete a task
+duplicate    | duplicate  | Clone an existing task
+edit         | edit       | Launch your text editor to modify a task
+execute      | -          | Execute an external command
+[export]     | ndjson     | Export tasks in NDJSON instead of JSON format
+help         | help       | Show high-level help, a cheat-sheet
+import       | import     | Additionally to JSON supports Email files (.eml)
+[log]        | log        | Record an already-completed task
+logo         | -          | Show the Taskwarrior logo
+[modify]     | - (edit)   | Modify one or more tasks
+[prepend]    | - (edit)   | Prepend words to a task description
+purge        | delete     | Completely remove task, rather than just change status
+start        | start      | Start working on a task, make active
+stop         | stop       | Stop working on a task, no longer active
+[synchronize]| -          | Syncs tasks with Taskserver
 undo         | -          | Revert last change
 version      | version    | Version details and copyright
 active       | -          | Started tasks
