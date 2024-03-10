@@ -10,9 +10,11 @@ start-app:
 	npx elm-app start
 
 
+# Explicitly run tests for each package for better console output
 .PHONY: test
 test:
-	stack test
+	stack test --fast huzzy
+	stack test --fast tasklite-core
 
 
 # Build the documentation

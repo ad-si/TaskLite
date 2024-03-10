@@ -1,3 +1,4 @@
+# WARNING: Later LTS versions don't seem to work with Beam
 resolver: lts-20.26
 packages:
   - huzzy
@@ -5,11 +6,10 @@ packages:
   # - tasklite-app
 
 extra-deps:
+  - simple-sql-parser-0.6.0
+
   - github: ad-si/iso8601-duration
     commit: 15822155a51831fbcd75a3bb5cb608a731a0461b
-
-  - github: JakeWheat/simple-sql-parser
-    commit: 00433a26e8303c9e61359f406da5a2dbf1293fc8
 
 allow-newer: true
 

@@ -5,6 +5,13 @@
 
 packages:
 - completed:
+    hackage: simple-sql-parser-0.6.0@sha256:ce8f602fa81001287deb25af7b711fc45e1cdf36ff7702edde5dee2358f19a37,5580
+    pantry-tree:
+      sha256: cd333c976b4b12425d0eed28749884551a4595dd249cc6d6b75c34e4ce7688cc
+      size: 2752
+  original:
+    hackage: simple-sql-parser-0.6.0
+- completed:
     name: iso8601-duration
     pantry-tree:
       sha256: dd24cbdc13e4aa8ae25125ad3fece2ea910ecb5fd0af4c31fce39d26aaa7930e
@@ -15,17 +22,6 @@ packages:
     version: 0.1.2.0
   original:
     url: https://github.com/ad-si/iso8601-duration/archive/15822155a51831fbcd75a3bb5cb608a731a0461b.tar.gz
-- completed:
-    name: simple-sql-parser
-    pantry-tree:
-      sha256: 8ea116a325adc8001f2f0c52ca5ece1e8d00f5ec44b7bc38de8907305fd1f37b
-      size: 3477
-    sha256: a003b0d5906248468b886feea1536febc8b91946e634c4321b2f5c1c42744385
-    size: 132157
-    url: https://github.com/JakeWheat/simple-sql-parser/archive/00433a26e8303c9e61359f406da5a2dbf1293fc8.tar.gz
-    version: 0.5.0
-  original:
-    url: https://github.com/JakeWheat/simple-sql-parser/archive/00433a26e8303c9e61359f406da5a2dbf1293fc8.tar.gz
 snapshots:
 - completed:
     sha256: 5a59b2a405b3aba3c00188453be172b85893cab8ebc352b1ef58b0eae5d248a2
