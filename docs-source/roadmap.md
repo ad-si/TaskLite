@@ -37,16 +37,6 @@ Check out the page
 for more information.
 
 
-## Server and Webapp
-
-I'd like to be able to run TaskLite on a cheap v-server in a dedicated
-server mode and have it host a simple REST API,
-and an [Elm](https://elm-lang.org) webapp consuming it.
-
-This would then be a good way to casually browse and edit the tasks
-in a more graphical way.
-
-
 ## Syncing
 
 There is no concrete plan for native synchronization support yet.
@@ -57,7 +47,27 @@ Another good solution could be [Litestream](https://litestream.io),
 which continuously streams SQLite changes to S3-compatible storage.
 
 
-## Desktop App
+## Apps
 
-While there is already a prototype included in the code,
+### Webapp
+
+I'd like to be able to run TaskLite on a cheap v-server in a dedicated
+server mode and have it host a simple REST API,
+and an [Elm](https://elm-lang.org) webapp consuming it.
+
+This would then be a good way to casually browse and edit the tasks
+in a more graphical way.
+
+
+### Mobile App
+
+There are no plans for a native mobile app.
+The webapp should be sufficient for most use cases.
+
+
+### Desktop App
+
+While there is already a prototype for a desktop app included in the code,
 I currently don't plan to further work on it any time soon.
+A webapp -- which could also be hosted locally --
+should be sufficient for most use cases.
