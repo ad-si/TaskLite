@@ -1,11 +1,11 @@
-# WARNING: Later LTS versions don't seem to work with Beam
-resolver: lts-20.26
+resolver: lts-22.13
 packages:
   - huzzy
   - tasklite-core
   # - tasklite-app
 
 extra-deps:
+  # TODO: Upgrade after 0.7.x includes missing megaparsec dependency
   - simple-sql-parser-0.6.0
 
   - github: ad-si/iso8601-duration
