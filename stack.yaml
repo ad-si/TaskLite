@@ -1,3 +1,4 @@
+# ATTENTION: Also update the version in the Dockerfile
 resolver: lts-22.13
 packages:
   - huzzy
