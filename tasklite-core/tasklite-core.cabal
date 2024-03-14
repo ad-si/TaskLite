@@ -120,6 +120,7 @@ executable tasklite
       aeson
     , base >=4.7 && <5
     , directory
+    , exceptions
     , file-embed
     , filepath
     , githash
@@ -128,6 +129,7 @@ executable tasklite
     , optparse-applicative
     , prettyprinter
     , prettyprinter-ansi-terminal
+    , process
     , protolude
     , sqlite-simple
     , tasklite-core

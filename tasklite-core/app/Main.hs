@@ -50,7 +50,9 @@ import Protolude (
   (<&>),
   (||),
  )
+import Protolude qualified as P
 
+import Control.Monad.Catch (catchAll)
 import Data.Aeson as Aeson (KeyValue ((.=)), encode, object)
 import Data.FileEmbed (embedStringFile, makeRelativeToProject)
 import Data.Hourglass (
@@ -66,9 +68,6 @@ import Data.Text.Lazy.Encoding qualified as TL
 import Data.Time.ISO8601.Duration qualified as Iso
 import Data.Version (showVersion)
 import Data.Yaml (decodeFileEither, prettyPrintParseException)
-
--- Special module provided by Cabal
-
 import Database.SQLite.Simple (Connection (..))
 import Database.SQLite.Simple qualified as SQLite
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
@@ -154,6 +153,7 @@ import Options.Applicative (
   fullDesc,
   headerDoc,
   help,
+  helpHeader,
   helper,
   idm,
   info,
@@ -169,6 +169,7 @@ import Options.Applicative (
   subparser,
   switch,
  )
+import Options.Applicative.Help.Chunk (Chunk (Chunk), (<<+>>))
 import Options.Applicative.Help.Core (parserHelp)
 import Paths_tasklite_core (version)
 import Prettyprinter (
@@ -185,10 +186,11 @@ import Prettyprinter (
  )
 import Prettyprinter.Render.Terminal (
   AnsiStyle,
-  Color (Black, Blue, Cyan, Yellow),
+  Color (Black, Blue, Cyan, Red, Yellow),
   bold,
   color,
   colorDull,
+  hPutDoc,
   putDoc,
  )
 import System.Directory (
@@ -202,6 +204,7 @@ import System.Directory (
   listDirectory,
  )
 import System.FilePath ((</>))
+import System.Process (readProcess)
 import Time.System (timeCurrentP)
 
 import Config (
@@ -342,6 +345,7 @@ data Command
   | Help
   | PrintConfig
   | UlidToUtc Text
+  | ExternalCommand Text (Maybe [Text])
   deriving (Show, Eq)
 
 
@@ -349,6 +353,7 @@ data CliArgs = CliArgs
   { cliCommand :: Command
   , runHelpCommand :: Bool
   }
+  deriving (Show, Eq)
 
 
 nameToAliasList :: [(Text, Text)]
@@ -944,26 +949,27 @@ commandParser conf =
     -- <> command "utc-quarter"  -- … last day of the quarter
     -- <> command "utc-year"  -- … last day of the year
     )
+
+  -- Catch-all parser for any external "tasklite-???" command
+  -- Do not show in help
+  <|> ExternalCommand
+        <$> strArgument P.mempty
+        <*> optional (some (strArgument P.mempty))
   )
 
 {- FOURMOLU_ENABLE -}
-
-
-runHelpSwitch :: Parser Bool
-runHelpSwitch =
-  switch
-    ( long "help"
-        <> short 'h'
-        <> help "Display current help page"
-        <> internal
-    )
 
 
 cliArgsParser :: Config -> Parser CliArgs
 cliArgsParser conf =
   CliArgs
     <$> commandParser conf
-    <*> runHelpSwitch
+    <*> switch
+      ( long "help"
+          <> short 'h'
+          <> help "Display current help page"
+          <> internal
+      )
 
 
 parserInfo :: Config -> ParserInfo CliArgs
@@ -1101,7 +1107,7 @@ executeCLiCommand conf now connection = do
 
   if runHelpCommand cliArgs
     then pure $ extendHelp $ parserHelp defaultPrefs $ cliArgsParser conf
-    else case cliCommand cliArgs of
+    else case cliArgs.cliCommand of
       ListAll -> listAll conf now connection
       ListHead -> headTasks conf now connection
       ListNew -> newTasks conf now connection
@@ -1191,6 +1197,40 @@ executeCLiCommand conf now connection = do
       PrintConfig -> pure $ pretty conf
       Alias alias _ -> pure $ aliasWarning alias
       UlidToUtc ulid -> pure $ prettyUlid ulid
+      ExternalCommand cmd argsMb -> do
+        let
+          args =
+            argsMb & P.fromMaybe []
+
+          runCmd = do
+            output <-
+              readProcess
+                ("tasklite-" <> T.unpack cmd)
+                (args <&> T.unpack)
+                ""
+            pure $ pretty output
+
+          handleException exception = do
+            hPutDoc P.stderr $
+              if not $ exception & show & T.isInfixOf "does not exist"
+                then pretty (show exception :: Text)
+                else do
+                  let
+                    theHelp = parserHelp defaultPrefs $ cliArgsParser conf
+                    newHeader =
+                      Chunk
+                        ( Just $
+                            annotate (color Red) $
+                              "ERROR: Command \""
+                                <> pretty cmd
+                                <> "\" does not exist"
+                        )
+                        <<+>> helpHeader theHelp
+                  extendHelp theHelp{helpHeader = newHeader}
+
+            P.exitFailure
+
+        catchAll runCmd handleException
 
 
 printOutput :: [Char] -> Config -> IO ()

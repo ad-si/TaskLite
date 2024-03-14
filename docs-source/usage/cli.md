@@ -248,3 +248,24 @@ and
 ```sh
 tl metadata set kanban-state sprint 01e0k6a1p00002zgzc0845vayw
 ```
+
+
+## External Commands
+
+Like Git, TaskLite also supports external commands.
+This allows you to easily extend TaskLite's functionality with your own scripts.
+
+For this to work, simply add an executable script (`chmod +x`)
+with the prefix `tasklite-` to your `$PATH`
+
+For example, to add a `grin` command which simply prints a smiley:
+
+```sh
+$ cat /usr/local/bin/tasklite-grin
+#! /usr/bin/env bash
+
+echo '😁' "$@"
+
+$ tasklite grin Hi
+😁 Hi
+```

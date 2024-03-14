@@ -91,6 +91,7 @@ executables:
     dependencies:
       - aeson
       - directory
+      - exceptions
       - file-embed
       - filepath
       - githash
@@ -99,6 +100,7 @@ executables:
       - optparse-applicative
       - prettyprinter
       - prettyprinter-ansi-terminal
+      - process
       - sqlite-simple
       - tasklite-core
       - text
