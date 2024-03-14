@@ -358,7 +358,7 @@ testSuite conf now = do
                     `shouldBe` emptyFullTask
                       { FullTask.body = "Just a test"
                       , -- TODO: Fix after notes are returned as a JSON array
-                        FullTask.notes = Nothing
+                        FullTask.notes = Just []
                       , FullTask.priority = Just 1.0
                       , FullTask.metadata = decode jsonTask
                       }

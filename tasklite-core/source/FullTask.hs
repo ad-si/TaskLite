@@ -127,7 +127,8 @@ instance FromRow FullTask where
         ( \value -> case fieldData value of
             SQLText _txt ->
               -- TODO: Parse notes as a JSON array
-              Ok Nothing
+              -- Must return a `Just` to signal that notes exist
+              Ok (Just [])
             SQLNull -> Ok Nothing
             val ->
               Errors
