@@ -295,11 +295,15 @@ testSuite conf now = do
           [updatedTask] -> do
             updatedTask `shouldSatisfy` (\task -> task.ulid /= "")
             updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
-            updatedTask{FullTask.ulid = "", FullTask.modified_utc = ""}
+            updatedTask `shouldSatisfy` (\task -> task.user /= "")
+            updatedTask
+              { FullTask.ulid = ""
+              , FullTask.modified_utc = ""
+              , FullTask.user = ""
+              }
               `shouldBe` emptyFullTask
                 { FullTask.body = "Just a test"
                 , FullTask.due_utc = Just "2082-10-03 00:00:00"
-                , FullTask.user = "adrian"
                 , FullTask.priority = Just 2.0
                 , FullTask.tags = Just ["tag", "what"]
                 }
