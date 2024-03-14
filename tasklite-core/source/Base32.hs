@@ -18,13 +18,13 @@ import Data.ULID.Digits (unDigits)
 Decodes a Crockford-encoded `String` into an integer, if possible.
 Returns `Nothing` if the string is not a valid Crockford-encoded value.
 -}
-decode :: Integral i => Text -> Maybe i
+decode :: (Integral i) => Text -> Maybe i
 decode base32text = do
   numbers <- mapM decodeChar $ T.unpack base32text
   pure $ unDigits 32 numbers
 
 
-decodeChar :: Integral i => Char -> Maybe i
+decodeChar :: (Integral i) => Char -> Maybe i
 decodeChar c = case C.toUpper c of
   '0' -> Just 0
   'O' -> Just 0

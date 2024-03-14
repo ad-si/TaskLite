@@ -47,7 +47,7 @@ data CaseSensitivity
   deriving (Show, Eq)
 
 
-null :: T.TextualMonoid s => s -> Bool
+null :: (T.TextualMonoid s) => s -> Bool
 null =
   not . T.any (const True)
 

@@ -395,7 +395,7 @@ aliasWarning alias =
     <+> "Use"
     <+> dquotes (pretty alias)
     <+> "instead."
-      <> hardline
+    <> hardline
 
 
 getCommand :: (Text, Text) -> Mod CommandFields Command
@@ -1056,11 +1056,11 @@ helpReplacements =
       ( "{{header}}"
       , annotate (bold <> color Blue) "TaskLite"
           <+> prettyVersion
-            <> hardline
-            <> hardline
-            <> annotate
-              (color Blue)
-              "Task-list manager powered by Haskell and SQLite"
+          <> hardline
+          <> hardline
+          <> annotate
+            (color Blue)
+            "Task-list manager powered by Haskell and SQLite"
       )
         : ("{{examples}}", examples)
         : fmap

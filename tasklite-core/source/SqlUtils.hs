@@ -195,7 +195,7 @@ fromAs tableName aliasName =
     (alias aliasName)
 
 
-getValue :: Show a => a -> Text
+getValue :: (Show a) => a -> Text
 getValue value =
   "'" <> show value <> "'"
 

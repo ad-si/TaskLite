@@ -65,7 +65,7 @@ tests =
                       identity
                       "ab"
                       "ZaZbZ"
-                    @?= Just "ZaZbZ"
+                      @?= Just "ZaZbZ"
                 ]
           , TestLabel "should return Nothing on no match" $
               from
@@ -96,7 +96,7 @@ tests =
                       identity
                       "brd"
                       "bread"
-                    @?= Just "<b><r>ea<d>"
+                      @?= Just "<b><r>ea<d>"
                 ]
           ]
     , TestLabel "filter" $
