@@ -101,7 +101,12 @@ main = do
       tasks <-
         query_
           connection
-          "select * from tasks_view order by ulid asc limit 10"
+          [sql|
+            SELECT *
+            FROM tasks_view
+            ORDER BY ulid ASC
+            LIMIT 10
+          |]
 
       void $
         run

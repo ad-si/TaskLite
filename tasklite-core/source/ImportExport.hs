@@ -626,7 +626,7 @@ ingestFile config connection filePath = do
 dumpCsv :: Config -> IO (Doc AnsiStyle)
 dumpCsv conf = do
   execWithConn conf $ \connection -> do
-    rows :: [FullTask] <- query_ connection "select * from tasks_view"
+    rows :: [FullTask] <- query_ connection "SELECT * FROM tasks_view"
     pure $ pretty $ TL.decodeUtf8 $ Csv.encodeDefaultOrderedByName rows
 
 
@@ -634,7 +634,7 @@ dumpNdjson :: Config -> IO (Doc AnsiStyle)
 dumpNdjson conf = do
   -- TODO: Use Task instead of FullTask to fix broken notes export
   execWithConn conf $ \connection -> do
-    tasks :: [FullTask] <- query_ connection "select * from tasks_view"
+    tasks :: [FullTask] <- query_ connection "SELECT * FROM tasks_view"
     pure $
       vsep $
         fmap (pretty . TL.decodeUtf8 . Aeson.encode) tasks
@@ -644,7 +644,7 @@ dumpJson :: Config -> IO (Doc AnsiStyle)
 dumpJson conf = do
   -- TODO: Use Task instead of FullTask to fix broken notes export
   execWithConn conf $ \connection -> do
-    tasks :: [FullTask] <- query_ connection "select * from tasks_view"
+    tasks :: [FullTask] <- query_ connection "SELECT * FROM tasks_view"
     pure $ pretty $ fmap (TL.decodeUtf8 . Aeson.encode) tasks
 
 

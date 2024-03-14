@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 {-|
 Migrations of SQLite database for new versions
 -}
@@ -18,7 +20,6 @@ import Protolude (
   Show,
   Text,
   Traversable (mapM, sequence),
-  either,
   maybeToEither,
   show,
   try,
@@ -42,6 +43,7 @@ import Database.SQLite.Simple (
   query_,
   withTransaction,
  )
+import Database.SQLite.Simple.QQ (sql)
 import Prettyprinter (Doc, Pretty (pretty), hardline)
 
 
@@ -67,30 +69,36 @@ data Migration = Migration
 
 createSetModifiedUtcTrigger :: Query
 createSetModifiedUtcTrigger =
-  "create trigger set_modified_utc_after_update\n\
-  \after update on tasks\n\
-  \when new.modified_utc is old.modified_utc\n\
-  \begin\n\
-  \  update tasks\n\
-  \  set modified_utc = datetime('now')\n\
-  \  where ulid = new.ulid;\n\
-  \end"
+  [sql|
+    CREATE TRIGGER set_modified_utc_after_update
+    AFTER UPDATE ON tasks
+    WHEN new.modified_utc IS old.modified_utc  -- Must be `IS` to handle `NULL`
+    BEGIN
+      UPDATE tasks
+      SET modified_utc = datetime('now')
+      WHERE ulid == new.ulid;
+    END
+  |]
 
 
 createSetClosedUtcTrigger :: Query
 createSetClosedUtcTrigger =
-  "create trigger set_closed_utc_after_update\n\
-  \after update on tasks\n\
-  \when old.state is not new.state and (\n\
-  \    new.state is 'Done'\n\
-  \    or new.state is 'Obsolete'\n\
-  \    or new.state is 'Deletable'\n\
-  \  )\n\
-  \begin\n\
-  \  update tasks\n\
-  \  set closed_utc = datetime('now')\n\
-  \  where ulid = new.ulid;\n\
-  \end"
+  [sql|
+    CREATE TRIGGER set_closed_utc_after_update
+    AFTER UPDATE ON tasks
+    WHEN
+      old.state IS NOT new.state  -- Must be `IS NOT` to handle `NULL`
+      AND (
+        new.state == 'Done' OR
+        new.state == 'Obsolete' OR
+        new.state == 'Deletable'
+      )
+    BEGIN
+      UPDATE tasks
+      SET closed_utc = datetime('now')
+      WHERE ulid == new.ulid;
+    END
+  |]
 
 
 _0_ :: MigrateDirection -> Migration
@@ -106,32 +114,38 @@ _0_ =
       MigrateUp ->
         base
           { Migrations.querySet =
-              [ "create table tasks (\n\
-                \  ulid text not null primary key,\n\
-                \  body text not null,\n\
-                \  state text check(state in ('Done','Obsolete','Deletable'))\n\
-                \    not null default 'Done',\n\
-                \  due_utc text,\n\
-                \  closed_utc text,\n\
-                \  modified_utc text not null,\n\
-                \  priority_adjustment float,\n\
-                \  metadata text\n\
-                \)"
+              [ [sql|
+                  CREATE TABLE tasks (
+                    ulid TEXT NOT NULL PRIMARY KEY,
+                    body TEXT NOT NULL,
+                    state TEXT check(state IN ('Done','Obsolete','Deletable'))
+                      NOT NULL DEFAULT 'Done',
+                    due_utc TEXT,
+                    closed_utc TEXT,
+                    modified_utc TEXT NOT NULL,
+                    priority_adjustment REAL,
+                    metadata TEXT
+                  )
+                |]
               , createSetModifiedUtcTrigger
               , createSetClosedUtcTrigger
-              , "create table task_to_note (\n\
-                \  ulid text not null primary key,\n\
-                \  task_ulid text not null,\n\
-                \  note text not null,\n\
-                \  foreign key(task_ulid) references tasks(ulid)\n\
-                \)"
-              , "create table task_to_tag (\n\
-                \  ulid text not null primary key,\n\
-                \  task_ulid text not null,\n\
-                \  tag text not null,\n\
-                \  foreign key(task_ulid) references tasks(ulid),\n\
-                \  constraint no_duplicate_tags unique (task_ulid, tag)\n\
-                \)"
+              , [sql|
+                  CREATE TABLE task_to_note (
+                    ulid TEXT NOT NULL PRIMARY KEY,
+                    task_ulid TEXT NOT NULL,
+                    note TEXT NOT NULL,
+                    FOREIGN KEY(task_ulid) REFERENCES tasks(ulid)
+                  )
+                |]
+              , [sql|
+                  CREATE TABLE task_to_tag (
+                    ulid TEXT NOT NULL PRIMARY KEY,
+                    task_ulid TEXT NOT NULL,
+                    tag TEXT NOT NULL,
+                    FOREIGN KEY(task_ulid) REFERENCES tasks(ulid),
+                    CONSTRAINT no_duplicate_tags UNIQUE (task_ulid, tag)
+                  )
+                |]
               ]
           }
       MigrateDown -> base{Migrations.querySet = []}
@@ -151,18 +165,31 @@ _1_ =
       MigrateUp ->
         base
           { Migrations.querySet =
-              ["alter table tasks add column user text"]
+              [ "ALTER TABLE tasks\n\
+                \ADD COLUMN user TEXT"
+              ]
           }
       -- TODO: Fix the invalid create table statement
       MigrateDown ->
         base
           { Migrations.querySet =
-              [ "create table tasks_temp"
-              , "insert into tasks_temp \
-                \select ulid, body, state, due_utc, closed_utc, \
-                \  modified_utc, priority_adjustment, metadata from tasks"
-              , "drop table tasks"
-              , "alter table tasks_temp rename to tasks"
+              [ "CREATE TABLE tasks_temp"
+              , [sql|
+                  INSERT INTO tasks_temp
+                  SELECT
+                    ulid,
+                    body,
+                    state,
+                    due_utc,
+                    closed_utc,
+                    modified_utc,
+                    priority_adjustment,
+                    metadata
+                  FROM tasks
+                |]
+              , "DROP TABLE tasks"
+              , "ALTER TABLE tasks_temp\n\
+                \RENAME TO tasks"
               ]
           }
 
@@ -177,55 +204,75 @@ _2_ =
         , querySet = []
         }
     createTempTableQueryUp =
-      Query
-        "\
-        \create table tasks_temp ( \n\
-        \  ulid text not null primary key, \n\
-        \  body text not null, \n\
-        \  state text check(state in (NULL, 'Done', 'Obsolete', 'Deleted')), \n\
-        \  due_utc text, \n\
-        \  sleep_utc text, \n\
-        \  closed_utc text, \n\
-        \  modified_utc text not null, \n\
-        \  priority_adjustment float, \n\
-        \  metadata text, \n\
-        \  user text \n\
-        \) \n\
-        \"
+      [sql|
+        CREATE TABLE tasks_temp (
+          ulid TEXT NOT NULL PRIMARY KEY,
+          body TEXT NOT NULL,
+          state TEXT check(state IN (NULL, 'Done', 'Obsolete', 'Deleted')),
+          due_utc TEXT,
+          sleep_utc TEXT,
+          closed_utc TEXT,
+          modified_utc TEXT NOT NULL,
+          priority_adjustment REAL,
+          metadata TEXT,
+          user TEXT
+        )
+      |]
 
     -- TODO: Finish query
-    createTempTableQueryDown = Query "create table tasks_temp"
+    createTempTableQueryDown = Query "CREATE TABLE tasks_temp"
   in
     \case
       MigrateUp ->
         base
           { Migrations.querySet =
               [ createTempTableQueryUp
-              , "insert into tasks_temp \
-                \select ulid, body, \
-                \  nullif(nullif(state,'Open'),'Waiting') as state, \
-                \due_utc, NULL, closed_utc, \
-                \modified_utc, priority_adjustment, metadata, user \
-                \from tasks"
-              , "drop table tasks"
-              , "alter table tasks_temp rename to tasks"
+              , [sql|
+                  INSERT INTO tasks_temp
+                  SELECT
+                    ulid,
+                    body,
+                    nullif(nullif(state, 'Open'), 'Waiting') AS state,
+                    due_utc,
+                    NULL,
+                    closed_utc,
+                    modified_utc,
+                    priority_adjustment,
+                    metadata,
+                    user
+                  FROM tasks
+                |]
+              , "DROP TABLE tasks"
+              , "ALTER TABLE tasks_temp\n\
+                \RENAME TO tasks"
               ]
           }
       MigrateDown ->
         base
           { Migrations.querySet =
               [ createTempTableQueryDown
-              , "insert into tasks_temp \
-                \select ulid, body, state, due_utc, closed_utc, \
-                \  modified_utc, priority_adjustment, metadata, user from tasks"
-              , "drop table tasks"
-              , "alter table tasks_temp rename to tasks"
+              , [sql|
+                  INSERT INTO tasks_temp
+                  SELECT
+                    ulid,
+                    body,
+                    state,
+                    due_utc,
+                    closed_utc,
+                    modified_utc,
+                    priority_adjustment,
+                    metadata,
+                    user
+                  FROM tasks
+                |]
+              , "DROP TABLE tasks"
+              , "ALTER TABLE tasks_temp RENAME TO tasks"
               ]
           }
 
 
 {-| Add fields awake_utc, ready_utc, waiting_utc, review_utc, closed_utc,
- | group_ulid, repetition_duration, recurrence_duration,
+group_ulid, repetition_duration, recurrence_duration,
 -}
 _3_ :: MigrateDirection -> Migration
 _3_ =
@@ -236,44 +283,58 @@ _3_ =
         , querySet = []
         }
     createTempTableQueryUp =
-      Query
-        "\
-        \create table tasks_temp ( \n\
-        \  ulid text not null primary key, \n\
-        \  body text not null, \n\
-        \  modified_utc text not null, \n\
-        \  awake_utc text, \n\
-        \  ready_utc text, \n\
-        \  waiting_utc text, \n\
-        \  review_utc text, \n\
-        \  due_utc text, \n\
-        \  closed_utc text, \n\
-        \  state text \
-        \    check(state in (NULL, 'Done', 'Obsolete', 'Deletable')), \n\
-        \  group_ulid text, \n\
-        \  repetition_duration text, \n\
-        \  recurrence_duration text, \n\
-        \  priority_adjustment float, \n\
-        \  user text, \n\
-        \  metadata text \n\
-        \) \n\
-        \"
+      [sql|
+        CREATE TABLE tasks_temp (
+          ulid TEXT NOT NULL PRIMARY KEY,
+          body TEXT NOT NULL,
+          modified_utc TEXT NOT NULL,
+          awake_utc TEXT,
+          ready_utc TEXT,
+          waiting_utc TEXT,
+          review_utc TEXT,
+          due_utc TEXT,
+          closed_utc TEXT,
+          state TEXT check(state IN (NULL, 'Done', 'Obsolete', 'Deletable')),
+          group_ulid TEXT,
+          repetition_duration TEXT,
+          recurrence_duration TEXT,
+          priority_adjustment REAL,
+          user TEXT,
+          metadata TEXT
+        )
+      |]
 
     -- TODO: Finish query
-    createTempTableQueryDown = Query "create table tasks_temp"
+    createTempTableQueryDown = Query "CREATE TABLE tasks_temp"
   in
     \case
       MigrateUp ->
         base
           { Migrations.querySet =
               [ createTempTableQueryUp
-              , "insert into tasks_temp \
-                \select ulid, body, modified_utc, sleep_utc, NULL, NULL, NULL, \
-                \due_utc, closed_utc, state, NULL, NULL, NULL, \
-                \priority_adjustment, user, metadata \
-                \from tasks"
-              , "drop table tasks"
-              , "alter table tasks_temp rename to tasks"
+              , [sql|
+                  INSERT INTO tasks_temp
+                  SELECT
+                    ulid,
+                    body,
+                    modified_utc,
+                    sleep_utc,
+                    NULL,
+                    NULL,
+                    NULL,
+                    due_utc,
+                    closed_utc,
+                    state,
+                    NULL,
+                    NULL,
+                    NULL,
+                    priority_adjustment,
+                    user,
+                    metadata
+                  FROM tasks
+                |]
+              , "DROP TABLE tasks"
+              , "ALTER TABLE tasks_temp RENAME TO tasks"
               , createSetModifiedUtcTrigger
               , createSetClosedUtcTrigger
               ]
@@ -282,11 +343,22 @@ _3_ =
         base
           { Migrations.querySet =
               [ createTempTableQueryDown
-              , "insert into tasks_temp \
-                \select ulid, body, state, due_utc, closed_utc, \
-                \  modified_utc, priority_adjustment, metadata, user from tasks"
-              , "drop table tasks"
-              , "alter table tasks_temp rename to tasks"
+              , [sql|
+                  INSERT INTO tasks_temp
+                  SELECT
+                    ulid,
+                    body,
+                    state,
+                    due_utc,
+                    closed_utc,
+                    modified_utc,
+                    priority_adjustment,
+                    metadata,
+                    user
+                  FROM tasks
+                |]
+              , "DROP TABLE tasks"
+              , "ALTER TABLE tasks_temp RENAME TO tasks"
               ]
           }
 
@@ -304,92 +376,101 @@ _4_ =
       MigrateUp ->
         base
           { Migrations.querySet =
-              [ "create view tasks_view as\n\
-                \select\n\
-                \  tasks.ulid as ulid,\n\
-                \  tasks.body as body,\n\
-                \  tasks.modified_utc as modified_utc,\n\
-                \  tasks.awake_utc as awake_utc,\n\
-                \  tasks.ready_utc as ready_utc,\n\
-                \  tasks.waiting_utc as waiting_utc,\n\
-                \  tasks.review_utc as review_utc,\n\
-                \  tasks.due_utc as due_utc,\n\
-                \  tasks.closed_utc as closed_utc,\n\
-                \  tasks.state as state,\n\
-                \  tasks.group_ulid as group_ulid,\n\
-                \  tasks.repetition_duration as repetition_duration,\n\
-                \  tasks.recurrence_duration as recurrence_duration,\n\
-                \  group_concat(distinct task_to_tag.tag) as tags,\n\
-                \  group_concat(distinct task_to_note.note) as notes,\n\
-                \  ifnull(tasks.priority_adjustment, 0.0)\n\
-                \    + case\n\
-                \        when awake_utc is null then 0.0\n\
-                \        when awake_utc >= datetime('now') then -5.0\n\
-                \        when awake_utc >= datetime('now', '-1 days') then 1.0\n\
-                \        when awake_utc >= datetime('now', '-2 days') then 2.0\n\
-                \        when awake_utc >= datetime('now', '-5 days') then 5.0\n\
-                \        when awake_utc <  datetime('now', '-5 days') then 9.0\n\
-                \      end \n\
-                \    + case\n\
-                \        when waiting_utc is null then 0.0\n\
-                \        when waiting_utc >= datetime('now') then 0.0\n\
-                \        when waiting_utc <  datetime('now') then -10.0\n\
-                \      end \n\
-                \    + case when review_utc is null then 0.0\n\
-                \        when review_utc >= datetime('now') then 0.0\n\
-                \        when review_utc <  datetime('now') then 20.0\n\
-                \      end \n\
-                \    + case\n\
-                \        when due_utc is null then 0.0\n\
-                \        when due_utc >= datetime('now', '+24 days') then 0.0\n\
-                \        when due_utc >= datetime('now',  '+6 days') then 3.0\n\
-                \        when due_utc >= datetime('now') then 6.0\n\
-                \        when due_utc >= datetime('now',  '-6 days') then 9.0\n\
-                \        when due_utc >= datetime('now', '-24 days') then 12.0\n\
-                \        when due_utc <  datetime('now', '-24 days') then 15.0\n\
-                \      end\n\
-                \    + case\n\
-                \        when state is null then 0.0\n\
-                \        when state == 'Done' then 0.0\n\
-                \        when state == 'Obsolete' then -1.0\n\
-                \        when state == 'Deletable' then -10.0\n\
-                \      end \n\
-                \    + case count(task_to_note.note)\n\
-                \        when 0 then 0.0\n\
-                \        else 1.0\n\
-                \      end\n\
-                \    + case count(task_to_tag.tag)\n\
-                \        when 0 then 0.0\n\
-                \        else 2.0\n\
-                \      end\n\
-                \    as priority,\n\
-                \  tasks.user as user,\n\
-                \  tasks.metadata as metadata\n\
-                \from\n\
-                \  tasks\n\
-                \  left join task_to_tag on tasks.ulid = task_to_tag.task_ulid\n\
-                \  left join task_to_note on tasks.ulid = task_to_note.task_ulid\n\
-                \group by tasks.ulid"
-              , "create view tags as\n\
-                \select\n\
-                \  task_to_tag_1.tag,\n\
-                \  (count(task_to_tag_1.tag) - ifnull(closed_count, 0)) as \"open\",\n\
-                \  ifnull(closed_count, 0) as closed,\n\
-                \  round(cast(ifnull(closed_count, 0) as float) / \
-                \    count(task_to_tag_1.tag), 6) as progress\n\
-                \from\n\
-                \  task_to_tag as task_to_tag_1\n\
-                \  left join (\n\
-                \      select tag, count(tasks.ulid) as closed_count\n\
-                \      from tasks\n\
-                \      left join task_to_tag\n\
-                \      on tasks.ulid is task_to_tag.task_ulid\n\
-                \      where closed_utc is not null\n\
-                \      group by tag\n\
-                \    ) as task_to_tag_2\n\
-                \  on task_to_tag_1.tag is task_to_tag_2.tag\n\
-                \group by task_to_tag_1.tag\n\
-                \order by task_to_tag_1.tag asc"
+              [ [sql|
+                  CREATE VIEW tasks_view AS
+                  SELECT
+                    tasks.ulid AS ulid,
+                    tasks.body AS body,
+                    tasks.modified_utc AS modified_utc,
+                    tasks.awake_utc AS awake_utc,
+                    tasks.ready_utc AS ready_utc,
+                    tasks.waiting_utc AS waiting_utc,
+                    tasks.review_utc AS review_utc,
+                    tasks.due_utc AS due_utc,
+                    tasks.closed_utc AS closed_utc,
+                    tasks.state AS state,
+                    tasks.group_ulid AS group_ulid,
+                    tasks.repetition_duration AS repetition_duration,
+                    tasks.recurrence_duration AS recurrence_duration,
+                    group_concat(DISTINCT task_to_tag.tag) AS tags,
+                    group_concat(DISTINCT task_to_note.note) AS notes,
+                    ifnull(tasks.priority_adjustment, 0.0)
+                      + CASE
+                          WHEN awake_utc IS NULL THEN 0.0
+                          WHEN awake_utc >= datetime('now') THEN -5.0
+                          WHEN awake_utc >= datetime('now', '-1 days') THEN 1.0
+                          WHEN awake_utc >= datetime('now', '-2 days') THEN 2.0
+                          WHEN awake_utc >= datetime('now', '-5 days') THEN 5.0
+                          WHEN awake_utc < datetime('now', '-5 days') THEN 9.0
+                        END
+                      + CASE
+                          WHEN waiting_utc IS NULL THEN 0.0
+                          WHEN waiting_utc >= datetime('now') THEN 0.0
+                          WHEN waiting_utc < datetime('now') THEN -10.0
+                        END
+                      + CASE
+                          WHEN review_utc IS NULL THEN 0.0
+                          WHEN review_utc >= datetime('now') THEN 0.0
+                          WHEN review_utc < datetime('now') THEN 20.0
+                        END
+                      + CASE
+                          WHEN due_utc IS NULL THEN 0.0
+                          WHEN due_utc >= datetime('now', '+24 days') THEN 0.0
+                          WHEN due_utc >= datetime('now', '+6 days') THEN 3.0
+                          WHEN due_utc >= datetime('now') THEN 6.0
+                          WHEN due_utc >= datetime('now', '-6 days') THEN 9.0
+                          WHEN due_utc >= datetime('now', '-24 days') THEN 12.0
+                          WHEN due_utc < datetime('now', '-24 days') THEN 15.0
+                        END
+                      + CASE
+                          WHEN state IS NULL THEN 0.0
+                          WHEN state == 'Done' THEN 0.0
+                          WHEN state == 'Obsolete' THEN -1.0
+                          WHEN state == 'Deletable' THEN -10.0
+                        END
+                      + CASE count(task_to_note.note)
+                          WHEN 0 THEN 0.0
+                          ELSE 1.0
+                        END
+                      + CASE count(task_to_tag.tag)
+                          WHEN 0 THEN 0.0
+                          ELSE 2.0
+                        END
+                      AS priority,
+                    tasks.user AS user,
+                    tasks.metadata AS metadata
+                  FROM
+                    tasks
+                    LEFT JOIN task_to_tag ON tasks.ulid == task_to_tag.task_ulid
+                    LEFT JOIN task_to_note ON tasks.ulid == task_to_note.task_ulid
+                  GROUP BY tasks.ulid
+                |]
+              , [sql|
+                  CREATE VIEW tags AS
+                  SELECT
+                    task_to_tag_1.tag,
+                    (count(task_to_tag_1.tag) - ifnull(closed_count, 0))
+                      AS "open",
+                    ifnull(closed_count, 0) AS closed,
+                    round(
+                      cast(ifnull(closed_count, 0) AS REAL) /
+                        count(task_to_tag_1.tag),
+                      6
+                    ) AS progress
+                  FROM
+                    task_to_tag AS task_to_tag_1
+                    LEFT JOIN (
+                      SELECT tag, count(tasks.ulid) AS closed_count
+                      FROM tasks
+                      LEFT JOIN task_to_tag
+                      ON tasks.ulid IS task_to_tag.task_ulid
+                      WHERE closed_utc IS NOT NULL
+                      GROUP BY tag
+                    ) AS task_to_tag_2
+                    ON task_to_tag_1.tag IS task_to_tag_2.tag
+                  GROUP BY task_to_tag_1.tag
+                  ORDER BY task_to_tag_1.tag ASC
+                |]
               ]
           }
       MigrateDown -> base{Migrations.querySet = []}
@@ -403,10 +484,10 @@ hasDuplicates (x : xs) =
 
 wrapQuery :: UserVersion -> QuerySet -> QuerySet
 wrapQuery (UserVersion userVersion) querySet =
-  ["pragma foreign_keys = OFF"]
+  ["PRAGMA foreign_keys = OFF"]
     <> querySet
-    <> [ "pragma foreign_key_check"
-       , "pragma user_version = " <> Query (show userVersion)
+    <> [ "PRAGMA foreign_key_check"
+       , "PRAGMA user_version = " <> Query (show userVersion)
        ]
 
 
@@ -433,10 +514,10 @@ lintQuery = Right
 
 lintMigration :: Migration -> Either Text Migration
 lintMigration migration =
-  either
-    Left
-    (\_ -> Right migration)
-    (mapM lintQuery (Migrations.querySet migration))
+  migration
+    & Migrations.querySet
+    & mapM lintQuery
+    <&> P.const migration
 
 
 runMigration :: Connection -> [Query] -> IO (Either SQLError [()])
@@ -452,11 +533,10 @@ runMigration connection querySet = do
 runMigrations :: Config -> Connection -> IO (Doc ann)
 runMigrations _ connection = do
   currentVersionList <-
-    ( query_
-        connection
-        "pragma user_version"
-        :: IO [UserVersion]
-      )
+    query_
+      connection
+      "PRAGMA user_version"
+      :: IO [UserVersion]
 
   let
     migrations = [_0_, _1_, _2_, _3_, _4_]
@@ -471,7 +551,7 @@ runMigrations _ connection = do
     migrationsUpLinted = do
       currentVersion <-
         maybeToEither
-          "'pragma user_verison' does not return current version"
+          "`PRAGMA user_verison` does not return current version"
           (P.head currentVersionList)
 
       -- Check if duplicate user versions are defined
@@ -489,8 +569,7 @@ runMigrations _ connection = do
                   && (currentVersion == UserVersion 0)
           )
         <&> lintMigration
-        <&> fmap wrapMigration
-        & sequence
+        & mapM (fmap wrapMigration)
 
   case migrationsUpLinted of
     Left error -> pure $ pretty error
@@ -499,15 +578,14 @@ runMigrations _ connection = do
       result <-
         migsUpLinted
           <&> Migrations.querySet
-          <&> runMigration connection
-          & sequence
+          & mapM (runMigration connection)
 
       case sequence result of
         Left error -> pure $ pretty (show error :: Text)
         Right _ -> do
           execute_ connection $
             Query $
-              "pragma user_version = " <> show userVersionMax
+              "PRAGMA user_version = " <> show userVersionMax
           pure $
             ( "Migration succeeded. New user-version: "
                 <> pretty userVersionMax

@@ -574,7 +574,11 @@ execWithTask conf connection idSubstr callback = do
   tasks <-
     query
       connection
-      (Query $ "select * from " <> conf.tableName <> " where `ulid` like ?")
+      ( Query $
+          "SELECT *\n"
+            <> ("FROM \"" <> conf.tableName <> "\"\n")
+            <> "WHERE ulid LIKE ?\n"
+      )
       ["%" <> idSubstr :: Text]
       :: IO [Task]
 
@@ -1180,7 +1184,7 @@ adjustPriority conf adjustment ids = do
           [sql|
             UPDATE tasks
             SET priority_adjustment =
-              IFNULL(priority_adjustment, 0) + :adjustment
+              ifnull(priority_adjustment, 0) + :adjustment
             WHERE ulid == :ulid
           |]
           [ ":adjustment" := adjustment
@@ -1488,12 +1492,15 @@ nextTask conf connection = do
 randomTask :: Config -> Connection -> IO (Doc AnsiStyle)
 randomTask conf connection = do
   (tasks :: [FullTask]) <-
-    query_ connection $
-      Query
-        "select * from `tasks_view` \
-        \where closed_utc is null \
-        \order by random() \
-        \limit 1"
+    query_
+      connection
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE closed_utc IS NULL
+        ORDER BY random()
+        LIMIT 1
+      |]
 
   case tasks of
     [fullTask] -> infoTask conf connection fullTask.ulid
@@ -1504,8 +1511,10 @@ findTask :: Connection -> Text -> IO (Doc AnsiStyle)
 findTask connection aPattern = do
   tasks :: [(Text, Text, Maybe [Text], Maybe [Text], Maybe Text)] <-
     query_ connection $
-      Query
-        "select ulid, body, tags, notes, metadata from tasks_view"
+      [sql|
+        SELECT ulid, body, tags, notes, metadata
+        FROM tasks_view
+      |]
 
   let
     ulidWidth = 5
@@ -2149,9 +2158,13 @@ countTasks conf connection filterExpression = do
   case filterMay of
     Nothing -> do
       [NumRows taskCount] <-
-        query_ connection $
-          Query $
-            "select count(1) from `" <> tableName conf <> "`"
+        query
+          connection
+          [sql|
+            SELECT count(1)
+            FROM ?
+          |]
+          (Only $ tableName conf)
 
       pure $ pretty taskCount
     Just (filterExps, _) -> do
@@ -2181,49 +2194,69 @@ countTasks conf connection filterExpression = do
 headTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 headTasks conf now connection = do
   tasks <-
-    query_ connection $
-      Query $
-        -- TODO: Add `wait_utc` < datetime('now')"
-        "select * from tasks_view \
-        \where closed_utc is null \
-        \order by priority desc, due_utc asc, ulid desc \
-        \limit "
-          <> show (headCount conf)
+    query
+      connection
+      -- TODO: Add `wait_utc` < datetime('now')"
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE closed_utc IS NULL
+        ORDER BY
+          priority DESC,
+          due_utc ASC,
+          ulid DESC
+        LIMIT ?
+      |]
+      (Only $ headCount conf)
+
   formatTasksColor conf now tasks
 
 
 newTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 newTasks conf now connection = do
   tasks <-
-    query_ connection $
-      Query $
-        "select * from `tasks_view` \
-        \where closed_utc is null \
-        \order by `ulid` desc limit "
-          <> show (headCount conf)
+    query
+      connection
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE closed_utc IS NULL
+        ORDER BY ulid DESC
+        LIMIT ?
+      |]
+      (Only $ headCount conf)
+
   formatTasksColor conf now tasks
 
 
 listOldTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listOldTasks conf now connection = do
   tasks <-
-    query_ connection $
-      Query $
-        "select * from `tasks_view` \
-        \where closed_utc is null \
-        \order by `ulid` asc limit "
-          <> show (headCount conf)
+    query
+      connection
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE closed_utc IS NULL
+        ORDER BY ulid ASC
+        LIMIT ?
+      |]
+      (Only $ headCount conf)
+
   formatTasksColor conf now tasks
 
 
 openTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 openTasks conf now connection = do
   tasks <-
-    query_ connection $
-      Query
-        "select * from `tasks_view` \
-        \where closed_utc is null \
-        \order by priority desc, due_utc asc, ulid desc"
+    query_
+      connection
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE closed_utc IS NULL
+        ORDER BY priority DESC, due_utc ASC, ulid DESC
+      |]
   formatTasksColor conf now tasks
 
 
@@ -2235,10 +2268,14 @@ modifiedTasks
   -> IO (Doc AnsiStyle)
 modifiedTasks conf now connection listModifiedFlag = do
   tasks <-
-    query_ connection $
-      Query
-        "select * from `tasks_view` \
-        \order by `modified_utc` desc"
+    query_
+      connection
+      [sql|
+        SELECT *
+        FROM tasks_view
+        ORDER BY modified_utc DESC
+      |]
+
   let
     filterModified =
       P.filter
@@ -2266,58 +2303,90 @@ modifiedTasks conf now connection listModifiedFlag = do
 overdueTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 overdueTasks conf now connection = do
   tasks <-
-    query_ connection $
-      Query
-        "select * from `tasks_view` \
-        \where closed_utc is null and due_utc < datetime('now') \
-        \order by priority desc, due_utc asc, ulid desc"
+    query_
+      connection
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE
+          closed_utc IS NULL AND
+          due_utc < datetime('now')
+        ORDER BY
+          priority DESC,
+          due_utc ASC,
+          ulid DESC
+      |]
+
   formatTasksColor conf now tasks
 
 
 doneTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 doneTasks conf now connection = do
   tasks <-
-    query_ connection $
-      Query $
-        "select * from tasks_view \
-        \where closed_utc is not null and state is 'Done' \
-        \order by closed_utc desc limit "
-          <> show (headCount conf)
+    query
+      connection
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE
+          closed_utc IS NOT NULL AND
+          state == 'Done'
+        ORDER BY closed_utc DESC
+        LIMIT ?
+      |]
+      (Only $ headCount conf)
+
   formatTasksColor conf now tasks
 
 
 obsoleteTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 obsoleteTasks conf now connection = do
   tasks <-
-    query_ connection $
-      Query $
-        "select * from tasks_view \
-        \where closed_utc is not null and state is 'Obsolete' \
-        \order by ulid desc limit "
-          <> show (headCount conf)
+    query
+      connection
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE
+          closed_utc IS NOT NULL AND
+          state == 'Obsolete'
+        ORDER BY ulid DESC
+        LIMIT ?
+      |]
+      (Only $ headCount conf)
+
   formatTasksColor conf now tasks
 
 
 deletableTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 deletableTasks conf now connection = do
   tasks <-
-    query_ connection $
-      Query $
-        "select * from tasks_view \
-        \where closed_utc is not null and state is 'Deletable' \
-        \order by ulid desc limit "
-          <> show (headCount conf)
+    query
+      connection
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE
+          closed_utc IS NOT NULL
+          AND state == 'Deletable'
+        ORDER BY ulid DESC
+        LIMIT ?
+      |]
+      (Only $ headCount conf)
   formatTasksColor conf now tasks
 
 
 listRepeating :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listRepeating conf now connection = do
   tasks <-
-    query_ connection $
-      Query
-        "select * from tasks_view \
-        \where repetition_duration is not null \
-        \order by repetition_duration desc"
+    query_
+      connection
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE repetition_duration IS NOT NULL
+        ORDER BY repetition_duration DESC
+      |]
 
   formatTasksColor conf now tasks
 
@@ -2325,11 +2394,14 @@ listRepeating conf now connection = do
 listRecurring :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listRecurring conf now connection = do
   tasks <-
-    query_ connection $
-      Query
-        "select * from tasks_view \
-        \where recurrence_duration is not null \
-        \order by recurrence_duration desc"
+    query_
+      connection
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE recurrence_duration IS NOT NULL
+        ORDER BY recurrence_duration DESC
+      |]
 
   formatTasksColor conf now tasks
 
@@ -2337,15 +2409,24 @@ listRecurring conf now connection = do
 listReady :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 listReady conf now connection = do
   tasks <-
-    query_ connection $
-      Query $
-        "select * from tasks_view \
-        \where (ready_utc is null \
-        \or (ready_utc is not null and ready_utc < datetime('now'))) \
-        \and closed_utc is null \
-        \order by priority desc, due_utc asc, ulid desc \
-        \limit "
-          <> show (headCount conf)
+    query
+      connection
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE
+          ready_utc IS NULL OR
+          (
+            (ready_utc IS NOT NULL AND ready_utc < datetime('now')) AND
+            closed_utc IS NULL
+          )
+        ORDER BY
+          priority DESC,
+          due_utc ASC,
+          ulid DESC
+        LIMIT ?
+      |]
+      (Only $ headCount conf)
 
   formatTasksColor conf now tasks
 
@@ -2355,11 +2436,15 @@ listWaiting conf now connection = do
   tasks <-
     query_
       connection
-      "select * from tasks_view \
-      \where closed_utc is null \
-      \and waiting_utc is not null \
-      \and (review_utc > datetime('now') or review_utc is null) \
-      \order by waiting_utc desc"
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE closed_utc IS NULL
+          AND waiting_utc IS NOT NULL
+          AND (review_utc > datetime('now') OR review_utc IS NULL)
+        ORDER BY waiting_utc DESC
+      |]
+
   formatTasksColor conf now tasks
 
 
@@ -2368,7 +2453,12 @@ listAll conf now connection = do
   tasks <-
     query_
       connection
-      "select * from tasks_view order by ulid asc"
+      [sql|
+        SELECT *
+        FROM tasks_view
+        ORDER BY ulid ASC
+      |]
+
   formatTasksColor conf now tasks
 
 
@@ -2377,9 +2467,18 @@ listNoTag conf now connection = do
   tasks <-
     query_
       connection
-      "select * from tasks_view \
-      \where closed_utc is null and tags is null \
-      \order by priority desc, due_utc asc, ulid desc"
+      [sql|
+        SELECT *
+        FROM tasks_view
+        WHERE
+          closed_utc IS NULL AND
+          tags IS NULL
+        ORDER BY
+          priority DESC,
+          due_utc ASC,
+          ulid DESC
+      |]
+
   formatTasksColor conf now tasks
 
 
@@ -2390,41 +2489,44 @@ getWithTag connection stateMaybe tags = do
       [] -> ""
       _ ->
         tags
-          <&> (\t -> "tag like '" <> t <> "'")
-          & T.intercalate " or "
-          & ("and " <>)
+          <&> (\t -> "tag LIKE '" <> t <> "'")
+          & T.intercalate " OR "
+          & ("AND " <>)
 
     stateQuery = case stateMaybe of
       Nothing -> ""
-      Just derivedState -> "and " <> derivedStateToQuery derivedState
+      Just derivedState -> "AND " <> derivedStateToQuery derivedState
 
-    -- `where true` simplifies adding additional filters with "and"
+    -- `WHERE TRUE` simplifies adding additional filters with "AND"
     ulidsQuery =
       "\
-      \select tasks.ulid \
-      \from tasks \
-      \left join task_to_tag on tasks.ulid is task_to_tag.task_ulid \
-      \where true \
+      \SELECT tasks.ulid \n\
+      \FROM tasks \n\
+      \LEFT JOIN task_to_tag ON tasks.ulid IS task_to_tag.task_ulid \n\
+      \WHERE TRUE \n\
       \"
         <> tagQuery
         <> " \
            \"
         <> stateQuery
         <> " \
-           \group by tasks.ulid \
-           \having count(tag) = "
+           \GROUP BY tasks.ulid \
+           \HAVING count(tag) = "
         <> show (P.length tags)
 
     mainQuery =
       FullTask.selectQuery
         <> "\
-           \from ("
-        <> ulidsQuery
+           \FROM ("
+        <> Query ulidsQuery
         <> ") tasks1\n\
-           \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
-           \order by priority desc, due_utc asc, ulid desc"
+           \LEFT JOIN tasks_view ON tasks1.ulid IS tasks_view.ulid\n\
+           \ORDER BY \n\
+           \  priority DESC,\n\
+           \  due_utc ASC,\n\
+           \  ulid DESC\n"
 
-  query_ connection $ Query mainQuery
+  query_ connection mainQuery
 
 
 listWithTag :: Config -> DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
@@ -2438,7 +2540,7 @@ queryTasks conf now connection sqlQuery = do
   tasks <-
     query_ connection $
       Query $
-        "select * from `tasks_view` where " <> sqlQuery
+        "SELECT * FROM tasks_view WHERE " <> sqlQuery
   formatTasksColor conf now tasks
 
 
@@ -2580,7 +2682,7 @@ runFilter conf now connection exps = do
 
 -- TODO: Increase performance of this query
 getFilterQuery :: [FilterExp] -> Query
-getFilterQuery filterExps =
+getFilterQuery filterExps = do
   let
     filterTuple = filterToSql <$> P.filter isValidFilter filterExps
 
@@ -2588,28 +2690,27 @@ getFilterQuery filterExps =
       filterTuple <&> \(operator, whereQuery) ->
         operator
           <> "\n\
-             \select tasks.ulid\n\
-             \from tasks\n\
-             \left join task_to_tag on tasks.ulid is task_to_tag.task_ulid\n\
-             \where "
+             \SELECT tasks.ulid\n\
+             \FROM tasks\n\
+             \LEFT JOIN task_to_tag ON tasks.ulid IS task_to_tag.task_ulid\n\
+             \WHERE "
           <> whereQuery
           <> "\n\
-             \group by tasks.ulid"
+             \GROUP BY tasks.ulid"
 
     ulidsQuery =
-      "select tasks.ulid from tasks\n"
+      "SELECT tasks.ulid FROM tasks\n"
         <> unlines queries
 
-    mainQuery =
-      FullTask.selectQuery
-        <> "\
-           \from ("
-        <> ulidsQuery
-        <> ") tasks1\n\
-           \left join tasks_view on tasks1.ulid is tasks_view.ulid\n\
-           \order by priority desc, due_utc asc, ulid desc"
-  in
-    Query mainQuery
+  FullTask.selectQuery
+    <> "FROM ("
+    <> Query ulidsQuery
+    <> ") tasks1\n\
+       \LEFT JOIN tasks_view ON tasks1.ulid IS tasks_view.ulid\n\
+       \ORDER BY \n\
+       \  priority DESC,\n\
+       \  due_utc ASC,\n\
+       \  ulid DESC\n"
 
 
 formatTasks :: Config -> DateTime -> [FullTask] -> Doc AnsiStyle
@@ -2704,7 +2805,7 @@ formatTags conf tagTuples =
 
 listTags :: Config -> Connection -> IO (Doc AnsiStyle)
 listTags conf connection = do
-  tags <- query_ connection $ Query "select * from tags"
+  tags <- query_ connection $ Query "SELECT * FROM tags"
 
   pure $ formatTags conf tags
 
@@ -2713,7 +2814,13 @@ listProjects :: Config -> Connection -> IO (Doc AnsiStyle)
 listProjects conf connection = do
   tags <-
     query_ connection $
-      Query "select * from tags where open > 0 and closed > 0"
+      [sql|
+        SELECT *
+        FROM tags
+        WHERE
+          "open" > 0 AND
+          closed > 0
+      |]
 
   pure $ formatTags conf tags
 
@@ -2722,22 +2829,22 @@ getStats :: Config -> Connection -> IO (Doc AnsiStyle)
 getStats _ connection = do
   [NumRows numOfTasksTotal] <-
     query_ connection $
-      Query "select count(1) from tasks"
+      Query "SELECT count(1) FROM tasks"
   [NumRows numOfTasksOpen] <-
     query_ connection $
-      Query "select count(1) from tasks where closed_utc is null"
+      Query "SELECT count(1) FROM tasks WHERE closed_utc IS NULL"
   [NumRows numOfTasksClosed] <-
     query_ connection $
-      Query "select count(1) from tasks where closed_utc is not null"
+      Query "SELECT count(1) FROM tasks WHERE closed_utc IS NOT NULL"
   [NumRows numOfTasksDone] <-
     query_ connection $
-      Query "select count(1) from tasks where state is 'Done'"
+      Query "SELECT count(1) FROM tasks WHERE state IS 'Done'"
   [NumRows numOfTasksObsolete] <-
     query_ connection $
-      Query "select count(1) from tasks where state is 'Obsolete'"
+      Query "SELECT count(1) FROM tasks WHERE state IS 'Obsolete'"
   [NumRows numOfTasksDeletable] <-
     query_ connection $
-      Query "select count(1) from tasks where state is 'Deletable'"
+      Query "SELECT count(1) FROM tasks WHERE state IS 'Deletable'"
 
   let
     widthKey = 12

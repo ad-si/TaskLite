@@ -116,7 +116,7 @@ getTasks conf tags = do
 getTags :: Config -> Servant.Handler [Tag]
 getTags conf =
   liftIO $ execWithConn conf $ \connection ->
-    SQLite.query_ connection "select * from tags" :: IO [Tag]
+    SQLite.query_ connection "SELECT * FROM tags" :: IO [Tag]
 
 
 -- `serve` comes from servant and hands you a WAI Application,

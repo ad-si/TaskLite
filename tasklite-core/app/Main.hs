@@ -761,8 +761,8 @@ commandParser conf =
 
     -- TODO: Replace with tasks and tags commands
     <> command "query" (toParserInfo (QueryTasks <$> strArgument
-        (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
-        "Run \"select * from tasks where QUERY\" on the database")
+        (metavar "QUERY" <> help "The SQL query after the \"WHERE\" clause"))
+        "Run \"SELECT * FROM tasks WHERE QUERY\" on the database")
 
     -- <> command "metadata" (toParserInfo (pure $ ListNoTag)
     --     "List all tasks with metadata")
@@ -772,11 +772,11 @@ commandParser conf =
 
     -- <> command "tasks" (toParserInfo (QueryTasks <$> strArgument
     --     (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
-    --     "Run \"select * from tasks where QUERY\" on the database")
+    --     "Run \"SELECT * FROM tasks WHERE QUERY\" on the database")
 
     -- <> command "tags" (toParserInfo (QueryTasks <$> strArgument
     --     (metavar "QUERY" <> help "The SQL query after the \"where\" clause"))
-    --     "Run \"select * from tasks where QUERY\" on the database")
+    --     "Run \"SELECT * FROM tasks WHERE QUERY\" on the database")
 
     -- <> command "newest" "Show the newest task"
     -- <> command "oldest" "Show the oldest task"
@@ -1098,8 +1098,6 @@ executeCLiCommand conf now connection = do
     days3 = Iso.DurationDate (Iso.DurDateDay (Iso.DurDay 3) Nothing)
 
   cliArgs <- execParser (parserInfo conf)
-
-  -- [[sqliteVersion]] <- SQLite.query_ connection "select sqlite_version()"
 
   if runHelpCommand cliArgs
     then pure $ extendHelp $ parserHelp defaultPrefs $ cliArgsParser conf

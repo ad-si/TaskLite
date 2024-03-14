@@ -204,9 +204,9 @@ getTable :: Text -> [Text] -> Query
 getTable tableName columns =
   Query $
     T.unlines
-      [ "create table `" <> tableName <> "` ("
+      [ "CREATE TABLE \"" <> tableName <> "\" ("
       , T.intercalate ",\n" columns
-      , ");"
+      , ")"
       ]
 
 
@@ -214,9 +214,9 @@ getColumns :: Text -> [Text] -> Query
 getColumns tableName columns =
   Query $
     unlines
-      [ "select"
+      [ "SELECT"
       , "  " <> T.intercalate ",\n  " columns <> "\n"
-      , "from `" <> tableName <> "`;"
+      , "FROM \"" <> tableName <> "\""
       ]
 
 
@@ -224,11 +224,11 @@ getSelect :: [Text] -> Text -> Text -> Query
 getSelect selectLines fromStatement groupByColumn =
   Query $
     T.unlines
-      [ "select"
+      [ "SELECT"
       , T.intercalate ",\n" selectLines
-      , "from"
+      , "FROM"
       , fromStatement
-      , "group by " <> groupByColumn <> ";"
+      , "GROUP BY " <> groupByColumn
       ]
 
 
@@ -236,7 +236,7 @@ getView :: Text -> Query -> Query
 getView viewName selectQuery =
   Query $
     T.unlines
-      [ "create view `" <> viewName <> "` as"
+      [ "CREATE VIEW \"" <> viewName <> "\" AS"
       , fromQuery selectQuery
       ]
 
@@ -274,7 +274,9 @@ createTableWithQuery connection aTableName theQuery = do
 
 replaceTableWithQuery :: Connection -> Text -> Query -> IO (Doc ann)
 replaceTableWithQuery connection aTableName theQuery = do
-  execute_ connection $ Query $ "drop table if exists `" <> aTableName <> "`"
+  execute_ connection $
+    Query $
+      "DROP TABLE IF EXISTS \"" <> aTableName <> "\""
   result <- try $ execute_ connection theQuery
 
   let
@@ -287,34 +289,24 @@ replaceTableWithQuery connection aTableName theQuery = do
 
 getCase :: Maybe Text -> [(Text, Float)] -> Text
 getCase fieldNameMaybe valueMap =
-  "case "
+  "CASE "
     <> case fieldNameMaybe of
       Nothing -> ""
-      Just fName -> "`" <> fName <> "`"
+      Just fName -> "\"" <> fName <> "\""
     <> P.fold
       ( fmap
-          (\(key, val) -> "  when " <> key <> " then " <> show val <> "\n")
+          (\(key, val) -> "  WHEN " <> key <> " THEN " <> show val <> "\n")
           valueMap
       )
-    <> " end "
+    <> " END "
 
 
 createTriggerAfterUpdate :: Text -> Text -> Text -> Text -> Query
 createTriggerAfterUpdate name tableName whenBlock body =
   Query $
-    "\
-    \create trigger `"
-      <> name
-      <> "_after_update`\n\
-         \after update on `"
-      <> tableName
-      <> "`\n\
-         \when "
-      <> whenBlock
-      <> "\n\
-         \begin\n\
-         \  "
-      <> body
-      <> ";\n\
-         \end;\n\
-         \"
+    ("CREATE TRIGGER \"" <> name <> "_after_update\"\n")
+      <> ("AFTER UPDATE ON \"" <> tableName <> "\"\n")
+      <> ("WHEN " <> whenBlock)
+      <> "\nBEGIN\n"
+      <> ("  " <> body <> ";\n")
+      <> "END\n"

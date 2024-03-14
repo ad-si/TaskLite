@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 {-|
 Data type to represent tasks from the `tasks_view`
 -}
@@ -32,15 +34,18 @@ import Data.Csv as Csv (
  )
 import Data.Text as T (Text, dropEnd, intercalate, split, splitOn)
 import Data.Yaml as Yaml (encode)
-import Database.SQLite.Simple (FromRow, SQLData (SQLNull, SQLText), field)
-import Database.SQLite.Simple as Sql (
+import Database.SQLite.Simple (
   FromRow (..),
+  Query,
   ResultError (ConversionFailed),
+  SQLData (SQLNull, SQLText),
+  field,
  )
 import Database.SQLite.Simple.FromField (FromField (..), fieldData, returnError)
 import Database.SQLite.Simple.FromRow (fieldWith)
 import Database.SQLite.Simple.Internal (Field (Field))
 import Database.SQLite.Simple.Ok (Ok (Errors, Ok))
+import Database.SQLite.Simple.QQ (sql)
 import GHC.Exception (errorCallException)
 import Prettyprinter (Pretty (pretty))
 
@@ -202,15 +207,29 @@ emptyFullTask =
     }
 
 
-selectQuery :: Text
+selectQuery :: Query
 selectQuery =
-  "\
-  \select\n\
-  \  tasks_view.ulid as ulid, body, modified_utc, awake_utc, ready_utc,\n\
-  \  waiting_utc, review_utc, due_utc, closed_utc, state,\n\
-  \  group_ulid, repetition_duration, recurrence_duration,\n\
-  \  tags, notes, priority, user, metadata\n\
-  \"
+  [sql|
+    SELECT
+      tasks_view.ulid AS ulid,
+      body,
+      modified_utc,
+      awake_utc,
+      ready_utc,
+      waiting_utc,
+      review_utc,
+      due_utc,
+      closed_utc,
+      state,
+      group_ulid,
+      repetition_duration,
+      recurrence_duration,
+      tags,
+      notes,
+      priority,
+      user,
+      metadata
+  |]
 
 
 cpTimesAndState :: FullTask -> Task
