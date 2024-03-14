@@ -3,24 +3,26 @@ Data type to represent tasks from the `tasks_view`
 -}
 module FullTask where
 
-import Protolude as P (
+import Protolude (
   Applicative ((<*>)),
   Eq ((==)),
   Float,
   Generic,
   Hashable,
-  Maybe,
+  Maybe (Just, Nothing),
   Show,
   decodeUtf8,
   encodeUtf8,
+  show,
   toStrict,
   ($),
   (.),
   (<$>),
   (<&>),
+  (<>),
  )
 
-import Data.Aeson as Aeson (Value)
+import Data.Aeson as Aeson (ToJSON, Value (Object))
 import Data.Aeson.Text as Aeson (encodeToLazyText)
 import Data.Csv as Csv (
   DefaultOrdered,
@@ -28,28 +30,41 @@ import Data.Csv as Csv (
   ToNamedRecord,
   ToRecord,
  )
-import Data.Text as T (Text, dropEnd, intercalate, split)
-import Data.Yaml as Yaml (ToJSON, encode)
+import Data.Text as T (Text, dropEnd, intercalate, split, splitOn)
+import Data.Yaml as Yaml (encode)
+import Database.SQLite.Simple (FromRow, SQLData (SQLNull, SQLText), field)
 import Database.SQLite.Simple as Sql (
   FromRow (..),
   ResultError (ConversionFailed),
-  SQLData (SQLText),
-  field,
  )
-import Database.SQLite.Simple.FromField as Sql.FromField (
-  FromField (..),
-  returnError,
- )
+import Database.SQLite.Simple.FromField (FromField (..), fieldData, returnError)
+import Database.SQLite.Simple.FromRow (fieldWith)
 import Database.SQLite.Simple.Internal (Field (Field))
-import Database.SQLite.Simple.Ok (Ok (Ok))
-import Note (Note (..))
+import Database.SQLite.Simple.Ok (Ok (Errors, Ok))
+import GHC.Exception (errorCallException)
 import Prettyprinter (Pretty (pretty))
-import Task (TaskState)
+
+import Note (Note (..))
+import Task (
+  Task (
+    awake_utc,
+    closed_utc,
+    due_utc,
+    modified_utc,
+    ready_utc,
+    review_utc,
+    state,
+    ulid,
+    waiting_utc
+  ),
+  TaskState,
+  zeroTask,
+ )
 
 
 -- | Final user-facing format of tasks
 data FullTask = FullTask
-  { ulid :: Text -- Ulid
+  { ulid :: Text -- TODO: Use Ulid type
   , body :: Text
   , modified_utc :: Text
   , awake_utc :: Maybe Text
@@ -88,19 +103,47 @@ instance FromRow FullTask where
       <*> field
       <*> field
       <*> field
+      -- Tags
+      <*> fieldWith
+        ( \value -> case fieldData value of
+            SQLText txt ->
+              -- Parse tags as a comma-separated list
+              -- TODO: Parse tags as a JSON array
+              Ok (Just (T.splitOn "," txt))
+            SQLNull -> Ok Nothing
+            val ->
+              Errors
+                [ errorCallException $
+                    "Expected a string, but got: " <> show val
+                ]
+        )
+      -- Notes
+      <*> fieldWith
+        ( \value -> case fieldData value of
+            SQLText _txt ->
+              -- TODO: Parse notes as a JSON array
+              Ok Nothing
+            SQLNull -> Ok Nothing
+            val ->
+              Errors
+                [ errorCallException $
+                    "Expected a string, but got: " <> show val
+                ]
+        )
       <*> field
       <*> field
-      <*> field
-      <*> field
-      <*> field
+      <*> ( field <&> \case
+              Just (Object obj) -> Just $ Object obj
+              _ -> Nothing
+          )
 
 
-instance Sql.FromField.FromField [Text] where
+instance FromField [Text] where
   fromField (Field (SQLText txt) _) = Ok $ split (== ',') txt
   fromField f = returnError ConversionFailed f "expecting SQLText column type"
 
 
-instance Sql.FromField.FromField [Note] where
+instance FromField [Note] where
   fromField (Field (SQLText txt) _) =
     let notes = split (== ',') txt
     in  Ok $ notes <&> Note ""
@@ -121,7 +164,6 @@ instance ToNamedRecord FullTask
 instance DefaultOrdered FullTask
 
 
--- For conversion to JSON
 instance ToJSON FullTask
 
 
@@ -136,6 +178,30 @@ instance Pretty FullTask where
       . Yaml.encode
 
 
+emptyFullTask :: FullTask
+emptyFullTask =
+  FullTask
+    { ulid = ""
+    , body = ""
+    , modified_utc = ""
+    , awake_utc = Nothing
+    , ready_utc = Nothing
+    , waiting_utc = Nothing
+    , review_utc = Nothing
+    , due_utc = Nothing
+    , closed_utc = Nothing
+    , state = Nothing
+    , group_ulid = Nothing
+    , repetition_duration = Nothing
+    , recurrence_duration = Nothing
+    , tags = Nothing
+    , notes = Nothing
+    , priority = Nothing
+    , user = ""
+    , metadata = Nothing
+    }
+
+
 selectQuery :: Text
 selectQuery =
   "\
@@ -145,3 +211,18 @@ selectQuery =
   \  group_ulid, repetition_duration, recurrence_duration,\n\
   \  tags, notes, priority, user, metadata\n\
   \"
+
+
+cpTimesAndState :: FullTask -> Task
+cpTimesAndState (FullTask{..}) =
+  zeroTask
+    { Task.ulid
+    , Task.modified_utc
+    , Task.awake_utc
+    , Task.ready_utc
+    , Task.waiting_utc
+    , Task.review_utc
+    , Task.due_utc
+    , Task.closed_utc
+    , Task.state
+    }

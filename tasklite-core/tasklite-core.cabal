@@ -1,17 +1,22 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.0.
+-- This file has been generated from package.yaml by hpack version 0.36.0.
 --
 -- see: https://github.com/sol/hpack
 
 name:           tasklite-core
 version:        0.3.0.0
 synopsis:       CLI task / todo list manager with SQLite backend
-description:    Please see the README on GitHub
-                at <https://github.com/ad-si/tasklite#readme>
+description:    TaskLite is a CLI task / todo list manager with a SQLite backend.
+                It is designed to be simple and easy to use,
+                while still providing a powerful interface for managing tasks.
+                It's heavily inspired by Taskwarrior and stems from my personal frustration
+                with some of its design decisions.
+                Check out https://tasklite.org/differences_taskwarrior
+                for a full comparison.
 category:       CLI, Task, Todo
-homepage:       https://github.com/ad-si/tasklite#readme
-bug-reports:    https://github.com/ad-si/tasklite/issues
+homepage:       https://github.com/ad-si/TaskLite#readme
+bug-reports:    https://github.com/ad-si/TaskLite/issues
 author:         Adrian Sieber
 maintainer:     mail@adriansieber.com
 copyright:      Adrian Sieber
@@ -24,7 +29,7 @@ data-files:
 
 source-repository head
   type: git
-  location: https://github.com/ad-si/tasklite
+  location: https://github.com/ad-si/TaskLite
 
 library
   exposed-modules:
@@ -39,7 +44,6 @@ library
       Task
       TaskToNote
       TaskToTag
-      TaskView
       Utils
   other-modules:
       Paths_tasklite_core
@@ -49,7 +53,6 @@ library
       source
   default-extensions:
       DeriveAnyClass
-      GHC2021
       LambdaCase
       MultiWayIf
       NoImplicitPrelude
@@ -58,33 +61,25 @@ library
       RecordWildCards
       TypeFamilies
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
   build-depends:
       QuickCheck
     , aeson
     , ansi-terminal
     , base >=4.7 && <5
-    , beam-core
-    , beam-migrate
-    , beam-sqlite
     , bytestring
     , cassava
     , colour
-    , containers
     , directory
     , exceptions
-    , file-embed
     , filepath
     , generic-random
-    , githash
     , hourglass
     , hsemail
     , huzzy
     , iso8601-duration
-    , optparse-applicative
     , parsec
     , portable-lines
-    , pretty-simple
     , prettyprinter
     , prettyprinter-ansi-terminal
     , process
@@ -93,14 +88,14 @@ library
     , read-editor
     , simple-sql-parser
     , sqlite-simple
+    , syb
     , text
     , time
     , ulid
     , unix
-    , unordered-containers
     , vector
     , yaml
-  default-language: Haskell2010
+  default-language: GHC2021
 
 executable tasklite
   main-is: Main.hs
@@ -112,7 +107,6 @@ executable tasklite
       app
   default-extensions:
       DeriveAnyClass
-      GHC2021
       LambdaCase
       MultiWayIf
       NoImplicitPrelude
@@ -121,50 +115,25 @@ executable tasklite
       RecordWildCards
       TypeFamilies
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
   build-depends:
-      QuickCheck
-    , aeson
-    , ansi-terminal
+      aeson
     , base >=4.7 && <5
-    , beam-core
-    , beam-migrate
-    , beam-sqlite
-    , bytestring
-    , cassava
-    , colour
-    , containers
     , directory
-    , exceptions
     , file-embed
     , filepath
-    , generic-random
     , githash
     , hourglass
-    , hsemail
-    , huzzy
     , iso8601-duration
     , optparse-applicative
-    , parsec
-    , portable-lines
-    , pretty-simple
     , prettyprinter
     , prettyprinter-ansi-terminal
-    , process
     , protolude
-    , quickcheck-instances
-    , read-editor
-    , simple-sql-parser
     , sqlite-simple
     , tasklite-core
     , text
-    , time
-    , ulid
-    , unix
-    , unordered-containers
-    , vector
     , yaml
-  default-language: Haskell2010
+  default-language: GHC2021
 
 test-suite tasklite-test
   type: exitcode-stdio-1.0
@@ -177,7 +146,6 @@ test-suite tasklite-test
       test
   default-extensions:
       DeriveAnyClass
-      GHC2021
       LambdaCase
       MultiWayIf
       NoImplicitPrelude
@@ -186,52 +154,17 @@ test-suite tasklite-test
       RecordWildCards
       TypeFamilies
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
   build-depends:
-      QuickCheck
-    , aeson
-    , ansi-terminal
+      aeson
     , base >=4.7 && <5
-    , beam-core
-    , beam-migrate
-    , beam-sqlite
-    , bytestring
-    , cassava
-    , colour
-    , containers
-    , directory
-    , exceptions
-    , file-embed
-    , filepath
-    , generic-random
-    , githash
     , hourglass
-    , hsemail
     , hspec
-    , huzzy
-    , iso8601-duration
-    , optparse-applicative
-    , parsec
-    , portable-lines
-    , pretty-simple
-    , prettyprinter
-    , prettyprinter-ansi-terminal
-    , process
     , protolude
-    , quickcheck-instances
-    , read-editor
-    , simple-sql-parser
     , sqlite-simple
     , tasklite-core
-    , temporary
     , text
-    , time
-    , ulid
-    , unix
-    , unordered-containers
-    , vector
-    , yaml
-  default-language: Haskell2010
+  default-language: GHC2021
 
 benchmark tasklite-bench
   type: exitcode-stdio-1.0
@@ -244,7 +177,6 @@ benchmark tasklite-bench
       benchmarks
   default-extensions:
       DeriveAnyClass
-      GHC2021
       LambdaCase
       MultiWayIf
       NoImplicitPrelude
@@ -253,48 +185,9 @@ benchmark tasklite-bench
       RecordWildCards
       TypeFamilies
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
   build-depends:
-      QuickCheck
-    , aeson
-    , ansi-terminal
-    , base >=4.7 && <5
-    , beam-core
-    , beam-migrate
-    , beam-sqlite
-    , bytestring
-    , cassava
-    , colour
-    , containers
+      base >=4.7 && <5
     , criterion
-    , directory
-    , exceptions
-    , file-embed
-    , filepath
-    , generic-random
-    , githash
-    , hourglass
-    , hsemail
-    , huzzy
-    , iso8601-duration
-    , optparse-applicative
-    , parsec
-    , portable-lines
-    , pretty-simple
-    , prettyprinter
-    , prettyprinter-ansi-terminal
-    , process
     , protolude
-    , quickcheck-instances
-    , read-editor
-    , simple-sql-parser
-    , sqlite-simple
-    , tasklite-core
-    , text
-    , time
-    , ulid
-    , unix
-    , unordered-containers
-    , vector
-    , yaml
-  default-language: Haskell2010
+  default-language: GHC2021

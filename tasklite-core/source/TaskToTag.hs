@@ -1,54 +1,49 @@
 module TaskToTag where
 
 import Protolude as P (
+  Eq,
   Generic,
-  Identity,
   Show,
   Text,
   decodeUtf8,
   (.),
+  (<$>),
+  (<*>),
  )
 
+import Data.Generics (Data)
 import Data.Text as T (dropEnd)
 import Data.Yaml as Yaml (ToJSON, encode)
-import Database.Beam (
-  Beamable,
-  Columnar,
-  Table (..),
- )
+import Database.SQLite.Simple (FromRow, ToRow, field, fromRow, toRow)
+import Database.SQLite.Simple.ToField (toField)
 import Prettyprinter (Pretty (pretty))
-import Task (TaskT)
 
 
 -- | Record for storing entries of the `task_to_tag` table
-data TaskToTagT f = TaskToTag
-  { ulid :: Columnar f Text -- Ulid
-  , task_ulid :: PrimaryKey TaskT f
-  , tag :: Columnar f Text
+data TaskToTag = TaskToTag
+  { ulid :: Text -- Ulid
+  , task_ulid :: Text
+  , tag :: Text
   }
-  deriving (Generic)
+  deriving (Show, Eq, Generic, Data)
 
 
-type TaskToTag = TaskToTagT Identity
-type TaskToTagId = PrimaryKey TaskToTagT Identity
+instance FromRow TaskToTag where
+  fromRow =
+    TaskToTag
+      <$> field
+      <*> field
+      <*> field
 
 
-deriving instance Show TaskToTag
+instance ToRow TaskToTag where
+  toRow TaskToTag{..} =
+    [ toField ulid
+    , toField task_ulid
+    , toField tag
+    ]
 
 
--- deriving instance Eq TaskToTag
-
-instance Beamable TaskToTagT
-
-
-instance Table TaskToTagT where
-  data PrimaryKey TaskToTagT f = TaskToTagId (Columnar f Text)
-    deriving (Generic)
-  primaryKey = TaskToTagId . ulid
-instance Beamable (PrimaryKey TaskToTagT)
-
-
--- For conversion to JSON
 instance ToJSON TaskToTag
 
 

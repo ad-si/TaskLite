@@ -10,6 +10,8 @@ import Data.Aeson (
 import Data.Csv qualified as Csv
 import Data.Text as T (Text, intercalate, toLower)
 import Data.ULID (ulidFromInteger)
+import Database.SQLite.Simple (FromRow, ToRow, field, fromRow, toRow)
+import Database.SQLite.Simple.ToField (toField)
 import Protolude (
   Alternative ((<|>)),
   Applicative (pure),
@@ -27,7 +29,9 @@ import Protolude (
   show,
   ($),
   (.),
+  (<$>),
   (<&>),
+  (<*>),
  )
 
 
@@ -36,6 +40,17 @@ data Note = Note
   , body :: Text
   }
   deriving (Generic, Show, Eq)
+
+
+instance ToRow Note where
+  toRow Note{ulid = ulid, body = body} =
+    [ toField ulid
+    , toField body
+    ]
+
+
+instance FromRow Note where
+  fromRow = Note <$> field <*> field
 
 
 instance ToJSON Note

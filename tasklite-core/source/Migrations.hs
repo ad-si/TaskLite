@@ -3,12 +3,12 @@ Migrations of SQLite database for new versions
 -}
 module Migrations where
 
-import Protolude as P (
+import Protolude (
   Applicative (pure),
   Bool (False),
   Either (..),
   Eq ((==)),
-  Foldable (elem, maximum),
+  Foldable (elem),
   Functor (fmap),
   IO,
   Int,
@@ -19,8 +19,6 @@ import Protolude as P (
   Text,
   Traversable (mapM, sequence),
   either,
-  filter,
-  head,
   maybeToEither,
   show,
   try,
@@ -31,6 +29,7 @@ import Protolude as P (
   (<&>),
   (||),
  )
+import Protolude qualified as P
 
 import Config (Config)
 import Database.SQLite.Simple (
@@ -374,7 +373,7 @@ _4_ =
               , "create view tags as\n\
                 \select\n\
                 \  task_to_tag_1.tag,\n\
-                \  (count(task_to_tag_1.tag) - ifnull(closed_count, 0)) as open,\n\
+                \  (count(task_to_tag_1.tag) - ifnull(closed_count, 0)) as \"open\",\n\
                 \  ifnull(closed_count, 0) as closed,\n\
                 \  round(cast(ifnull(closed_count, 0) as float) / \
                 \    count(task_to_tag_1.tag), 6) as progress\n\

@@ -25,7 +25,7 @@ $ tl do pb
 
 The Code is available on [GitHub].
 
-[GitHub]: https://github.com/ad-si/tasklite
+[GitHub]: https://github.com/ad-si/TaskLite
 
 
 For help and ideas please come visit us at our [GitHub Discussions]!

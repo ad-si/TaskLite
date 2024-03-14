@@ -1,69 +1,29 @@
 name: tasklite-core
 version: 0.3.0.0
-github: "ad-si/tasklite"
+github: "ad-si/TaskLite"
 license: AGPL-3.0-or-later
 author: Adrian Sieber
 maintainer: mail@adriansieber.com
 copyright: Adrian Sieber
-
+category: CLI, Task, Todo
+synopsis: CLI task / todo list manager with SQLite backend
+description: |
+  TaskLite is a CLI task / todo list manager with a SQLite backend.
+  It is designed to be simple and easy to use,
+  while still providing a powerful interface for managing tasks.
+  It's heavily inspired by Taskwarrior and stems from my personal frustration
+  with some of its design decisions.
+  Check out https://tasklite.org/differences_taskwarrior
+  for a full comparison.
 extra-source-files:
   - README.md
-
 data-files:
   - example-config.yaml
 
-synopsis: CLI task / todo list manager with SQLite backend
-category: CLI, Task, Todo
-
-description: |
-  Please see the README on GitHub
-  at <https://github.com/ad-si/tasklite#readme>
-
-dependencies:
-  - aeson
-  - ansi-terminal
-  - base >= 4.7 && < 5
-  - beam-core
-  - beam-migrate
-  - beam-sqlite
-  - bytestring
-  - cassava
-  - colour
-  - containers
-  - directory
-  - exceptions
-  - file-embed
-  - filepath
-  - generic-random
-  - githash
-  - hourglass
-  - hsemail
-  - huzzy
-  - iso8601-duration
-  - optparse-applicative
-  - parsec
-  - portable-lines
-  - pretty-simple
-  - prettyprinter
-  - prettyprinter-ansi-terminal
-  - process
-  - protolude
-  - QuickCheck
-  - quickcheck-instances
-  - read-editor
-  - simple-sql-parser
-  - sqlite-simple
-  - text
-  - time
-  - ulid
-  - unix
-  - unordered-containers
-  - vector
-  - yaml
+language: GHC2021
 
 default-extensions:
   - DeriveAnyClass
-  - GHC2021
   - LambdaCase
   - MultiWayIf
   - NoImplicitPrelude
@@ -80,26 +40,81 @@ ghc-options:
   - -Wincomplete-uni-patterns
   - -Wno-orphans
   - -Wredundant-constraints
-  # - -Wunused-packages
+  - -Wunused-packages
+
+dependencies:
+  - base >= 4.7 && < 5
+  - protolude
 
 library:
   source-dirs: source
+  dependencies:
+    - aeson
+    - ansi-terminal
+    - bytestring
+    - cassava
+    - colour
+    - directory
+    - exceptions
+    - filepath
+    - generic-random
+    - hourglass
+    - hourglass
+    - hsemail
+    - huzzy
+    - iso8601-duration
+    - parsec
+    - portable-lines
+    - prettyprinter
+    - prettyprinter-ansi-terminal
+    - process
+    - protolude
+    - QuickCheck
+    - quickcheck-instances
+    - read-editor
+    - simple-sql-parser
+    - sqlite-simple
+    - sqlite-simple
+    - syb
+    - text
+    - text
+    - time
+    - ulid
+    - unix
+    - vector
+    - yaml
 
 executables:
   tasklite:
     main: Main.hs
     source-dirs: app
     dependencies:
+      - aeson
+      - directory
+      - file-embed
+      - filepath
+      - githash
+      - hourglass
+      - iso8601-duration
+      - optparse-applicative
+      - prettyprinter
+      - prettyprinter-ansi-terminal
+      - sqlite-simple
       - tasklite-core
+      - text
+      - yaml
 
 tests:
   tasklite-test:
     main: Spec.hs
     source-dirs: test
     dependencies:
+      - aeson
+      - hourglass
       - hspec
+      - sqlite-simple
       - tasklite-core
-      - temporary
+      - text
 
 benchmarks:
   tasklite-bench:
@@ -107,4 +122,3 @@ benchmarks:
     source-dirs: benchmarks
     dependencies:
       - criterion
-      - tasklite-core

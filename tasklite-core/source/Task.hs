@@ -5,13 +5,13 @@ module Task where
 
 import Protolude as P (
   Applicative ((<*>)),
-  Char,
   Either (Left, Right),
   Enum (toEnum),
   Eq ((==)),
   Float,
   Foldable (elem),
   Functor (fmap),
+  Generic,
   Hashable,
   Maybe (..),
   Ord ((<), (>)),
@@ -24,7 +24,6 @@ import Protolude as P (
   otherwise,
   show,
   snd,
-  toStrict,
   ($),
   (&),
   (&&),
@@ -38,12 +37,13 @@ import Data.Aeson as Aeson (
   ToJSON,
   Value (Object),
   eitherDecode,
+  encode,
  )
 import Data.Aeson.Key as Key (fromText)
 import Data.Aeson.KeyMap as KeyMap (fromList, insert)
-import Data.Aeson.Text as Aeson (encodeToLazyText)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Csv as Csv (ToField (..), ToNamedRecord, ToRecord)
+import Data.Generics (Data)
 import Data.Hourglass (DateTime, timePrint)
 import Data.Text as T (
   Text,
@@ -55,25 +55,11 @@ import Data.Text as T (
   unpack,
  )
 import Data.Yaml as Yaml (encode)
-import Database.Beam (
-  Beamable,
-  Columnar,
-  FromBackendRow,
-  Generic,
-  HasSqlEqualityCheck,
-  Identity,
-  Table (..),
- )
-import Database.Beam.Backend.SQL (
-  HasSqlValueSyntax (..),
-  autoSqlValueSyntax,
- )
-import Database.Beam.Sqlite.Connection (Sqlite)
-import Database.Beam.Sqlite.Syntax (SqliteValueSyntax)
 import Database.SQLite.Simple as Sql (
   FromRow (..),
   ResultError (ConversionFailed),
   SQLData (SQLText),
+  ToRow (toRow),
   field,
  )
 import Database.SQLite.Simple.FromField as Sql.FromField (
@@ -82,9 +68,7 @@ import Database.SQLite.Simple.FromField as Sql.FromField (
  )
 import Database.SQLite.Simple.Internal (Field (Field))
 import Database.SQLite.Simple.Ok (Ok (Ok))
-import Database.SQLite.Simple.ToField as Sql.ToField (
-  ToField (..),
- )
+import Database.SQLite.Simple.ToField as Sql.ToField (ToField (..), toField)
 import Generic.Random (genericArbitrary, genericArbitraryU, (%))
 import Prettyprinter (Pretty (pretty))
 import Test.QuickCheck (Arbitrary (arbitrary))
@@ -97,7 +81,7 @@ data TaskState
   = Done
   | Obsolete
   | Deletable
-  deriving (Eq, Enum, Generic, Ord, Read, Show)
+  deriving (Eq, Enum, Generic, Ord, Read, Show, Data)
 
 
 instance Arbitrary TaskState where
@@ -118,16 +102,6 @@ instance Sql.FromField.FromField TaskState where
 
 instance Sql.ToField.ToField TaskState where
   toField = SQLText . show
-
-
-instance HasSqlValueSyntax be [Char] => HasSqlValueSyntax be TaskState where
-  sqlValueSyntax = autoSqlValueSyntax
-
-
-instance FromBackendRow Sqlite TaskState
-
-
-instance HasSqlEqualityCheck Sqlite TaskState
 
 
 instance FromJSON TaskState
@@ -295,55 +269,25 @@ getStateHierarchy now task =
 newtype Ulid = Ulid Text
 
 
-{-| Uses _ to match Beam's defaults
- | (https://haskell-beam.github.io/beam/user-guide/models/#defaults)
--}
-data TaskT f = Task
-  { ulid :: Columnar f Text -- Ulid
-  , body :: Columnar f Text
-  , modified_utc :: Columnar f Text
-  , awake_utc :: Columnar f (Maybe Text)
-  , ready_utc :: Columnar f (Maybe Text)
-  , waiting_utc :: Columnar f (Maybe Text)
-  , review_utc :: Columnar f (Maybe Text)
-  , due_utc :: Columnar f (Maybe Text)
-  , closed_utc :: Columnar f (Maybe Text)
-  , state :: Columnar f (Maybe TaskState)
-  , group_ulid :: Columnar f (Maybe Text)
-  , repetition_duration :: Columnar f (Maybe Text)
-  , recurrence_duration :: Columnar f (Maybe Text)
-  , priority_adjustment :: Columnar f (Maybe Float)
-  , user :: Columnar f Text
-  , metadata :: Columnar f (Maybe Aeson.Value)
+data Task = Task
+  { ulid :: Text -- TODO: Use Ulid type
+  , body :: Text
+  , modified_utc :: Text
+  , awake_utc :: Maybe Text
+  , ready_utc :: Maybe Text
+  , waiting_utc :: Maybe Text
+  , review_utc :: Maybe Text
+  , due_utc :: Maybe Text
+  , closed_utc :: Maybe Text
+  , state :: Maybe TaskState
+  , group_ulid :: Maybe Text
+  , repetition_duration :: Maybe Text
+  , recurrence_duration :: Maybe Text
+  , priority_adjustment :: Maybe Float
+  , user :: Text
+  , metadata :: Maybe Aeson.Value
   }
-  deriving (Generic)
-
-
--- Beam related instances
-type Task = TaskT Identity
-type TaskUlid = PrimaryKey TaskT Identity
-
-
-deriving instance Show TaskUlid
-deriving instance Show Task
-deriving instance Eq Task
-
-
-instance HasSqlValueSyntax SqliteValueSyntax Value where
-  sqlValueSyntax =
-    sqlValueSyntax . toStrict . Aeson.encodeToLazyText
-
-
-instance FromBackendRow Sqlite Value
-
-
-instance Beamable TaskT
-
-
-instance Table TaskT where
-  data PrimaryKey TaskT f = TaskUlid (Columnar f Text) deriving (Generic)
-  primaryKey = TaskUlid . ulid
-instance Beamable (PrimaryKey TaskT)
+  deriving (Generic, Data, Show, Eq)
 
 
 -- For conversion from SQLite with SQLite.Simple
@@ -365,7 +309,31 @@ instance FromRow Task where
       <*> field
       <*> field
       <*> field
-      <*> field
+      <*> ( field <&> \case
+              Just (Object obj) -> Just $ Object obj
+              _ -> Nothing
+          )
+
+
+instance ToRow Task where
+  toRow task =
+    [ Sql.ToField.toField task.ulid
+    , Sql.ToField.toField task.body
+    , Sql.ToField.toField task.modified_utc
+    , Sql.ToField.toField task.awake_utc
+    , Sql.ToField.toField task.ready_utc
+    , Sql.ToField.toField task.waiting_utc
+    , Sql.ToField.toField task.review_utc
+    , Sql.ToField.toField task.due_utc
+    , Sql.ToField.toField task.closed_utc
+    , Sql.ToField.toField task.state
+    , Sql.ToField.toField task.group_ulid
+    , Sql.ToField.toField task.repetition_duration
+    , Sql.ToField.toField task.recurrence_duration
+    , Sql.ToField.toField task.priority_adjustment
+    , Sql.ToField.toField task.user
+    , SQLText $ task.metadata & (decodeUtf8 . BSL.toStrict . Aeson.encode)
+    ]
 
 
 instance Hashable Task
@@ -381,7 +349,6 @@ instance Sql.FromField.FromField Value where
 
 -- For conversion to JSON
 instance ToJSON Task
-instance ToJSON (PrimaryKey TaskT Identity)
 
 
 instance Pretty Task where

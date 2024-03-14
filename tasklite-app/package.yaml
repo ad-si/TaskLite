@@ -2,12 +2,12 @@ name: tasklite-app
 version: 0.3.0.0
 synopsis: ""
 description: ""
-homepage: https://github.com/ad-si/tasklite-app#readme
+homepage: https://github.com/ad-si/TaskLite#readme
 license: AGPL-3.0-or-later
 author: Adrian Sieber
 maintainer: mail@adriansieber.com
 copyright: Adrian Sieber
-category: Web
+category: Web, App, Task, Todo, Desktop
 
 extra-source-files:
   - readme.md
@@ -15,9 +15,6 @@ extra-source-files:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  - beam-core
-  - beam-migrate
-  - beam-sqlite
   - bytestring
   - cassava
   - directory

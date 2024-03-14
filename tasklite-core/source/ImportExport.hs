@@ -3,7 +3,7 @@ Functions to import and export tasks
 -}
 module ImportExport where
 
-import Protolude as P (
+import Protolude (
   Alternative ((<|>)),
   Applicative (pure),
   Bool (..),
@@ -11,8 +11,9 @@ import Protolude as P (
   Either (..),
   Eq ((==)),
   FilePath,
-  Foldable (fold, foldl),
+  Foldable (foldl),
   Functor (fmap),
+  Generic,
   Hashable (hash),
   IO,
   Integral (toInteger),
@@ -25,7 +26,6 @@ import Protolude as P (
   asum,
   decodeUtf8,
   die,
-  encodeUtf8,
   fromMaybe,
   hush,
   isJust,
@@ -40,6 +40,7 @@ import Protolude as P (
   (<&>),
   (=<<),
  )
+import Protolude qualified as P
 
 import Config (Config (dataDir, dbName))
 import Data.Aeson as Aeson (
@@ -69,7 +70,6 @@ import Data.Time.ISO8601.Duration qualified as Iso
 import Data.ULID (ulidFromInteger)
 import Data.Vector qualified as V
 import Data.Yaml as Yaml (ParseException, decodeEither', encode)
-import Database.Beam (Generic, Table (primaryKey))
 import Database.SQLite.Simple as Sql (Connection, query_)
 import FullTask (FullTask)
 import Lib (
@@ -78,7 +78,7 @@ import Lib (
   insertNotes,
   insertTags,
   insertTask,
-  replaceTask,
+  updateTask,
  )
 import Note (Note (..))
 import Prettyprinter (
@@ -96,8 +96,7 @@ import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
 import System.ReadEditor (readEditorWith)
 import Task (
-  Task,
-  TaskT (
+  Task (
     Task,
     awake_utc,
     body,
@@ -445,13 +444,13 @@ insertImportTask connection importTaskRecord = do
   insertTags
     connection
     (ulidTextToDateTime $ Task.ulid taskParsed)
-    (primaryKey theTask)
-    (tags importTaskRecord)
+    theTask
+    importTaskRecord.tags
   insertNotes
     connection
     (ulidTextToDateTime $ Task.ulid taskParsed)
-    (primaryKey theTask)
-    (notes importTaskRecord)
+    theTask
+    importTaskRecord.notes
   pure $
     "📥 Imported task"
       <+> dquotes (pretty $ Task.body theTask)
@@ -618,7 +617,9 @@ ingestFile config connection filePath = do
 
   pure $
     P.fold resultDocs
-      <+> "❌ Deleted file \"" <> pretty filePath <> "\""
+      <+> "❌ Deleted file \""
+      <> pretty filePath
+      <> "\""
 
 
 -- TODO: Use Task instead of FullTask to fix broken notes export
@@ -705,7 +706,7 @@ editTaskByTask _ connection taskToEdit = do
         "⚠️  Nothing changed" <+> hardline
     else do
       let
-        newContentBS = encodeUtf8 $ T.pack newContent
+        newContentBS = P.encodeUtf8 $ T.pack newContent
 
         parseMetadata :: Value -> Parser Bool
         parseMetadata val = case val of
@@ -741,16 +742,16 @@ editTaskByTask _ connection taskToEdit = do
                       else Nothing
                 }
 
-          replaceTask connection taskFixed
+          updateTask connection taskFixed
           insertTags
             connection
             Nothing
-            (primaryKey taskFixed)
+            taskFixed
             (tags importTaskRecord)
           insertNotes
             connection
             Nothing
-            (primaryKey taskFixed)
+            taskFixed
             (notes importTaskRecord)
           pure $
             "✏️  Edited task"

@@ -5,19 +5,19 @@ Main technologies:
 - Programming language: [Haskell]
 - Dependency management: [Stack]
 - Backend: [SQLite]
-- Database access: [Beam]
+- Database access: [sqlite-simple]
 - Command line parsing: [Optparse Applicative]
 - Formatting: [Prettyprinter]
 - Prelude: [Protolude]
 - IDs: [ULID]
 - Desktop App: [Declarative GTK]
 
-[Beam]: https://tathougies.github.io/beam/
 [Declarative GTK]: https://github.com/owickstrom/gi-gtk-declarative
 [Haskell]: https://haskell.org
 [Optparse Applicative]: https://github.com/pcapriotti/optparse-applicative
 [Prettyprinter]: https://github.com/quchen/prettyprinter
 [Protolude]: https://github.com/sdiehl/protolude
+[sqlite-simple]: https://github.com/nurpax/sqlite-simple
 [SQLite]: https://sqlite.org
 [Stack]: https://docs.haskellstack.org
 [ULID]: https://github.com/ulid/spec
