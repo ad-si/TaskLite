@@ -309,6 +309,27 @@ testSuite conf now = do
                 }
           _ -> P.die "More than one task found"
 
+    it "deduplicates tags when adding a task" $ do
+      withMemoryDb conf $ \memConn -> do
+        _ <- addTask conf memConn ["Buy milk +drink +drink"]
+        (tasks :: [FullTask]) <- query_ memConn "SELECT * FROM tasks_view"
+        case tasks of
+          [updatedTask] -> do
+            updatedTask `shouldSatisfy` (\task -> task.ulid /= "")
+            updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
+            updatedTask `shouldSatisfy` (\task -> task.user /= "")
+            updatedTask
+              { FullTask.ulid = ""
+              , FullTask.modified_utc = ""
+              , FullTask.user = ""
+              }
+              `shouldBe` emptyFullTask
+                { FullTask.body = "Buy milk"
+                , FullTask.priority = Just 2.0
+                , FullTask.tags = Just ["drink"]
+                }
+          _ -> P.die "More than one task found"
+
     it "logs a task" $ do
       withMemoryDb conf $ \memConn -> do
         result <- logTask conf memConn ["Just a test"]

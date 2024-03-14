@@ -93,6 +93,7 @@ import Protolude qualified as P
 import Control.Arrow ((>>>))
 import Data.Aeson as Aeson (KeyValue ((.=)), encode, object)
 import Data.Coerce (coerce)
+import Data.List (nub)
 import Data.Generics (Data, constrFields, toConstr)
 import Data.Hourglass (
   DateTime (dtTime),
@@ -369,7 +370,8 @@ updateTask connection task = do
 
 insertTags :: Connection -> Maybe DateTime -> Task -> [Text] -> IO ()
 insertTags connection mbCreatedUtc task tags = do
-  taskToTags <- forM tags $ \tag -> do
+  let uniqueTags = nub tags
+  taskToTags <- forM uniqueTags $ \tag -> do
     tagUlid <- getULID
     pure $
       TaskToTag
