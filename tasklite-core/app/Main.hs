@@ -27,7 +27,6 @@ import Protolude (
   Semigroup ((<>)),
   Show,
   Text,
-  Traversable (sequence),
   die,
   filter,
   foldMap,
@@ -1279,24 +1278,26 @@ printOutput appName config = do
   hookFiles <- listDirectory hooksPathNorm
 
   hookFilesPerm :: [(FilePath, Permissions)] <-
-    sequence $
-      hookFiles
-        & filter
-          ( \name ->
-              ("pre-" `isPrefixOf` name) || ("post-" `isPrefixOf` name)
-          )
-        <&> (hooksPathNorm </>)
-        <&> \path -> do
-          perm <- getPermissions path
-          pure (path, perm)
+    hookFiles
+      & filter
+        ( \name ->
+            ("pre-" `isPrefixOf` name) || ("post-" `isPrefixOf` name)
+        )
+      <&> (hooksPathNorm </>)
+      & P.mapM
+        ( \path -> do
+            perm <- getPermissions path
+            pure (path, perm)
+        )
 
   hookFilesPermContent <-
-    sequence $
-      hookFilesPerm
-        & filter (\(_, perm) -> executable perm)
-        <&> \(filePath, perm) -> do
-          fileContent <- readFile filePath
-          pure (filePath, perm, fileContent)
+    hookFilesPerm
+      & filter (\(_, perm) -> executable perm)
+      & P.mapM
+        ( \(filePath, perm) -> do
+            fileContent <- readFile filePath
+            pure (filePath, perm, fileContent)
+        )
 
   let configNorm = addHookFilesToConfig configNormHookDir hookFilesPermContent
 
@@ -1306,7 +1307,7 @@ printOutput appName config = do
   connection <- setupConnection configNorm
 
   -- For debugging SQLite interactions
-  -- SQLite.setTrace connection $ Just print
+  -- SQLite.setTrace connection $ Just P.print
 
   migrationsStatus <- runMigrations configNorm connection
   nowElapsed <- timeCurrentP
