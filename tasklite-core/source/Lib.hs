@@ -2417,11 +2417,10 @@ listReady conf now connection = do
         SELECT *
         FROM tasks_view
         WHERE
-          ready_utc IS NULL OR
-          (
-            (ready_utc IS NOT NULL AND ready_utc < datetime('now')) AND
-            closed_utc IS NULL
-          )
+          (ready_utc IS NULL OR
+            (ready_utc IS NOT NULL AND ready_utc < datetime('now'))
+          ) AND
+          closed_utc IS NULL
         ORDER BY
           priority DESC,
           due_utc ASC,
