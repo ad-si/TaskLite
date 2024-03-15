@@ -6,6 +6,7 @@ packages:
   # - tasklite-app
 
 extra-deps:
+  - aeson-2.2.1.0
   # TODO: Upgrade after 0.7.x includes missing megaparsec dependency
   - simple-sql-parser-0.6.0
 

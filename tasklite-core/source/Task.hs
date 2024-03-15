@@ -19,7 +19,6 @@ import Protolude as P (
   Semigroup ((<>)),
   Show,
   decodeUtf8,
-  encodeUtf8,
   fst,
   otherwise,
   show,
@@ -36,8 +35,8 @@ import Data.Aeson as Aeson (
   FromJSON,
   ToJSON,
   Value (Object),
-  eitherDecode,
   encode,
+  eitherDecodeStrictText,
  )
 import Data.Aeson.Key as Key (fromText)
 import Data.Aeson.KeyMap as KeyMap (fromList, insert)
@@ -341,7 +340,7 @@ instance Hashable Task
 
 instance Sql.FromField.FromField Value where
   fromField aField@(Field (SQLText txt) _) =
-    case Aeson.eitherDecode $ BSL.fromStrict $ encodeUtf8 txt of
+    case eitherDecodeStrictText txt of
       Left error -> returnError ConversionFailed aField error
       Right value -> Ok value
   fromField f = returnError ConversionFailed f "expecting SQLText column type"

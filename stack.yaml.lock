@@ -5,6 +5,13 @@
 
 packages:
 - completed:
+    hackage: aeson-2.2.1.0@sha256:a23a61aada8233e10573e1612c0b2efe5a1aba0d59b05dbe2f63301822f136cb,6582
+    pantry-tree:
+      sha256: 8a50c54b9ecba80ecc3df3ea67faa4d155d6f6a6b3e342c74f3e6b0dcdc87e13
+      size: 83518
+  original:
+    hackage: aeson-2.2.1.0
+- completed:
     hackage: simple-sql-parser-0.6.0@sha256:ce8f602fa81001287deb25af7b711fc45e1cdf36ff7702edde5dee2358f19a37,5580
     pantry-tree:
       sha256: cd333c976b4b12425d0eed28749884551a4595dd249cc6d6b75c34e4ce7688cc

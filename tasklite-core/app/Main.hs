@@ -54,12 +54,7 @@ import Protolude qualified as P
 import Control.Monad.Catch (catchAll)
 import Data.Aeson as Aeson (KeyValue ((.=)), encode, object)
 import Data.FileEmbed (embedStringFile, makeRelativeToProject)
-import Data.Hourglass (
-  DateTime,
-  Time (timeFromElapsedP),
-  TimeFormat (toFormat),
-  timePrint,
- )
+import Data.Hourglass (DateTime, Time (timeFromElapsedP))
 import Data.String (fromString)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
@@ -231,7 +226,7 @@ import Utils (
   TagText,
   executeHooks,
   parseUtc,
-  ulidTextToDateTime,
+  ulid2utc,
  )
 
 
@@ -1095,11 +1090,7 @@ executeCLiCommand :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
 executeCLiCommand conf now connection = do
   let
     addTaskC = addTask conf connection
-    prettyUlid ulid =
-      pretty $
-        fmap
-          (T.pack . timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])))
-          (ulidTextToDateTime ulid)
+
     days3 = Iso.DurationDate (Iso.DurDateDay (Iso.DurDay 3) Nothing)
 
   cliArgs <- execParser (parserInfo conf)
@@ -1195,7 +1186,7 @@ executeCLiCommand conf now connection = do
       Help -> pure $ extendHelp $ parserHelp defaultPrefs $ cliArgsParser conf
       PrintConfig -> pure $ pretty conf
       Alias alias _ -> pure $ aliasWarning alias
-      UlidToUtc ulid -> pure $ prettyUlid ulid
+      UlidToUtc ulid -> pure $ pretty $ ulid2utc ulid
       ExternalCommand cmd argsMb -> do
         let
           args =

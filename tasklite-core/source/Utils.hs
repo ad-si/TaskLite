@@ -1,15 +1,18 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use maybe" #-}
+
 {-|
 Several utility functions (e.g for parsing & serializing UTC stamps)
 -}
 module Utils where
 
-import Protolude as P (
+import Protolude (
   Alternative ((<|>)),
   Applicative (pure),
   Char,
   Double,
   Eq,
-  Foldable (elem),
   Fractional (fromRational, (/)),
   Functor (fmap),
   IO,
@@ -41,6 +44,7 @@ import Protolude as P (
   (.),
   (<&>),
  )
+import Protolude qualified as P
 
 import Control.Monad.Catch (catchAll)
 import Data.Colour.RGBSpace (RGB (..))
@@ -57,6 +61,7 @@ import Data.Hourglass (
   Timeable (timeGetElapsedP),
   timeGetDateTimeOfDay,
   timeParse,
+  timePrint,
  )
 import Data.Text as T (
   Text,
@@ -88,6 +93,7 @@ import Config (
   Config (bodyStyle),
   Hook (body, filePath, interpreter),
  )
+import Control.Arrow ((>>>))
 
 
 type IdText = Text
@@ -138,6 +144,10 @@ parseUtc utcText =
   in
     -- From long (specific) to short (unspecific)
     timeParse ISO8601_DateAndTime utcString
+      -- <|> tParse "YYYY-MM-DDtH:MI:S.ns"
+      <|> tParse "YYYY-MM-DDtH:MI:S.msusns"
+      <|> tParse "YYYY-MM-DDtH:MI:S.msus"
+      <|> tParse "YYYY-MM-DDtH:MI:S.ms"
       <|> tParse "YYYY-MM-DDtH:MI:S"
       <|> tParse "YYYY-MM-DDtH:MI"
       <|> tParse "YYYYMMDDtHMIS"
@@ -167,7 +177,19 @@ parseUlidUtcSection encodedUtc = do
 
 ulidTextToDateTime :: Text -> Maybe DateTime
 ulidTextToDateTime =
-  parseUlidUtcSection . T.take 10
+  T.take 10 >>> parseUlidUtcSection
+
+
+{-| `ulid2utc` converts a ULID to a UTC timestamp
+
+>>> ulid2utc "01hq68smfe0r9entg3x4rb9441"
+Just "2024-02-21 16:43:17.358"
+-}
+ulid2utc :: Text -> Maybe Text
+ulid2utc ulid =
+  fmap
+    (T.pack . timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])))
+    (ulidTextToDateTime ulid)
 
 
 parseUlidText :: Text -> Maybe ULID

@@ -208,12 +208,28 @@ instance FromJSON ImportTask where
     utc <- o .:? "utc"
     entry <- o .:? "entry"
     creation <- o .:? "creation"
+    creation_utc <- o .:? "creation_utc"
+    creationUtc <- o .:? "creationUtc"
+    created <- o .:? "created"
     created_at <- o .:? "created_at"
+    createdAt <- o .:? "createdAt"
+    created_utc <- o .:? "created_utc"
+    createdUtc_ <- o .:? "createdUtc"
 
     let
       parsedCreatedUtc =
         parseUtc
-          =<< (utc <|> entry <|> creation <|> created_at)
+          =<< ( utc
+                  <|> entry
+                  <|> creation
+                  <|> creation_utc
+                  <|> creationUtc
+                  <|> created
+                  <|> created_at
+                  <|> createdAt
+                  <|> created_utc
+                  <|> createdUtc_
+              )
       createdUtc = fromMaybe zeroTime parsedCreatedUtc
 
     o_body <- o .:? "body"
