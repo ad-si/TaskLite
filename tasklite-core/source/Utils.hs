@@ -76,8 +76,8 @@ import Data.Text as T (
  )
 import Data.Time (UTCTime, ZonedTime, addUTCTime, zonedTimeToUTC)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
-import Data.ULID (ULID (ULID, random))
-import Data.ULID.Random (ULIDRandom)
+import Data.ULID (ULID (ULID, random, timeStamp))
+import Data.ULID.Random (ULIDRandom, mkULIDRandom)
 import Data.ULID.TimeStamp (ULIDTimeStamp, mkULIDTimeStamp)
 import Prettyprinter (Doc, Pretty (pretty), softline)
 import Prettyprinter.Render.Terminal (
@@ -94,6 +94,7 @@ import Config (
   Hook (body, filePath, interpreter),
  )
 import Control.Arrow ((>>>))
+import System.Random (mkStdGen)
 
 
 type IdText = Text
@@ -115,6 +116,14 @@ x <++> y =
 
 zeroTime :: DateTime
 zeroTime = timeFromElapsedP 0
+
+
+emptyUlid :: ULID
+emptyUlid =
+  ULID
+    { timeStamp = mkULIDTimeStamp 0
+    , random = mkULIDRandom (mkStdGen 0) & P.fst
+    }
 
 
 utcFormatReadable :: TimeFormatString

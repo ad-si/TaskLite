@@ -71,6 +71,7 @@ library:
     - protolude
     - QuickCheck
     - quickcheck-instances
+    - random
     - read-editor
     - simple-sql-parser
     - sqlite-simple

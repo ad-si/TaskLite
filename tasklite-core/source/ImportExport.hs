@@ -43,6 +43,7 @@ import Protolude (
 import Protolude qualified as P
 
 import Config (Config (dataDir, dbName))
+import Control.Arrow ((>>>))
 import Data.Aeson as Aeson (
   FromJSON (parseJSON),
   ToJSON,
@@ -126,6 +127,7 @@ import Text.PortableLines.ByteString.Lazy (lines8)
 import Time.System (timeCurrent)
 import Utils (
   IdText,
+  emptyUlid,
   parseUlidText,
   parseUtc,
   setDateTime,
@@ -156,23 +158,23 @@ instance FromJSON Annotation where
 
 
 annotationToNote :: Annotation -> Note
-annotationToNote annot@Annotation{entry = entry, description = description} =
+annotationToNote annot@Annotation{entry, description} = do
   let
-    utc = fromMaybe (timeFromElapsedP 0 :: DateTime) (parseUtc entry)
-    Right ulidGenerated = (ulidFromInteger . abs . toInteger . hash) annot
-    ulidCombined = setDateTime ulidGenerated utc
-  in
-    Note
-      { ulid = (T.toLower . show) ulidCombined
-      , body = description
-      }
+    utc = entry & parseUtc & fromMaybe (timeFromElapsedP 0 :: DateTime)
+    ulidGeneratedRes = annot & (hash >>> toInteger >>> abs >>> ulidFromInteger)
+    ulidCombined = (ulidGeneratedRes & P.fromRight emptyUlid) `setDateTime` utc
+
+  Note
+    { ulid = (T.toLower . show) ulidCombined
+    , body = description
+    }
 
 
 textToNote :: DateTime -> Text -> Note
 textToNote utc body =
   let
-    Right ulidGenerated = (ulidFromInteger . abs . toInteger . hash) body
-    ulidCombined = setDateTime ulidGenerated utc
+    ulidGeneratedRes = body & (hash >>> toInteger >>> abs >>> ulidFromInteger)
+    ulidCombined = (ulidGeneratedRes & P.fromRight emptyUlid) `setDateTime` utc
   in
     Note
       { ulid = (T.toLower . show) ulidCombined
@@ -428,8 +430,8 @@ instance FromJSON ImportTask where
 
     o_ulid <- o .:? "ulid"
     let
-      Right ulidGenerated = (ulidFromInteger . abs . toInteger . hash) tempTask
-      ulidCombined = setDateTime ulidGenerated createdUtc
+      ulidGeneratedRes = tempTask & (hash >>> toInteger >>> abs >>> ulidFromInteger)
+      ulidCombined = (ulidGeneratedRes & P.fromRight emptyUlid) `setDateTime` createdUtc
       ulid =
         T.toLower $
           fromMaybe
@@ -503,8 +505,7 @@ emailToImportTask email@(Message headerFields msgBody) =
               Task.body task
                 <> ( msgBody
                       & lines8
-                      <&> TL.decodeUtf8
-                      <&> toStrict
+                      <&> (TL.decodeUtf8 >>> toStrict)
                       & T.unlines
                       & T.dropEnd 1
                    )
@@ -530,9 +531,8 @@ emailToImportTask email@(Message headerFields msgBody) =
         Email.Date emailDate ->
           let
             utc = zonedTimeToDateTime emailDate
-            Right ulidGenerated =
-              (ulidFromInteger . abs . toInteger . hash) $ (show email :: Text)
-            ulidCombined = setDateTime ulidGenerated utc
+            ulidGeneratedRes = (email & show :: Text) & (hash >>> toInteger >>> abs >>> ulidFromInteger)
+            ulidCombined = (ulidGeneratedRes & P.fromRight emptyUlid) `setDateTime` utc
           in
             ImportTask
               task
