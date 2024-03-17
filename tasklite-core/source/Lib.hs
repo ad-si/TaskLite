@@ -93,7 +93,6 @@ import Protolude qualified as P
 import Control.Arrow ((>>>))
 import Data.Aeson as Aeson (KeyValue ((.=)), encode, object)
 import Data.Coerce (coerce)
-import Data.List (nub)
 import Data.Generics (Data, constrFields, toConstr)
 import Data.Hourglass (
   DateTime (dtTime),
@@ -106,6 +105,7 @@ import Data.Hourglass (
   timeAdd,
   timePrint,
  )
+import Data.List (nub)
 import Data.Text as T (
   breakOn,
   dropEnd,

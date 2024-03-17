@@ -56,13 +56,16 @@ library:
     - colour
     - directory
     - exceptions
+    - file-embed
     - filepath
     - generic-random
+    - githash
     - hourglass
     - hourglass
     - hsemail
     - huzzy
     - iso8601-duration
+    - optparse-applicative
     - parsec
     - portable-lines
     - prettyprinter
@@ -90,19 +93,8 @@ executables:
     main: Main.hs
     source-dirs: app
     dependencies:
-      - aeson
       - directory
-      - exceptions
-      - file-embed
       - filepath
-      - githash
-      - hourglass
-      - iso8601-duration
-      - optparse-applicative
-      - prettyprinter
-      - prettyprinter-ansi-terminal
-      - process
-      - sqlite-simple
       - tasklite-core
       - text
       - yaml
@@ -115,6 +107,7 @@ tests:
       - aeson
       - hourglass
       - hspec
+      - optparse-applicative
       - sqlite-simple
       - tasklite-core
       - text

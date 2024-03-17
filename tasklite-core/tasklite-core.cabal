@@ -34,6 +34,7 @@ source-repository head
 library
   exposed-modules:
       Base32
+      Cli
       Config
       FullTask
       ImportExport
@@ -72,12 +73,15 @@ library
     , colour
     , directory
     , exceptions
+    , file-embed
     , filepath
     , generic-random
+    , githash
     , hourglass
     , hsemail
     , huzzy
     , iso8601-duration
+    , optparse-applicative
     , parsec
     , portable-lines
     , prettyprinter
@@ -118,21 +122,10 @@ executable tasklite
       UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
   build-depends:
-      aeson
-    , base >=4.7 && <5
+      base >=4.7 && <5
     , directory
-    , exceptions
-    , file-embed
     , filepath
-    , githash
-    , hourglass
-    , iso8601-duration
-    , optparse-applicative
-    , prettyprinter
-    , prettyprinter-ansi-terminal
-    , process
     , protolude
-    , sqlite-simple
     , tasklite-core
     , text
     , yaml
@@ -142,6 +135,7 @@ test-suite tasklite-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      CliSpec
       Paths_tasklite_core
   autogen-modules:
       Paths_tasklite_core
@@ -163,6 +157,7 @@ test-suite tasklite-test
     , base >=4.7 && <5
     , hourglass
     , hspec
+    , optparse-applicative
     , protolude
     , sqlite-simple
     , tasklite-core

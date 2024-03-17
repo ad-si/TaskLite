@@ -45,6 +45,7 @@ import Test.Hspec (
  )
 import Time.System (timeCurrentP)
 
+import CliSpec qualified
 import Config (Config (..), defaultConfig)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
@@ -111,6 +112,8 @@ exampleTask =
 
 testSuite :: Config -> DateTime -> SpecWith ()
 testSuite conf now = do
+  CliSpec.spec
+
   describe "Utils" $ do
     it "correctly parses beginning of UNIX epoch" $
       do
