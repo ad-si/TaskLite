@@ -35,7 +35,6 @@ import Protolude (
   readFile,
   show,
   snd,
-  take,
   ($),
   (&),
   (&&),
@@ -58,7 +57,7 @@ import Data.Time.ISO8601.Duration qualified as Iso
 import Data.Version (showVersion)
 import Database.SQLite.Simple (Connection (..))
 import Database.SQLite.Simple qualified as SQLite
-import GitHash (giDirty, giHash, tGitInfoCwd)
+import GitHash (giDirty, giTag, tGitInfoCwd)
 import Options.Applicative (
   ArgumentFields,
   CommandFields,
@@ -368,15 +367,13 @@ nameToAliasList =
 
 {- Imitates output from `git describe` -}
 versionSlug :: Text
-versionSlug =
+versionSlug = do
   let
     gitInfo = $$tGitInfoCwd
-  in
-    fromString $
-      showVersion version
-        <> "+"
-        <> take 8 (giHash gitInfo)
-        <> (if giDirty gitInfo then "-dirty" else "")
+
+  fromString $
+    giTag gitInfo
+      <> if giDirty gitInfo then "-dirty" else ""
 
 
 aliasWarning :: Text -> Doc AnsiStyle
