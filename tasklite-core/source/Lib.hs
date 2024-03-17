@@ -248,6 +248,7 @@ import FullTask (
   selectQuery,
  )
 import Note (Note (body, ulid))
+import SqlUtils (quoteKeyword)
 import Task (
   DerivedState (IsOpen),
   Task,
@@ -2160,13 +2161,9 @@ countTasks conf connection filterExpression = do
   case filterMay of
     Nothing -> do
       [NumRows taskCount] <-
-        query
-          connection
-          [sql|
-            SELECT count(1)
-            FROM ?
-          |]
-          (Only $ tableName conf)
+        query_ connection $
+          Query $
+            "SELECT count(1) FROM " <> quoteKeyword conf.tableName
 
       pure $ pretty taskCount
     Just (filterExps, _) -> do

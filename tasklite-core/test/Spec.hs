@@ -66,6 +66,7 @@ import Lib (
   setReadyUtc,
   updateTask,
  )
+import LibSpec qualified
 import Migrations (runMigrations)
 import Note (Note)
 import Task (
@@ -87,14 +88,8 @@ import TaskToNote (TaskToNote)
 import TaskToNote qualified
 import TaskToTag (TaskToTag)
 import TaskToTag qualified
+import TestUtils (withMemoryDb)
 import Utils (parseUlidText, parseUlidUtcSection, parseUtc, ulid2utc)
-
-
-withMemoryDb :: Config -> (Sql.Connection -> IO a) -> IO a
-withMemoryDb conf action =
-  Sql.withConnection ":memory:" $ \memConn -> do
-    _ <- runMigrations conf memConn
-    action memConn
 
 
 exampleTask :: Task
@@ -112,8 +107,6 @@ exampleTask =
 
 testSuite :: Config -> DateTime -> SpecWith ()
 testSuite conf now = do
-  CliSpec.spec
-
   describe "Utils" $ do
     it "correctly parses beginning of UNIX epoch" $
       do
@@ -448,6 +441,9 @@ testSuite conf now = do
                 [updatedTask] ->
                   ulid2utc updatedTask.ulid `shouldBe` Just utcFromUlid
                 _ -> P.die "More than one task found"
+
+  LibSpec.spec
+  CliSpec.spec
 
 
 main :: IO ()

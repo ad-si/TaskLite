@@ -24,15 +24,10 @@ import Protolude as P (
   unwords,
   words,
   ($),
+  (&),
  )
 
-import Data.Text as T (
-  intercalate,
-  isSuffixOf,
-  pack,
-  unlines,
-  unpack,
- )
+import Data.Text qualified as T
 import Database.SQLite.Simple as Sql (
   Connection,
   Query (..),
@@ -193,6 +188,34 @@ fromAs tableName aliasName =
   TRAlias
     (TRSimple [tableName])
     (alias aliasName)
+
+
+-- | Escape double quotes in SQL strings
+escDoubleQuotes :: Text -> Text
+escDoubleQuotes =
+  T.replace "\"" "\"\""
+
+
+-- | Quote a keyword in an SQL query
+quoteKeyword :: Text -> Text
+quoteKeyword keyword =
+  keyword
+    & escDoubleQuotes
+    & (\word -> "\"" <> word <> "\"")
+
+
+-- | Escape single quotes in SQL strings
+escSingleQuotes :: Text -> Text
+escSingleQuotes =
+  T.replace "'" "''"
+
+
+-- | Quote literal text in an SQL query
+quoteText :: Text -> Text
+quoteText keyword =
+  keyword
+    & escSingleQuotes
+    & (\word -> "'" <> word <> "'")
 
 
 getValue :: (Show a) => a -> Text

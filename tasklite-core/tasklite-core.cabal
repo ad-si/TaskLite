@@ -136,6 +136,8 @@ test-suite tasklite-test
   main-is: Spec.hs
   other-modules:
       CliSpec
+      LibSpec
+      TestUtils
       Paths_tasklite_core
   autogen-modules:
       Paths_tasklite_core
