@@ -1,5 +1,11 @@
 # Concepts
 
+---
+<!-- toc -->
+---
+
+
+
 ## States
 
 Instead of allowing one to explicitly set a state, TaskLite infers the

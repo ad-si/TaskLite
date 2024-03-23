@@ -1,5 +1,10 @@
 # CLI Tool
 
+---
+<!-- toc -->
+---
+
+
 ## Prebuilt Binaries
 
 ### MacOS

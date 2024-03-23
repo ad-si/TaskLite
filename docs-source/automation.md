@@ -5,6 +5,10 @@ be tightly integrated with other apps.
 This section contains several examples of how it can work together
 with other systems and services.
 
+---
+<!-- toc -->
+---
+
 
 ## Folder Actions on MacOS
 

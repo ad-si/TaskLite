@@ -5,9 +5,12 @@ authors = ["Adrian Sieber"]
 language = "en"
 src = "docs-source"
 
+[preprocessor.toc]
+command = "mdbook-toc"
+renderer = ["html"]
+
 [build]
 build-dir = "docs"
-
 
 [output.html]
 git-repository-url = "https://github.com/ad-si/TaskLite"

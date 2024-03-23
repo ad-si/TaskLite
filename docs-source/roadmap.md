@@ -1,5 +1,9 @@
 # Roadmap
 
+---
+<!-- toc -->
+---
+
 There is no time frame when the following enhancements will be implemented
 since the amount of time I can spare to work on TaskLite fluctuates heavily.
 

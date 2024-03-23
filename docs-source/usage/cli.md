@@ -1,5 +1,10 @@
 # CLI Tool
 
+---
+<!-- toc -->
+---
+
+
 ## Add
 
 To add a task run:

@@ -1,5 +1,10 @@
 ## Differences to Taskwarrior
 
+---
+<!-- toc -->
+---
+
+
 ### General
 
 - **Simpler** \

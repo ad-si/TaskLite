@@ -1,6 +1,10 @@
 # Development
 
-Main technologies:
+---
+<!-- toc -->
+---
+
+## Technologies
 
 - Programming language: [Haskell]
 - Dependency management: [Stack]

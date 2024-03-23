@@ -3,6 +3,10 @@
 This is a best effort list on how to import your tasks
 from other task managers to TaskLite.
 
+---
+<!-- toc -->
+---
+
 
 ## YAML File
 
@@ -181,57 +185,32 @@ convenient inbox. Here is how to move them to TaskLite afterwards:
 
 Use following Apple Script to display the reminders
 including their creation timestamp.
-Seen at https://discussions.apple.com/thread/8570915.
+Seen at [discussions.apple.com/thread/8570915](
+  https://discussions.apple.com/thread/8570915).
 
-```applescript
-use scripting additions
-
-set rnames to {}
-set cdates to {}
-set fmt to ""
-
-tell application "Reminders"
-  launch
-
-  try
-    set theRemList to text returned of (¬
-      display dialog "Enter the Reminder list name" ¬
-        default answer "" with icon note¬
-    )
-
-  on error errmsg number errnbr
-    if errnbr is equal to -128 then
-      display alert "User cancelled... ending." giving up after 10
-    end if
-
-    return
-  end try
-
-  set {rnames, cdates} to {name, creation date}¬
-    of every reminder of list theRemList
-end tell
-
-
-repeat with i from 1 to number of items in rnames
-  set fmt to fmt & (item i of rnames) & " : " & (item i of cdates) & return
-end repeat
-
-
-tell application "System Events"
-  display dialog fmt as text with title "Reminder Items Creation Dates"
-end tell
-
-return
-```
-
-1. Copy and paste it into a `tasks.json` file
-2. Format it as proper JSON and manually add notes, and tags fields
-3. Import JSON file:
+1. Download the script: [`export-reminders.scpt`](./export-reminders.scpt)
+1. Run it with:
+    ```sh
+    osascript export-reminders.scpt
+    ```
+1. Enter the name of the list you want to export
+    <!--
+      TODO: Use alert after
+            https://github.com/lambdalisue/rs-mdbook-alerts/issues/17
+    -->
+    > **⚠️ Warning** \
+    > It includes *all reminders* - even completed ones - in the list.
+    > If it's a long list, it will take a while.
+    > A better approach would be to create a new list and move all
+    > reminders you want to export to that list.
+1. Copy and paste the output into a `tasks.json` file
+1. Format it as proper JSON and manually add notes, and tags fields
+1. Import JSON file:
     ```bash
     cat tasks.json \
-    | jq -c '.[]' \
-    | while read -r task
-      do
-        echo $task | tasklite importjson
-      done
+      | jq -c '.[]' \
+      | while read -r task
+        do
+          echo $task | tasklite importjson
+        done
     ```

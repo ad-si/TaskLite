@@ -2,6 +2,10 @@
 
 This document lists all changes to the functionality of TaskLite.
 
+---
+<!-- toc -->
+---
+
 
 ## 2020-03-01 - <small>[0.3.0.0]</small>
 

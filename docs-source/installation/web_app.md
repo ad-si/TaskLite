@@ -1,5 +1,10 @@
 # Web App
 
+---
+<!-- toc -->
+---
+
+
 ## Datasette
 
 The web app is currently based on [Datasette] and can

@@ -5,6 +5,13 @@ or via hook files.
 But make sure that all hook files are executable,
 otherwise they won't be picked up by TaskLite.
 
+---
+<!-- toc -->
+---
+
+
+## Stages
+
 Following stages are available:
 
 - `pre-launch` - After reading all configs,
