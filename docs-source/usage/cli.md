@@ -97,14 +97,14 @@ in TaskLite's task `metadata` field.
 However, if the original JSON object already has a `metadata` field,
 its value is used instead.
 
-**Attention:**
-An import object's `tags` field must be of type `[string]`,
-while a `notes` field must be of type `{ulid?: string, body: string}`.
+> [!WARNING]
+> An import object's `tags` field must be of type `[string]`,
+> while a `notes` field must be of type `{ulid?: string, body: string}`.
 
-**Warning:**
-TaskLite does not properly support importing tasks
-which were created before 1970.
-While they can be imported, the creation date is set to 1970-01-01.
+> [!WARNING]
+> TaskLite does not properly support importing tasks
+> which were created before 1970.
+> While they can be imported, the creation date is set to 1970-01-01.
 
 
 ## Export

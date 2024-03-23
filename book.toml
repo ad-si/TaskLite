@@ -5,6 +5,7 @@ authors = ["Adrian Sieber"]
 language = "en"
 src = "docs-source"
 
+[preprocessor.alerts]
 [preprocessor.toc]
 command = "mdbook-toc"
 renderer = ["html"]
