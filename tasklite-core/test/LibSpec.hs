@@ -15,15 +15,18 @@ import Test.Hspec (
   describe,
   it,
   shouldBe,
+  shouldContain,
+  shouldNotContain,
  )
 
-import Task (Task (body, ulid), zeroTask)
-import Lib (countTasks, insertRecord, insertTags)
+import Data.Hourglass (DateTime)
+import Lib (countTasks, insertRecord, insertTags, newTasks)
+import Task (Task (body, closed_utc, state, ulid), TaskState (Done), zeroTask)
 import TestUtils (withMemoryDb)
 
 
-spec :: Spec
-spec = do
+spec :: DateTime -> Spec
+spec now = do
   describe "Lib" $ do
     it "counts tasks" $ do
       withMemoryDb defaultConfig $ \memConn -> do
@@ -31,12 +34,12 @@ spec = do
           task1 =
             zeroTask
               { ulid = "01hs68z7mdg4ktpxbv0yfafznq"
-              , body = "New task"
+              , body = "New task 1"
               }
           task2 =
             zeroTask
               { ulid = "01hs690f9hkzk9z7zews9j2k1d"
-              , body = "New task"
+              , body = "New task 2"
               }
 
         count0 <- countTasks defaultConfig memConn P.mempty
@@ -55,3 +58,26 @@ spec = do
         show countWithTag `shouldBe` ("1" :: Text)
 
         pure ()
+
+    it "gets new tasks" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        let
+          task1 =
+            zeroTask
+              { ulid = "01hs68z7mdg4ktpxbv0yfafznq"
+              , body = "New task 1"
+              }
+          task2 =
+            zeroTask
+              { ulid = "01hs6zsf3c0vqx6egfnmbqtmvy"
+              , body = "New task 2"
+              , closed_utc = Just "2024-04-10T18:54:10Z"
+              , state = Just Done
+              }
+
+        insertRecord "tasks" memConn task1
+        insertRecord "tasks" memConn task2
+
+        cliOutput <- newTasks defaultConfig now memConn (Just ["state:done"])
+        show cliOutput `shouldContain` "New task 2"
+        show cliOutput `shouldNotContain` "New task 1"

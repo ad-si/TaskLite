@@ -476,7 +476,7 @@ _4_ =
       MigrateDown -> base{Migrations.querySet = []}
 
 
-hasDuplicates :: Eq a => [a] -> Bool
+hasDuplicates :: (Eq a) => [a] -> Bool
 hasDuplicates [] = False
 hasDuplicates (x : xs) =
   x `elem` xs || hasDuplicates xs

@@ -288,7 +288,7 @@ data Command
   -- \| Fork -- Create new SQLite db with the tasks of the specified query
   | ListAll
   | ListHead
-  | ListNew
+  | ListNewFiltered (Maybe [Text])
   | ListOld
   | ListOpen
   | ListModified
@@ -382,7 +382,7 @@ aliasWarning alias =
     <+> "Use"
     <+> dquotes (pretty alias)
     <+> "instead."
-    <> hardline
+      <> hardline
 
 
 getCommand :: (Text, Text) -> Mod CommandFields Command
@@ -687,9 +687,11 @@ commandParser conf =
     <> command "recurring" (toParserInfo (pure ListRecurring)
         "List all recurring tasks by priority desc")
 
-    <> command "new" (toParserInfo (pure ListNew)
-        ("List " <> numTasks
-          <> " newest open tasks by creation UTC desc"))
+    <> command "new"
+        (toParserInfo
+          (ListNewFiltered <$> optional (some
+            (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions")))
+          "List newest tasks by creation UTC desc (Open and Closed)")
 
     <> command "old" (toParserInfo (pure ListOld)
         ("List " <> numTasks
@@ -955,11 +957,11 @@ commandParserInfo conf =
     header =
       annotate (bold <> color Blue) "TaskLite"
         <+> prettyVersion
-        <> hardline
-        <> hardline
-        <> annotate
-          (color Blue)
-          "Task-list manager powered by Haskell and SQLite"
+          <> hardline
+          <> hardline
+          <> annotate
+            (color Blue)
+            "Task-list manager powered by Haskell and SQLite"
 
     examples = do
       let
@@ -1137,7 +1139,7 @@ executeCLiCommand conf now connection progName args = do
       case cliCommand of
         ListAll -> listAll conf now connection
         ListHead -> headTasks conf now connection
-        ListNew -> newTasks conf now connection
+        ListNewFiltered taskFilter -> newTasks conf now connection taskFilter
         ListOld -> listOldTasks conf now connection
         ListOpen -> openTasks conf now connection
         ListModified -> modifiedTasks conf now connection AllItems
@@ -1304,7 +1306,7 @@ printOutput appName config = do
   connection <- setupConnection configNorm
 
   -- For debugging SQLite interactions
-  -- SQLite.setTrace connection $ Just P.print
+  -- SQLite.setTrace connection $ Just P.putStrLn
 
   migrationsStatus <- runMigrations configNorm connection
   nowElapsed <- timeCurrentP

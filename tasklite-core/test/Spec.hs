@@ -442,7 +442,7 @@ testSuite conf now = do
                   ulid2utc updatedTask.ulid `shouldBe` Just utcFromUlid
                 _ -> P.die "More than one task found"
 
-  LibSpec.spec
+  LibSpec.spec now
   CliSpec.spec
 
 

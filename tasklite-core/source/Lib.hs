@@ -248,7 +248,7 @@ import FullTask (
   selectQuery,
  )
 import Note (Note (body, ulid))
-import SqlUtils (quoteKeyword)
+import SqlUtils (quoteKeyword, quoteText)
 import Task (
   DerivedState (IsOpen),
   Task,
@@ -461,14 +461,14 @@ parseTaskBody bodyWords =
         & P.filter isDueUtc
         <&> T.replace "due:" ""
         & P.lastMay
-          >>= parseUtc
-        <&> (timePrint utcFormatReadable >>> pack)
+        >>= parseUtc
+          <&> (timePrint utcFormatReadable >>> pack)
     createdUtcMb =
       metadata
         & P.filter isCreatedUtc
         <&> T.replace "created:" ""
         & P.lastMay
-          >>= parseUtc
+        >>= parseUtc
   in
     (body, tags, dueUtcMb, createdUtcMb)
 
@@ -588,13 +588,13 @@ execWithTask conf connection idSubstr callback = do
             <+> quote idSubstr
             <+> "is not unique."
             <+> "It could refer to one of the following tasks:"
-              <++> P.foldMap
-                ( \task ->
-                    annotate conf.idStyle (pretty task.ulid)
-                      <++> pretty task.body
-                      <> hardline
-                )
-                tasks
+            <++> P.foldMap
+              ( \task ->
+                  annotate conf.idStyle (pretty task.ulid)
+                    <++> pretty task.body
+                    <> hardline
+              )
+              tasks
     | otherwise -> pure "This case should not be possible"
 
 
@@ -683,9 +683,9 @@ waitFor conf connection duration ids = do
           then
             "⚠️  An error occurred while moving task"
               <+> prettyBody
-                <> "with id"
-              <+> prettyId
-              <+> "into waiting mode"
+              <> "with id"
+                <+> prettyId
+                <+> "into waiting mode"
           else
             "⏳  Set waiting UTC and review UTC for task"
               <+> prettyBody
@@ -776,7 +776,7 @@ createNextRepetition conf connection task = do
     isoDurEither =
       durTextEither
         <&> encodeUtf8
-          >>= Iso.parseDuration
+        >>= Iso.parseDuration
 
     nextDueMb =
       liftA2
@@ -859,7 +859,7 @@ createNextRecurrence conf connection task = do
     isoDurEither =
       durTextEither
         <&> encodeUtf8
-          >>= Iso.parseDuration
+        >>= Iso.parseDuration
 
     nextDueMb =
       liftA2
@@ -1103,10 +1103,10 @@ repeatTasks conf connection duration ids = do
           <+> dquotes (pretty task.ulid)
           <+> "to"
           <+> dquotes (pretty durationIsoText)
-            <++> ( creationMb
-                    & fromMaybe
-                      "⚠️ Next task in repetition series could not be created!"
-                 )
+          <++> ( creationMb
+                  & fromMaybe
+                    "⚠️ Next task in repetition series could not be created!"
+               )
 
   pure $ vsep docs
 
@@ -1154,10 +1154,10 @@ recurTasks conf connection duration ids = do
           <+> dquotes (pretty task.ulid)
           <+> "to"
           <+> dquotes (pretty durationIsoText)
-            <++> ( creationMb
-                    & fromMaybe
-                      "⚠️ Next task in recurrence series could not be created!"
-                 )
+          <++> ( creationMb
+                  & fromMaybe
+                    "⚠️ Next task in recurrence series could not be created!"
+               )
 
   pure $ vsep docs
 
@@ -1276,7 +1276,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         ( \v ->
             name
               <+> annotate (dueStyle conf) (pretty v)
-                <> hardline
+              <> hardline
         )
   in
     hardline
@@ -1313,17 +1313,17 @@ formatTaskForInfo conf now (taskV, tags, notes) =
          )
       <> ( "   State:"
             <+> mkGreen (pretty stateHierarchy)
-              <> hardline
+            <> hardline
          )
       <> ( "Priority:"
             <+> annotate
               (priorityStyle conf)
               (pretty $ FullTask.priority taskV)
-              <> hardline
+            <> hardline
          )
       <> ( "    ULID:"
             <+> grayOut (pretty $ FullTask.ulid taskV)
-              <> hardline
+            <> hardline
          )
       <> hardline
       <> ( [ (printIf "🆕  Created  ", mbCreatedUtc)
@@ -1346,7 +1346,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         ( \value ->
             "Repetition Duration:"
               <+> mkGreen (pretty value)
-                <> hardline
+              <> hardline
         )
         (FullTask.repetition_duration taskV)
       <> maybe
@@ -1354,7 +1354,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         ( \value ->
             "Recurrence Duration:"
               <+> mkGreen (pretty value)
-                <> hardline
+              <> hardline
         )
         (FullTask.recurrence_duration taskV)
       <> maybe
@@ -1362,12 +1362,12 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         ( \value ->
             "Group Ulid:"
               <+> grayOut (pretty value)
-                <> hardline
+              <> hardline
         )
         (FullTask.group_ulid taskV)
       <> ( "User:"
             <+> mkGreen (pretty $ FullTask.user taskV)
-              <> hardline
+            <> hardline
          )
       <> hardline
       <> maybe
@@ -2056,11 +2056,11 @@ formatTaskLine conf now taskWidth task =
     closedUtcMaybe =
       task.closed_utc
         >>= parseUtc
-        <&> timePrint conf.utcFormat
+          <&> timePrint conf.utcFormat
     dueUtcMaybe =
       task.due_utc
         >>= parseUtc
-        <&> T.replace " 00:00:00" ""
+          <&> T.replace " 00:00:00" ""
           . T.pack
           . timePrint conf.utcFormat
     dueIn offset =
@@ -2173,10 +2173,8 @@ countTasks conf connection filterExpression = do
                   <> hardline
             else Nothing
 
-      -- TODO: Increase performance of this query
-      tasks <- query_ connection (getFilterQuery filterExps)
-
-      pure $ fromMaybe (pretty $ P.length (tasks :: [FullTask])) errorsDoc
+      tasks <- query_ connection (getFilterQuery filterExps Nothing)
+      pure $ errorsDoc & fromMaybe (pretty $ P.length (tasks :: [FullTask]))
 
 
 -- TODO: Print number of remaining tasks and how to display them at the bottom
@@ -2201,21 +2199,55 @@ headTasks conf now connection = do
   formatTasksColor conf now tasks
 
 
-newTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-newTasks conf now connection = do
-  tasks <-
-    query
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE closed_utc IS NULL
-        ORDER BY ulid DESC
-        LIMIT ?
-      |]
-      (Only $ headCount conf)
+newTasks
+  :: Config
+  -> DateTime
+  -> Connection
+  -> Maybe [Text]
+  -> IO (Doc AnsiStyle)
+newTasks conf now connection filterExp = do
+  let
+    parserResults =
+      readP_to_S filterExpsParser $
+        T.unpack (unwords $ fromMaybe [""] filterExp)
+    filterMay = listToMaybe parserResults
 
-  formatTasksColor conf now tasks
+  case filterMay of
+    Nothing -> do
+      tasks <-
+        query
+          connection
+          [sql|
+            SELECT *
+            FROM tasks_view
+            ORDER BY ulid DESC
+            LIMIT ?
+          |]
+          (Only $ headCount conf)
+
+      formatTasksColor conf now tasks
+    --
+    Just (filterExps, _) -> do
+      let
+        ppInvalidFilter = \case
+          (InvalidFilter error) ->
+            dquotes (pretty error) <+> "is an invalid filter"
+          (HasStatus Nothing) -> "Filter contains an invalid state value"
+          _ -> "The functions should not be called with a valid function"
+        errors = P.filter (not . isValidFilter) filterExps
+
+      if P.length errors > 0
+        then
+          pure $
+            vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
+              <> hardline
+              <> hardline
+        else do
+          tasks <-
+            query_
+              connection
+              (getFilterQuery filterExps (Just "ulid DESC"))
+          formatTasksColor conf now tasks
 
 
 listOldTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
@@ -2612,10 +2644,10 @@ parseFilterExps input =
 -}
 filterToSql :: FilterExp -> (Text, Text)
 filterToSql = \case
-  HasTag tag -> ("intersect", "tag like '" <> tag <> "'")
-  NotTag tag -> ("except", "tag like '" <> tag <> "'")
-  HasDue utc -> ("intersect", "due_utc < datetime('" <> utc <> "')")
-  HasStatus (Just taskState) -> ("intersect", derivedStateToQuery taskState)
+  HasTag tag -> ("INTERSECT", "tag LIKE " <> quoteText tag)
+  NotTag tag -> ("EXCEPT", "tag LIKE " <> quoteText tag)
+  HasDue utc -> ("INTERSECT", "due_utc < datetime(" <> quoteText utc <> ")")
+  HasStatus (Just taskState) -> ("INTERSECT", derivedStateToQuery taskState)
   -- Following cases should never be called, as they are filtered out
   HasStatus Nothing -> ("", "")
   InvalidFilter _ -> ("", "")
@@ -2646,8 +2678,8 @@ runFilter conf now connection exps = do
           (InvalidFilter error) ->
             dquotes (pretty error)
               <+> "is an invalid filter."
-                <> hardline
-                <> filterHelp
+              <> hardline
+              <> filterHelp
           (HasStatus Nothing) ->
             "Filter contains an invalid state value"
           _ ->
@@ -2658,7 +2690,7 @@ runFilter conf now connection exps = do
           if P.any isStateExp filterExps
             then filterExps
             else HasStatus (Just IsOpen) : filterExps
-        sqlQuery = getFilterQuery updatedFilterExps
+        sqlQuery = getFilterQuery updatedFilterExps Nothing
 
       tasks <- query_ connection sqlQuery
 
@@ -2669,10 +2701,11 @@ runFilter conf now connection exps = do
 
 
 -- TODO: Increase performance of this query
-getFilterQuery :: [FilterExp] -> Query
-getFilterQuery filterExps = do
+getFilterQuery :: [FilterExp] -> Maybe Text -> Query
+getFilterQuery filterExps orderByMb = do
   let
-    filterTuple = filterToSql <$> P.filter isValidFilter filterExps
+    filterTuple =
+      filterToSql <$> P.filter isValidFilter filterExps
 
     queries =
       filterTuple <&> \(operator, whereQuery) ->
@@ -2690,15 +2723,21 @@ getFilterQuery filterExps = do
       "SELECT tasks.ulid FROM tasks\n"
         <> unlines queries
 
+    orderBy = Query $ case orderByMb of
+      Nothing ->
+        "ORDER BY \n\
+        \  priority DESC,\n\
+        \  due_utc ASC,\n\
+        \  ulid DESC\n"
+      Just orderByTxt ->
+        "ORDER BY \n" <> orderByTxt
+
   FullTask.selectQuery
     <> "FROM ("
     <> Query ulidsQuery
     <> ") tasks1\n\
-       \LEFT JOIN tasks_view ON tasks1.ulid IS tasks_view.ulid\n\
-       \ORDER BY \n\
-       \  priority DESC,\n\
-       \  due_utc ASC,\n\
-       \  ulid DESC\n"
+       \LEFT JOIN tasks_view ON tasks1.ulid IS tasks_view.ulid\n"
+    <> orderBy
 
 
 formatTasks :: Config -> DateTime -> [FullTask] -> Doc AnsiStyle
