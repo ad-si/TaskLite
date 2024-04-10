@@ -5,6 +5,36 @@
 ---
 
 
+## General
+
+TaskLite tries to adhere to the Unix philosophy:
+*Do one thing and do it well.*
+This, however, also means that it intentionally
+does not include certain features, which you might expect it to have.
+
+For example there is no support for fuzzy timestamps like "in 2 weeks",
+as this should be handled by other CLI tools.
+Since CLI tools can be easily combosed, this is no disadvantage!
+
+For example, I use [`tu`](https://github.com/ad-si/tu) to convert
+such fuzzy times to exact timestamps:
+
+```sh
+tl add Buy milk due:$(tu in 2 weeks)
+```
+
+And the big advantage of composing tools is,
+that you now can use `tu` in other contexts as well!
+
+The power of the Unix philosophy: \
+**Each new tool you learn gives you a compound interest on all other tools!**
+
+> [!TIP]
+> If you use [`fish`](https://fishshell.com/), it will be even shorter:
+> ```fish
+> tl add Buy milk due:(tu in 2 weeks)
+> ```
+
 
 ## States
 
