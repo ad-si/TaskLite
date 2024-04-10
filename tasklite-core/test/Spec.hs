@@ -58,7 +58,7 @@ import Lib (
   deleteTasks,
   doTasks,
   headTasks,
-  insertTask,
+  insertRecord,
   logTask,
   nextTask,
   runFilter,
@@ -143,7 +143,7 @@ testSuite conf now = do
                 , state = Just Done
                 }
 
-        insertTask memConn task
+        insertRecord "tasks" memConn task
         tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
         tasks `shouldBe` [task]
 
@@ -164,7 +164,7 @@ testSuite conf now = do
                   }
               newTask = initialTask{body = "Updated task"}
 
-          insertTask memConn initialTask
+          insertRecord "tasks" memConn initialTask
           updateTask memConn newTask
           tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
 
@@ -178,13 +178,13 @@ testSuite conf now = do
 
       it "lists next task" $ do
         withMemoryDb conf $ \memConn -> do
-          insertTask memConn exampleTask
+          insertRecord "tasks" memConn exampleTask
           result <- nextTask conf memConn
           unpack (show result) `shouldContain` "Buy milk"
 
       it "adds a tag" $ do
         withMemoryDb conf $ \memConn -> do
-          insertTask memConn exampleTask
+          insertRecord "tasks" memConn exampleTask
           tagResult <- addTag conf memConn "test" [exampleTask.ulid]
           unpack (show tagResult)
             `shouldStartWith` "🏷  Added tag \"test\" to task"
@@ -199,7 +199,7 @@ testSuite conf now = do
 
       it "deletes a tag" $ do
         withMemoryDb conf $ \memConn -> do
-          insertTask memConn exampleTask
+          insertRecord "tasks" memConn exampleTask
           _ <- addTag conf memConn "test" [exampleTask.ulid]
           delResult <- deleteTag conf memConn "test" [exampleTask.ulid]
           unpack (show delResult)
@@ -210,21 +210,21 @@ testSuite conf now = do
 
       it "adds a note" $ do
         withMemoryDb conf $ \memConn -> do
-          insertTask memConn exampleTask
+          insertRecord "tasks" memConn exampleTask
           noteResult <- addNote conf memConn "A test note" [exampleTask.ulid]
           unpack (show noteResult)
             `shouldStartWith` "🗒  Added a note to task"
 
       it "deletes a note" $ do
         withMemoryDb conf $ \memConn -> do
-          insertTask memConn exampleTask
+          insertRecord "tasks" memConn exampleTask
           _ <- addNote conf memConn "A test note" [exampleTask.ulid]
           -- delResult <- Note.deleteNote conf memConn ulid
           pendingWith "Implement deleteNote"
 
       it "sets due UTC" $ do
         withMemoryDb conf $ \memConn -> do
-          insertTask memConn exampleTask
+          insertRecord "tasks" memConn exampleTask
           let utcTxt = "2087-03-21 17:43:00"
           case parseUtc utcTxt of
             Nothing -> P.die "Invalid UTC string"
@@ -242,7 +242,7 @@ testSuite conf now = do
 
       it "sets ready UTC" $ do
         withMemoryDb conf $ \memConn -> do
-          insertTask memConn exampleTask
+          insertRecord "tasks" memConn exampleTask
           let utcTxt = "2059-07-11 04:55:16"
           case parseUtc utcTxt of
             Nothing -> P.die "Invalid UTC string"
@@ -265,7 +265,7 @@ testSuite conf now = do
 
       it "completes it" $ do
         withMemoryDb conf $ \memConn -> do
-          insertTask memConn exampleTask
+          insertRecord "tasks" memConn exampleTask
           doResult <- doTasks conf memConn Nothing [exampleTask.ulid]
           unpack (show doResult) `shouldStartWith` "✅ Finished task"
           tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
@@ -277,7 +277,7 @@ testSuite conf now = do
 
       it "deletes it" $ do
         withMemoryDb conf $ \memConn -> do
-          insertTask memConn exampleTask
+          insertRecord "tasks" memConn exampleTask
           deleteResult <- deleteTasks conf memConn [exampleTask.ulid]
           unpack (show deleteResult) `shouldStartWith` "❌ Deleted task"
           tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"

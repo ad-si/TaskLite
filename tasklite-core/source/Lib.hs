@@ -317,23 +317,8 @@ getRecordFields =
   toConstr >>> constrFields >>> fmap T.pack
 
 
-insertTask :: Connection -> Task -> IO ()
-insertTask connection task = do
-  let recordFields = task & getRecordFields
-  execute
-    connection
-    ( Query $
-        "INSERT INTO tasks("
-          <> (recordFields & T.intercalate ", ")
-          <> ") VALUES ("
-          <> ((recordFields $> "?") & T.intercalate ", ")
-          <> ")"
-    )
-    (toRow task)
-
-
-insertRecord :: (ToRow r, Data r) => Connection -> Text -> r -> IO ()
-insertRecord connection tableName record = do
+insertRecord :: (ToRow r, Data r) => Text -> Connection -> r -> IO ()
+insertRecord tableName connection record = do
   let recordFields = record & getRecordFields
   execute
     connection
@@ -341,9 +326,9 @@ insertRecord connection tableName record = do
         "INSERT INTO "
           <> tableName
           <> "("
-          <> (recordFields & T.intercalate ", ")
+          <> (recordFields & T.intercalate ",\n")
           <> ") VALUES ("
-          <> ((recordFields $> "?") & T.intercalate ", ")
+          <> ((recordFields $> "?") & T.intercalate ",\n")
           <> ")"
     )
     (toRow record)
@@ -388,7 +373,7 @@ insertTags connection mbCreatedUtc task tags = do
 
   -- TODO: Insert all tags at once
   P.forM_ taskToTags $ \taskToTag ->
-    insertRecord connection "task_to_tag" taskToTag
+    insertRecord "task_to_tag" connection taskToTag
 
 
 insertNotes :: Connection -> Maybe DateTime -> Task -> [Note] -> IO ()
@@ -414,7 +399,7 @@ insertNotes connection mbCreatedUtc task notes = do
         }
 
   P.forM_ taskToNotes $ \taskToNote ->
-    insertRecord connection "task_to_note" taskToNote
+    insertRecord "task_to_note" connection taskToNote
 
 
 -- | Tuple is (Maybe createdUtc, noteBody)
@@ -435,7 +420,7 @@ insertNoteTuples connection task notes = do
         }
 
   forM_ taskToNotes $ \taskToNote ->
-    insertRecord connection "task_to_note" taskToNote
+    insertRecord "task_to_note" connection taskToNote
 
 
 formatElapsedP :: Config -> IO ElapsedP -> IO Text
@@ -476,14 +461,14 @@ parseTaskBody bodyWords =
         & P.filter isDueUtc
         <&> T.replace "due:" ""
         & P.lastMay
-        >>= parseUtc
-          <&> (timePrint utcFormatReadable >>> pack)
+          >>= parseUtc
+        <&> (timePrint utcFormatReadable >>> pack)
     createdUtcMb =
       metadata
         & P.filter isCreatedUtc
         <&> T.replace "created:" ""
         & P.lastMay
-        >>= parseUtc
+          >>= parseUtc
   in
     (body, tags, dueUtcMb, createdUtcMb)
 
@@ -529,7 +514,7 @@ addTask conf connection bodyWords = do
       (conf.hooks & add & pre)
   putDoc preAddResult
 
-  insertRecord connection "tasks" task
+  insertRecord "tasks" connection task
   insertTags connection Nothing task tags
 
   pure $
@@ -558,7 +543,7 @@ logTask conf connection bodyWords = do
         , Task.modified_utc = modified_utc
         }
 
-  insertTask connection task
+  insertRecord "tasks" connection task
   insertTags connection Nothing task tags
   pure $
     "📝 Logged task"
@@ -603,13 +588,13 @@ execWithTask conf connection idSubstr callback = do
             <+> quote idSubstr
             <+> "is not unique."
             <+> "It could refer to one of the following tasks:"
-            <++> P.foldMap
-              ( \task ->
-                  annotate conf.idStyle (pretty task.ulid)
-                    <++> pretty task.body
-                    <> hardline
-              )
-              tasks
+              <++> P.foldMap
+                ( \task ->
+                    annotate conf.idStyle (pretty task.ulid)
+                      <++> pretty task.body
+                      <> hardline
+                )
+                tasks
     | otherwise -> pure "This case should not be possible"
 
 
@@ -698,9 +683,9 @@ waitFor conf connection duration ids = do
           then
             "⚠️  An error occurred while moving task"
               <+> prettyBody
-              <> "with id"
-                <+> prettyId
-                <+> "into waiting mode"
+                <> "with id"
+              <+> prettyId
+              <+> "into waiting mode"
           else
             "⏳  Set waiting UTC and review UTC for task"
               <+> prettyBody
@@ -791,7 +776,7 @@ createNextRepetition conf connection task = do
     isoDurEither =
       durTextEither
         <&> encodeUtf8
-        >>= Iso.parseDuration
+          >>= Iso.parseDuration
 
     nextDueMb =
       liftA2
@@ -832,7 +817,7 @@ createNextRepetition conf connection task = do
               & fromMaybe ""
         }
 
-  insertRecord connection "tasks" newTask
+  insertRecord "tasks" connection newTask
 
   tags <-
     query
@@ -874,7 +859,7 @@ createNextRecurrence conf connection task = do
     isoDurEither =
       durTextEither
         <&> encodeUtf8
-        >>= Iso.parseDuration
+          >>= Iso.parseDuration
 
     nextDueMb =
       liftA2
@@ -965,10 +950,11 @@ doTasks conf connection noteWordsMaybe ids = do
 
           pure $
             fromMaybe "" (noteMessageMaybe <&> (<> hardline))
-              <> "✅ Finished task"
-                <+> dquotes (pretty task.body)
-                <+> "with id"
-                <+> dquotes (pretty task.ulid)
+              <> ( "✅ Finished task"
+                    <+> dquotes (pretty task.body)
+                    <+> "with id"
+                    <+> dquotes (pretty task.ulid)
+                 )
               <> fromMaybe "" (logMessageMaybe <&> (hardline <>))
 
   pure $ vsep docs
@@ -1117,10 +1103,10 @@ repeatTasks conf connection duration ids = do
           <+> dquotes (pretty task.ulid)
           <+> "to"
           <+> dquotes (pretty durationIsoText)
-          <++> ( creationMb
-                  & fromMaybe
-                    "⚠️ Next task in repetition series could not be created!"
-               )
+            <++> ( creationMb
+                    & fromMaybe
+                      "⚠️ Next task in repetition series could not be created!"
+                 )
 
   pure $ vsep docs
 
@@ -1168,10 +1154,10 @@ recurTasks conf connection duration ids = do
           <+> dquotes (pretty task.ulid)
           <+> "to"
           <+> dquotes (pretty durationIsoText)
-          <++> ( creationMb
-                  & fromMaybe
-                    "⚠️ Next task in recurrence series could not be created!"
-               )
+            <++> ( creationMb
+                    & fromMaybe
+                      "⚠️ Next task in recurrence series could not be created!"
+                 )
 
   pure $ vsep docs
 
@@ -1290,7 +1276,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         ( \v ->
             name
               <+> annotate (dueStyle conf) (pretty v)
-              <> hardline
+                <> hardline
         )
   in
     hardline
@@ -1325,17 +1311,20 @@ formatTaskForInfo conf now (taskV, tags, notes) =
                 <> hardline
                 <> hardline
          )
-      <> "   State:"
-        <+> mkGreen (pretty stateHierarchy)
-      <> hardline
-      <> "Priority:"
-        <+> annotate
-          (priorityStyle conf)
-          (pretty $ FullTask.priority taskV)
-      <> hardline
-      <> "    ULID:"
-        <+> grayOut (pretty $ FullTask.ulid taskV)
-      <> hardline
+      <> ( "   State:"
+            <+> mkGreen (pretty stateHierarchy)
+              <> hardline
+         )
+      <> ( "Priority:"
+            <+> annotate
+              (priorityStyle conf)
+              (pretty $ FullTask.priority taskV)
+              <> hardline
+         )
+      <> ( "    ULID:"
+            <+> grayOut (pretty $ FullTask.ulid taskV)
+              <> hardline
+         )
       <> hardline
       <> ( [ (printIf "🆕  Created  ", mbCreatedUtc)
            , (printIf "☀️   Awake   ", mbAwakeUtc)
@@ -1357,7 +1346,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         ( \value ->
             "Repetition Duration:"
               <+> mkGreen (pretty value)
-              <> hardline
+                <> hardline
         )
         (FullTask.repetition_duration taskV)
       <> maybe
@@ -1365,7 +1354,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         ( \value ->
             "Recurrence Duration:"
               <+> mkGreen (pretty value)
-              <> hardline
+                <> hardline
         )
         (FullTask.recurrence_duration taskV)
       <> maybe
@@ -1373,12 +1362,13 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         ( \value ->
             "Group Ulid:"
               <+> grayOut (pretty value)
-              <> hardline
+                <> hardline
         )
         (FullTask.group_ulid taskV)
-      <> "User:"
-        <+> mkGreen (pretty $ FullTask.user taskV)
-      <> hardline
+      <> ( "User:"
+            <+> mkGreen (pretty $ FullTask.user taskV)
+              <> hardline
+         )
       <> hardline
       <> maybe
         mempty
@@ -1610,8 +1600,8 @@ addTag conf connection tag ids = do
       ulid <- formatUlid getULID
 
       insertRecord
-        connection
         "task_to_tag"
+        connection
         TaskToTag{ulid, task_ulid = task.ulid, tag}
 
       -- TODO: Check if modified_utc could be set via SQL trigger
@@ -1670,8 +1660,8 @@ addNote conf connection noteBody ids = do
       ulid <- formatUlid getULID
 
       insertRecord
-        connection
         "task_to_note"
+        connection
         TaskToNote
           { ulid
           , task_ulid = task.ulid
@@ -1969,7 +1959,7 @@ duplicateTasks conf connection ids = do
               , Task.state = Nothing
               }
 
-      insertRecord connection "tasks" dupeTask
+      insertRecord "tasks" connection dupeTask
 
       tags <-
         query
@@ -2066,11 +2056,11 @@ formatTaskLine conf now taskWidth task =
     closedUtcMaybe =
       task.closed_utc
         >>= parseUtc
-          <&> timePrint conf.utcFormat
+        <&> timePrint conf.utcFormat
     dueUtcMaybe =
       task.due_utc
         >>= parseUtc
-          <&> T.replace " 00:00:00" ""
+        <&> T.replace " 00:00:00" ""
           . T.pack
           . timePrint conf.utcFormat
     dueIn offset =
@@ -2656,8 +2646,8 @@ runFilter conf now connection exps = do
           (InvalidFilter error) ->
             dquotes (pretty error)
               <+> "is an invalid filter."
-              <> hardline
-              <> filterHelp
+                <> hardline
+                <> filterHelp
           (HasStatus Nothing) ->
             "Filter contains an invalid state value"
           _ ->

@@ -17,8 +17,8 @@ import Test.Hspec (
   shouldBe,
  )
 
-import Lib (countTasks, insertTags, insertTask)
 import Task (Task (body, ulid), zeroTask)
+import Lib (countTasks, insertRecord, insertTags)
 import TestUtils (withMemoryDb)
 
 
@@ -42,11 +42,11 @@ spec = do
         count0 <- countTasks defaultConfig memConn P.mempty
         show count0 `shouldBe` ("0" :: Text)
 
-        insertTask memConn task1
+        insertRecord "tasks" memConn task1
         count1 <- countTasks defaultConfig memConn P.mempty
         show count1 `shouldBe` ("1" :: Text)
 
-        insertTask memConn task2
+        insertRecord "tasks" memConn task2
         count2 <- countTasks defaultConfig memConn P.mempty
         show count2 `shouldBe` ("2" :: Text)
 

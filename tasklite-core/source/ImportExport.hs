@@ -78,7 +78,7 @@ import Lib (
   execWithTask,
   insertNotes,
   insertTags,
-  insertTask,
+  insertRecord ,
   updateTask,
  )
 import Note (Note (..))
@@ -458,7 +458,7 @@ insertImportTask connection importTaskRecord = do
       if Task.user taskParsed == ""
         then taskParsed{Task.user = T.pack effectiveUserName}
         else taskParsed
-  insertTask connection theTask
+  insertRecord "tasks" connection theTask
   insertTags
     connection
     (ulidTextToDateTime $ Task.ulid taskParsed)
