@@ -10,13 +10,14 @@
 
 Instead of allowing one to explicitly set a state, TaskLite infers the
 current state from several other fields.
+There are primary, secondary, and tertiary states.
 
-There are 2 primary states:
+**2 primary states:**
 
 - `Open` - Waits to be done
 - `Closed` - Nothing left to be done
 
-And 9 exclusive secondary states.
+**9 exclusive secondary states:**
 
 - `Asleep` - Is hidden because it's not relevant yet
 - `Awake` - Has become relevant or will become soon
@@ -28,8 +29,14 @@ And 9 exclusive secondary states.
 - `Done` - Has been done
 - `Obsolete` - Has become obsolete or impossible to finish
 - `Deletable` - Not needed anymore and can be deleted (item in the trash)
+
+<!--
+TODO: Add Blocked
 - `Blocked` - Some other task(s) must be done first.
     Blockers are stored in a separate table.
+Table row:
+`└─Blocked`  |   ❔      |    ❔    |    ❔    |    ❔     |  ❌  |    ❌
+-->
 
 &nbsp;
 
@@ -43,7 +50,6 @@ State\Field|`awake_utc`|`ready_utc`|`waiting_utc`|`review_utc`|`closed_utc`|`sta
 `└─Ready`    |< now or ❌| < now     |   ❌    |    ❌     |  ❌  |    ❌
 `└─Waiting`  |   ❔      |    ❔    |   < now  |> now or ❌|  ❌  |    ❌
 `└─Review`   |   ❔      |    ❔    |    ❔    | < now     |  ❌  |    ❌
-`└─Blocked`  |   ❔      |    ❔    |    ❔    |    ❔     |  ❌  |    ❌
 **`Closed`** |   ❔      |    ❔    |    ❔    |    ❔     |  ✅  |    ❔
 `└─Done`     |   ❔      |    ❔    |    ❔    |    ❔     |  ✅  |`Done`
 `└─Obsolete` |   ❔      |    ❔    |    ❔    |    ❔     |  ✅  |`Obsolete`
@@ -57,7 +63,7 @@ Legend:
 - ❔ = Maybe set
 
 
-Tertiary states:
+**3 exclusive tertiary states:**
 
 - `Repeating` - If this task get completed, a duplicate will be created
     with the specified time offset.
