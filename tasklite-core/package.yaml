@@ -107,10 +107,12 @@ tests:
       - aeson
       - hourglass
       - hspec
+      - neat-interpolation
       - optparse-applicative
       - sqlite-simple
       - tasklite-core
       - text
+      - yaml
 
 benchmarks:
   tasklite-bench:

@@ -138,6 +138,7 @@ test-suite tasklite-test
       CliSpec
       LibSpec
       TestUtils
+      TypesSpec
       Paths_tasklite_core
   autogen-modules:
       Paths_tasklite_core
@@ -159,11 +160,13 @@ test-suite tasklite-test
     , base >=4.7 && <5
     , hourglass
     , hspec
+    , neat-interpolation
     , optparse-applicative
     , protolude
     , sqlite-simple
     , tasklite-core
     , text
+    , yaml
   default-language: GHC2021
 
 benchmark tasklite-bench

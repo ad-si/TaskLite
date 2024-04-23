@@ -89,6 +89,7 @@ import TaskToNote qualified
 import TaskToTag (TaskToTag)
 import TaskToTag qualified
 import TestUtils (withMemoryDb)
+import TypesSpec qualified
 import Utils (parseUlidText, parseUlidUtcSection, parseUtc, ulid2utc)
 
 
@@ -442,6 +443,7 @@ testSuite conf now = do
                   ulid2utc updatedTask.ulid `shouldBe` Just utcFromUlid
                 _ -> P.die "More than one task found"
 
+  TypesSpec.spec
   LibSpec.spec now
   CliSpec.spec
 

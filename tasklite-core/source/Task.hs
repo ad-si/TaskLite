@@ -1,15 +1,16 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 {-|
 Datatype to represent a task as stored in the `tasks` table
 -}
 module Task where
 
-import Protolude as P (
+import Protolude (
   Applicative ((<*>)),
   Either (Left, Right),
   Enum (toEnum),
   Eq ((==)),
   Float,
-  Foldable (elem),
   Functor (fmap),
   Generic,
   Hashable,
@@ -21,6 +22,7 @@ import Protolude as P (
   decodeUtf8,
   fst,
   otherwise,
+  pure,
   show,
   snd,
   ($),
@@ -30,29 +32,23 @@ import Protolude as P (
   (<$>),
   (<&>),
  )
+import Protolude qualified as P
 
 import Data.Aeson as Aeson (
   FromJSON,
   ToJSON,
   Value (Object),
-  encode,
   eitherDecodeStrictText,
+  encode,
  )
 import Data.Aeson.Key as Key (fromText)
 import Data.Aeson.KeyMap as KeyMap (fromList, insert)
 import Data.ByteString.Lazy qualified as BSL
-import Data.Csv as Csv (ToField (..), ToNamedRecord, ToRecord)
+import Data.Csv qualified as Csv
 import Data.Generics (Data)
 import Data.Hourglass (DateTime, timePrint)
-import Data.Text as T (
-  Text,
-  dropEnd,
-  intercalate,
-  pack,
-  replace,
-  toLower,
-  unpack,
- )
+import Data.Text (Text, pack)
+import Data.Text qualified as T
 import Data.Yaml as Yaml (encode)
 import Database.SQLite.Simple as Sql (
   FromRow (..),
@@ -74,6 +70,8 @@ import Test.QuickCheck (Arbitrary (arbitrary))
 import Test.QuickCheck.Instances.Text ()
 
 import Config (defaultConfig, utcFormat)
+import Database.SQLite.Simple (Connection, Only (Only), query)
+import Database.SQLite.Simple.QQ (sql)
 
 
 data TaskState
@@ -107,8 +105,8 @@ instance FromJSON TaskState
 instance ToJSON TaskState
 
 
-instance ToRecord TaskState
-instance ToNamedRecord TaskState
+instance Csv.ToRecord TaskState
+instance Csv.ToNamedRecord TaskState
 
 
 instance Csv.ToField TaskState where
@@ -395,3 +393,56 @@ setMetadataField fieldNameText value task =
             Just $ Object $ fromList [(Key.fromText fieldNameText, value)]
           _ -> metadata task
     }
+
+
+{-| Convert a task to a YAML string that can be edited
+| and then converted back to a task.
+| Tags and notes are commented out, so they are not accidentally added again.
+-}
+taskToEditableYaml :: Connection -> Task -> P.IO P.ByteString
+taskToEditableYaml conn task = do
+  (tags :: [[P.Text]]) <-
+    query
+      conn
+      [sql|
+        SELECT tag
+        FROM task_to_tag
+        WHERE task_ulid == ?
+      |]
+      (Only $ ulid task)
+
+  (notes :: [[P.Text]]) <-
+    query
+      conn
+      [sql|
+        SELECT note
+        FROM task_to_note
+        WHERE task_ulid == ?
+      |]
+      (Only $ ulid task)
+
+  let indentNoteContent noteContent =
+        noteContent
+          & T.strip
+          & T.lines
+          <&> T.stripEnd
+          & T.intercalate "\n#     "
+
+  pure $
+    ( task
+        & Yaml.encode
+        & P.decodeUtf8
+    )
+      <> "\n# | Existing tags and notes can't be edited here, \
+         \but new ones can be added\n\n"
+      <> (("# tags: " :: Text) <> P.show (P.concat tags) <> "\n")
+      <> "tags: []\n"
+      <> ( ("\n# notes:\n" :: Text)
+            <> ( notes
+                  & P.concat
+                  <&> (\note -> "# - " <> indentNoteContent note)
+                  & T.unlines
+               )
+         )
+      <> "notes: []\n"
+        & P.encodeUtf8

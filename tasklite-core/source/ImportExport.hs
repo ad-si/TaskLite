@@ -69,7 +69,7 @@ import Data.Text.Lazy.Encoding qualified as TL
 import Data.Time.ISO8601.Duration qualified as Iso
 import Data.ULID (ulidFromInteger)
 import Data.Vector qualified as V
-import Data.Yaml as Yaml (ParseException, decodeEither', encode)
+import Data.Yaml as Yaml (ParseException, decodeEither')
 import Database.SQLite.Simple as Sql (Connection, query_)
 import FullTask (FullTask)
 import Lib (
@@ -115,6 +115,7 @@ import Task (
     waiting_utc
   ),
   setMetadataField,
+  taskToEditableYaml,
   textToTaskState,
   zeroTask,
  )
@@ -718,8 +719,8 @@ data PreEdit
 
 
 editTaskByTask :: PreEdit -> Connection -> Task -> IO (Doc AnsiStyle)
-editTaskByTask preEdit connection taskToEdit = do
-  let taskYaml = Yaml.encode taskToEdit
+editTaskByTask preEdit conn taskToEdit = do
+  taskYaml <- taskToEditableYaml conn taskToEdit
   newContent <- case preEdit of
     ApplyPreEdit editFunc -> pure $ editFunc taskYaml
     NoPreEdit -> runUserEditorDWIM yamlTemplate taskYaml
@@ -764,15 +765,15 @@ editTaskByTask preEdit connection taskToEdit = do
                       else Nothing
                 }
 
-          updateTask connection taskFixed
+          updateTask conn taskFixed
           warnings <-
             insertTags
-              connection
+              conn
               Nothing
               taskFixed
               (tags importTaskRecord)
           insertNotes
-            connection
+            conn
             Nothing
             taskFixed
             (notes importTaskRecord)
@@ -786,6 +787,6 @@ editTaskByTask preEdit connection taskToEdit = do
 
 
 editTask :: Config -> Connection -> IdText -> IO (Doc AnsiStyle)
-editTask conf connection idSubstr = do
-  execWithTask conf connection idSubstr $ \taskToEdit -> do
-    editTaskByTask NoPreEdit connection taskToEdit
+editTask conf conn idSubstr = do
+  execWithTask conf conn idSubstr $ \taskToEdit -> do
+    editTaskByTask NoPreEdit conn taskToEdit

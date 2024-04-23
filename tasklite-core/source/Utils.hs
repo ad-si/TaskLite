@@ -126,6 +126,10 @@ x <$$> y = x <++> y
 infixr 6 <$$>
 
 
+vsepCollapse :: [Doc ann] -> Doc ann
+vsepCollapse = P.foldr (<$$>) Empty
+
+
 zeroTime :: DateTime
 zeroTime = timeFromElapsedP 0
 

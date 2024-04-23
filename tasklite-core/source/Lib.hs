@@ -275,6 +275,7 @@ import Utils (
   ulidTextToDateTime,
   utcFormatReadable,
   utcTimeToDateTime,
+  vsepCollapse,
   (<$$>),
   (<++>),
  )
@@ -389,7 +390,7 @@ insertTags connection mbCreatedUtc task tags = do
       (insertRecord "task_to_tag" connection taskToTag P.>> pure "")
       (handleTagDupError taskToTag.tag)
 
-  pure $ vsep insertWarnings
+  pure $ vsepCollapse insertWarnings
 
 
 insertNotes :: Connection -> Maybe DateTime -> Task -> [Note] -> IO ()
