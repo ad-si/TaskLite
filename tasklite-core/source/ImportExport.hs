@@ -24,7 +24,6 @@ import Protolude (
   Text,
   Traversable (sequence),
   asum,
-  decodeUtf8,
   die,
   fromMaybe,
   hush,
@@ -77,8 +76,8 @@ import Lib (
   execWithConn,
   execWithTask,
   insertNotes,
+  insertRecord,
   insertTags,
-  insertRecord ,
   updateTask,
  )
 import Note (Note (..))
@@ -95,7 +94,6 @@ import System.Directory (createDirectoryIfMissing, removeFile)
 import System.FilePath (takeExtension, (</>))
 import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
-import System.ReadEditor (readEditorWith)
 import Task (
   Task (
     Task,
@@ -120,6 +118,7 @@ import Task (
   textToTaskState,
   zeroTask,
  )
+import Text.Editor (runUserEditorDWIM, yamlTemplate)
 import Text.Parsec.Rfc2822 (GenericMessage (..), message)
 import Text.Parsec.Rfc2822 qualified as Email
 import Text.ParserCombinators.Parsec as Parsec (parse)
@@ -712,9 +711,8 @@ backupDatabase conf = do
 
 editTaskByTask :: Config -> Connection -> Task -> IO (Doc AnsiStyle)
 editTaskByTask _ connection taskToEdit = do
-  let taskYaml = (T.unpack . decodeUtf8 . Yaml.encode) taskToEdit
-
-  newContent <- readEditorWith taskYaml
+  let taskYaml = Yaml.encode taskToEdit
+  newContent <- runUserEditorDWIM yamlTemplate taskYaml
 
   if newContent == taskYaml
     then
@@ -722,8 +720,6 @@ editTaskByTask _ connection taskToEdit = do
         "⚠️  Nothing changed" <+> hardline
     else do
       let
-        newContentBS = P.encodeUtf8 $ T.pack newContent
-
         parseMetadata :: Value -> Parser Bool
         parseMetadata val = case val of
           Object obj -> do
@@ -735,10 +731,10 @@ editTaskByTask _ connection taskToEdit = do
 
         hasMetadata =
           parseMaybe parseMetadata
-            =<< (rightToMaybe $ Yaml.decodeEither' newContentBS :: Maybe Value)
+            =<< (rightToMaybe $ Yaml.decodeEither' newContent :: Maybe Value)
 
         decodeResult :: Either ParseException ImportTask
-        decodeResult = Yaml.decodeEither' newContentBS
+        decodeResult = Yaml.decodeEither' newContent
 
       case decodeResult of
         Left error -> die $ show error <> " in task \n" <> show newContent

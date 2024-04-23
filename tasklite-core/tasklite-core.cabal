@@ -72,6 +72,7 @@ library
     , cassava
     , colour
     , directory
+    , editor-open
     , exceptions
     , file-embed
     , filepath
@@ -90,7 +91,6 @@ library
     , protolude
     , quickcheck-instances
     , random
-    , read-editor
     , simple-sql-parser
     , sqlite-simple
     , syb

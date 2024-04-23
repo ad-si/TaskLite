@@ -55,6 +55,7 @@ library:
     - cassava
     - colour
     - directory
+    - editor-open
     - exceptions
     - file-embed
     - filepath
@@ -75,7 +76,6 @@ library:
     - QuickCheck
     - quickcheck-instances
     - random
-    - read-editor
     - simple-sql-parser
     - sqlite-simple
     - sqlite-simple
