@@ -129,7 +129,7 @@ import Data.Time.Clock (UTCTime)
 import Data.Time.ISO8601.Duration qualified as Iso
 import Data.ULID (ULID, getULID)
 import Data.Yaml as Yaml (encode)
-import Database.SQLite.Simple (Only (Only))
+import Database.SQLite.Simple (Error (ErrorConstraint), Only (Only), SQLError (sqlError))
 import Database.SQLite.Simple as Sql (
   Connection,
   FromRow (..),
@@ -169,7 +169,7 @@ import Prettyprinter as Pp (
  )
 import Prettyprinter.Render.Terminal (
   AnsiStyle,
-  Color (Black, Green, Red),
+  Color (Black, Green, Red, Yellow),
   bgColorDull,
   bold,
   color,
@@ -224,6 +224,7 @@ import Config (
   HooksConfig (add),
   defaultConfig,
  )
+import Control.Monad.Catch (catchIf)
 import FullTask (
   FullTask (
     awake_utc,
@@ -274,6 +275,7 @@ import Utils (
   ulidTextToDateTime,
   utcFormatReadable,
   utcTimeToDateTime,
+  (<$$>),
   (<++>),
  )
 
@@ -354,7 +356,15 @@ updateTask connection task = do
     (toRow task <> [SQLText task.ulid])
 
 
-insertTags :: Connection -> Maybe DateTime -> Task -> [Text] -> IO ()
+handleTagDupError :: Text -> (Applicative f) => e -> f (Doc AnsiStyle)
+handleTagDupError tag _exception =
+  pure $
+    annotate (color Yellow) $
+      "⚠️ Tag " <> dquotes (pretty tag) <> " is already assigned"
+
+
+insertTags
+  :: Connection -> Maybe DateTime -> Task -> [Text] -> IO (Doc AnsiStyle)
 insertTags connection mbCreatedUtc task tags = do
   let uniqueTags = nub tags
   taskToTags <- forM uniqueTags $ \tag -> do
@@ -372,8 +382,14 @@ insertTags connection mbCreatedUtc task tags = do
         }
 
   -- TODO: Insert all tags at once
-  P.forM_ taskToTags $ \taskToTag ->
-    insertRecord "task_to_tag" connection taskToTag
+  insertWarnings <- P.forM taskToTags $ \taskToTag ->
+    catchIf
+      -- TODO: Find out why it's not `ErrorConstraintUnique`
+      (\(err :: SQLError) -> err.sqlError == ErrorConstraint)
+      (insertRecord "task_to_tag" connection taskToTag P.>> pure "")
+      (handleTagDupError taskToTag.tag)
+
+  pure $ vsep insertWarnings
 
 
 insertNotes :: Connection -> Maybe DateTime -> Task -> [Note] -> IO ()
@@ -515,13 +531,15 @@ addTask conf connection bodyWords = do
   putDoc preAddResult
 
   insertRecord "tasks" connection task
-  insertTags connection Nothing task tags
+  warnings <- insertTags connection Nothing task tags
 
   pure $
-    "🆕 Added task"
-      <+> dquotes (pretty task.body)
-      <+> "with id"
-      <+> dquotes (pretty task.ulid)
+    warnings
+      <$$> ( "🆕 Added task"
+              <+> dquotes (pretty task.body)
+              <+> "with id"
+              <+> dquotes (pretty task.ulid)
+           )
 
 
 logTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
@@ -544,9 +562,10 @@ logTask conf connection bodyWords = do
         }
 
   insertRecord "tasks" connection task
-  insertTags connection Nothing task tags
+  warnings <- insertTags connection Nothing task tags
   pure $
-    "📝 Logged task"
+    warnings
+      <$$> "📝 Logged task"
       <+> dquotes (pretty task.body)
       <+> "with id"
       <+> dquotes (pretty task.ulid)
@@ -761,7 +780,7 @@ showEither conf theEither =
 
 -- TODO: Eliminate code duplication with createNextRecurrence
 createNextRepetition
-  :: Config -> Connection -> Task -> IO (Maybe (Doc ann))
+  :: Config -> Connection -> Task -> IO (Maybe (Doc AnsiStyle))
 createNextRepetition conf connection task = do
   newUlidText <- formatUlid getULID
   let
@@ -829,12 +848,13 @@ createNextRepetition conf connection task = do
       |]
       (Only task.ulid)
 
-  liftIO $ insertTags connection Nothing newTask (tags & P.concat)
+  warnings <- liftIO $ insertTags connection Nothing newTask (tags & P.concat)
 
   liftIO $
     pure $
       Just $
-        "➡️  Created next task"
+        warnings
+          <$$> "➡️  Created next task"
           <+> dquotes (pretty newTask.body)
           <+> "in repetition series"
           <+> dquotes (pretty newTask.group_ulid)
@@ -844,7 +864,7 @@ createNextRepetition conf connection task = do
 
 -- TODO: Eliminate code duplication with createNextRepetition
 createNextRecurrence
-  :: Config -> Connection -> Task -> IO (Maybe (Doc ann))
+  :: Config -> Connection -> Task -> IO (Maybe (Doc AnsiStyle))
 createNextRecurrence conf connection task = do
   newUlidText <- formatUlid getULID
   let
@@ -908,12 +928,13 @@ createNextRecurrence conf connection task = do
       |]
       (Only task.ulid)
 
-  liftIO $ insertTags connection Nothing newTask (tags & P.concat)
+  warnings <- liftIO $ insertTags connection Nothing newTask (tags & P.concat)
 
   liftIO $
     pure $
       Just $
-        "➡️  Created next task"
+        warnings
+          <$$> "➡️  Created next task"
           <+> dquotes (pretty task.body)
           <+> "in recurrence series"
           <+> dquotes (pretty task.group_ulid)
@@ -1593,40 +1614,43 @@ findTask connection aPattern = do
 --     ContT $ withConnection dbPath
 
 addTag :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
-addTag conf connection tag ids = do
+addTag conf conn tag ids = do
   docs <- forM ids $ \idSubstr ->
-    execWithTask conf connection idSubstr $ \task -> do
+    execWithTask conf conn idSubstr $ \task -> do
       now <- fmap (pack . timePrint conf.utcFormat) timeCurrentP
       ulid <- formatUlid getULID
 
-      insertRecord
-        "task_to_tag"
-        connection
-        TaskToTag{ulid, task_ulid = task.ulid, tag}
+      catchIf
+        -- TODO: Find out why it's not `ErrorConstraintUnique`
+        (\(err :: SQLError) -> err.sqlError == ErrorConstraint)
+        ( do
+            insertRecord "task_to_tag" conn TaskToTag{ulid, task_ulid = task.ulid, tag}
 
-      -- TODO: Check if modified_utc could be set via SQL trigger
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET modified_utc = :now
-          WHERE ulid == :ulid
-        |]
-        [ ":now" := now
-        , ":ulid" := task.ulid
-        ]
+            -- TODO: Check if modified_utc could be set via SQL trigger
+            executeNamed
+              conn
+              [sql|
+                UPDATE tasks
+                SET modified_utc = :now
+                WHERE ulid == :ulid
+              |]
+              [ ":now" := now
+              , ":ulid" := task.ulid
+              ]
 
-      let
-        prettyBody = dquotes $ pretty task.body
-        prettyId = dquotes $ pretty task.ulid
+            let
+              prettyBody = dquotes $ pretty task.body
+              prettyId = dquotes $ pretty task.ulid
 
-      pure $
-        "🏷  Added tag"
-          <+> dquotes (pretty tag)
-          <+> "to task"
-          <+> prettyBody
-          <+> "with id"
-          <+> prettyId
+            pure $
+              "🏷  Added tag"
+                <+> dquotes (pretty tag)
+                <+> "to task"
+                <+> prettyBody
+                <+> "with id"
+                <+> prettyId
+        )
+        (handleTagDupError tag)
 
   pure $ vsep docs
 
@@ -1971,7 +1995,7 @@ duplicateTasks conf connection ids = do
           |]
           (Only task.ulid)
 
-      liftIO $ insertTags connection Nothing dupeTask (tags & P.concat)
+      warnings <- liftIO $ insertTags connection Nothing dupeTask (tags & P.concat)
 
       notes <-
         query
@@ -2003,21 +2027,22 @@ duplicateTasks conf connection ids = do
         prettyId = dquotes $ pretty task.ulid
 
       pure $
-        if numOfChanges == 0
-          then
-            "⚠️  Task"
-              <+> prettyBody
-              <+> "with id"
-              <+> prettyId
-              <+> "could not be duplicated"
-          else
-            "👯  Created a duplicate of task"
-              <+> prettyBody
-              <+> "(id:"
-              <+> pretty task.ulid
-              <+> ")"
-              <+> "with id"
-              <+> pretty dupeUlid
+        warnings
+          <$$> if numOfChanges == 0
+            then
+              "⚠️  Task"
+                <+> prettyBody
+                <+> "with id"
+                <+> prettyId
+                <+> "could not be duplicated"
+            else
+              "👯  Created a duplicate of task"
+                <+> prettyBody
+                <+> "(id:"
+                <+> pretty task.ulid
+                <+> ")"
+                <+> "with id"
+                <+> pretty dupeUlid
 
   pure $ vsep docs
 

@@ -94,6 +94,7 @@ import Config (
   Hook (body, filePath, interpreter),
  )
 import Control.Arrow ((>>>))
+import Prettyprinter.Internal.Type (Doc (Empty))
 import System.Random (mkStdGen)
 
 
@@ -109,9 +110,20 @@ data ListModifiedFlag = AllItems | ModifiedItemsOnly
   deriving (Eq, Show)
 
 
+-- | Combine documents with 2 newlines
 (<++>) :: Doc ann -> Doc ann -> Doc ann
 x <++> y =
   x <> softline <> softline <> y
+
+
+-- | Combine documents with 2 newlines if both documents are non-empty
+(<$$>) :: Doc ann -> Doc ann -> Doc ann
+Empty <$$> y = y
+x <$$> Empty = x
+x <$$> y = x <++> y
+
+
+infixr 6 <$$>
 
 
 zeroTime :: DateTime

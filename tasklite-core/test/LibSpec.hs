@@ -6,6 +6,7 @@ import Protolude (
   pure,
   show,
   ($),
+  (<>),
  )
 import Protolude qualified as P
 
@@ -16,13 +17,24 @@ import Test.Hspec (
   it,
   shouldBe,
   shouldContain,
+  shouldEndWith,
   shouldNotContain,
  )
 
 import Data.Hourglass (DateTime)
-import Lib (countTasks, insertRecord, insertTags, newTasks)
+import Data.Text qualified as T
+import ImportExport (PreEdit (ApplyPreEdit), editTaskByTask)
+import Lib (addTag, countTasks, insertRecord, insertTags, newTasks)
 import Task (Task (body, closed_utc, state, ulid), TaskState (Done), zeroTask)
 import TestUtils (withMemoryDb)
+
+
+task1 :: Task
+task1 =
+  zeroTask
+    { ulid = "01hs68z7mdg4ktpxbv0yfafznq"
+    , body = "New task 1"
+    }
 
 
 spec :: DateTime -> Spec
@@ -31,11 +43,6 @@ spec now = do
     it "counts tasks" $ do
       withMemoryDb defaultConfig $ \memConn -> do
         let
-          task1 =
-            zeroTask
-              { ulid = "01hs68z7mdg4ktpxbv0yfafznq"
-              , body = "New task 1"
-              }
           task2 =
             zeroTask
               { ulid = "01hs690f9hkzk9z7zews9j2k1d"
@@ -53,7 +60,8 @@ spec now = do
         count2 <- countTasks defaultConfig memConn P.mempty
         show count2 `shouldBe` ("2" :: Text)
 
-        insertTags memConn Nothing task2 ["test"]
+        warnings <- insertTags memConn Nothing task2 ["test"]
+        P.show warnings `shouldBe` T.empty
         countWithTag <- countTasks defaultConfig memConn (Just ["+test"])
         show countWithTag `shouldBe` ("1" :: Text)
 
@@ -62,11 +70,6 @@ spec now = do
     it "gets new tasks" $ do
       withMemoryDb defaultConfig $ \memConn -> do
         let
-          task1 =
-            zeroTask
-              { ulid = "01hs68z7mdg4ktpxbv0yfafznq"
-              , body = "New task 1"
-              }
           task2 =
             zeroTask
               { ulid = "01hs6zsf3c0vqx6egfnmbqtmvy"
@@ -81,3 +84,28 @@ spec now = do
         cliOutput <- newTasks defaultConfig now memConn (Just ["state:done"])
         show cliOutput `shouldContain` "New task 2"
         show cliOutput `shouldNotContain` "New task 1"
+
+    it "shows warning if a tag is duplicated" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        let newTag = "test"
+        insertRecord "tasks" memConn task1
+        warnings <- insertTags memConn Nothing task1 [newTag]
+        P.show warnings `shouldBe` T.empty
+
+        cliOutput <- addTag defaultConfig memConn newTag [task1.ulid]
+        show cliOutput `shouldEndWith` "Tag \"test\" is already assigned"
+
+    it "lets you edit a task and shows warning if a tag was duplicated" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        let existTag = "existing-tag"
+        insertRecord "tasks" memConn task1
+        warnings <- insertTags memConn Nothing task1 [existTag]
+        P.show warnings `shouldBe` T.empty
+
+        cliOutput <-
+          editTaskByTask
+            (ApplyPreEdit (<> ("\ntags: " <> P.show [existTag, "new-tag"])))
+            memConn
+            task1
+        let errMsg = "Tag \"" <> T.unpack existTag <> "\" is already assigned"
+        show cliOutput `shouldContain` errMsg

@@ -133,6 +133,7 @@ import Utils (
   ulidTextToDateTime,
   zeroTime,
   zonedTimeToDateTime,
+  (<$$>),
  )
 
 
@@ -448,7 +449,7 @@ instance FromJSON ImportTask where
     pure $ ImportTask finalTask notes tags
 
 
-insertImportTask :: Connection -> ImportTask -> IO (Doc ann)
+insertImportTask :: Connection -> ImportTask -> IO (Doc AnsiStyle)
 insertImportTask connection importTaskRecord = do
   effectiveUserName <- getEffectiveUserName
   let
@@ -458,18 +459,20 @@ insertImportTask connection importTaskRecord = do
         then taskParsed{Task.user = T.pack effectiveUserName}
         else taskParsed
   insertRecord "tasks" connection theTask
-  insertTags
-    connection
-    (ulidTextToDateTime $ Task.ulid taskParsed)
-    theTask
-    importTaskRecord.tags
+  warnings <-
+    insertTags
+      connection
+      (ulidTextToDateTime $ Task.ulid taskParsed)
+      theTask
+      importTaskRecord.tags
   insertNotes
     connection
     (ulidTextToDateTime $ Task.ulid taskParsed)
     theTask
     importTaskRecord.notes
   pure $
-    "📥 Imported task"
+    warnings
+      <$$> "📥 Imported task"
       <+> dquotes (pretty $ Task.body theTask)
       <+> "with ulid"
       <+> dquotes (pretty $ Task.ulid theTask)
@@ -599,7 +602,7 @@ importFile _ connection filePath = do
 
 
 ingestFile :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
-ingestFile config connection filePath = do
+ingestFile _config connection filePath = do
   content <- BSL.readFile filePath
 
   let
@@ -614,7 +617,7 @@ ingestFile config connection filePath = do
             Right importTaskRecord@ImportTask{task} ->
               sequence
                 [ insertImportTask connection importTaskRecord
-                , editTaskByTask config connection task
+                , editTaskByTask NoPreEdit connection task
                 ]
     ".eml" ->
       case Parsec.parse message filePath content of
@@ -624,7 +627,7 @@ ingestFile config connection filePath = do
                 emailToImportTask email
           in  sequence
                 [ insertImportTask connection taskRecord
-                , editTaskByTask config connection task
+                , editTaskByTask NoPreEdit connection task
                 ]
     _ -> die $ T.pack $ "File type " <> fileExt <> " is not supported"
 
@@ -709,10 +712,17 @@ backupDatabase conf = do
         )
 
 
-editTaskByTask :: Config -> Connection -> Task -> IO (Doc AnsiStyle)
-editTaskByTask _ connection taskToEdit = do
+data PreEdit
+  = ApplyPreEdit (P.ByteString -> P.ByteString)
+  | NoPreEdit
+
+
+editTaskByTask :: PreEdit -> Connection -> Task -> IO (Doc AnsiStyle)
+editTaskByTask preEdit connection taskToEdit = do
   let taskYaml = Yaml.encode taskToEdit
-  newContent <- runUserEditorDWIM yamlTemplate taskYaml
+  newContent <- case preEdit of
+    ApplyPreEdit editFunc -> pure $ editFunc taskYaml
+    NoPreEdit -> runUserEditorDWIM yamlTemplate taskYaml
 
   if newContent == taskYaml
     then
@@ -755,18 +765,20 @@ editTaskByTask _ connection taskToEdit = do
                 }
 
           updateTask connection taskFixed
-          insertTags
-            connection
-            Nothing
-            taskFixed
-            (tags importTaskRecord)
+          warnings <-
+            insertTags
+              connection
+              Nothing
+              taskFixed
+              (tags importTaskRecord)
           insertNotes
             connection
             Nothing
             taskFixed
             (notes importTaskRecord)
           pure $
-            "✏️  Edited task"
+            warnings
+              <$$> "✏️  Edited task"
               <+> dquotes (pretty $ Task.body taskFixed)
               <+> "with ulid"
               <+> dquotes (pretty $ Task.ulid taskFixed)
@@ -776,4 +788,4 @@ editTaskByTask _ connection taskToEdit = do
 editTask :: Config -> Connection -> IdText -> IO (Doc AnsiStyle)
 editTask conf connection idSubstr = do
   execWithTask conf connection idSubstr $ \taskToEdit -> do
-    editTaskByTask conf connection taskToEdit
+    editTaskByTask NoPreEdit connection taskToEdit
