@@ -17,6 +17,11 @@ test:
 	stack test --fast tasklite-core
 
 
+.PHONY: install
+install:
+	stack build --fast --copy-bins
+
+
 # Build the documentation
 docs: book.toml docs-source
 	mdbook build
