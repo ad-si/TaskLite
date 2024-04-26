@@ -216,13 +216,6 @@ testSuite conf now = do
           unpack (show noteResult)
             `shouldStartWith` "🗒  Added a note to task"
 
-      it "deletes a note" $ do
-        withMemoryDb conf $ \memConn -> do
-          insertRecord "tasks" memConn exampleTask
-          _ <- addNote conf memConn "A test note" [exampleTask.ulid]
-          -- delResult <- Note.deleteNote conf memConn ulid
-          pendingWith "Implement deleteNote"
-
       it "sets due UTC" $ do
         withMemoryDb conf $ \memConn -> do
           insertRecord "tasks" memConn exampleTask
