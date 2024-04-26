@@ -218,9 +218,9 @@ Or leverage SQL:
 
 ```txt
 $ tl runsql "
-    select json_extract(metadata, '\$.kanban-state')
-    from tasks
-    where ulid == '01e0k6a1p00002zgzc0845vayw'
+    SELECT json_extract(metadata, '\$.kanban-state')
+    FROM tasks
+    WHERE ulid == '01e0k6a1p00002zgzc0845vayw'
   " \
   | tail -n 1
 backlog
@@ -230,18 +230,40 @@ This can also be used to update metadata fields:
 
 ```txt
 tl runsql "
-    update tasks
-    set metadata=(
-      select json_set(tasks.metadata, '$.kanban-state', 'sprint')
-      from tasks
-      where ulid == '01e0k6a1p00002zgzc0845vayw'
+    UPDATE tasks
+    SET metadata=(
+      SELECT json_set(tasks.metadata, '\$.kanban-state', 'sprint')
+      FROM tasks
+      WHERE ulid == '01e0k6a1p00002zgzc0845vayw'
     )
-    where ulid == '01e0k6a1p00002zgzc0845vayw'
+    WHERE ulid == '01e0k6a1p00002zgzc0845vayw'
   "
 ```
 
-&nbsp;
+Another great use-case is to automatically extract and store data
+from the body of the task.
 
+E.g. you could set up a CRON job to automatically extract any GitHub link
+from the body and store it in an extra `github_url` metadata field:
+
+```sql
+UPDATE tasks
+SET metadata = json_insert(
+  ifnull(metadata, '{}'),
+  '$.github_url',
+  substr(body, instr(body, 'https://github.com'),
+    CASE
+      WHEN instr(substr(body, instr(body, 'https://github.com')), ' ') == 0
+      THEN length(substr(body, instr(body, 'https://github.com')))
+      ELSE instr(substr(body, instr(body, 'https://github.com')), ' ') - 1
+    END
+  )
+)
+WHERE body LIKE '%https://github.com%'
+```
+
+
+<!-- TODO:
 Soon TaskLite will also support a dedicated `metadata` command like:
 
 ```sh
@@ -253,6 +275,7 @@ and
 ```sh
 tl metadata set kanban-state sprint 01e0k6a1p00002zgzc0845vayw
 ```
+-->
 
 
 ## External Commands
