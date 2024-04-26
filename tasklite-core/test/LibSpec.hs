@@ -24,8 +24,10 @@ import Test.Hspec (
 import Data.Hourglass (DateTime)
 import Data.Text qualified as T
 import ImportExport (PreEdit (ApplyPreEdit), editTaskByTask)
-import Lib (addTag, countTasks, insertRecord, insertTags, newTasks)
+import Lib (addTag, countTasks, deleteNote, insertRecord, insertTags, newTasks)
 import Task (Task (body, closed_utc, state, ulid), TaskState (Done), zeroTask)
+import TaskToNote (TaskToNote (TaskToNote))
+import TaskToNote qualified
 import TestUtils (withMemoryDb)
 
 
@@ -109,3 +111,22 @@ spec now = do
             task1
         let errMsg = "Tag \"" <> T.unpack existTag <> "\" is already assigned"
         show cliOutput `shouldContain` errMsg
+
+    it "lets you delete a note" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        let noteId = "01hwcqk9nnwjypzw9kr646nqce"
+        insertRecord
+          "task_to_note"
+          memConn
+          TaskToNote
+            { TaskToNote.ulid = noteId
+            , TaskToNote.task_ulid = task1.ulid
+            , TaskToNote.note = "The note content"
+            }
+
+        cliOutput <- deleteNote defaultConfig memConn noteId
+
+        (show cliOutput :: Text)
+          `shouldBe` "\128165 Deleted note \"01hwcqk9nnwjypzw9kr646nqce\" \
+                     \of task \"01hs68z7mdg4ktpxbv0yfafznq\""

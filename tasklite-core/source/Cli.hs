@@ -157,6 +157,7 @@ import Lib (
   adjustPriority,
   countTasks,
   deletableTasks,
+  deleteNote,
   deleteTag,
   deleteTasks,
   doTasks,
@@ -261,6 +262,7 @@ data Command
   | AddTag TagText [IdText]
   | DeleteTag TagText [IdText]
   | AddNote Text [IdText]
+  | DeleteNote IdText
   | SetDueUtc DateTime [IdText]
   | Start [IdText]
   | Stop [IdText]
@@ -382,7 +384,7 @@ aliasWarning alias =
     <+> "Use"
     <+> dquotes (pretty alias)
     <+> "instead."
-      <> hardline
+    <> hardline
 
 
 getCommand :: (Text, Text) -> Mod CommandFields Command
@@ -573,6 +575,10 @@ commandParser conf =
       <$> strArgument (metavar "NOTE" <> help "The note")
       <*> some (strArgument idsVar))
       "Add a note to specified tasks")
+
+    <> command "deletenote" (toParserInfo (DeleteNote
+      <$> strArgument (metavar "ULID" <> help "The ULID of the note"))
+      "Delete the specified note")
 
     <> command "due" (toParserInfo (SetDueUtc
       <$> argument (maybeReader (parseUtc . T.pack))
@@ -957,11 +963,11 @@ commandParserInfo conf =
     header =
       annotate (bold <> color Blue) "TaskLite"
         <+> prettyVersion
-          <> hardline
-          <> hardline
-          <> annotate
-            (color Blue)
-            "Task-list manager powered by Haskell and SQLite"
+        <> hardline
+        <> hardline
+        <> annotate
+          (color Blue)
+          "Task-list manager powered by Haskell and SQLite"
 
     examples = do
       let
@@ -1207,6 +1213,7 @@ executeCLiCommand conf now connection progName args = do
         AddTag tagText ids -> addTag conf connection tagText ids
         DeleteTag tagText ids -> deleteTag conf connection tagText ids
         AddNote noteText ids -> addNote conf connection noteText ids
+        DeleteNote id -> deleteNote conf connection id
         SetDueUtc datetime ids -> setDueUtc conf connection datetime ids
         Duplicate ids -> duplicateTasks conf connection ids
         CountFiltered taskFilter -> countTasks conf connection taskFilter

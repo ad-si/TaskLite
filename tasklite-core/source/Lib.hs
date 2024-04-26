@@ -129,7 +129,11 @@ import Data.Time.Clock (UTCTime)
 import Data.Time.ISO8601.Duration qualified as Iso
 import Data.ULID (ULID, getULID)
 import Data.Yaml as Yaml (encode)
-import Database.SQLite.Simple (Error (ErrorConstraint), Only (Only), SQLError (sqlError))
+import Database.SQLite.Simple (
+  Error (ErrorConstraint),
+  Only (Only),
+  SQLError (sqlError),
+ )
 import Database.SQLite.Simple as Sql (
   Connection,
   FromRow (..),
@@ -143,6 +147,7 @@ import Database.SQLite.Simple as Sql (
   field,
   open,
   query,
+  queryNamed,
   query_,
   toRow,
   withConnection,
@@ -1718,6 +1723,38 @@ addNote conf connection noteBody ids = do
   pure $ vsep docs
 
 
+deleteNote :: Config -> Connection -> IdText -> IO (Doc AnsiStyle)
+deleteNote _conf connection noteId = do
+  taskIds :: [Only Text] <-
+    queryNamed
+      connection
+      [sql|
+        DELETE FROM task_to_note
+        WHERE ulid == :noteId
+        RETURNING task_ulid
+      |]
+      [":noteId" := noteId]
+
+  case taskIds of
+    [Only taskId] ->
+      pure $
+        "💥 Deleted note"
+          <+> dquotes (pretty noteId)
+          <+> "of task"
+          <+> dquotes (pretty taskId)
+    [] ->
+      pure $
+        annotate (color Yellow) $
+          "⚠️  Note" <+> dquotes (pretty noteId) <+> "does not exist"
+    _ ->
+      pure $
+        annotate (color Yellow) $
+          ("⚠️  Note" <+> dquotes (pretty noteId) <+> "exists multiple times.")
+            <++> "This indicates a serious database inconsistency \
+                 \and you should clean up the database manually \
+                 \before continuing."
+
+
 setDueUtc :: Config -> Connection -> DateTime -> [IdText] -> IO (Doc AnsiStyle)
 setDueUtc conf connection datetime ids = do
   let
@@ -1925,7 +1962,7 @@ unnoteTasks conf connection ids = do
         |]
         [":task_ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Removed all notes" task
+      pure $ getResultMsg "💥 Deleted all notes" task
 
   pure $ vsep docs
 
