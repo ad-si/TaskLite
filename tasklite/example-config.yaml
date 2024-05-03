@@ -1,0 +1,35 @@
+tableName: tasks
+idWidth: 4
+idStyle: green
+priorityStyle: magenta
+dateStyle: dull black
+bodyStyle: white
+bodyClosedStyle: black
+closedStyle: dull black
+dueStyle: yellow
+overdueStyle: red
+tagStyle: blue
+utcFormat: YYYY-MM-DD H:MI:S
+#| FIXME: Blocked by https://github.com/vincenthz/hs-hourglass/issue
+# utcFormatShort: YYYY-DDD H:MI
+utcFormatShort: YYYY-MM-DD H:MI
+
+#| Optional, uses the XDG directory per default
+#| https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+# dataDir: /custom/path/tasklite
+
+dbName: main.db
+dateWidth: 10
+bodyWidth: 10
+prioWidth: 4
+headCount: 20
+maxWidth: 120
+progressBarWidth: 24
+
+# hooks:
+#   #| Is per default the "hooks" directory in the `dataDir`
+#   # directory: /custom/path/hooks
+#   launch:
+#     pre:
+#       - interpreter: python3
+#         body: print('Python test')

@@ -5,7 +5,7 @@ help: makefile
 
 .PHONY: start-app
 start-app:
-	cd tasklite-airsequel-app \
+	cd tasklite-webapp \
 	&& NODE_OPTIONS=--openssl-legacy-provider \
 	npx elm-app start
 
@@ -15,11 +15,12 @@ start-app:
 test:
 	stack test --fast huzzy
 	stack test --fast tasklite-core
+	stack test --fast tasklite
 
 
 .PHONY: install
 install:
-	stack build --fast --copy-bins
+	stack build --fast --copy-bins tasklite
 
 
 # Build the documentation
@@ -75,9 +76,8 @@ docker-build:
 .PHONY: clean
 clean:
 	rm -rf .stack-work
+	rm -rf docs
 	rm -rf huzzy/.stack-work
-	rm -rf tasklite-api/.stack-work
 	rm -rf tasklite-app/.stack-work
 	rm -rf tasklite-core/.stack-work
-	rm -rf tasklite-server/.stack-work
-	rm -rf docs
+	rm -rf tasklite/.stack-work

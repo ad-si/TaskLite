@@ -1,0 +1,68 @@
+name: tasklite
+version: 0.3.0.0
+github: "ad-si/TaskLite"
+license: AGPL-3.0-or-later
+author: Adrian Sieber
+maintainer: mail@adriansieber.com
+copyright: Adrian Sieber
+category: CLI, Task, Todo
+synopsis: CLI task / todo list manager with SQLite backend
+description: |
+  TaskLite is a CLI task / todo list manager with a SQLite backend.
+  It is designed to be simple and easy to use,
+  while still providing a powerful interface for managing tasks.
+  It's heavily inspired by Taskwarrior and stems from my personal frustration
+  with some of its design decisions.
+  Check out https://tasklite.org/differences_taskwarrior
+  for a full comparison.
+extra-source-files:
+  - README.md
+data-files:
+  - example-config.yaml
+
+language: GHC2021
+
+default-extensions:
+  - DeriveAnyClass
+  - LambdaCase
+  - MultiWayIf
+  - NoImplicitPrelude
+  - OverloadedRecordDot
+  - OverloadedStrings
+  - RecordWildCards
+  - TypeFamilies
+  - UndecidableInstances
+
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wno-orphans
+  - -Wredundant-constraints
+  - -Wunused-packages
+
+dependencies:
+  - base >= 4.18 && < 5
+  - protolude >= 0.3
+  - tasklite-core
+
+executables:
+  tasklite:
+    main: Main.hs
+    source-dirs: app
+    dependencies:
+      - directory
+      - filepath
+      - tasklite-core
+      - text
+      - yaml
+
+tests:
+  tasklite-test:
+    main: Spec.hs
+    source-dirs: test
+    dependencies:
+      - hspec
+      - optparse-applicative
+      - tasklite-core

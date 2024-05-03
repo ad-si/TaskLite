@@ -113,40 +113,10 @@ library
     , yaml ==0.11.*
   default-language: GHC2021
 
-executable tasklite
-  main-is: Main.hs
-  other-modules:
-      Paths_tasklite_core
-  autogen-modules:
-      Paths_tasklite_core
-  hs-source-dirs:
-      app
-  default-extensions:
-      DeriveAnyClass
-      LambdaCase
-      MultiWayIf
-      NoImplicitPrelude
-      OverloadedRecordDot
-      OverloadedStrings
-      RecordWildCards
-      TypeFamilies
-      UndecidableInstances
-  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
-  build-depends:
-      base >=4.18 && <5
-    , directory
-    , filepath
-    , protolude >=0.3
-    , tasklite-core
-    , text
-    , yaml
-  default-language: GHC2021
-
 test-suite tasklite-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      CliSpec
       LibSpec
       TestUtils
       TypesSpec
@@ -172,7 +142,6 @@ test-suite tasklite-test
     , hourglass
     , hspec
     , neat-interpolation
-    , optparse-applicative
     , protolude >=0.3
     , sqlite-simple
     , tasklite-core

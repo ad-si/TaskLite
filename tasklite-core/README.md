@@ -1,13 +1,4 @@
-# TaskLite
+# TaskLite Core
 
-CLI task manager built with [Haskell] and [SQLite].
-
-<img
-  src='screenshots/withtag.svg'
-  alt="Screenshot of all TaskLite related tasks in the maintainer's database"
-  width='600'
-/>
-
-Check out [tasklite.org] for extensive documentation.
-
-[tasklite.org]: https://tasklite.org
+This Haskell package provides the core functionality for TaskLite.
+Use it to interact with a TaskLite database programmatically.

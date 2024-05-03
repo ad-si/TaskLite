@@ -44,7 +44,6 @@ import Test.Hspec (
  )
 import Time.System (timeCurrentP)
 
-import CliSpec qualified
 import Config (Config (..), defaultConfig)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
@@ -437,7 +436,6 @@ testSuite conf now = do
 
   TypesSpec.spec
   LibSpec.spec now
-  CliSpec.spec
 
 
 main :: IO ()

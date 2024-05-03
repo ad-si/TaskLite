@@ -1,0 +1,90 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           tasklite
+version:        0.3.0.0
+synopsis:       CLI task / todo list manager with SQLite backend
+description:    TaskLite is a CLI task / todo list manager with a SQLite backend.
+                It is designed to be simple and easy to use,
+                while still providing a powerful interface for managing tasks.
+                It's heavily inspired by Taskwarrior and stems from my personal frustration
+                with some of its design decisions.
+                Check out https://tasklite.org/differences_taskwarrior
+                for a full comparison.
+category:       CLI, Task, Todo
+homepage:       https://github.com/ad-si/TaskLite#readme
+bug-reports:    https://github.com/ad-si/TaskLite/issues
+author:         Adrian Sieber
+maintainer:     mail@adriansieber.com
+copyright:      Adrian Sieber
+license:        AGPL-3.0-or-later
+build-type:     Simple
+extra-source-files:
+    README.md
+data-files:
+    example-config.yaml
+
+source-repository head
+  type: git
+  location: https://github.com/ad-si/TaskLite
+
+executable tasklite
+  main-is: Main.hs
+  other-modules:
+      Paths_tasklite
+  autogen-modules:
+      Paths_tasklite
+  hs-source-dirs:
+      app
+  default-extensions:
+      DeriveAnyClass
+      LambdaCase
+      MultiWayIf
+      NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedStrings
+      RecordWildCards
+      TypeFamilies
+      UndecidableInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
+  build-depends:
+      base >=4.18 && <5
+    , directory
+    , filepath
+    , protolude >=0.3
+    , tasklite-core
+    , text
+    , yaml
+  default-language: GHC2021
+
+test-suite tasklite-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      CliSpec
+      Paths_tasklite
+  autogen-modules:
+      Paths_tasklite
+  hs-source-dirs:
+      test
+  default-extensions:
+      DeriveAnyClass
+      LambdaCase
+      MultiWayIf
+      NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedStrings
+      RecordWildCards
+      TypeFamilies
+      UndecidableInstances
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
+  build-depends:
+      base >=4.18 && <5
+    , hspec
+    , optparse-applicative
+    , protolude >=0.3
+    , tasklite-core
+  default-language: GHC2021
