@@ -15,8 +15,8 @@ extra-deps:
   - github: Airsequel/simple-sql-parser
     commit: 680f2b77c53fcc086dc7d5f498f764ad2235b828
 
-  - github: ad-si/iso8601-duration
-    commit: 15822155a51831fbcd75a3bb5cb608a731a0461b
+  - github: meteogrid/iso8601-duration
+    commit: 9524d1f02775be1d6c73165c4b4d62a19c8b7698
 
 allow-newer: true
 

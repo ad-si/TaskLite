@@ -11,7 +11,7 @@ written in [Elm](elm-lang.org).
 1. Build GraphQL connector code:
     ```sh
     npx elm-graphql --skip-elm-format \
-      http://localhost:4185/dbs/tasklite/graphql
+      http://localhost:7458/graphql
     ```
 1. Start the development server by running:
     ```sh

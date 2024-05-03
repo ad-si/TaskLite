@@ -43,6 +43,7 @@ import Html.Styled.Attributes
         , css
         , disabled
         , href
+        , placeholder
         , title
         , type_
         , value
@@ -50,7 +51,7 @@ import Html.Styled.Attributes
 import Html.Styled.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Iso8601
 import Json.Decode
-import List exposing (map)
+import List
 import Random
 import RemoteData exposing (RemoteData(..))
 import Tailwind.Theme exposing (..)
@@ -59,17 +60,12 @@ import Task
 import Time exposing (Posix)
 import Ulid exposing (Ulid, ulidGenerator)
 import Url exposing (Url)
-import Url.Parser exposing ((</>), Parser, map, oneOf, parse, s, string)
-
-
-dbId : String
-dbId =
-    "tasklite"
+import Url.Parser exposing ((</>), Parser, oneOf, parse, s, string)
 
 
 graphqlApiUrl : String
 graphqlApiUrl =
-    "http://localhost:4185/dbs/" ++ dbId ++ "/graphql"
+    "http://localhost:7458/graphql"
 
 
 dark : List Css.Style -> Css.Style
@@ -418,6 +414,7 @@ viewBody model =
                     form [ onSubmit AddTaskNow, css [ flex, mb_3 ] ]
                         [ input
                             [ type_ "text"
+                            , placeholder "Add a new task …"
                             , onInput NewTask
                             , value model.newTask
                             , css
@@ -429,6 +426,7 @@ viewBody model =
                                 , border
                                 , border_solid
                                 , border_color gray_400
+                                , placeholder_color gray_400
                                 , dark
                                     [ bg_color neutral_800
                                     , border_color neutral_500

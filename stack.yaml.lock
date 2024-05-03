@@ -46,14 +46,14 @@ packages:
 - completed:
     name: iso8601-duration
     pantry-tree:
-      sha256: dd24cbdc13e4aa8ae25125ad3fece2ea910ecb5fd0af4c31fce39d26aaa7930e
-      size: 724
-    sha256: 2645e7337c863d1dc7aa68ca79be6ca8efc79b508ad575336335d2d7cb7d5fca
-    size: 7309
-    url: https://github.com/ad-si/iso8601-duration/archive/15822155a51831fbcd75a3bb5cb608a731a0461b.tar.gz
+      sha256: 7aec9c9ad262d3354d5eef475cdaff22fa60eba1303c480e67b33e84c31fad2c
+      size: 722
+    sha256: 883399c89b887becc644c045431f336009927ab950cc8b5d0ea7016473ac3dda
+    size: 6507
+    url: https://github.com/meteogrid/iso8601-duration/archive/9524d1f02775be1d6c73165c4b4d62a19c8b7698.tar.gz
     version: 0.1.2.0
   original:
-    url: https://github.com/ad-si/iso8601-duration/archive/15822155a51831fbcd75a3bb5cb608a731a0461b.tar.gz
+    url: https://github.com/meteogrid/iso8601-duration/archive/9524d1f02775be1d6c73165c4b4d62a19c8b7698.tar.gz
 snapshots:
 - completed:
     sha256: e5cac927cf7ccbd52aa41476baa68b88c564ee6ddc3bc573dbf4210069287fe7
