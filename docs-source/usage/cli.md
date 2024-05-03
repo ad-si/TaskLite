@@ -5,6 +5,17 @@
 ---
 
 
+## Help
+
+For a full overview of all supported subcommands run:
+
+```sh
+tasklite help
+```
+
+![Screenshot of CLI output of `help` command](../images/help.svg)
+
+
 ## Add
 
 To add a task run:
@@ -30,15 +41,28 @@ The tags and special commands must be the last parameters,
 but their order doesn't matter.
 
 
-## Help
+## Edit
 
-For a full overview of all supported subcommands run:
+Existing tasks can be easily edited in their YAML representation:
 
 ```sh
-tasklite help
+tl edit 01hwcw6s1kzakd5pje218zmtpt
 ```
 
-![Screenshot of CLI output of `help` command](../images/help.svg)
+This will open your default editor,
+as specified in the environment variables `$VISUAL` or `$EDITOR`.
+You can then easily edit existing fields and add new fields.
+
+This feature allows for a powerful batch editing workflow.
+Use an SQL query to select a subsection of your tasks
+and then edit all of them one by one:
+
+```bash
+sqlite3 \
+  ~/TaskLite/main.db \
+  "SELECT ulid FROM tasks WHERE metadata LIKE '%sprint%'" \
+| while read ulid; do tl edit $ulid; done
+```
 
 
 ## Context / Views

@@ -214,3 +214,36 @@ Seen at [discussions.apple.com/thread/8570915](
           echo $task | tasklite importjson
         done
     ```
+
+
+## Fixing Mistakes
+
+It's easy to write a short shell script to fix any mistakes
+you might have made during the import process.
+
+In following example I forgot to use the metadata field `end`
+to set the `closed_utc` column, but used the current date instead.
+
+As I deleted all metadata afterwards,
+I now need to extract the field from an old backup.
+In the meantime I changed some `closed_utc` fields and therefore I can't fully automate it.
+A neat little trick I came up with is to automatically paste the correct value
+into the clipboard, so I only have to insert it at the right location.
+
+A [fish](https://fishshell.com/) script to fix the mistake could look like this:
+
+```fish
+sqlite3 \
+  ~/TaskLite/main.db \
+  "SELECT ulid FROM tasks WHERE closed_utc LIKE '%2024-02-26%'" \
+| while read ulid \
+    ; echo "$ulid" \
+    ; and \
+      sqlite3 \
+        ~/TaskLite/backups/2024-02-14t1949.db \
+        "SELECT json_extract(metadata, '\$.end') FROM tasks WHERE ulid == '$ulid'" \
+      | tee /dev/tty \
+      | pbcopy \
+    ; and tl edit "$ulid" \
+  ; end
+```
