@@ -35,7 +35,7 @@ jobs:
             ${{runner.os}}-stack
 
       - name: Install TaskLite CLI tool
-        run: stack install tasklite-core
+        run: stack install tasklite
 
       - name: Run test suite
         run: stack test
@@ -71,7 +71,7 @@ jobs:
           stack-no-global: true
 
       - name: Install TaskLite CLI tool
-        run: stack install tasklite-core
+        run: stack install tasklite
 
       - name: Run test suite
         run: stack test
@@ -125,7 +125,7 @@ jobs:
   #       run: choco install haskell-stack
 
   #     - name: Install dependencies
-  #       run: stack install tasklite-core
+  #       run: stack install tasklite
 
   #     - name: Upload Windows Release
   #       uses: actions/upload-artifact@v4
