@@ -12,12 +12,37 @@ packages:
   original:
     hackage: aeson-2.2.1.0
 - completed:
-    hackage: simple-sql-parser-0.6.0@sha256:ce8f602fa81001287deb25af7b711fc45e1cdf36ff7702edde5dee2358f19a37,5580
+    hackage: airgql-0.7.1.2@sha256:43e5f5d98391b4515a71489498a1a60e9e3baef6a7e23e74d3e45ef8ba3c5c92,6971
     pantry-tree:
-      sha256: cd333c976b4b12425d0eed28749884551a4595dd249cc6d6b75c34e4ce7688cc
-      size: 2752
+      sha256: 3fbb535a536df207b8c3173c95406deaebf5cf931566cc79442b5fec3cefdd28
+      size: 1722
   original:
-    hackage: simple-sql-parser-0.6.0
+    hackage: airgql-0.7.1.2
+- completed:
+    hackage: double-x-encoding-1.2.1@sha256:9dfc5a74ad82f507a5adeeddc7e32545cde04d11716fc44cd9bd2160bb38fb4c,1813
+    pantry-tree:
+      sha256: 9d0d9316d3da245a690dabecee9fb1797a10e09344758e9b8e7f7cb2728b5c04
+      size: 237
+  original:
+    hackage: double-x-encoding-1.2.1
+- completed:
+    hackage: graphql-spice-1.0.2.0@sha256:97d22da8ec38342408bcd237e91e76ffcdad4f14df666f62b0b1ccba6bf39b87,2000
+    pantry-tree:
+      sha256: d60774d462c7c0af08c82b3f754e0ac49e598640e382c417e1809880192747cb
+      size: 937
+  original:
+    hackage: graphql-spice-1.0.2.0
+- completed:
+    name: simple-sql-parser
+    pantry-tree:
+      sha256: a7f399e93b6cb3056e43702b57ecda1a6a86dfdbeca4361ae3d2d27518ba4fe7
+      size: 3846
+    sha256: 5731c4471e011dede78b8f1d8812dd5eeb1c79024307f0b03f1855f9028e43e0
+    size: 137333
+    url: https://github.com/Airsequel/simple-sql-parser/archive/680f2b77c53fcc086dc7d5f498f764ad2235b828.tar.gz
+    version: 0.6.1
+  original:
+    url: https://github.com/Airsequel/simple-sql-parser/archive/680f2b77c53fcc086dc7d5f498f764ad2235b828.tar.gz
 - completed:
     name: iso8601-duration
     pantry-tree:
@@ -31,7 +56,7 @@ packages:
     url: https://github.com/ad-si/iso8601-duration/archive/15822155a51831fbcd75a3bb5cb608a731a0461b.tar.gz
 snapshots:
 - completed:
-    sha256: 6f0bea3ba5b07360f25bc886e8cff8d847767557a492a6f7f6dcb06e3cc79ee9
-    size: 712905
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/13.yaml
-  original: lts-22.13
+    sha256: e5cac927cf7ccbd52aa41476baa68b88c564ee6ddc3bc573dbf4210069287fe7
+    size: 713340
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/19.yaml
+  original: lts-22.19

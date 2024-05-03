@@ -45,6 +45,7 @@ import Protolude (
  )
 import Protolude qualified as P
 
+import AirGQL.Config qualified as AirGQL
 import Control.Monad.Catch (catchAll)
 import Data.Aeson as Aeson (KeyValue ((.=)), encode, object)
 import Data.FileEmbed (embedStringFile, makeRelativeToProject)
@@ -214,6 +215,7 @@ import Lib (
   waitTasks,
  )
 import Migrations (runMigrations)
+import Server (startServer)
 import System.Environment (getProgName)
 import Utils (
   IdText,
@@ -337,6 +339,7 @@ data Command
     Alias Text (Maybe [Text])
   | Help
   | PrintConfig
+  | StartServer
   | UlidToUtc Text
   | ExternalCommand Text (Maybe [Text])
   deriving (Show, Eq)
@@ -850,6 +853,11 @@ commandParser conf =
     <> command "config" (toParserInfo (pure PrintConfig)
         "Print current configuration of TaskLite")
 
+    <> command "server" (toParserInfo (pure StartServer)
+        "Start an API server with several endpoints \
+        \for data access and management \
+        \(including a GraphQL endpoint powered by AirGQL)")
+
     -- <> command "verify" (toParserInfo (pure Verify)
     --     "Verify the integrity of the database")
 
@@ -1233,6 +1241,7 @@ executeCLiCommand conf now connection progName args = do
         Version -> pure $ pretty versionSlug <> hardline
         Help -> pure $ getHelpText progName conf
         PrintConfig -> pure $ pretty conf
+        StartServer -> startServer AirGQL.defaultConfig conf
         Alias alias _ -> pure $ aliasWarning alias
         UlidToUtc ulid -> pure $ pretty $ ulid2utc ulid
         ExternalCommand cmd argsMb -> handleExternalCommand conf cmd argsMb

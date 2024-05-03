@@ -36,7 +36,6 @@ import Test.Hspec (
   describe,
   hspec,
   it,
-  pendingWith,
   shouldBe,
   shouldContain,
   shouldSatisfy,

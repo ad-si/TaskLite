@@ -50,6 +50,7 @@ library:
   source-dirs: source
   dependencies:
     - aeson
+    - airgql
     - ansi-terminal
     - bytestring
     - cassava
@@ -76,6 +77,10 @@ library:
     - QuickCheck
     - quickcheck-instances
     - random
+    - servant
+    - servant-blaze
+    - servant-multipart
+    - servant-server
     - simple-sql-parser
     - sqlite-simple
     - sqlite-simple
@@ -86,7 +91,12 @@ library:
     - ulid
     - unix
     - vector
+    - wai
+    - wai-cors
+    - wai-app-static
+    - warp
     - yaml
+    - wai-extra
 
 executables:
   tasklite:

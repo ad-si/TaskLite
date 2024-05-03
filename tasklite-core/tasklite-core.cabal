@@ -41,6 +41,7 @@ library
       Lib
       Migrations
       Note
+      Server
       SqlUtils
       Task
       TaskToNote
@@ -66,6 +67,7 @@ library
   build-depends:
       QuickCheck
     , aeson
+    , airgql
     , ansi-terminal
     , base >=4.7 && <5
     , bytestring
@@ -91,6 +93,10 @@ library
     , protolude
     , quickcheck-instances
     , random
+    , servant
+    , servant-blaze
+    , servant-multipart
+    , servant-server
     , simple-sql-parser
     , sqlite-simple
     , syb
@@ -99,6 +105,11 @@ library
     , ulid
     , unix
     , vector
+    , wai
+    , wai-app-static
+    , wai-cors
+    , wai-extra
+    , warp
     , yaml
   default-language: GHC2021
 

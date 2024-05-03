@@ -1,5 +1,6 @@
 # ATTENTION: Also update the version in the Dockerfile
-resolver: lts-22.13
+resolver: lts-22.19
+
 packages:
   - huzzy
   - tasklite-core
@@ -7,13 +8,24 @@ packages:
 
 extra-deps:
   - aeson-2.2.1.0
-  # TODO: Upgrade after 0.7.x includes missing megaparsec dependency
-  - simple-sql-parser-0.6.0
+  - airgql-0.7.1.2
+  - double-x-encoding-1.2.1
+  - graphql-spice-1.0.2.0
+
+  - github: Airsequel/simple-sql-parser
+    commit: 680f2b77c53fcc086dc7d5f498f764ad2235b828
 
   - github: ad-si/iso8601-duration
     commit: 15822155a51831fbcd75a3bb5cb608a731a0461b
 
 allow-newer: true
+
+flags:
+  aeson-pretty:
+    lib-only: true
+
+  airgql:
+    lib-only: true
 
 # Build TaskLite in a container
 # docker:
