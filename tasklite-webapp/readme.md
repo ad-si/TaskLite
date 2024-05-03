@@ -1,8 +1,9 @@
-# TaskLite Airsequel App
+# TaskLite Web App
 
-App for a [TaskLite](tasklite.org) database
-hosted on [Airsequel](airsequel.com)
-written in [Elm](elm-lang.org).
+The TaskLite web app is a simple [Elm Land](https://elm.land/) app
+backed by an [AirGQL](https://github.com/Airsequel/AirGQL) GraphQL server.
+
+![Screenshot of web app](images/2024-05-03t1220_screenshot.png)
 
 
 ## Development
