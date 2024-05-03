@@ -6,11 +6,11 @@
 !/stack.yaml
 !/docker-stack.yaml
 
-!/huzzy
-/huzzy/huzzy.cabal
+!/tasklite
+/tasklite/.stack-work
 
 !/tasklite-core
 /tasklite-core/.stack-work
 
-!/tasklite-server
-/tasklite-server/.stack-work
+!/tasklite-app
+/tasklite-app/.stack-work

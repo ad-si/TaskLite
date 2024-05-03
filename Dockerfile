@@ -5,7 +5,9 @@ WORKDIR /tasklite
 
 COPY stack.yaml stack.yaml
 
-COPY huzzy huzzy
+COPY tasklite/README.md tasklite/README.md
+COPY tasklite/example-config.yaml tasklite/example-config.yaml
+COPY tasklite/package.yaml tasklite/package.yaml
 
 COPY tasklite-core/README.md tasklite-core/README.md
 COPY tasklite-core/example-config.yaml tasklite-core/example-config.yaml

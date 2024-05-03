@@ -13,7 +13,6 @@ start-app:
 # Explicitly run tests for each package for better console output
 .PHONY: test
 test:
-	stack test --fast huzzy
 	stack test --fast tasklite-core
 	stack test --fast tasklite
 
@@ -77,7 +76,6 @@ docker-build:
 clean:
 	rm -rf .stack-work
 	rm -rf docs
-	rm -rf huzzy/.stack-work
 	rm -rf tasklite-app/.stack-work
 	rm -rf tasklite-core/.stack-work
 	rm -rf tasklite/.stack-work

@@ -188,7 +188,7 @@ import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
 import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
-import Text.Huzzy qualified as Huzzy
+import Text.Fuzzily qualified as Fuzzily
 import Text.ParserCombinators.ReadP as ReadP (
   ReadP,
   char,
@@ -1550,8 +1550,8 @@ findTask connection aPattern = do
         & T.replace "\":" "\": "
         & T.replace "\"" ""
     matchFunc =
-      Huzzy.match
-        Huzzy.IgnoreCase
+      Fuzzily.match
+        Fuzzily.IgnoreCase
         (preTag, postTag)
         identity
         aPattern
@@ -1568,11 +1568,11 @@ findTask connection aPattern = do
             matchFunc (metaNorm mbMetadata)
           , matchFunc ulid
           ]
-        highestScore = P.maximum $ 0 : (catMaybes scoreParts <&> Huzzy.score)
+        highestScore = P.maximum $ 0 : (catMaybes scoreParts <&> Fuzzily.score)
         combinedText =
           scoreParts
             & catMaybes
-            <&> (Huzzy.rendered >>> reflow)
+            <&> (Fuzzily.rendered >>> reflow)
             & P.intersperse mempty
             & vcat
       in

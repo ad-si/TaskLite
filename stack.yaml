@@ -2,7 +2,6 @@
 resolver: lts-22.19
 
 packages:
-  - huzzy
   - tasklite
   - tasklite-core
   # - tasklite-app
@@ -11,6 +10,7 @@ extra-deps:
   - aeson-2.2.1.0
   - airgql-0.7.1.2
   - double-x-encoding-1.2.1
+  - fuzzily-0.2.0.0
   - graphql-spice-1.0.2.0
 
   - github: Airsequel/simple-sql-parser
