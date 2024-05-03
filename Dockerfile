@@ -15,10 +15,10 @@ COPY tasklite-core/package.yaml tasklite-core/package.yaml
 
 RUN stack install --only-dependencies tasklite-core
 
-
 ########## Install CLI tool ##########
 
 COPY tasklite-core tasklite-core
+COPY tasklite tasklite
 
 # Needed for retrieving the version number
 COPY .git .git
@@ -27,7 +27,7 @@ COPY .git .git
 RUN mkdir -p /etc/stack
 RUN echo "allow-different-user: true" >> /etc/stack/config.yaml
 
-RUN stack install tasklite-core
+RUN stack install tasklite
 
 
 # Same OS version as the builder image
@@ -35,7 +35,7 @@ FROM haskell:9.6.4-slim-buster
 RUN apt-get update && \
     apt-get install -y libgmp10
 COPY --from=builder \
-    /tasklite/tasklite-core/example-config.yaml \
+    /tasklite/tasklite/example-config.yaml \
     /root/.config/tasklite/config.yaml
 COPY --from=builder /root/.local/bin/tasklite /usr/local/bin/tasklite
 
