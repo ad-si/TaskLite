@@ -157,7 +157,7 @@ parseUtc utcText =
   let
     utcString = unpack $ T.toLower utcText
 
-    -- TOOD: Remove after https://github.com/vincenthz/hs-hourglass/issues/50
+    -- TODO: Remove after https://github.com/vincenthz/hs-hourglass/issues/50
     addSpaceAfter10 = T.intercalate " " . T.chunksOf 10
     addSpaceAfter13 = T.intercalate " " . T.chunksOf 13
     unixMicro = "EPOCH ms us" :: [Char]

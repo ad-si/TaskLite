@@ -4,15 +4,15 @@ module Helpers where
 
 import Protolude as P hiding (get, put)
 
+import Control.Lens
+import Crypto.BCrypt
 import Crypto.JOSE.JWS (CompactJWS)
 import Crypto.JWT as Crypto hiding (param)
-import Crypto.BCrypt
-import Control.Lens
-import Data.Aeson as Aeson (Value(..), toJSON, decode, object)
+import Data.Aeson as Aeson (Value (..), decode, object, toJSON)
+import Data.HashMap.Lazy (lookup)
 import Data.Text.Encoding as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
-import Data.HashMap.Lazy (lookup)
 
 import Data.Acid as Acid
 import Data.Time
@@ -20,8 +20,8 @@ import Network.HTTP.Types.Status
 import Web.Scotty as Scotty
 
 import Database
-import DbUser
 import DbIdea
+import DbUser
 import PostIdea
 import Types
 
@@ -48,22 +48,24 @@ loginToPartialDbUser (LoginUser email password) =
   credentialsToDbUser "" email password
 
 
-credentialsToDbUser :: Text ->  Text -> Text -> IO DbUser
+credentialsToDbUser :: Text -> Text -> Text -> IO DbUser
 credentialsToDbUser name email password = do
-  newHash <- hashPasswordUsingPolicy
-            HashingPolicy
-              { preferredHashCost = 10
-              , preferredHashAlgorithm = "$2b$"
-              }
-            (T.encodeUtf8 password)
+  newHash <-
+    hashPasswordUsingPolicy
+      HashingPolicy
+        { preferredHashCost = 10
+        , preferredHashAlgorithm = "$2b$"
+        }
+      (T.encodeUtf8 password)
 
   refresh_token <- getRefreshToken
 
-  pure $ DbUser
-    { password_hash = T.decodeUtf8 $ fromMaybe "" newHash
-    , refresh_token = Just refresh_token
-    , ..
-    }
+  pure $
+    DbUser
+      { password_hash = T.decodeUtf8 $ fromMaybe "" newHash
+      , refresh_token = Just refresh_token
+      , ..
+      }
 
 
 getAudienceFromJWT :: TL.Text -> Either Text Text
@@ -81,20 +83,19 @@ getAudienceFromJWT jwtBS =
 
           strToMaybe = \case
             (Just (String s)) -> Just s
-            _                 -> Nothing
+            _ -> Nothing
 
           payloadMaybe =
             (strToMaybe stringValMaybe)
-            <&> P.encodeUtf8
-            >>= preview base64url
-            >>= Aeson.decode
+              <&> P.encodeUtf8
+              >>= preview base64url
+              >>= Aeson.decode
         in
           case payloadMaybe of
             Just (Object payloadObj) ->
               let emailMaybe = strToMaybe $ lookup "aud" payloadObj
-              in note "Payload does not contain an audience" emailMaybe
+              in  note "Payload does not contain an audience" emailMaybe
             _ -> Left $ "JWT does not contain a payload"
-
       _ -> Left "JWT payload is not an object"
 
 
@@ -150,11 +151,9 @@ validateAndAddIdea database emailAddress claimsResult ideaResult =
     (Left error, _) -> do
       status status400
       json $ toJsonError $ show error
-
     (_, Left error) -> do
       status status400
       json $ toJsonError error
-
     (Right _, Right verifiedIdea) -> do
       newId <- liftIO getId
       now <- liftIO getCurrentTime
@@ -181,24 +180,23 @@ validateAndReplaceIdea database emailAddress id claimsResult ideaResult =
     (Left error, _) -> do
       status status400
       json $ toJsonError $ show error
-
     (_, Left error) -> do
       status status400
       json $ toJsonError error
-
     (Right _, Right verifiedIdea) -> do
       now <- liftIO getCurrentTime
       let
         newDbIdea = PostIdea.toDbIdea id emailAddress now verifiedIdea
 
-      updateResult <- liftIO
-        $ update database $ UpdateIdeaIfBy emailAddress id newDbIdea
+      updateResult <-
+        liftIO $
+          update database $
+            UpdateIdeaIfBy emailAddress id newDbIdea
 
       case updateResult of
-        Left (statusCode, errorMesage) -> do
+        Left (statusCode, errorMessage) -> do
           status statusCode
-          json $ toJsonError errorMesage
+          json $ toJsonError errorMessage
         Right _ -> do
           status ok200
           json $ DbIdea.toIdea newDbIdea
-

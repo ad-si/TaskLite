@@ -551,7 +551,7 @@ runMigrations _ connection = do
     migrationsUpLinted = do
       currentVersion <-
         maybeToEither
-          "`PRAGMA user_verison` does not return current version"
+          "`PRAGMA user_version` does not return current version"
           (P.head currentVersionList)
 
       -- Check if duplicate user versions are defined

@@ -1,4 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use uncurry" #-}
 
 {-|
 Datatype to represent a task as stored in the `tasks` table
@@ -169,10 +172,10 @@ instance Arbitrary DerivedState where
  | detailed explanation of the different states
  | and how they relate to each other
 -}
-type StateHierachy = (DerivedState, DerivedState)
+type StateHierarchy = (DerivedState, DerivedState)
 
 
-instance {-# OVERLAPS #-} Pretty StateHierachy where
+instance {-# OVERLAPS #-} Pretty StateHierarchy where
   pretty stateH =
     ( if fst stateH == snd stateH
         then show $ fst stateH
@@ -231,36 +234,36 @@ derivedStateToQuery = \case
   IsBlocked -> "" -- TODO
 
 
-getStateHierarchy :: DateTime -> Task -> StateHierachy
-getStateHierarchy now task =
+getStateHierarchy :: DateTime -> Task -> StateHierarchy
+getStateHierarchy now task = do
   let
     nowTxt = pack $ timePrint (utcFormat defaultConfig) now
-  in
-    case Task.state task of
-      Just Done -> (IsClosed, IsDone)
-      Just Obsolete -> (IsClosed, IsObsolete)
-      Just Deletable -> (IsClosed, IsDeletable)
-      Nothing -> case closed_utc task of
-        Just _ -> (IsClosed, IsClosed)
-        Nothing -> case review_utc task of
-          Just val ->
-            if val > nowTxt
-              then (IsOpen, IsWaiting)
-              else (IsOpen, IsReview)
-          Nothing -> case waiting_utc task of
-            Just _ -> (IsOpen, IsWaiting)
-            Nothing -> case (ready_utc task, awake_utc task) of
-              (Just readyUtc, Just awakeUtc) ->
-                if readyUtc < nowTxt && awakeUtc < nowTxt
-                  then (IsOpen, IsReady)
-                  else
-                    if readyUtc > nowTxt && awakeUtc < nowTxt
-                      then (IsOpen, IsAwake)
-                      else (IsOpen, IsAsleep)
-              (Just readyUtc, Nothing) | readyUtc < nowTxt -> (IsOpen, IsReady)
-              (Nothing, Just awakeUtc) | awakeUtc < nowTxt -> (IsOpen, IsAwake)
-              (Nothing, Just awakeUtc) | awakeUtc > nowTxt -> (IsOpen, IsAsleep)
-              _ -> (IsOpen, IsOpen)
+
+  case Task.state task of
+    Just Done -> (IsClosed, IsDone)
+    Just Obsolete -> (IsClosed, IsObsolete)
+    Just Deletable -> (IsClosed, IsDeletable)
+    Nothing -> case closed_utc task of
+      Just _ -> (IsClosed, IsClosed)
+      Nothing -> case review_utc task of
+        Just val ->
+          if val > nowTxt
+            then (IsOpen, IsWaiting)
+            else (IsOpen, IsReview)
+        Nothing -> case waiting_utc task of
+          Just _ -> (IsOpen, IsWaiting)
+          Nothing -> case (ready_utc task, awake_utc task) of
+            (Just readyUtc, Just awakeUtc) ->
+              if readyUtc < nowTxt && awakeUtc < nowTxt
+                then (IsOpen, IsReady)
+                else
+                  if readyUtc > nowTxt && awakeUtc < nowTxt
+                    then (IsOpen, IsAwake)
+                    else (IsOpen, IsAsleep)
+            (Just readyUtc, Nothing) | readyUtc < nowTxt -> (IsOpen, IsReady)
+            (Nothing, Just awakeUtc) | awakeUtc < nowTxt -> (IsOpen, IsAwake)
+            (Nothing, Just awakeUtc) | awakeUtc > nowTxt -> (IsOpen, IsAsleep)
+            _ -> (IsOpen, IsOpen)
 
 
 newtype Ulid = Ulid Text

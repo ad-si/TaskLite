@@ -125,7 +125,7 @@ uuids           | -       | Filtered list of UUIDs
 \_aliases       | -       | List of active aliases
 \_columns       | -       | List of supported columns
 \_commands      | -       | List of supported commands
-\_config        | -       | List of confguration setting names
+\_config        | -       | List of configuration setting names
 \_context       | -       | List of defined context names
 [\_get]         | -       | DOM accessor
 \_ids           | -       | Filtered list of task IDs

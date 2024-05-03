@@ -238,7 +238,7 @@ viewTodo now todo =
                     ]
                 , ifDisabledElse
                     (title <|
-                        "Currenly not supported.\n"
+                        "Currently not supported.\n"
                             ++ "Please use the CLI to complete this task."
                     )
                     (\_ -> css [])
@@ -627,7 +627,7 @@ setTodoCompleted closedUtc ulid =
                                     (\c -> { c | eq = Present ulid })
 
                         -- TODO: Add when Airsequel supports
-                        --       several filters simulatenously
+                        --       several filters simultaneously
                         -- recurrence_duration =
                         --     Present <|
                         --         buildStringComparison
