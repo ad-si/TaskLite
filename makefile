@@ -74,10 +74,10 @@ docker-build:
 
 .PHONY: clean
 clean:
-	-rm -r .stack-work
-	-rm -r huzzy/.stack-work
-	-rm -r tasklite-api/.stack-work
-	-rm -r tasklite-app/.stack-work
-	-rm -r tasklite-core/.stack-work
-	-rm -r tasklite-server/.stack-work
-	-rm -r docs
+	rm -rf .stack-work
+	rm -rf huzzy/.stack-work
+	rm -rf tasklite-api/.stack-work
+	rm -rf tasklite-app/.stack-work
+	rm -rf tasklite-core/.stack-work
+	rm -rf tasklite-server/.stack-work
+	rm -rf docs
