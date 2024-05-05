@@ -130,6 +130,7 @@ type alias Model =
     , newTask : String
     , submissionStatus : RemoteData (Graphql.Http.Error Int) Int
     , now : Posix
+    , tags : List String
     }
 
 
@@ -185,6 +186,25 @@ viewMaybe maybeValue viewFunc =
 
         Just value ->
             viewFunc value
+
+
+viewTagStr : String -> Html.Styled.Html Msg
+viewTagStr tagsStr =
+    span []
+        (tagsStr
+            |> String.split ","
+            |> List.map
+                (\tag ->
+                    a
+                        [ css
+                            [ text_color blue_400
+                            , mr_2
+                            ]
+                        , href <| "/tags/" ++ tag
+                        ]
+                        [ text <| "+" ++ tag ]
+                )
+        )
 
 
 viewTodo : Posix -> TodoItem -> Html.Styled.Html Msg
@@ -305,24 +325,7 @@ viewTodo now todo =
                         ]
                         [ text due_utc ]
                 )
-            , viewMaybe todo.tags
-                (\tagsStr ->
-                    span []
-                        (tagsStr
-                            |> String.split ","
-                            |> List.map
-                                (\tag ->
-                                    a
-                                        [ css
-                                            [ text_color blue_400
-                                            , mr_2
-                                            ]
-                                        , href <| "/tags/" ++ tag
-                                        ]
-                                        [ text <| "+" ++ tag ]
-                                )
-                        )
-                )
+            , viewMaybe todo.tags viewTagStr
             ]
         , div
             [ css
@@ -383,9 +386,9 @@ viewBody model =
         ]
         [ main_
             [ css [ max_w_3xl, mx_auto, px_4, py_8 ] ]
-            [ nav [ css [ flex ] ]
+            [ nav [ css [ flex, items_baseline ] ]
                 [ h1
-                    [ css [ mb_4, inline_block, mr_4, flex_1 ] ]
+                    [ css [ mb_4, inline_block, mr_4 ] ]
                     [ a
                         [ href "/"
                         , css
@@ -396,18 +399,28 @@ viewBody model =
                         ]
                         [ text "TaskLite" ]
                     ]
-                , button
-                    [ css
-                        [ mb_4
-                        , border_none
-                        , text_2xl
-                        , cursor_pointer
-                        , bg_color transparent
-                        , dark [ opacity_60, hover [ opacity_100 ] ]
+                , div [ css [ text_color gray_500 ] ]
+                    (model.tags
+                        |> List.map
+                            (\tag ->
+                                span [ css [ mr_2 ] ] [ text <| "+" ++ tag ]
+                            )
+                    )
+                , div
+                    [ css [ flex, flex_1, justify_end ] ]
+                    [ button
+                        [ css
+                            [ mb_4
+                            , border_none
+                            , text_2xl
+                            , cursor_pointer
+                            , bg_color transparent
+                            , dark [ opacity_60, hover [ opacity_100 ] ]
+                            ]
+                        , onClick ReloadTasks
                         ]
-                    , onClick ReloadTasks
+                        [ text "🔁" ]
                     ]
-                    [ text "🔁" ]
                 ]
             , let
                 inputForm =
@@ -539,34 +552,40 @@ getTodos =
 
 getTodosWithTag : String -> Cmd Msg
 getTodosWithTag tag =
-    let
-        setTags filter =
-            { filter
-                | tags =
+    if String.contains "," tag then
+        -- TODO: Add support for specifying multiple tags
+        Cmd.none
+
+    else
+        let
+            setTags filter =
+                { filter
+                    | tags =
+                        Present <|
+                            buildStringComparison
+                                (\c ->
+                                    { c
+                                        | like =
+                                            Present <| "%" ++ tag ++ "%"
+                                    }
+                                )
+                    , closed_utc =
+                        Present <|
+                            buildStringComparison (\c -> { c | eq = Null })
+                }
+        in
+        Query.tasks_view
+            (\_ ->
+                { filter = Present <| buildTasks_view_filter setTags
+                , order_by =
                     Present <|
-                        buildStringComparison
-                            (\c ->
-                                { c
-                                    | like =
-                                        Present <| "%" ++ tag ++ "%"
-                                }
-                            )
-                , closed_utc =
-                    Present <| buildStringComparison (\c -> { c | eq = Null })
-            }
-    in
-    Query.tasks_view
-        (\_ ->
-            { filter = Present <| buildTasks_view_filter setTags
-            , order_by =
-                Present <|
-                    buildTasks_view_order_by
-                        (\o -> { o | priority = Present Desc })
-            }
-        )
-        tasksViewSelection
-        |> Graphql.Http.queryRequest graphqlApiUrl
-        |> Graphql.Http.send (RemoteData.fromResult >> GotTasksResponse)
+                        buildTasks_view_order_by
+                            (\o -> { o | priority = Present Desc })
+                }
+            )
+            tasksViewSelection
+            |> Graphql.Http.queryRequest graphqlApiUrl
+            |> Graphql.Http.send (RemoteData.fromResult >> GotTasksResponse)
 
 
 insertTodo : Posix -> Ulid -> String -> Cmd Msg
@@ -715,24 +734,18 @@ routeParser =
         ]
 
 
-handleUrl : Url -> Cmd Msg
-handleUrl url =
-    let
-        route =
-            url
-                |> parse routeParser
-                |> Maybe.withDefault NotFound
-    in
-    case Debug.log "route" route of
+handleRoute : Route -> Cmd Msg
+handleRoute route =
+    case route of
         Home ->
             Cmd.batch
                 [ getTodos
                 , Task.perform ReceivedTime Time.now
                 ]
 
-        Tags tag ->
+        Tags tagStr ->
             Cmd.batch
-                [ getTodosWithTag tag
+                [ getTodosWithTag tagStr
                 , Task.perform ReceivedTime Time.now
                 ]
 
@@ -745,13 +758,24 @@ handleUrl url =
 
 init : Flags -> Url -> Key -> ( Model, Cmd Msg )
 init _ url key =
+    let
+        route =
+            url |> parse routeParser |> Maybe.withDefault NotFound
+    in
     ( { key = key
       , remoteTodos = RemoteData.Loading
       , newTask = ""
       , submissionStatus = RemoteData.NotAsked
       , now = Time.millisToPosix 0
+      , tags =
+            case route of
+                Tags tagStr ->
+                    String.split "," tagStr
+
+                _ ->
+                    []
       }
-    , handleUrl url
+    , handleRoute route
     )
 
 
@@ -863,7 +887,27 @@ update msg model =
             )
 
         UrlChanged url ->
-            ( { model | remoteTodos = RemoteData.Loading }, handleUrl url )
+            let
+                _ =
+                    Debug.log "UrlChanged" url
+
+                route =
+                    url
+                        |> parse routeParser
+                        |> Maybe.withDefault NotFound
+            in
+            ( { model
+                | remoteTodos = RemoteData.Loading
+                , tags =
+                    case route of
+                        Tags tagStr ->
+                            String.split "," tagStr
+
+                        _ ->
+                            []
+              }
+            , handleRoute route
+            )
 
         ClickedLink urlRequest ->
             case urlRequest of
