@@ -9,6 +9,8 @@
     - [Hooks](./cli/hooks.md)
 
 - [Web Based GUIs](./web_based_guis/main.md)
+    - [Web App](./web_based_guis/web_app.md)
+    - [SQLite Web Frontends](./web_based_guis/sqlite_web_frontends.md)
 
 - [Haskell Library](./haskell_library/main.md)
 
