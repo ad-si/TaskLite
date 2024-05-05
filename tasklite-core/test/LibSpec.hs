@@ -24,7 +24,15 @@ import Test.Hspec (
 import Data.Hourglass (DateTime)
 import Data.Text qualified as T
 import ImportExport (PreEdit (ApplyPreEdit), editTaskByTask)
-import Lib (addTag, countTasks, deleteNote, insertRecord, insertTags, newTasks)
+import Lib (
+  addTag,
+  countTasks,
+  deleteNote,
+  infoTask,
+  insertRecord,
+  insertTags,
+  newTasks,
+ )
 import Task (Task (body, closed_utc, state, ulid), TaskState (Done), zeroTask)
 import TaskToNote (TaskToNote (TaskToNote))
 import TaskToNote qualified
@@ -36,6 +44,17 @@ task1 =
   zeroTask
     { ulid = "01hs68z7mdg4ktpxbv0yfafznq"
     , body = "New task 1"
+    }
+
+
+taskMultiLine :: Task
+taskMultiLine =
+  zeroTask
+    { ulid = "01hx48cnjhp18mts3c44zk3gen"
+    , body =
+        "New task\n\
+        \with several lines\n\
+        \and line breaks"
     }
 
 
@@ -111,6 +130,16 @@ spec now = do
             task1
         let errMsg = "Tag \"" <> T.unpack existTag <> "\" is already assigned"
         show cliOutput `shouldContain` errMsg
+
+    it "keeps line breaks of multi-line tasks in info view" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        insertRecord "tasks" memConn taskMultiLine
+
+        cliOutput <- infoTask defaultConfig memConn taskMultiLine.ulid
+        show cliOutput
+          `shouldContain` "New task\n\
+                          \with several lines\n\
+                          \and line breaks"
 
     it "lets you delete a note" $ do
       withMemoryDb defaultConfig $ \memConn -> do

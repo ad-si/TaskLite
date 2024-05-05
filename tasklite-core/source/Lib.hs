@@ -1307,7 +1307,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         )
   in
     hardline
-      <> annotate bold (reflow $ FullTask.body taskV)
+      <> annotate bold (pretty taskV.body)
       <> hardline
       <> hardline
       <> ( if P.null tags
