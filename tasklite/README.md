@@ -3,9 +3,9 @@
 CLI task manager built with [Haskell] and [SQLite].
 
 <img
-  src='screenshots/withtag.svg'
-  alt="Screenshot of all TaskLite related tasks in the maintainer's database"
-  width='600'
+  src="screenshots/help-short.svg"
+  alt="Screenshot of TaskLite's help output"
+  width="600"
 />
 
 Check out [tasklite.org] for extensive documentation.
