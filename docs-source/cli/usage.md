@@ -4,6 +4,16 @@
 <!-- toc -->
 ---
 
+## Configuration
+
+It's a good idea to customize your config file
+at `~/.config/tasklite/config.yaml` before starting to use TaskLite.
+
+Check out the [example config file] for infos about available settings.
+
+[example config file]:
+  https://github.com/ad-si/TaskLite/blob/master/tasklite-core/example-config.yaml
+
 
 ## Help
 

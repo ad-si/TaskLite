@@ -32,49 +32,6 @@
 [makefile]: https://github.com/ad-si/TaskLite/blob/master/makefile
 
 
-## Generate Screenshots
-
-Use asciinema to generate the terminal recording:
-
-```sh
-asciinema rec \
-  --title 'TaskLite Help Page' \
-  --command 'tasklite help' \
-  --overwrite \
-  screenshots/recording.json
-```
-
-```sh
-asciinema rec \
-  --title 'TaskLite "withtag" Command' \
-  --command 'tasklite withtag tasklite' \
-  --overwrite \
-  screenshots/withtag.json
-```
-
-Change the size of the terminal in the recording.json file to:
-
-```json
-  "width": 80,
-  "height": 86,
-```
-
-Then use [svg-term] to generate the SVG image:
-
-```sh
-svg-term \
-  --no-cursor \
-  --at 99999 \
-  --window \
-  --term iterm2 \
-  --profile ~/dotfiles/terminal/adius.itermcolors \
-  < screenshots/recording.json \
-  > screenshots/recording.svg
-```
-
-[svg-term]: https://github.com/marionebl/svg-term-cli
-
-
 ## Ghcid
 
 Ghcid with color output for GHC 8.4 (probably obsolete in 8.6):
@@ -85,7 +42,7 @@ ghcid \
 ```
 
 
-## Hlint
+## HLint
 
 ```sh
 hlint \

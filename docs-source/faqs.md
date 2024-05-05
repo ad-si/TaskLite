@@ -181,12 +181,9 @@ We do not have access to any of your data!
 <details>
   <summary><small>Answer:</small></summary>
 
-There are several ways to stay up to date:
-
-- Visit the [official changelog](/changelog)
-- Join our subreddit at [/r/TaskLite](https://www.reddit.com/r/TaskLite/)
-- Follow the
-  [releases page on GitHub](https://github.com/ad-si/TaskLite/releases)
+- [Star TaskLite on GitHub](https://github.com/ad-si/TaskLite)
+    to get notified about new releases in your GitHub feed
+- Check out the [official changelog](/changelog.html)
 
 </details>
 

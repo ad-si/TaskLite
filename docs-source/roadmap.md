@@ -29,16 +29,13 @@ Check out the page "[Differences to Taskwarrior](/differences_taskwarrior)"
 for a detailed comparison.
 
 
-## Tasklite Core
+## More Features for Using It as a Personal Knowledge Base
 
-Currently the core of TaskLite and the CLI are somewhat mixed up in the code.
-I'd like to split them up, so that TaskLite Core can be used
-as a library in other applications
-which need to manage internal tasks / queues.
-
-Check out the page
-[Haskell API for Programmatic Usage](https://tasklite.org/usage/haskell_api)
-for more information.
+- [ ] Tasks can be a note
+- [ ] Tasks can be linked to each other
+  - [ ] Visualize the graph of linked tasks
+- [ ] Export to markdown files a la Zettelkasten apps like Obsidian
+- [ ] Export to PDF, Anki, etc.
 
 
 ## Syncing
@@ -51,27 +48,15 @@ Another good solution could be [Litestream](https://litestream.io),
 which continuously streams SQLite changes to S3-compatible storage.
 
 
-## Apps
-
-### Webapp
-
-I'd like to be able to run TaskLite on a cheap v-server in a dedicated
-server mode and have it host a simple REST API,
-and an [Elm](https://elm-lang.org) webapp consuming it.
-
-This would then be a good way to casually browse and edit the tasks
-in a more graphical way.
-
-
-### Mobile App
-
-There are no plans for a native mobile app.
-The webapp should be sufficient for most use cases.
-
-
-### Desktop App
+## Desktop App
 
 While there is already a prototype for a desktop app included in the code,
-I currently don't plan to further work on it any time soon.
-A webapp -- which could also be hosted locally --
-should be sufficient for most use cases.
+I currently don't plan to further work on it.
+The integrated webapp is sufficient for most use cases.
+However, I'm open to contributions!
+
+
+## Mobile App
+
+There are no plans for a native mobile app.
+The integrated webapp is sufficient for most use cases.

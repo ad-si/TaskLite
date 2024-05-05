@@ -2,11 +2,21 @@
 
 # Introduction
 
-TaskLite is a CLI task manager built with [Haskell] and [SQLite].
+TaskLite is a task manager built with [Haskell] and [SQLite].
+It includes a CLI tool, a GraphQL server, and a webapp.
 
 [Haskell]: https://haskell.org
 [SQLite]: https://sqlite.org
 
+
+## CLI
+
+<img
+  alt="Screenshot of a simple usage scenario"
+  src="images/usage.svg"
+/>
+
+<!--
 ```txt
 $ tl add Buy milk +groceries
 🆕 Added task "Buy milk" with id "01dd62xryn5fnzjgynkcy06spb"
@@ -22,8 +32,17 @@ sj   0    2019-06-12  Go running
 $ tl do pb
 ✅ Finished task "Buy milk" with id "01dd62xryn5fnzjgynkcy06spb"
 ```
+-->
 
-The Code is available on [GitHub].
+
+## Webapp
+
+![Screenshot of web app](images/webapp_screenshot.png)
+
+
+## Code
+
+The code is available on [GitHub].
 
 [GitHub]: https://github.com/ad-si/TaskLite
 
@@ -33,9 +52,10 @@ For help and ideas please come visit us at our [GitHub Discussions]!
 [GitHub Discussions]: https://github.com/ad-si/TaskLite/discussions
 
 
-### Latest Versions
+## Latest Versions
 
-- CLI {{#include ../tasklite-core/package.yaml:2}}
-- App {{#include ../tasklite-app/package.yaml:2}}
+- CLI: `{{#include ../tasklite/package.yaml:2}}`
+- Webapp: `{{#include ../tasklite-webapp/package.json:3}}`
 
-[Full Changelog](/changelog.html)
+For all versions and their changes,
+check out the [Changelog](/changelog.html).

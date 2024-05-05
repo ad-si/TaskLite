@@ -2,37 +2,33 @@
 
 - [Introduction](./introduction.md)
 
-- [Installation](./installation/readme.md)
-    - [CLI](./installation/cli.md)
-    - [Desktop App](./installation/desktop_app.md)
-    - [Web App](./installation/web_app.md)
+- [CLI](./cli/main.md)
+    - [Installation](./cli/installation.md)
+    - [Usage](./cli/usage.md)
+    - [Import](./cli/import.md)
+    - [Hooks](./cli/hooks.md)
 
-- [FAQs](./faqs.md)
+- [Web Based GUIs](./web_based_guis/main.md)
 
-- [Roadmap](./roadmap.md)
+- [Haskell Library](./haskell_library/main.md)
 
-- [Concepts](./concepts.md)
-    - [Repetition and Recurrence](./repetition_and_recurrence.md)
-
-- [Import](./import.md)
-
-- [Hooks](./hooks.md)
-
-- [Usage](./usage/readme.md)
-    - [CLI](./usage/cli.md)
-    - [Desktop App](./usage/desktop_app.md)
-    - [Web App](./usage/web_app.md)
-    - [REST API](./usage/rest_api.md)
-    - [Haskell API](./usage/haskell_api.md)
+- [Concepts](./concepts/main.md)
+    - [States](./concepts/states.md)
+    - [Repetition and Recurrence](./concepts/repetition_and_recurrence.md)
 
 - [Automation](./automation.md)
 
 - [Differences to Taskwarrior](./differences_taskwarrior.md)
 
-- [Performance](./performance.md)
+- [Changelog](./changelog.md)
+
+- [FAQs](./faqs.md)
+
+- [Roadmap](./roadmap.md)
+
+- [Related](./related.md)
 
 - [Development](./development.md)
 
-- [Changelog](./changelog.md)
-
-- [Related](./related.md)
+- [Archive](./archive/main.md)
+    - [Desktop App](./archive/desktop_app.md)

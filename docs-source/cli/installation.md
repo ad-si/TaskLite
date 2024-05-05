@@ -1,9 +1,8 @@
-# CLI Tool
+# Installation
 
 ---
 <!-- toc -->
 ---
-
 
 ## Prebuilt Binaries
 
@@ -23,8 +22,7 @@ as macOS prevents the execution of files downloaded via a browser.
 
 Furthermore you can get the latest CI builds on
 [GitHub's Actions page](https://github.com/ad-si/TaskLite/actions).
-They are quite stable since only tested and production ready
-code gets merged into the master branch.
+They are pretty stable if the build is successful due to the included tests.
 
 
 ### Linux
@@ -34,8 +32,7 @@ You can get the latest versions on
 
 Furthermore you can get the latest CI builds on
 [GitHub's Actions page](https://github.com/ad-si/TaskLite/actions).
-They are quite stable since only tested and production ready
-code gets merged into the master branch.
+They are pretty stable if the build is successful due to the included tests.
 
 
 ## Prebuilt Docker Image
@@ -91,14 +88,3 @@ To test the installation run:
 ```shell
 tasklite help
 ```
-
-
-## Configuration
-
-It's a good idea to customize your config file
-at `~/.config/tasklite/config.yaml` afterwards.
-
-Check out the [example config file] for infos about available settings.
-
-[example config file]:
-  https://github.com/ad-si/TaskLite/blob/master/tasklite-core/example-config.yaml
