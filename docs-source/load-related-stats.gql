@@ -1,0 +1,42 @@
+fragment Stats on Repository {
+  stargazers { totalCount }
+  mentionableUsers { totalCount }
+}
+
+query CountStargazers {
+  TaskLite: repository(owner: "ad-si", name: "TaskLite") { ...Stats }
+  yokadi: repository(owner: "agateau", name: "yokadi") { ...Stats }
+  toodles: repository(owner: "aviaviavi", name: "toodles") { ...Stats }
+  etmDgraham: repository(owner: "dagraham", name: "etm-dgraham") { ...Stats }
+  tdCli: repository(owner: "darrikonn", name: "td-cli") { ...Stats }
+  ff: repository(owner: "ff-notes", name: "ff") { ...Stats }
+  work: repository(owner: "g-w1", name: "work") { ...Stats }
+  taskwarrior: repository(owner: "GothenburgBitFactory", name: "taskwarrior") {
+    ...Stats }
+  pomodayV2: repository(owner: "huytd", name: "pomoday-v2") { ...Stats }
+  eagle: repository(owner: "im-n1", name: "eagle") { ...Stats }
+  Buku: repository(owner: "jarun", name: "Buku") { ...Stats }
+  vimOrgmode: repository(owner: "jceb", name: "vim-orgmode") { ...Stats }
+  gitPending: repository(owner: "kamranahmedse", name: "git-pending") {
+    ...Stats }
+  taskbook: repository(owner: "klauscfhq", name: "taskbook") { ...Stats }
+  dooit: repository(owner: "kraanzu", name: "dooit") { ...Stats }
+  dstask: repository(owner: "naggie", name: "dstask") { ...Stats }
+  smos: repository(owner: "NorfairKing", name: "smos") { ...Stats }
+  neorg: repository(owner: "nvim-neorg", name: "neorg") { ...Stats }
+  orgmode: repository(owner: "nvim-orgmode", name: "orgmode") { ...Stats }
+  todoman: repository(owner: "pimutils", name: "todoman") { ...Stats }
+  tracliTerminal: repository(owner: "ridvankaradag", name: "tracli-terminal") {
+    ...Stats }
+  eureka: repository(owner: "simeg", name: "eureka") { ...Stats }
+  t: repository(owner: "sjl", name: "t") { ...Stats }
+  taskell: repository(owner: "smallhadroncollider", name: "taskell") {
+    ...Stats }
+  todo_txtCli: repository(owner: "todotxt", name: "todo.txt-cli") { ...Stats }
+  ultralist: repository(owner: "ultralist", name: "ultralist") { ...Stats }
+  unfogCli: repository(owner: "unfog-io", name: "unfog-cli") { ...Stats }
+  ttdl: repository(owner: "VladimirMarkelov", name: "ttdl") { ...Stats }
+  nb: repository(owner: "xwmx", name: "nb") { ...Stats }
+  CommitTasks: repository(owner: "ZeroX-DG", name: "CommitTasks") { ...Stats }
+}
+

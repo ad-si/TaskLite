@@ -34,31 +34,31 @@ Name          | Description
 
 ### Stats
 
-Updated on 2024-01-17.
+Updated on 2024-05-05.
 
 <!-- Uses non breaking hyphens for date hyphens -->
 
 Nr|Name          |Stars|Commits|Contrib.| Code             | 1. Commit
 -:|--------------|----:|------:|-------:|:----------------:|----------
- 1|[nb]          | 6078|   7395|     20 |[Shell][nb]       |2014‑11‑12
- 2|[Buku]        | 5976|   2028|     68 |[Python][Buku]    |2015‑11‑02
- 3|[Todo.txt]    | 5391|    483|     66 |[Shell][TtxtGH]   |2009‑03‑05
- 4|[Neorg]       | 5253|   3121|    101 |[Lua][Neorg]      |2021‑04‑11
+ 1|[nb]          | 7495|   7395|     20 |[Shell][nb]       |2014‑11‑12
+ 2|[Buku]        | 6160|   2058|     69 |[Python][Buku]    |2015‑11‑02
+ 3|[Neorg]       | 5872|   3323|    108 |[Lua][Neorg]      |2021‑04‑11
+ 4|[Todo.txt]    | 5477|    483|     66 |[Shell][TtxtGH]   |2009‑03‑05
  5|[Org mode]    |~4000| ~25000|    543 |[EmacsLisp][OmC]  |2003‑01‑01
- 6|[Taskwarrior] | 3643|  11578|    140 |[C++][TwGH]       |2008‑04‑19
- 7|[Vim-OrgMode] | 3066|   1044|     47 |[Python][VomGH]   |2010‑10‑09
- 8|[Nvim-OrgMode]| 2594|    939|     53 |[Lua][NvomGH]     |2021‑05‑13
- 9|[Dooit]       | 1788|    908|     14 |[Python][Dooit]   |2022‑04‑17
- 9|[Toodles]     |  968|    211|     13 |[Haskell][TooGH]  |2018‑09‑04
-10|[Eureka]      |  718|    258|      8 |[Rust][Eureka]    |2017‑11‑20
-11|[Dstask]      |  752|    879|     13 |[Go][Dstask]      |2018‑12‑08
-12|[Todoman]     |  447|    965|     36 |[Python][TmGH]    |2015‑03‑29
-13|[Smos]        |  274|   2709|     23 |[Haskell][SmosGH] |2018‑07‑29
-14|[Unfog]       |  181|    198|      4 |[Haskell][Unfog]  |2019‑10‑22
-15|[td-cli]      |  181|    301|      5 |[Python][td-cli]  |2018‑06‑03
-16|[TTDL]        |  178|    238|      7 |[Rust][TTDL]      |2018‑12‑30
-17|[TaskLite]    |  159|    398|      5 |[Haskell][TLGH]   |2018‑06‑04
-18|[Etm]         |   40|   3773|      4 |[Python][Etm]     |2017‑09‑02
+ 6|[Taskwarrior] | 3904|  11650|    147 |[C++][TwGH]       |2008‑04‑19
+ 7|[Vim-OrgMode] | 3083|   1044|     47 |[Python][VomGH]   |2010‑10‑09
+ 8|[Nvim-OrgMode]| 2752|   1081|     55 |[Lua][NvomGH]     |2021‑05‑13
+ 9|[Dooit]       | 1908|    948|     14 |[Python][Dooit]   |2022‑04‑17
+ 9|[Toodles]     |  966|    211|     13 |[Haskell][TooGH]  |2018‑09‑04
+10|[Dstask]      |  770|    882|     14 |[Go][Dstask]      |2018‑12‑08
+11|[Eureka]      |  738|    258|      8 |[Rust][Eureka]    |2017‑11‑20
+12|[Todoman]     |  472|    974|     35 |[Python][TmGH]    |2015‑03‑29
+13|[Smos]        |  283|   2741|     23 |[Haskell][SmosGH] |2018‑07‑29
+14|[TTDL]        |  193|    247|      7 |[Rust][TTDL]      |2018‑12‑30
+15|[TaskLite]    |  191|    444|      5 |[Haskell][TLGH]   |2018‑06‑04
+16|[Unfog]       |  184|    198|      4 |[Haskell][Unfog]  |2019‑10‑22
+17|[td-cli]      |  184|    310|      2 |[Python][td-cli]  |2018‑06‑03
+18|[Etm]         |   40|   3879|      4 |[Python][Etm]     |2017‑09‑02
 
 
 ## Commercial Alternatives
@@ -113,18 +113,18 @@ Name          | Description
 
 ### Stats
 
-Updated on 2024-01-17.
+Updated on 2024-05-05.
 
 Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 -------------|----:|------:|-------:|:----------------:|----------
-[Taskbook]   | 8852|    232|     28 |[JavaScript][TbGH]|2018‑02‑12
-[Taskell]    | 1639|   1064|     10 |[Haskell][TllGH]  |2017‑11‑15
-[Ultralist]  |  941|    419|     19 |[Go][UlGH]        |2016‑04‑23
-[t]          |  737|     97|      9 |[Python][t]       |2009‑08‑26
-[Pomoday]    |  575|    165|     14 |[TypeScript][PGH] |2019‑10‑24
-[CommitTasks]|  295|     94|      4 |[JavaScript][CTGH]|2018‑08‑17
-[git-pending]|  288|     37|      2 |[JavaScript][gpGH]|2019‑06‑17
-[Ff]         |  187|    833|     10 |[Haskell][Ff]     |2017‑12‑29
+[Taskbook]   | 8888|    232|     28 |[JavaScript][TbGH]|2018‑02‑12
+[Taskell]    | 1703|   1064|     10 |[Haskell][TllGH]  |2017‑11‑15
+[Ultralist]  |  947|    419|     20 |[Go][UlGH]        |2016‑04‑23
+[t]          |  740|     97|      9 |[Python][t]       |2009‑08‑26
+[Pomoday]    |  577|    165|     14 |[TypeScript][PGH] |2019‑10‑24
+[git-pending]|  303|     37|      2 |[JavaScript][gpGH]|2019‑06‑17
+[CommitTasks]|  294|     94|      4 |[JavaScript][CTGH]|2018‑08‑17
+[Ff]         |  190|    833|     10 |[Haskell][Ff]     |2017‑12‑29
 [Yokadi]     |  129|   1159|     12 |[Python][YGH]     |2008‑08‑24
 [Tracli]     |   37|     62|      3 |[JavaScript][TrGH]|2019‑07‑15
 [Eagle]      |   27|     46|      1 |[Python][Eagle]   |2018‑10‑28
@@ -209,3 +209,26 @@ Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 
 [Yokadi]: https://yokadi.github.io/
 [YGH]: https://github.com/agateau/yokadi
+
+
+## How to Get Latest Stats
+
+You can run the GraphgQL query in
+[`load-related-stats.gql`](load-related-stats.gql`)
+in the GitHub GraphQL Explorer at
+[docs.github.com/en/graphql/overview/explorer](
+  https://docs.github.com/en/graphql/overview/explorer)
+to get the latest stats.
+
+Or you can use [Airput](https://github.com/Airsequel/Airput)
+to create an [Aisequel](https://www.airsequel.com) table with the stats.
+
+```sh
+AIRSEQUEL_DB_ID='01…' \
+AIRSEQUEL_API_TOKEN='ast_…' \
+GITHUB_TOKEN='ghp_…' \
+airput github-upload ad-si/TaskLite && \
+airput github-upload xwmx/nb && \
+airput github-upload jarun/Buku && \
+…
+```
