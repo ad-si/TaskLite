@@ -140,8 +140,8 @@ test-suite tasklite-test
       aeson
     , base >=4.18 && <5
     , hourglass
-    , hspec
-    , neat-interpolation
+    , hspec >=2.11 && <3.0
+    , neat-interpolation ==0.5.*
     , protolude >=0.3
     , sqlite-simple
     , tasklite-core
@@ -171,6 +171,6 @@ benchmark tasklite-bench
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
   build-depends:
       base >=4.18 && <5
-    , criterion
+    , criterion >=1.5 && <1.7
     , protolude >=0.3
   default-language: GHC2021
