@@ -86,6 +86,7 @@ import Protolude as P (
   (.),
   (<$>),
   (<&>),
+  (<=),
   (||),
  )
 import Protolude qualified as P
@@ -2775,7 +2776,10 @@ runFilter conf now connection exps = do
 
       if P.length errors > 0
         then dieWithError $ vsep (fmap ppInvalidFilter errors)
-        else formatTasksColor conf now tasks
+        else
+          if P.length tasks <= 0
+            then pure "No tasks available for the given filter."
+            else formatTasksColor conf now tasks
     _ -> dieWithError filterHelp
 
 
