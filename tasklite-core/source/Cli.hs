@@ -253,6 +253,7 @@ data Command
   | DoTasks [IdText]
   | DoOneTask IdText (Maybe [Text])
   | EndTasks [IdText]
+  | EndOneTask IdText (Maybe [Text])
   | TrashTasks [IdText]
   | DeleteTasks [IdText]
   | RepeatTasks Iso.Duration [IdText]
@@ -506,7 +507,13 @@ commandParser conf =
     <> command "doall" (toParserInfo (DoTasks <$> some (strArgument idsVar))
         "Mark one or more tasks as done")
 
-    <> command "end" (toParserInfo (EndTasks <$> some (strArgument idsVar))
+    <> command "end" (toParserInfo (EndOneTask
+        <$> strArgument idsVar
+        <*> optional (some (strArgument (metavar "CLOSING_NOTE"
+              <> help "Final note to explain why and how it was closed"))))
+        "Mark a task as obsolete and add optional closing note")
+
+    <> command "endall" (toParserInfo (EndTasks <$> some (strArgument idsVar))
         "Mark a task as obsolete")
 
     <> command "edit" (toParserInfo (EditTask <$> strArgument idVar)
@@ -1209,7 +1216,8 @@ executeCLiCommand conf now connection progName args = do
         ReviewTasksIn days ids -> reviewTasksIn conf connection days ids
         DoTasks ids -> doTasks conf connection Nothing ids
         DoOneTask id noteWords -> doTasks conf connection noteWords [id]
-        EndTasks ids -> endTasks conf connection ids
+        EndTasks ids -> endTasks conf connection Nothing ids
+        EndOneTask id noteWords -> endTasks conf connection noteWords [id]
         EditTask id -> editTask conf connection id
         TrashTasks ids -> trashTasks conf connection ids
         DeleteTasks ids -> deleteTasks conf connection ids

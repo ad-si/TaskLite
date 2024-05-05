@@ -952,11 +952,17 @@ doTasks :: Config -> Connection -> Maybe [Text] -> [Text] -> IO (Doc AnsiStyle)
 doTasks conf connection noteWordsMaybe ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
+      let
+        prettyBody = dquotes $ pretty task.body
+        prettyId = dquotes $ pretty task.ulid
+
       if isJust task.closed_utc
         then
           pure $
             "⚠️  Task"
-              <+> dquotes (pretty task.ulid)
+              <+> prettyBody
+              <+> "with id"
+              <+> prettyId
               <+> "is already done"
         else do
           logMessageMaybe <-
@@ -987,31 +993,39 @@ doTasks conf connection noteWordsMaybe ids = do
   pure $ vsep docs
 
 
-endTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
-endTasks conf connection ids = do
+endTasks :: Config -> Connection -> Maybe [Text] -> [Text] -> IO (Doc AnsiStyle)
+endTasks conf connection noteWordsMaybe ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      setClosedWithState connection task $ Just Obsolete
-      numOfChanges <- changes connection
-
       let
         prettyBody = dquotes $ pretty task.body
         prettyId = dquotes $ pretty task.ulid
 
-      pure $
-        if numOfChanges == 0
-          then
+      if isJust task.closed_utc
+        then
+          pure $
             "⚠️  Task"
               <+> prettyBody
               <+> "with id"
               <+> prettyId
               <+> "is already marked as obsolete"
-          else
-            "⏹  Marked task"
-              <+> prettyBody
-              <+> "with id"
-              <+> prettyId
-              <+> "as obsolete"
+        else do
+          noteMessageMaybe <- case noteWordsMaybe of
+            Nothing -> pure Nothing
+            Just noteWords ->
+              liftIO $
+                addNote conf connection (unwords noteWords) ids <&> Just
+
+          setClosedWithState connection task $ Just Obsolete
+
+          pure $
+            fromMaybe "" (noteMessageMaybe <&> (<> hardline))
+              <> ( "⏹  Marked task"
+                    <+> prettyBody
+                    <+> "with id"
+                    <+> prettyId
+                    <+> "as obsolete"
+                 )
 
   pure $ vsep docs
 
