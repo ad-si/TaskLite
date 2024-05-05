@@ -1,0 +1,103 @@
+<!-- Created with term-transcript v0.3.0 (https://github.com/slowli/term-transcript) -->
+<svg viewBox="0 0 720 588" width="720" height="588" xmlns="http://www.w3.org/2000/svg">
+  <switch>
+    <g requiredExtensions="http://www.w3.org/1999/xhtml">
+      <style>
+        .container {
+          padding: 0 10px;
+          color: #e5e5e5;
+          line-height: 18px;
+        }
+        .container pre {
+          padding: 0;
+          margin: 0;
+          font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+          line-height: inherit;
+        }
+        .input {
+          margin: 0 -10px 6px;
+          color: #e5e5e5;
+          background: rgba(255, 255, 255, 0.1);
+          padding: 2px 10px;
+        }
+        .input-hidden { display: none; }
+        .output { margin-bottom: 6px; }
+        .bold,.prompt { font-weight: bold; }
+        .italic { font-style: italic; }
+        .underline { text-decoration: underline; }
+        .dimmed { opacity: 0.7; }
+        .hard-br {
+          position: relative;
+          margin-left: 5px;
+        }
+        .hard-br:before {
+          content: '↓';
+          font-size: 16px;
+          height: 16px;
+          position: absolute;
+          bottom: 0;
+          transform: rotate(45deg);
+          opacity: 0.8;
+        }
+        .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
+        .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
+        .fg2 { color: #cee318; } .bg2 { background: #cee318; }
+        .fg3 { color: #ffe755; } .bg3 { background: #ffe755; }
+        .fg4 { color: #048ac7; } .bg4 { background: #048ac7; }
+        .fg5 { color: #833c9f; } .bg5 { background: #833c9f; }
+        .fg6 { color: #0ac1cd; } .bg6 { background: #0ac1cd; }
+        .fg7 { color: #e5e5e5; } .bg7 { background: #e5e5e5; }
+        .fg8 { color: #666666; } .bg8 { background: #666666; }
+        .fg9 { color: #ff00a0; } .bg9 { background: #ff00a0; }
+        .fg10 { color: #ccff00; } .bg10 { background: #ccff00; }
+        .fg11 { color: #ff9f00; } .bg11 { background: #ff9f00; }
+        .fg12 { color: #48c6ff; } .bg12 { background: #48c6ff; }
+        .fg13 { color: #be67e1; } .bg13 { background: #be67e1; }
+        .fg14 { color: #63e7f0; } .bg14 { background: #63e7f0; }
+        .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
+      </style>
+      <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;" />
+      <svg x="0" y="10" width="720" height="568" viewBox="0 0 720 568">
+        <foreignObject width="720" height="568">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> tasklite help | head -n 30</pre></div>
+            <div class="output"><pre><span class="bold fg12">TaskLite</span> <span class="fg8">0.3.0.0</span>
+
+<span class="fg12">Task-list manager powered by Haskell and SQLite</span>
+
+Usage: tasklite [Basic Commands | Shortcuts to Add a Task | List Commands | 
+                  Visualizations | I/O Commands | Advanced Commands | 
+                  Unset Commands | Utils]
+
+  
+    <span class="bold">             Add an alias:</span> `<span class="fg14">alias tl tasklite</span>`
+    <span class="bold">    Add a task with a tag:</span> `<span class="fg14">tl add Buy milk +groceries</span>`
+    <span class="bold">   … or with the shortcut:</span> `<span class="fg14">tl buy milk +groceries</span>`
+    <span class="bold">List most important tasks:</span> `<span class="fg14">tl</span>` (same as `<span class="fg14">tl ready</span>`)
+    <span class="bold">              Complete it:</span> `<span class="fg14">tl do &lt;id&gt;</span>`
+
+Available options:
+  -h,--help                Show this help text
+
+<span class="fg3">Basic Commands:</span>
+  add                      Add a new task
+  log                      Log an already completed task
+  readyon                  Set ready UTC of tasks
+  wait                     Mark a task as waiting (e.g. for feedback) and review
+                           it in 3 days
+  waitfor                  Wait DURATION until it's ready for review
+  review                   Finish review and set new review date in 3 days
+  reviewin                 Finish review and set new review date in DURATION
+  do                       Mark a task as done and add optional closing note
+  doonly                   Mark only one task as done
+  doall                    Mark one or more tasks as done</pre></div>
+          </div>
+        </foreignObject>
+      </svg>
+    </g>
+    <text x="10" y="18" style="font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace; fill: #ff005b;">
+      HTML embedding not supported.
+      Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
+    </text>
+  </switch>
+</svg>

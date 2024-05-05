@@ -72,6 +72,34 @@ docker-build:
 		.
 
 
+# Possible alternative: https://github.com/MrMarble/termsvg
+tasklite/screenshots/help.svg:
+	term-transcript exec 'tasklite help' > $@ \
+	|| echo 'ℹ️ Run `cargo install term-transcript-cli`'
+	cp $@ docs-source/images/help.svg
+
+
+tasklite/screenshots/help-short.svg:
+	term-transcript exec 'tasklite help | head -n 30' > $@ \
+	|| @echo 'ℹ️ Run `cargo install term-transcript-cli`'
+
+
+# # TODO: Use an extra demo database to not mess up the local one
+# # ATTENTION: Set correct commands before executing
+# docs-source/images/usage.svg:
+# 	term-transcript exec --io-timeout 1sec \
+# 		'tl add Buy milk +groceries +demo' \
+# 		'tl add Go running +demo' \
+# 		'tl withtag demo' \
+# 		'tl do TODO' \
+# 		> $@ \
+# 	|| @echo 'ℹ️ Run `cargo install term-transcript-cli`'
+
+
+.PHONY: screenshots
+screenshots: tasklite/screenshots/help.svg tasklite/screenshots/help-short.svg
+
+
 .PHONY: clean
 clean:
 	rm -rf .stack-work

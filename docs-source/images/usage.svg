@@ -1,0 +1,86 @@
+<!-- Created with term-transcript v0.3.0 (https://github.com/slowli/term-transcript) -->
+<svg viewBox="0 0 720 330" width="720" height="330" xmlns="http://www.w3.org/2000/svg">
+  <switch>
+    <g requiredExtensions="http://www.w3.org/1999/xhtml">
+      <style>
+        .container {
+          padding: 0 10px;
+          color: #e5e5e5;
+          line-height: 18px;
+        }
+        .container pre {
+          padding: 0;
+          margin: 0;
+          font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+          line-height: inherit;
+        }
+        .input {
+          margin: 0 -10px 6px;
+          color: #e5e5e5;
+          background: rgba(255, 255, 255, 0.1);
+          padding: 2px 10px;
+        }
+        .input-hidden { display: none; }
+        .output { margin-bottom: 6px; }
+        .bold,.prompt { font-weight: bold; }
+        .italic { font-style: italic; }
+        .underline { text-decoration: underline; }
+        .dimmed { opacity: 0.7; }
+        .hard-br {
+          position: relative;
+          margin-left: 5px;
+        }
+        .hard-br:before {
+          content: '↓';
+          font-size: 16px;
+          height: 16px;
+          position: absolute;
+          bottom: 0;
+          transform: rotate(45deg);
+          opacity: 0.8;
+        }
+        .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
+        .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
+        .fg2 { color: #cee318; } .bg2 { background: #cee318; }
+        .fg3 { color: #ffe755; } .bg3 { background: #ffe755; }
+        .fg4 { color: #048ac7; } .bg4 { background: #048ac7; }
+        .fg5 { color: #833c9f; } .bg5 { background: #833c9f; }
+        .fg6 { color: #0ac1cd; } .bg6 { background: #0ac1cd; }
+        .fg7 { color: #e5e5e5; } .bg7 { background: #e5e5e5; }
+        .fg8 { color: #666666; } .bg8 { background: #666666; }
+        .fg9 { color: #ff00a0; } .bg9 { background: #ff00a0; }
+        .fg10 { color: #ccff00; } .bg10 { background: #ccff00; }
+        .fg11 { color: #ff9f00; } .bg11 { background: #ff9f00; }
+        .fg12 { color: #48c6ff; } .bg12 { background: #48c6ff; }
+        .fg13 { color: #be67e1; } .bg13 { background: #be67e1; }
+        .fg14 { color: #63e7f0; } .bg14 { background: #63e7f0; }
+        .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
+      </style>
+      <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;" />
+      <svg x="0" y="10" width="720" height="310" viewBox="0 0 720 310">
+        <foreignObject width="720" height="310">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> tl add Buy milk +groceries +demo</pre></div>
+            <div class="output"><pre>🆕 Added task "Buy milk" with id "01hx239c66g77s5thrsfd859c5"</pre></div>
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> tl add Go running +demo</pre></div>
+            <div class="output"><pre>🆕 Added task "Go running" with id "01hx239e66cash6mapbabc3mxf"</pre></div>
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> tl withtag demo</pre></div>
+            <div class="output"><pre><span class="bold underline fg10">Id </span>  <span class="bold underline fg13">Prio</span>  <span class="bold underline fg8">Opened UTC</span>  <span class="bold underline fg15">Body      </span>  
+<span class="fg10">mxf</span>  <span class="fg13"> 2  </span>  <span class="fg8">2024-05-04</span>  <span class="fg15">Go running</span>  <span class="fg8">+</span><span class="fg12">demo</span>
+<span class="fg10">9c5</span>  <span class="fg13"> 2  </span>  <span class="fg8">2024-05-04</span>  <span class="fg15">Buy milk</span>  <span class="fg8">+</span><span class="fg12">demo</span> <span class="fg8">+</span><span class="fg12">groceries</span>
+<span class="fg10">pc8</span>  <span class="fg13"> 2  </span>  <span class="fg8">2024-05-02</span>  <span class="fg8">Screen Studio - Screen recording app for macOS
+                         https://www.screen.studio/</span>  <span class="fg0">2024-05-02 10:11:41</span> 
+                         <span class="fg8">+</span><span class="fg12">demo</span> <span class="fg8">+</span><span class="fg12">log</span> <span class="fg8">+</span><span class="fg12">mockup</span> <span class="fg8">+</span><span class="fg12">screenshot</span> <span class="fg8">+</span><span class="fg12">video</span>
+</pre></div>
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> tl do xz8w</pre></div>
+            <div class="output"><pre>✅ Finished task "Make a usage screenshot for TaskLite" with id "01hx22ghdngjjaf<b class="hard-br"><br/></b>dk7v1yaxz8w"</pre></div>
+          </div>
+        </foreignObject>
+      </svg>
+    </g>
+    <text x="10" y="18" style="font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace; fill: #ff005b;">
+      HTML embedding not supported.
+      Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
+    </text>
+  </switch>
+</svg>

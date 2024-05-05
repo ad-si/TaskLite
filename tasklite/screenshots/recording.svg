@@ -1,1 +1,212 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="840" height="1927.06"><rect width="840" height="1927.06" rx="5" ry="5" class="a"/><svg y="0%" x="0%"><circle cx="20" cy="20" r="6" fill="#ff5f58"/><circle cx="40" cy="20" r="6" fill="#ffbd2e"/><circle cx="60" cy="20" r="6" fill="#18c132"/></svg><svg height="1867.06" viewBox="0 0 80 186.706" width="800" x="15" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" y="50"><style>.a{fill:#141414}.i{fill:#b5dcff}.j{fill:#dfdfdf}.k{fill:#fff;font-weight:700}.l{fill:#dfdffe}.m{fill:#ffffb6}</style><g font-size="1.67" font-family="Monaco,Consolas,Menlo,'Bitstream Vera Sans Mono','Powerline Symbols',monospace"><defs><symbol id="a"><path fill="transparent" d="M0 0h80v86H0z"/></symbol></defs><path class="a" d="M0 0h80v186.706H0z"/><svg width="80"><svg><use xlink:href="#a"/><text y="1.67" fill="#b5dcff" font-weight="700">TaskLite</text><text x="9.018" y="1.67" fill="#7c7c7c">0.1.0.0</text><text y="6.012" class="i">Task-list</text><text x="10.02" y="6.012" class="i">manager</text><text x="18.036" y="6.012" class="i">powered</text><text x="26.052" y="6.012" class="i">by</text><text x="29.058" y="6.012" class="i">Haskell</text><text x="37.074" y="6.012" class="i">and</text><text x="41.082" y="6.012" class="i">SQLite</text><text y="10.354" class="j">Usage:</text><text x="7.014" y="10.354" class="j">tasklite</text><text x="16.032" y="10.354" class="j">([COMMAND]</text><text x="27.054" y="10.354" class="j">|</text><text x="29.058" y="10.354" class="j">[COMMAND]</text><text x="39.078" y="10.354" class="j">|</text><text x="41.082" y="10.354" class="j">[COMMAND]</text><text x="51.102" y="10.354" class="j">|</text><text x="53.106" y="10.354" class="j">[COMMAND]</text><text x="63.126" y="10.354" class="j">|</text><text x="65.13" y="10.354" class="j">[COMMAND]</text><text x="75.15" y="10.354" class="j">|</text><text x="16.032" y="12.525" class="j">[COMMAND]</text><text x="26.052" y="12.525" class="j">|</text><text x="28.056" y="12.525" class="j">[COMMAND])</text><text x="15.03" y="16.867" class="k">Add</text><text x="19.038" y="16.867" class="k">an</text><text x="22.044" y="16.867" class="k">alias:</text><text x="29.058" y="16.867" class="j">`</text><text x="30.06" y="16.867" class="l">alias</text><text x="36.072" y="16.867" class="l">tl</text><text x="39.078" y="16.867" class="l">tasklite</text><text x="47.094" y="16.867" class="j">`</text><text x="6.012" y="19.038" class="k">Add</text><text x="10.02" y="19.038" class="k">a</text><text x="12.024" y="19.038" class="k">task</text><text x="17.034" y="19.038" class="k">with</text><text x="22.044" y="19.038" class="k">a</text><text x="24.048" y="19.038" class="k">tag:</text><text x="29.058" y="19.038" class="j">`</text><text x="30.06" y="19.038" class="l">tl</text><text x="33.066" y="19.038" class="l">add</text><text x="37.074" y="19.038" class="l">Buy</text><text x="41.082" y="19.038" class="l">milk</text><text x="46.092" y="19.038" class="l">+groceries</text><text x="56.112" y="19.038" class="j">`</text><text x="5.01" y="21.209" class="k">…</text><text x="7.014" y="21.209" class="k">or</text><text x="10.02" y="21.209" class="k">with</text><text x="15.03" y="21.209" class="k">the</text><text x="19.038" y="21.209" class="k">shortcut:</text><text x="29.058" y="21.209" class="j">`</text><text x="30.06" y="21.209" class="l">tl</text><text x="33.066" y="21.209" class="l">buy</text><text x="37.074" y="21.209" class="l">milk</text><text x="42.084" y="21.209" class="l">+groceries</text><text x="52.104" y="21.209" class="j">`</text><text x="2.004" y="23.38" class="k">List</text><text x="7.014" y="23.38" class="k">most</text><text x="12.024" y="23.38" class="k">important</text><text x="22.044" y="23.38" class="k">tasks:</text><text x="29.058" y="23.38" class="j">`</text><text x="30.06" y="23.38" class="l">tl</text><text x="32.064" y="23.38" class="j">`</text><text x="34.068" y="23.38" class="j">(same</text><text x="40.08" y="23.38" class="j">as</text><text x="43.086" y="23.38" class="j">`</text><text x="44.088" y="23.38" class="l">tl</text><text x="47.094" y="23.38" class="l">head</text><text x="51.102" y="23.38" class="j">`)</text><text x="16.032" y="25.551" class="k">Complete</text><text x="25.05" y="25.551" class="k">it:</text><text x="29.058" y="25.551" class="j">`</text><text x="30.06" y="25.551" class="l">tl</text><text x="33.066" y="25.551" class="l">do</text><text x="36.072" y="25.551" class="l">&lt;id&gt;</text><text x="40.08" y="25.551" class="j">`</text><text y="29.893" class="j">Available</text><text x="10.02" y="29.893" class="j">options:</text><text x="2.004" y="32.064" class="j">-h,--help</text><text x="27.054" y="32.064" class="j">Show</text><text x="32.064" y="32.064" class="j">this</text><text x="37.074" y="32.064" class="j">help</text><text x="42.084" y="32.064" class="j">text</text><text y="36.406" class="m">Basic</text><text x="6.012" y="36.406" class="m">Commands:</text><text x="2.004" y="38.577" class="j">add</text><text x="27.054" y="38.577" class="j">Add</text><text x="31.062" y="38.577" class="j">a</text><text x="33.066" y="38.577" class="j">new</text><text x="37.074" y="38.577" class="j">task</text><text x="2.004" y="40.748" class="j">log</text><text x="27.054" y="40.748" class="j">Log</text><text x="31.062" y="40.748" class="j">an</text><text x="34.068" y="40.748" class="j">already</text><text x="42.084" y="40.748" class="j">completed</text><text x="52.104" y="40.748" class="j">task</text><text x="2.004" y="42.919" class="j">do</text><text x="27.054" y="42.919" class="j">Mark</text><text x="32.064" y="42.919" class="j">a</text><text x="34.068" y="42.919" class="j">task</text><text x="39.078" y="42.919" class="j">as</text><text x="42.084" y="42.919" class="j">done</text><text x="2.004" y="45.09" class="j">end</text><text x="27.054" y="45.09" class="j">Mark</text><text x="32.064" y="45.09" class="j">a</text><text x="34.068" y="45.09" class="j">task</text><text x="39.078" y="45.09" class="j">as</text><text x="42.084" y="45.09" class="j">obsolete</text><text x="2.004" y="47.261" class="j">delete</text><text x="27.054" y="47.261" class="j">Delete</text><text x="34.068" y="47.261" class="j">a</text><text x="36.072" y="47.261" class="j">task</text><text x="41.082" y="47.261" class="j">from</text><text x="46.092" y="47.261" class="j">the</text><text x="50.1" y="47.261" class="j">database</text><text x="59.118" y="47.261" class="j">(Attention:</text><text x="27.054" y="49.432" class="j">Irreversible)</text><text x="2.004" y="51.603" class="j">boost</text><text x="27.054" y="51.603" class="j">Increase</text><text x="36.072" y="51.603" class="j">priority</text><text x="45.09" y="51.603" class="j">of</text><text x="48.096" y="51.603" class="j">specified</text><text x="58.116" y="51.603" class="j">tasks</text><text x="64.128" y="51.603" class="j">by</text><text x="67.134" y="51.603" class="j">1</text><text x="2.004" y="53.774" class="j">hush</text><text x="27.054" y="53.774" class="j">Decrease</text><text x="36.072" y="53.774" class="j">priority</text><text x="45.09" y="53.774" class="j">of</text><text x="48.096" y="53.774" class="j">specified</text><text x="58.116" y="53.774" class="j">tasks</text><text x="64.128" y="53.774" class="j">by</text><text x="67.134" y="53.774" class="j">1</text><text x="2.004" y="55.945" class="j">prioritize</text><text x="27.054" y="55.945" class="j">Adjust</text><text x="34.068" y="55.945" class="j">priority</text><text x="43.086" y="55.945" class="j">of</text><text x="46.092" y="55.945" class="j">specified</text><text x="56.112" y="55.945" class="j">tasks</text><text x="2.004" y="58.116" class="j">info</text><text x="27.054" y="58.116" class="j">Show</text><text x="32.064" y="58.116" class="j">detailed</text><text x="41.082" y="58.116" class="j">information</text><text x="53.106" y="58.116" class="j">and</text><text x="57.114" y="58.116" class="j">metadata</text><text x="66.132" y="58.116" class="j">of</text><text x="69.138" y="58.116" class="j">task</text><text x="2.004" y="60.287" class="j">next</text><text x="27.054" y="60.287" class="j">Show</text><text x="32.064" y="60.287" class="j">the</text><text x="36.072" y="60.287" class="j">task</text><text x="41.082" y="60.287" class="j">with</text><text x="46.092" y="60.287" class="j">the</text><text x="50.1" y="60.287" class="j">highest</text><text x="58.116" y="60.287" class="j">priority</text><text x="2.004" y="62.458" class="j">find</text><text x="27.054" y="62.458" class="j">Fuzzy</text><text x="33.066" y="62.458" class="j">search</text><text x="40.08" y="62.458" class="j">a</text><text x="42.084" y="62.458" class="j">task</text><text x="2.004" y="64.629" class="j">tag</text><text x="27.054" y="64.629" class="j">Add</text><text x="31.062" y="64.629" class="j">a</text><text x="33.066" y="64.629" class="j">tag</text><text x="37.074" y="64.629" class="j">to</text><text x="40.08" y="64.629" class="j">specified</text><text x="50.1" y="64.629" class="j">tasks</text><text x="2.004" y="66.8" class="j">due</text><text x="27.054" y="66.8" class="j">Set</text><text x="31.062" y="66.8" class="j">due</text><text x="35.07" y="66.8" class="j">UTC</text><text x="39.078" y="66.8" class="j">of</text><text x="42.084" y="66.8" class="j">specified</text><text x="52.104" y="66.8" class="j">tasks</text><text y="71.142" class="m">Shortcuts</text><text x="10.02" y="71.142" class="m">to</text><text x="13.026" y="71.142" class="m">Add</text><text x="17.034" y="71.142" class="m">a</text><text x="19.038" y="71.142" class="m">Task:</text><text x="2.004" y="73.313" class="j">write</text><text x="27.054" y="73.313" class="j">Write</text><text x="33.066" y="73.313" class="j">a</text><text x="35.07" y="73.313" class="j">message</text><text x="43.086" y="73.313" class="j">or</text><text x="46.092" y="73.313" class="j">a</text><text x="48.096" y="73.313" class="j">post</text><text x="2.004" y="75.484" class="j">read</text><text x="27.054" y="75.484" class="j">Read</text><text x="32.064" y="75.484" class="j">the</text><text x="36.072" y="75.484" class="j">specified</text><text x="46.092" y="75.484" class="j">URL</text><text x="2.004" y="77.655" class="j">watch</text><text x="27.054" y="77.655" class="j">Watch</text><text x="33.066" y="77.655" class="j">a</text><text x="35.07" y="77.655" class="j">movie</text><text x="41.082" y="77.655" class="j">or</text><text x="44.088" y="77.655" class="j">a</text><text x="46.092" y="77.655" class="j">video</text><text x="2.004" y="79.826" class="j">listen</text><text x="27.054" y="79.826" class="j">Listen</text><text x="34.068" y="79.826" class="j">to</text><text x="37.074" y="79.826" class="j">a</text><text x="39.078" y="79.826" class="j">song</text><text x="44.088" y="79.826" class="j">or</text><text x="47.094" y="79.826" class="j">podcast</text><text x="2.004" y="81.997" class="j">buy</text><text x="27.054" y="81.997" class="j">Buy</text><text x="31.062" y="81.997" class="j">something</text><text x="2.004" y="84.168" class="j">sell</text><text x="27.054" y="84.168" class="j">Sell</text><text x="32.064" y="84.168" class="j">something</text><text x="2.004" y="86.339" class="j">ship</text><text x="27.054" y="86.339" class="j">Ship</text><text x="32.064" y="86.339" class="j">an</text><text x="35.07" y="86.339" class="j">item</text><text x="40.08" y="86.339" class="j">to</text><text x="43.086" y="86.339" class="j">someone</text><text y="90.681" class="m">List</text><text x="5.01" y="90.681" class="m">Commands:</text><text x="2.004" y="92.852" class="j">head</text><text x="27.054" y="92.852" class="j">List</text><text x="32.064" y="92.852" class="j">20</text><text x="35.07" y="92.852" class="j">most</text><text x="40.08" y="92.852" class="j">important</text><text x="50.1" y="92.852" class="j">open</text><text x="55.11" y="92.852" class="j">tasks</text><text x="61.122" y="92.852" class="j">by</text><text x="64.128" y="92.852" class="j">priority</text><text x="73.146" y="92.852" class="j">desc</text><text x="2.004" y="95.023" class="j">all</text><text x="27.054" y="95.023" class="j">List</text><text x="32.064" y="95.023" class="j">all</text><text x="36.072" y="95.023" class="j">tasks</text><text x="42.084" y="95.023" class="j">by</text><text x="45.09" y="95.023" class="j">priority</text><text x="2.004" y="97.194" class="j">open</text><text x="27.054" y="97.194" class="j">List</text><text x="32.064" y="97.194" class="j">all</text><text x="36.072" y="97.194" class="j">open</text><text x="41.082" y="97.194" class="j">tasks</text><text x="47.094" y="97.194" class="j">by</text><text x="50.1" y="97.194" class="j">creation</text><text x="59.118" y="97.194" class="j">UTC</text><text x="63.126" y="97.194" class="j">desc</text><text x="2.004" y="99.365" class="j">overdue</text><text x="27.054" y="99.365" class="j">List</text><text x="32.064" y="99.365" class="j">all</text><text x="36.072" y="99.365" class="j">overdue</text><text x="44.088" y="99.365" class="j">tasks</text><text x="50.1" y="99.365" class="j">by</text><text x="53.106" y="99.365" class="j">priority</text><text x="62.124" y="99.365" class="j">desc</text><text x="2.004" y="101.536" class="j">new</text><text x="27.054" y="101.536" class="j">List</text><text x="32.064" y="101.536" class="j">20</text><text x="35.07" y="101.536" class="j">newest</text><text x="42.084" y="101.536" class="j">open</text><text x="47.094" y="101.536" class="j">tasks</text><text x="53.106" y="101.536" class="j">by</text><text x="56.112" y="101.536" class="j">creation</text><text x="65.13" y="101.536" class="j">UTC</text><text x="69.138" y="101.536" class="j">desc</text><text x="2.004" y="103.707" class="j">waiting</text><text x="27.054" y="103.707" class="j">List</text><text x="32.064" y="103.707" class="j">all</text><text x="36.072" y="103.707" class="j">waiting</text><text x="44.088" y="103.707" class="j">tasks</text><text x="50.1" y="103.707" class="j">by</text><text x="53.106" y="103.707" class="j">priority</text><text x="2.004" y="105.878" class="j">done</text><text x="27.054" y="105.878" class="j">List</text><text x="32.064" y="105.878" class="j">20</text><text x="35.07" y="105.878" class="j">done</text><text x="40.08" y="105.878" class="j">tasks</text><text x="46.092" y="105.878" class="j">by</text><text x="49.098" y="105.878" class="j">closing</text><text x="57.114" y="105.878" class="j">UTC</text><text x="61.122" y="105.878" class="j">desc</text><text x="2.004" y="108.049" class="j">obsolete</text><text x="27.054" y="108.049" class="j">List</text><text x="32.064" y="108.049" class="j">all</text><text x="36.072" y="108.049" class="j">obsolete</text><text x="45.09" y="108.049" class="j">tasks</text><text x="51.102" y="108.049" class="j">by</text><text x="54.108" y="108.049" class="j">closing</text><text x="62.124" y="108.049" class="j">UTC</text><text x="2.004" y="110.22" class="j">notag</text><text x="27.054" y="110.22" class="j">List</text><text x="32.064" y="110.22" class="j">tasks</text><text x="38.076" y="110.22" class="j">without</text><text x="46.092" y="110.22" class="j">any</text><text x="50.1" y="110.22" class="j">tags</text><text x="2.004" y="112.391" class="j">withtag</text><text x="27.054" y="112.391" class="j">List</text><text x="32.064" y="112.391" class="j">tasks</text><text x="38.076" y="112.391" class="j">which</text><text x="44.088" y="112.391" class="j">have</text><text x="49.098" y="112.391" class="j">all</text><text x="53.106" y="112.391" class="j">of</text><text x="56.112" y="112.391" class="j">the</text><text x="60.12" y="112.391" class="j">specified</text><text x="70.14" y="112.391" class="j">tags</text><text x="2.004" y="114.562" class="j">query</text><text x="27.054" y="114.562" class="j">Run</text><text x="31.062" y="114.562" class="j">&quot;select</text><text x="39.078" y="114.562" class="j">*</text><text x="41.082" y="114.562" class="j">from</text><text x="46.092" y="114.562" class="j">tasks</text><text x="52.104" y="114.562" class="j">where</text><text x="58.116" y="114.562" class="j">QUERY&quot;</text><text x="65.13" y="114.562" class="j">on</text><text x="68.136" y="114.562" class="j">the</text><text x="72.144" y="114.562" class="j">database</text><text y="118.904" class="m">Visualizations:</text><text x="2.004" y="121.075" class="j">tags</text><text x="27.054" y="121.075" class="j">List</text><text x="32.064" y="121.075" class="j">all</text><text x="36.072" y="121.075" class="j">used</text><text x="41.082" y="121.075" class="j">tags</text><text x="46.092" y="121.075" class="j">and</text><text x="50.1" y="121.075" class="j">their</text><text x="56.112" y="121.075" class="j">progress</text><text x="65.13" y="121.075" class="j">summary</text><text y="125.417" class="m">I/O</text><text x="4.008" y="125.417" class="m">Commands:</text><text x="2.004" y="127.588" class="j">import</text><text x="27.054" y="127.588" class="j">Import</text><text x="34.068" y="127.588" class="j">one</text><text x="38.076" y="127.588" class="j">JSON</text><text x="43.086" y="127.588" class="j">task</text><text x="48.096" y="127.588" class="j">from</text><text x="53.106" y="127.588" class="j">stdin</text><text x="2.004" y="129.759" class="j">csv</text><text x="27.054" y="129.759" class="j">Show</text><text x="32.064" y="129.759" class="j">tasks</text><text x="38.076" y="129.759" class="j">in</text><text x="41.082" y="129.759" class="j">CSV</text><text x="45.09" y="129.759" class="j">format</text><text x="2.004" y="131.93" class="j">runsql</text><text x="27.054" y="131.93" class="j">Run</text><text x="31.062" y="131.93" class="j">any</text><text x="35.07" y="131.93" class="j">SQL</text><text x="39.078" y="131.93" class="j">query</text><text x="45.09" y="131.93" class="j">and</text><text x="49.098" y="131.93" class="j">show</text><text x="54.108" y="131.93" class="j">result</text><text x="61.122" y="131.93" class="j">as</text><text x="64.128" y="131.93" class="j">CSV</text><text x="2.004" y="134.101" class="j">ndjson</text><text x="27.054" y="134.101" class="j">Show</text><text x="32.064" y="134.101" class="j">tasks</text><text x="38.076" y="134.101" class="j">in</text><text x="41.082" y="134.101" class="j">NDJSON</text><text x="48.096" y="134.101" class="j">format</text><text x="2.004" y="136.272" class="j">sql</text><text x="27.054" y="136.272" class="j">Show</text><text x="32.064" y="136.272" class="j">SQL</text><text x="36.072" y="136.272" class="j">commands</text><text x="45.09" y="136.272" class="j">to</text><text x="48.096" y="136.272" class="j">create</text><text x="55.11" y="136.272" class="j">and</text><text x="59.118" y="136.272" class="j">populate</text><text x="68.136" y="136.272" class="j">database</text><text x="2.004" y="138.443" class="j">backup</text><text x="27.054" y="138.443" class="j">Create</text><text x="34.068" y="138.443" class="j">a</text><text x="36.072" y="138.443" class="j">backup</text><text x="43.086" y="138.443" class="j">of</text><text x="46.092" y="138.443" class="j">the</text><text x="50.1" y="138.443" class="j">tasks</text><text x="56.112" y="138.443" class="j">database</text><text x="65.13" y="138.443" class="j">at</text><text x="27.054" y="140.614" class="j">~/tasklite/backups</text><text y="144.956" class="m">Advanced</text><text x="9.018" y="144.956" class="m">Commands:</text><text x="2.004" y="147.127" class="j">count</text><text x="27.054" y="147.127" class="j">Output</text><text x="34.068" y="147.127" class="j">total</text><text x="40.08" y="147.127" class="j">number</text><text x="47.094" y="147.127" class="j">of</text><text x="50.1" y="147.127" class="j">tasks</text><text x="2.004" y="149.298" class="j">version</text><text x="27.054" y="149.298" class="j">Display</text><text x="35.07" y="149.298" class="j">version</text><text x="2.004" y="151.469" class="j">help</text><text x="27.054" y="151.469" class="j">Display</text><text x="35.07" y="151.469" class="j">current</text><text x="43.086" y="151.469" class="j">help</text><text x="48.096" y="151.469" class="j">page</text><text y="155.811" class="m">Aliases:</text><text x="2.004" y="157.982" class="j">close</text><text x="27.054" y="157.982" class="j">-&gt;</text><text x="30.06" y="157.982" class="j">end</text><text x="2.004" y="160.153" class="j">decrease</text><text x="27.054" y="160.153" class="j">-&gt;</text><text x="30.06" y="160.153" class="j">hush</text><text x="2.004" y="162.324" class="j">finish</text><text x="27.054" y="162.324" class="j">-&gt;</text><text x="30.06" y="162.324" class="j">do</text><text x="2.004" y="164.495" class="j">fix</text><text x="27.054" y="164.495" class="j">-&gt;</text><text x="30.06" y="164.495" class="j">do</text><text x="2.004" y="166.666" class="j">implement</text><text x="27.054" y="166.666" class="j">-&gt;</text><text x="30.06" y="166.666" class="j">do</text><text x="2.004" y="168.837" class="j">inbox</text><text x="27.054" y="168.837" class="j">-&gt;</text><text x="30.06" y="168.837" class="j">notag</text><text x="2.004" y="171.008" class="j">increase</text><text x="27.054" y="171.008" class="j">-&gt;</text><text x="30.06" y="171.008" class="j">boost</text><text x="2.004" y="173.179" class="j">remove</text><text x="27.054" y="173.179" class="j">-&gt;</text><text x="30.06" y="173.179" class="j">delete</text><text x="2.004" y="175.35" class="j">rm</text><text x="27.054" y="175.35" class="j">-&gt;</text><text x="30.06" y="175.35" class="j">delete</text><text x="2.004" y="177.521" class="j">stop</text><text x="27.054" y="177.521" class="j">-&gt;</text><text x="30.06" y="177.521" class="j">end</text><text y="181.863" class="j">Version</text><text x="8.016" y="181.863" class="j">0.1.0.0,</text><text x="17.034" y="181.863" class="j">developed</text><text x="27.054" y="181.863" class="j">by</text><text x="30.06" y="181.863" class="j">&lt;adriansieber.com&gt;</text><text x="49.098" y="181.863" class="j">at</text><text x="52.104" y="181.863" class="j">&lt;feram.io&gt;</text></svg></svg></g></svg></svg>
+<!-- Created with term-transcript v0.3.0 (https://github.com/slowli/term-transcript) -->
+<svg viewBox="0 0 720 2532" width="720" height="2532" xmlns="http://www.w3.org/2000/svg">
+  <switch>
+    <g requiredExtensions="http://www.w3.org/1999/xhtml">
+      <style>
+        .container {
+          padding: 0 10px;
+          color: #e5e5e5;
+          line-height: 18px;
+        }
+        .container pre {
+          padding: 0;
+          margin: 0;
+          font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+          line-height: inherit;
+        }
+        .input {
+          margin: 0 -10px 6px;
+          color: #e5e5e5;
+          background: rgba(255, 255, 255, 0.1);
+          padding: 2px 10px;
+        }
+        .input-hidden { display: none; }
+        .output { margin-bottom: 6px; }
+        .bold,.prompt { font-weight: bold; }
+        .italic { font-style: italic; }
+        .underline { text-decoration: underline; }
+        .dimmed { opacity: 0.7; }
+        .hard-br {
+          position: relative;
+          margin-left: 5px;
+        }
+        .hard-br:before {
+          content: '↓';
+          font-size: 16px;
+          height: 16px;
+          position: absolute;
+          bottom: 0;
+          transform: rotate(45deg);
+          opacity: 0.8;
+        }
+        .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
+        .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
+        .fg2 { color: #cee318; } .bg2 { background: #cee318; }
+        .fg3 { color: #ffe755; } .bg3 { background: #ffe755; }
+        .fg4 { color: #048ac7; } .bg4 { background: #048ac7; }
+        .fg5 { color: #833c9f; } .bg5 { background: #833c9f; }
+        .fg6 { color: #0ac1cd; } .bg6 { background: #0ac1cd; }
+        .fg7 { color: #e5e5e5; } .bg7 { background: #e5e5e5; }
+        .fg8 { color: #666666; } .bg8 { background: #666666; }
+        .fg9 { color: #ff00a0; } .bg9 { background: #ff00a0; }
+        .fg10 { color: #ccff00; } .bg10 { background: #ccff00; }
+        .fg11 { color: #ff9f00; } .bg11 { background: #ff9f00; }
+        .fg12 { color: #48c6ff; } .bg12 { background: #48c6ff; }
+        .fg13 { color: #be67e1; } .bg13 { background: #be67e1; }
+        .fg14 { color: #63e7f0; } .bg14 { background: #63e7f0; }
+        .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
+      </style>
+      <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;" />
+      <svg x="0" y="10" width="720" height="2512" viewBox="0 0 720 2512">
+        <foreignObject width="720" height="2512">
+          <div xmlns="http://www.w3.org/1999/xhtml" class="container">
+            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> tasklite help</pre></div>
+            <div class="output"><pre><span class="bold fg12">TaskLite</span> <span class="fg8">0.3.0.0</span>
+
+<span class="fg12">Task-list manager powered by Haskell and SQLite</span>
+
+Usage: tasklite [Basic Commands | Shortcuts to Add a Task | List Commands | 
+                  Visualizations | I/O Commands | Advanced Commands | 
+                  Unset Commands | Utils]
+
+  
+    <span class="bold">             Add an alias:</span> `<span class="fg14">alias tl tasklite</span>`
+    <span class="bold">    Add a task with a tag:</span> `<span class="fg14">tl add Buy milk +groceries</span>`
+    <span class="bold">   … or with the shortcut:</span> `<span class="fg14">tl buy milk +groceries</span>`
+    <span class="bold">List most important tasks:</span> `<span class="fg14">tl</span>` (same as `<span class="fg14">tl ready</span>`)
+    <span class="bold">              Complete it:</span> `<span class="fg14">tl do &lt;id&gt;</span>`
+
+Available options:
+  -h,--help                Show this help text
+
+<span class="fg3">Basic Commands:</span>
+  add                      Add a new task
+  log                      Log an already completed task
+  readyon                  Set ready UTC of tasks
+  wait                     Mark a task as waiting (e.g. for feedback) and review
+                           it in 3 days
+  waitfor                  Wait DURATION until it's ready for review
+  review                   Finish review and set new review date in 3 days
+  reviewin                 Finish review and set new review date in DURATION
+  do                       Mark a task as done and add optional closing note
+  doonly                   Mark only one task as done
+  doall                    Mark one or more tasks as done
+  end                      Mark a task as obsolete
+  edit                     Edit YAML version of task in your $EDITOR
+  trash                    Mark a task as deletable
+  delete                   Delete a task from the database (Attention:
+                           Irreversible)
+  repeat                   Repeat a task DURATION after it gets closed
+  recur                    Recur a task DURATION after its due UTC
+  duplicate                Duplicates a task (and resets the closed and due UTC
+                           fields)
+  boost                    Increase priority of specified tasks by 1
+  hush                     Decrease priority of specified tasks by 1
+  prioritize               Adjust priority of specified tasks
+  info                     Show detailed information and metadata of task
+  next                     Show the task with the highest priority
+  random                   Show a random open task
+  find                     Fuzzy search a task
+  tag                      Add a tag to specified tasks
+  deletetag                Delete a tag from specified tasks
+  note                     Add a note to specified tasks
+  deletenote               Delete the specified note
+  due                      Set due UTC of specified tasks
+  start                    Add a note that work on task was started
+  stop                     Add a note that work on task was stopped
+
+<span class="fg3">Shortcuts to Add a Task:</span>
+  write                    Write a message or a post
+  read                     Read the specified URL
+  idea                     Quickly capture an idea
+  watch                    Watch a movie or a video
+  listen                   Listen to a song or podcast
+  buy                      Buy something
+  sell                     Sell something
+  pay                      Pay for something
+  ship                     Ship an item to someone
+
+<span class="fg3">List Commands:</span>
+  head                     List 20 most important open tasks by priority desc
+  all                      List all tasks by creation UTC asc
+  open                     List all open tasks by priority desc
+  modified                 List all tasks by modified UTC desc
+  modifiedonly             List tasks where modified UTC != creation UTC by
+                           modified UTC desc
+  overdue                  List all overdue tasks by priority desc
+  repeating                List all repeating tasks by priority desc
+  recurring                List all recurring tasks by priority desc
+  new                      List newest tasks by creation UTC desc (Open and
+                           Closed)
+  old                      List 20 oldest open tasks by creation UTC asc
+  ready                    List 20 most important ready tasks by priority desc
+  waiting                  List all waiting tasks by priority
+  done                     List 20 done tasks by closing UTC desc
+  obsolete                 List all obsolete tasks by closing UTC
+  deletable                List all deletable tasks by closing UTC
+  notag                    List tasks without any tags
+  withtag                  List tasks which have all of the specified tags
+  get                      Get all tasks filtered by the specified expressions
+                           by priority
+  query                    Run "SELECT * FROM tasks WHERE QUERY" on the database
+
+<span class="fg3">Visualizations:</span>
+  tags                     List all used tags and their progress
+  projects                 List all active tags (a.k.a projects) and their
+                           progress
+  stats                    Show statistics about tasks
+
+<span class="fg3">I/O Commands:</span>
+  import                   Import a .json or .eml file containing one task
+  importjson               Import one JSON object from stdin
+  importeml                Import one email from stdin
+  ingest                   Ingest a .json or .eml file containing one task
+                           (import, open in editor, delete the original file)
+  csv                      Show tasks in CSV format
+  runsql                   Run any SQL query and show result as CSV
+  json                     Show tasks in JSON format
+  ndjson                   Show tasks in NDJSON format
+  sql                      Show SQL commands to create and populate database
+  backup                   Create a backup of the tasks database at
+                           ~/tasklite/backups
+
+<span class="fg3">Advanced Commands:</span>
+  count                    Output total number of tasks filtered by the
+                           specified expressions
+  config                   Print current configuration of TaskLite
+  server                   Start an API server with several endpoints for data
+                           access and management (including a GraphQL endpoint
+                           powered by AirGQL)
+  version                  Display version
+  help                     Display current help page
+
+<span class="fg3">Unset Commands:</span>
+  unclose                  Erase closed timestamp and erase Done / Obsolete /
+                           Deletable state
+  undue                    Erase due timestamp of specified tasks
+  unwait                   Erase wait timestamp of specified tasks
+  unwake                   Erase awake timestamp of specified tasks
+  unready                  Erase ready timestamp of specified tasks
+  unreview                 Erase review timestamp of specified tasks
+  unrepeat                 Erase repetition duration of specified tasks
+  unrecur                  Erase recurrence duration of specified tasks
+  untag                    Erase all tags
+  unnote                   Erase all notes
+  unprio                   Erase manual priority adjustment
+  unmeta                   Erase metadata
+
+<span class="fg3">Utils:</span>
+  ulid2utc                 Extract UTC timestamp from ULID
+
+Version v0.3.0.0-209-gede3ef0-dirty, developed by &lt;adriansieber.com&gt;
+</pre></div>
+          </div>
+        </foreignObject>
+      </svg>
+    </g>
+    <text x="10" y="18" style="font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace; fill: #ff005b;">
+      HTML embedding not supported.
+      Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
+    </text>
+  </switch>
+</svg>
