@@ -1692,7 +1692,17 @@ deleteTag conf connection tag ids = do
         , ":tag" := tag
         ]
 
-      pure $ getResultMsg ("💥 Removed tag \"" <> pretty tag <> "\"") task
+      numOfChanges <- changes connection
+
+      pure $
+        if numOfChanges == 0
+          then
+            annotate (color Yellow) $
+              "⚠️  Tag"
+                <+> dquotes (pretty tag)
+                <+> "is not set for task"
+                <+> dquotes (pretty task.ulid)
+          else getResultMsg ("💥 Removed tag \"" <> pretty tag <> "\"") task
 
   pure $ vsep docs
 

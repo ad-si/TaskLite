@@ -207,6 +207,12 @@ testSuite conf now = do
             query_ memConn "SELECT * FROM task_to_tag"
           taskToTags `shouldBe` []
 
+      it "doesn't delete a tag that does not exist" $ do
+        withMemoryDb conf $ \memConn -> do
+          insertRecord "tasks" memConn exampleTask
+          delResult <- deleteTag conf memConn "test" [exampleTask.ulid]
+          unpack (show delResult) `shouldContain` "not set"
+
       it "adds a note" $ do
         withMemoryDb conf $ \memConn -> do
           insertRecord "tasks" memConn exampleTask
