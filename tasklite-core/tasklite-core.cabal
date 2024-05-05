@@ -137,7 +137,8 @@ test-suite tasklite-test
       UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
   build-depends:
-      aeson
+      MissingH >=1.4 && <1.7
+    , aeson
     , base >=4.18 && <5
     , hourglass
     , hspec >=2.11 && <3.0

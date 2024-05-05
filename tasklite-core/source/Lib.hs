@@ -2915,6 +2915,51 @@ listProjects conf connection = do
   pure $ formatTags conf tags
 
 
+listNotes :: Config -> Connection -> IO (Doc AnsiStyle)
+listNotes conf connection = do
+  (notes :: [TaskToNote]) <-
+    query_
+      connection
+      [sql|
+        SELECT ulid, task_ulid, note
+        FROM task_to_note
+        ORDER BY ulid DESC
+      |]
+
+  let
+    taskIdWidth = 7 -- TODO: Use dynamic width
+    noteWidth = getIdLength $ fromIntegral $ P.length notes
+    docHeader =
+      annotate
+        (idStyle conf <> bold <> underlined)
+        (fill taskIdWidth "Task ID")
+        <++> annotate
+          (idStyle conf <> bold <> underlined)
+          (fill noteWidth "ID")
+        <++> annotate (dateStyle conf <> bold <> underlined) "Created UTC"
+        <++> annotate (bold <> underlined) "Note"
+        <++> line
+
+    showNote note =
+      annotate
+        (idStyle conf)
+        (fill 7 $ pretty $ T.takeEnd taskIdWidth note.task_ulid)
+        <++> annotate
+          (idStyle conf)
+          (fill noteWidth $ pretty $ T.takeEnd noteWidth note.ulid)
+        <++> annotate
+          (dateStyle conf)
+          ( note.ulid
+              & ulidTextToDateTime
+              <&> timePrint ISO8601_Date
+              & pretty
+          )
+        <++> pretty note.note
+        <> line
+
+  pure $ docHeader <> vsep (notes <&> showNote)
+
+
 getStats :: Config -> Connection -> IO (Doc AnsiStyle)
 getStats _ connection = do
   [NumRows numOfTasksTotal] <-

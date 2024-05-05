@@ -171,6 +171,7 @@ import Lib (
   infoTask,
   listAll,
   listNoTag,
+  listNotes,
   listOldTasks,
   listProjects,
   listReady,
@@ -314,6 +315,7 @@ data Command
   -- \| Views -- List all available views
   | Tags -- List all used tags
   | Projects -- List all active tags
+  | Notes -- List all notes
   | Stats -- List statistics about tasks
   {- Unset -}
   | -- \| Active -- Started tasks
@@ -796,6 +798,9 @@ commandParser conf =
     <> command "projects" (toParserInfo (pure Projects)
         "List all active tags (a.k.a projects) and their progress")
 
+    <> command "notes" (toParserInfo (pure Notes)
+        "List all notes descending by creation UTC")
+
     <> command "stats" (toParserInfo (pure Stats)
         "Show statistics about tasks")
 
@@ -1173,6 +1178,7 @@ executeCLiCommand conf now connection progName args = do
         RunFilter expressions -> runFilter conf now connection expressions
         Tags -> listTags conf connection
         Projects -> listProjects conf connection
+        Notes -> listNotes conf connection
         Stats -> getStats conf connection
         ImportFile filePath -> importFile conf connection filePath
         ImportJson -> importJson conf connection
