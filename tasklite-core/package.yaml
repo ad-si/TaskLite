@@ -102,8 +102,8 @@ tests:
     dependencies:
       - aeson
       - hourglass
-      - hspec
-      - neat-interpolation
+      - hspec >= 2.11 && < 3.0
+      - neat-interpolation >= 0.5 && < 0.6
       - sqlite-simple
       - tasklite-core
       - text
@@ -114,4 +114,4 @@ benchmarks:
     main: Main.hs
     source-dirs: benchmarks
     dependencies:
-      - criterion
+      - criterion >= 1.5 && < 1.7
