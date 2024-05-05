@@ -4,7 +4,6 @@ resolver: lts-22.19
 packages:
   - tasklite
   - tasklite-core
-  # - tasklite-app
 
 extra-deps:
   - aeson-2.2.1.0

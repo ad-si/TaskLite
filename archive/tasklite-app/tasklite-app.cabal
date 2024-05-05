@@ -1,15 +1,15 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.36.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2a976f354e938ffecd19f5a6208b0996448cc0076725dccf4ede38befa78bada
+-- hash: 44e7e0659a5f8c488f2aff75196704ceae4bc1b6f09b408e7082d90c0cf711bf
 
 name:           tasklite-app
 version:        0.3.0.0
-category:       Web
-homepage:       https://github.com/ad-si/tasklite-app#readme
+category:       Web, App, Task, Todo, Desktop
+homepage:       https://github.com/ad-si/TaskLite#readme
 author:         Adrian Sieber
 maintainer:     mail@adriansieber.com
 copyright:      Adrian Sieber
@@ -22,6 +22,8 @@ library
   exposed-modules:
       Lib
   other-modules:
+      Paths_tasklite_app
+  autogen-modules:
       Paths_tasklite_app
   hs-source-dirs:
       source
@@ -45,9 +47,6 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
-    , beam-core
-    , beam-migrate
-    , beam-sqlite
     , bytestring
     , cassava
     , directory
@@ -76,6 +75,8 @@ executable tasklite-app
   main-is: Main.hs
   other-modules:
       Paths_tasklite_app
+  autogen-modules:
+      Paths_tasklite_app
   hs-source-dirs:
       app
   default-extensions:
@@ -98,9 +99,6 @@ executable tasklite-app
   build-depends:
       aeson
     , base >=4.7 && <5
-    , beam-core
-    , beam-migrate
-    , beam-sqlite
     , bytestring
     , cassava
     , directory

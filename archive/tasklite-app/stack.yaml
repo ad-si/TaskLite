@@ -1,0 +1,17 @@
+resolver: lts-22.19
+
+packages:
+  - .
+
+extra-deps:
+  - gi-gtk-declarative-0.7.1
+  - gi-gtk-declarative-app-simple-0.7.1
+
+allow-newer: true
+
+flags:
+  aeson-pretty:
+    lib-only: true
+
+  airgql:
+    lib-only: true
