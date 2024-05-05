@@ -1811,7 +1811,9 @@ uncloseTasks conf connection ids = do
         connection
         [sql|
           UPDATE tasks
-          SET closed_utc = NULL
+          SET
+            closed_utc = NULL,
+            state = NULL
           WHERE ulid == :ulid
         |]
         [":ulid" := task.ulid]
