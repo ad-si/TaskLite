@@ -114,10 +114,10 @@ import Task (
     user,
     waiting_utc
   ),
+  emptyTask,
   setMetadataField,
   taskToEditableYaml,
   textToTaskState,
-  zeroTask,
  )
 import Text.Editor (runUserEditorDWIM, yamlTemplate)
 import Text.Parsec.Rfc2822 (GenericMessage (..), message)
@@ -199,7 +199,7 @@ data ImportTask = ImportTask
 emptyImportTask :: ImportTask
 emptyImportTask =
   ImportTask
-    { task = zeroTask
+    { task = emptyTask
     , notes = []
     , tags = []
     }

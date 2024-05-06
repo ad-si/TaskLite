@@ -363,8 +363,8 @@ instance Arbitrary Task where
   arbitrary = genericArbitraryU
 
 
-zeroTask :: Task
-zeroTask =
+emptyTask :: Task
+emptyTask =
   Task
     { ulid = ""
     , body = ""

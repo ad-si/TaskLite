@@ -63,7 +63,7 @@ import Task (
     waiting_utc
   ),
   TaskState,
-  zeroTask,
+  emptyTask,
  )
 
 
@@ -235,7 +235,7 @@ selectQuery =
 
 cpTimesAndState :: FullTask -> Task
 cpTimesAndState (FullTask{..}) =
-  zeroTask
+  emptyTask
     { Task.ulid
     , Task.modified_utc
     , Task.awake_utc

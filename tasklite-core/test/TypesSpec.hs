@@ -14,7 +14,7 @@ import FullTask (FullTask (body, notes, tags, ulid), emptyFullTask)
 import Lib (insertNotes, insertRecord, insertTags)
 import NeatInterpolation (trimming)
 import Note (Note (Note, body, ulid))
-import Task (Task (body, ulid), taskToEditableYaml, zeroTask)
+import Task (Task (body, ulid), emptyTask, taskToEditableYaml)
 import TestUtils (withMemoryDb)
 
 
@@ -42,7 +42,7 @@ spec = do
     describe "Task" $ do
       let
         sampleTask =
-          zeroTask
+          emptyTask
             { Task.ulid = "01hs68z7mdg4ktpxbv0yfafznq"
             , Task.body = "Sample task"
             }

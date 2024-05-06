@@ -83,7 +83,7 @@ import Task (
     user
   ),
   TaskState (Done),
-  zeroTask,
+  emptyTask,
  )
 import TaskToNote (TaskToNote (TaskToNote, ulid))
 import TaskToNote qualified
@@ -95,7 +95,7 @@ import Utils (parseUtc)
 
 exampleTask :: Task
 exampleTask =
-  zeroTask
+  emptyTask
     { Task.ulid = "01hq68smfe0r9entg3x4rb9441"
     , Task.body = "Buy milk"
     , Task.state = Nothing
@@ -108,7 +108,7 @@ exampleTask =
 
 task1 :: Task
 task1 =
-  zeroTask
+  emptyTask
     { Task.ulid = "01hs68z7mdg4ktpxbv0yfafznq"
     , Task.body = "New task 1"
     }
@@ -116,7 +116,7 @@ task1 =
 
 taskMultiLine :: Task
 taskMultiLine =
-  zeroTask
+  emptyTask
     { Task.ulid = "01hx48cnjhp18mts3c44zk3gen"
     , Task.body =
         "New task\n\
@@ -146,7 +146,7 @@ spec conf now = do
     it "inserts a task" $ do
       withMemoryDb conf $ \memConn -> do
         let task =
-              zeroTask
+              emptyTask
                 { Task.ulid = "01hrvhc0h1pncbczxym16642mm"
                 , Task.body = "Directly inserted task"
                 , Task.state = Just Done
@@ -166,7 +166,7 @@ spec conf now = do
       it "updates a task" $ do
         withMemoryDb conf $ \memConn -> do
           let initialTask =
-                zeroTask
+                emptyTask
                   { Task.ulid = "01hrvhdddfwsrnp6dd8h7tp8h4"
                   , Task.body = "New task"
                   , Task.state = Just Done
@@ -385,7 +385,7 @@ spec conf now = do
       withMemoryDb defaultConfig $ \memConn -> do
         let
           task2 =
-            zeroTask
+            emptyTask
               { Task.ulid = "01hs690f9hkzk9z7zews9j2k1d"
               , Task.body = "New task 2"
               }
@@ -412,7 +412,7 @@ spec conf now = do
       withMemoryDb defaultConfig $ \memConn -> do
         let
           task2 =
-            zeroTask
+            emptyTask
               { Task.ulid = "01hs6zsf3c0vqx6egfnmbqtmvy"
               , Task.body = "New task 2"
               , Task.closed_utc = Just "2024-04-10T18:54:10Z"

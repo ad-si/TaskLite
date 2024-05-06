@@ -19,14 +19,14 @@ import Test.Hspec (SpecWith, describe, it, shouldBe)
 
 import Task (
   Task (body, due_utc, metadata, modified_utc, state, ulid, user),
-  zeroTask,
+  emptyTask,
  )
 import Utils (parseUlidText, parseUlidUtcSection)
 
 
 exampleTask :: Task
 exampleTask =
-  zeroTask
+  emptyTask
     { ulid = "01hq68smfe0r9entg3x4rb9441"
     , body = "Buy milk"
     , state = Nothing

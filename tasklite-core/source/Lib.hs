@@ -261,9 +261,9 @@ import Task (
   Task,
   TaskState (..),
   derivedStateToQuery,
+  emptyTask,
   getStateHierarchy,
   textToDerivedState,
-  zeroTask,
  )
 import Task qualified
 import TaskToNote (TaskToNote (..))
@@ -513,7 +513,7 @@ addTask conf connection bodyWords = do
   let
     (body, tags, dueUtcMb, createdUtcMb) = parseTaskBody bodyWords
     task =
-      zeroTask
+      emptyTask
         { Task.ulid = T.toLower $ show $ case createdUtcMb of
             Nothing -> ulid
             Just createdUtc -> setDateTime ulid createdUtc
@@ -557,7 +557,7 @@ logTask conf connection bodyWords = do
     (body, extractedTags, dueUtcMb, createdUtcMb) = parseTaskBody bodyWords
     tags = extractedTags <> ["log"]
     task =
-      zeroTask
+      emptyTask
         { Task.ulid = T.toLower $ show $ case createdUtcMb of
             Nothing -> ulid
             Just createdUtc -> setDateTime ulid createdUtc
@@ -608,7 +608,7 @@ execWithTask conf connection idSubstr callback = do
         pure $
           "⚠️  Task" <+> quote (prefix <> idSubstr) <+> "does not exist"
     | numOfTasks == 1 ->
-        callback $ fromMaybe zeroTask $ P.head tasks
+        callback $ fromMaybe emptyTask $ P.head tasks
     | numOfTasks > 1 ->
         pure $
           "⚠️  Id slice"
@@ -2042,7 +2042,7 @@ duplicateTasks conf connection ids = do
       user <- getEffectiveUserName
 
       let dupeTask =
-            zeroTask
+            emptyTask
               { Task.ulid = dupeUlid
               , Task.body = task.body
               , Task.modified_utc = modified_utc
