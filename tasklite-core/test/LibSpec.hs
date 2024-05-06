@@ -21,6 +21,7 @@ import Data.Hourglass (DateTime)
 import Data.List.Utils (subIndex)
 import Data.Text (unpack)
 import Data.Text qualified as T
+import Data.Time.ISO8601.Duration qualified as Iso
 import Database.SQLite.Simple (query_)
 import Test.Hspec (
   Spec,
@@ -30,6 +31,7 @@ import Test.Hspec (
   shouldBe,
   shouldContain,
   shouldEndWith,
+  shouldNotBe,
   shouldNotContain,
   shouldSatisfy,
   shouldStartWith,
@@ -50,6 +52,7 @@ import Lib (
   deleteTag,
   deleteTasks,
   doTasks,
+  duplicateTasks,
   headTasks,
   infoTask,
   insertRecord,
@@ -58,6 +61,7 @@ import Lib (
   logTask,
   newTasks,
   nextTask,
+  repeatTasks,
   runFilter,
   setDueUtc,
   setReadyUtc,
@@ -69,9 +73,11 @@ import Task (
     body,
     closed_utc,
     due_utc,
+    group_ulid,
     metadata,
     modified_utc,
     ready_utc,
+    repetition_duration,
     state,
     ulid,
     user
@@ -95,7 +101,7 @@ exampleTask =
     , Task.state = Nothing
     , Task.modified_utc = "2024-02-21 16:43:17"
     , Task.due_utc = Just "2025-07-08 10:22:56"
-    , Task.user = "john"
+    , Task.user = "john_vdg1c2hz"
     , Task.metadata = "{\"source\":\"fridge\"}" & decode
     }
 
@@ -116,6 +122,16 @@ taskMultiLine =
         "New task\n\
         \with several lines\n\
         \and line breaks"
+    }
+
+
+normTask :: Task -> Task
+normTask task =
+  task
+    { Task.ulid = ""
+    , Task.modified_utc = ""
+    , Task.due_utc = Nothing
+    , Task.user = ""
     }
 
 
@@ -278,6 +294,39 @@ spec conf now = do
           tags `shouldBe` []
           notes :: [Note] <- query_ memConn "SELECT * FROM task_to_note"
           notes `shouldBe` []
+
+      it "duplicates a task" $ do
+        withMemoryDb conf $ \memConn -> do
+          insertRecord "tasks" memConn exampleTask
+          duplicationResult <- duplicateTasks conf memConn [exampleTask.ulid]
+          unpack (show duplicationResult)
+            `shouldStartWith` "👯  Created a duplicate of task \"Buy milk\""
+          tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+          case tasks of
+            [taskA, taskB] -> do
+              normTask taskA `shouldBe` normTask exampleTask
+              normTask taskB `shouldBe` normTask exampleTask
+            _ -> P.die "Must have exactly two tasks"
+
+      it "deletes obsolete fields on duplication" $ do
+        withMemoryDb conf $ \memConn -> do
+          insertRecord "tasks" memConn exampleTask
+          let
+            zeroDur = Iso.DurationWeek (Iso.DurWeek 0)
+            oneMonth = "P1M" & Iso.parseDuration & P.fromRight zeroDur
+          _ <- repeatTasks conf memConn oneMonth [exampleTask.ulid]
+          _ <- duplicateTasks conf memConn [exampleTask.ulid]
+          tasks :: [Task] <-
+            query_ memConn "SELECT * FROM tasks ORDER BY ulid DESC"
+          case tasks of
+            [dupe, original] -> do
+              original.group_ulid `shouldSatisfy` P.isJust
+              original.repetition_duration `shouldSatisfy` P.isJust
+              dupe.group_ulid `shouldSatisfy` P.isNothing
+              dupe.repetition_duration `shouldSatisfy` P.isNothing
+              dupe.user `shouldNotBe` original.user
+              normTask dupe `shouldBe` normTask exampleTask
+            _ -> P.die "Must have exactly two tasks"
 
     it "adds a task with tags and due date" $ do
       withMemoryDb conf $ \memConn -> do

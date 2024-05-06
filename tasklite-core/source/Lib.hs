@@ -496,6 +496,7 @@ parseTaskBody bodyWords =
     (body, tags, dueUtcMb, createdUtcMb)
 
 
+-- | Get (ulid, modified_utc, effectiveUserName) from the environment
 getTriple :: Config -> IO (ULID, Text, [Char])
 getTriple conf = do
   ulid <- getULID
@@ -1545,7 +1546,8 @@ randomTask conf connection = do
 findTask :: Connection -> Text -> IO (Doc AnsiStyle)
 findTask connection aPattern = do
   tasks :: [(Text, Text, Maybe [Text], Maybe [Text], Maybe Text)] <-
-    query_ connection $
+    query_
+      connection
       [sql|
         SELECT ulid, body, tags, notes, metadata
         FROM tasks_view
@@ -2037,15 +2039,16 @@ duplicateTasks conf connection ids = do
       dupeUlid <- formatUlid getULID
       -- TODO: Check if modified_utc can be set via an SQL trigger
       modified_utc <- formatElapsedP conf timeCurrentP
+      user <- getEffectiveUserName
 
       let dupeTask =
-            task
+            zeroTask
               { Task.ulid = dupeUlid
-              , Task.due_utc = Nothing
-              , Task.awake_utc = Nothing
-              , Task.closed_utc = Nothing
+              , Task.body = task.body
               , Task.modified_utc = modified_utc
-              , Task.state = Nothing
+              , Task.priority_adjustment = task.priority_adjustment
+              , Task.user = T.pack user
+              , Task.metadata = task.metadata
               }
 
       insertRecord "tasks" connection dupeTask
@@ -2933,7 +2936,8 @@ listTags conf connection = do
 listProjects :: Config -> Connection -> IO (Doc AnsiStyle)
 listProjects conf connection = do
   tags <-
-    query_ connection $
+    query_
+      connection
       [sql|
         SELECT *
         FROM tags

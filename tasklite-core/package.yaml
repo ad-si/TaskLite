@@ -103,6 +103,7 @@ tests:
       - aeson
       - hourglass
       - hspec >= 2.11 && < 3.0
+      - iso8601-duration
       - MissingH >= 1.4 && < 1.7
       - neat-interpolation >= 0.5 && < 0.6
       - sqlite-simple

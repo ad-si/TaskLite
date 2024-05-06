@@ -144,6 +144,7 @@ test-suite tasklite-test
     , base >=4.18 && <5
     , hourglass
     , hspec >=2.11 && <3.0
+    , iso8601-duration
     , neat-interpolation ==0.5.*
     , protolude >=0.3
     , sqlite-simple
