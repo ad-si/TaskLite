@@ -117,9 +117,11 @@ test-suite tasklite-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      ImportExportSpec
       LibSpec
       TestUtils
       TypesSpec
+      UtilsSpec
       Paths_tasklite_core
   autogen-modules:
       Paths_tasklite_core
