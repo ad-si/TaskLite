@@ -150,6 +150,7 @@ test-suite tasklite-test
     , sqlite-simple
     , tasklite-core
     , text
+    , ulid
     , yaml
   default-language: GHC2021
 

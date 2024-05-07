@@ -33,6 +33,7 @@ import Test.Hspec (
   shouldEndWith,
   shouldNotBe,
   shouldNotContain,
+  shouldNotSatisfy,
   shouldSatisfy,
   shouldStartWith,
   shouldThrow,
@@ -90,7 +91,7 @@ import TaskToNote qualified
 import TaskToTag (TaskToTag)
 import TaskToTag qualified
 import TestUtils (withMemoryDb)
-import Utils (parseUtc)
+import Utils (parseUtc, zeroUlidTxt)
 
 
 exampleTask :: Task
@@ -450,6 +451,25 @@ spec conf now = do
             task1
         let errMsg = "Tag \"" <> T.unpack existTag <> "\" is already assigned"
         show cliOutput `shouldContain` errMsg
+
+    it "lets you add notes while editing a task" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        cliOutput <-
+          editTaskByTask
+            (ApplyPreEdit (<> ("\nnotes: " <> P.show ["A short note" :: Text])))
+            memConn
+            task1
+        show cliOutput `shouldStartWith` "✏️  Edited task \"New task 1\""
+
+        taskToNotes :: [TaskToNote] <-
+          query_ memConn "SELECT * FROM task_to_note"
+        case taskToNotes of
+          [taskToNote] -> do
+            taskToNote.ulid
+              `shouldNotSatisfy` (\ulid -> zeroUlidTxt `T.isPrefixOf` ulid)
+            taskToNote.note `shouldBe` "A short note"
+          _ -> P.die "Found more than one task_to_tag row"
 
     it "keeps line breaks of multi-line tasks in info view" $ do
       withMemoryDb defaultConfig $ \memConn -> do

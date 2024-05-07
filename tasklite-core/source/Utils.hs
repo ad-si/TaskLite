@@ -142,6 +142,11 @@ emptyUlid =
     }
 
 
+-- | ULID time section if timestamp == 1970-01-01 00:00:00.000
+zeroUlidTxt :: Text
+zeroUlidTxt = "0000000000"
+
+
 utcFormatReadable :: TimeFormatString
 utcFormatReadable =
   toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
@@ -205,22 +210,22 @@ ulidTextToDateTime =
   T.take 10 >>> parseUlidUtcSection
 
 
-{-| `ulid2utc` converts a ULID to a UTC timestamp
+{-| `ulidText2utc` converts a ULID to a UTC timestamp
 
->>> ulid2utc "01hq68smfe0r9entg3x4rb9441"
+>>> ulidText2utc "01hq68smfe0r9entg3x4rb9441"
 Just "2024-02-21 16:43:17.358"
 -}
-ulid2utc :: Text -> Maybe Text
-ulid2utc ulid =
-  fmap
-    (T.pack . timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])))
-    (ulidTextToDateTime ulid)
+ulidText2utc :: Text -> Maybe Text
+ulidText2utc ulid =
+  ulid
+    & ulidTextToDateTime
+    <&> (timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])) >>> T.pack)
 
 
 parseUlidText :: Text -> Maybe ULID
 parseUlidText ulidText = do
   let
-    mkUlidTimeMaybe text = fmap toUlidTime (ulidTextToDateTime text)
+    mkUlidTimeMaybe text = text & ulidTextToDateTime <&> toUlidTime
 
     mkUlidRandomMaybe :: Text -> Maybe ULIDRandom
     mkUlidRandomMaybe = readMaybe . T.unpack . T.drop 10
@@ -245,7 +250,10 @@ elapsedPToRational (ElapsedP (Elapsed (Seconds s)) (NanoSeconds ns)) =
 
 toUlidTime :: DateTime -> ULIDTimeStamp
 toUlidTime =
-  mkULIDTimeStamp . realToFrac . elapsedPToRational . timeGetElapsedP
+  timeGetElapsedP
+    >>> elapsedPToRational
+    >>> realToFrac
+    >>> mkULIDTimeStamp
 
 
 setDateTime :: ULID -> DateTime -> ULID

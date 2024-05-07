@@ -109,6 +109,7 @@ tests:
       - sqlite-simple
       - tasklite-core
       - text
+      - ulid
       - yaml
 
 benchmarks:

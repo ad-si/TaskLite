@@ -224,7 +224,7 @@ import Utils (
   TagText,
   executeHooks,
   parseUtc,
-  ulid2utc,
+  ulidText2utc,
  )
 
 
@@ -1257,7 +1257,7 @@ executeCLiCommand conf now connection progName args = do
         PrintConfig -> pure $ pretty conf
         StartServer -> startServer AirGQL.defaultConfig conf
         Alias alias _ -> pure $ aliasWarning alias
-        UlidToUtc ulid -> pure $ pretty $ ulid2utc ulid
+        UlidToUtc ulid -> pure $ pretty $ ulidText2utc ulid
         ExternalCommand cmd argsMb -> handleExternalCommand conf cmd argsMb
 
 

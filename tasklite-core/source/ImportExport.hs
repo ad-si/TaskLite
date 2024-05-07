@@ -67,7 +67,8 @@ import Data.Hourglass (
 import Data.Text qualified as T
 import Data.Text.Lazy.Encoding qualified as TL
 import Data.Time.ISO8601.Duration qualified as Iso
-import Data.ULID (ulidFromInteger)
+import Data.ULID (ULID, ulidFromInteger)
+import Data.ULID.TimeStamp (getULIDTimeStamp)
 import Data.Vector qualified as V
 import Data.Yaml as Yaml (ParseException, decodeEither')
 import Database.SQLite.Simple as Sql (Connection, query_)
@@ -133,6 +134,7 @@ import Utils (
   setDateTime,
   ulidTextToDateTime,
   zeroTime,
+  zeroUlidTxt,
   zonedTimeToDateTime,
   (<$$>),
  )
@@ -403,18 +405,15 @@ instance FromJSON ImportTask where
           Just crUtc ->
             theNotes
               <&> ( \theNote ->
-                      let
-                        noteUlidTxt = Note.ulid theNote
-                        mbNoteUlid = parseUlidText noteUlidTxt
-                        mbNewUlid = do
-                          noteUlid <- mbNoteUlid
-
-                          pure $ show $ setDateTime noteUlid crUtc
-                      in
-                        theNote
-                          { Note.ulid =
-                              T.toLower $ fromMaybe noteUlidTxt mbNewUlid
-                          }
+                      theNote
+                        { Note.ulid =
+                            theNote.ulid
+                              & parseUlidText
+                              <&> P.flip setDateTime crUtc
+                              <&> show @ULID
+                              & fromMaybe theNote.ulid
+                              & T.toLower
+                        }
                   )
           Nothing -> theNotes
 
@@ -456,27 +455,27 @@ insertImportTask connection importTaskRecord = do
   let
     taskParsed = task importTaskRecord
     theTask =
-      if Task.user taskParsed == ""
+      if taskParsed.user == ""
         then taskParsed{Task.user = T.pack effectiveUserName}
         else taskParsed
   insertRecord "tasks" connection theTask
   warnings <-
     insertTags
       connection
-      (ulidTextToDateTime $ Task.ulid taskParsed)
+      (ulidTextToDateTime taskParsed.ulid)
       theTask
       importTaskRecord.tags
   insertNotes
     connection
-    (ulidTextToDateTime $ Task.ulid taskParsed)
+    (ulidTextToDateTime taskParsed.ulid)
     theTask
     importTaskRecord.notes
   pure $
     warnings
       <$$> "📥 Imported task"
-      <+> dquotes (pretty $ Task.body theTask)
+      <+> dquotes (pretty theTask.body)
       <+> "with ulid"
-      <+> dquotes (pretty $ Task.ulid theTask)
+      <+> dquotes (pretty theTask.ulid)
       <+> hardline
 
 
@@ -505,7 +504,7 @@ emailToImportTask email@(Message headerFields msgBody) =
       ImportTask
         task
           { Task.body =
-              Task.body task
+              task.body
                 <> ( msgBody
                       & lines8
                       <&> (TL.decodeUtf8 >>> toStrict)
@@ -522,7 +521,7 @@ emailToImportTask email@(Message headerFields msgBody) =
           names
             <&> ( \(Email.NameAddr name emailAddress) ->
                     Object $
-                      KeyMap.fromList $
+                      KeyMap.fromList
                         [ ("name", Aeson.String $ T.pack $ fromMaybe "" name)
                         , ("email", Aeson.String $ T.pack emailAddress)
                         ]
@@ -534,8 +533,12 @@ emailToImportTask email@(Message headerFields msgBody) =
         Email.Date emailDate ->
           let
             utc = zonedTimeToDateTime emailDate
-            ulidGeneratedRes = (email & show :: Text) & (hash >>> toInteger >>> abs >>> ulidFromInteger)
-            ulidCombined = (ulidGeneratedRes & P.fromRight emptyUlid) `setDateTime` utc
+            ulidGeneratedRes =
+              (email & show :: Text)
+                & (hash >>> toInteger >>> abs >>> ulidFromInteger)
+            ulidCombined =
+              (ulidGeneratedRes & P.fromRight emptyUlid)
+                `setDateTime` utc
           in
             ImportTask
               task
@@ -562,7 +565,7 @@ emailToImportTask email@(Message headerFields msgBody) =
             tags
         Email.Subject subj ->
           ImportTask
-            task{Task.body = Task.body task <> T.pack subj}
+            task{Task.body = task.body <> T.pack subj}
             notes
             tags
         Email.Keywords kwords ->
@@ -751,38 +754,40 @@ editTaskByTask preEdit conn taskToEdit = do
         Left error -> die $ show error <> " in task \n" <> show newContent
         Right importTaskRecord -> do
           effectiveUserName <- getEffectiveUserName
+          now <- getULIDTimeStamp
           let
-            taskParsed = task importTaskRecord
             taskFixed =
-              taskParsed
+              importTaskRecord.task
                 { Task.user =
-                    if Task.user taskParsed == ""
+                    if importTaskRecord.task.user == ""
                       then T.pack effectiveUserName
-                      else Task.user taskParsed
+                      else importTaskRecord.task.user
                 , Task.metadata =
                     if hasMetadata == Just True
-                      then Task.metadata taskParsed
+                      then importTaskRecord.task.metadata
                       else Nothing
                 }
+            notesCorrectUtc =
+              importTaskRecord.notes
+                <&> ( \note ->
+                        note
+                          { Note.ulid =
+                              if zeroUlidTxt `T.isPrefixOf` note.ulid
+                                then
+                                  note.ulid & T.replace zeroUlidTxt (show now)
+                                else note.ulid
+                          }
+                    )
 
           updateTask conn taskFixed
-          warnings <-
-            insertTags
-              conn
-              Nothing
-              taskFixed
-              (tags importTaskRecord)
-          insertNotes
-            conn
-            Nothing
-            taskFixed
-            (notes importTaskRecord)
+          tagWarnings <- insertTags conn Nothing taskFixed importTaskRecord.tags
+          insertNotes conn Nothing taskFixed notesCorrectUtc
           pure $
-            warnings
+            tagWarnings
               <$$> "✏️  Edited task"
-              <+> dquotes (pretty $ Task.body taskFixed)
+              <+> dquotes (pretty taskFixed.body)
               <+> "with ulid"
-              <+> dquotes (pretty $ Task.ulid taskFixed)
+              <+> dquotes (pretty taskFixed.ulid)
               <+> hardline
 
 

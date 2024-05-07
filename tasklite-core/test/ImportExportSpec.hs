@@ -5,6 +5,7 @@ import Protolude (
   Eq ((==)),
   Maybe (..),
   Text,
+  fromMaybe,
   show,
   ($),
   (&),
@@ -18,12 +19,14 @@ import Data.Aeson (decode, eitherDecode, eitherDecodeStrictText)
 import Data.Hourglass (timePrint, toFormat)
 import Data.Text (unpack)
 import Data.Text qualified as T
+import Data.ULID (ULID)
 import Database.SQLite.Simple (query_)
 import Test.Hspec (
   SpecWith,
   describe,
   it,
   shouldBe,
+  shouldNotBe,
   shouldSatisfy,
   shouldStartWith,
  )
@@ -32,10 +35,10 @@ import Config (Config (..))
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
 import ImportExport (insertImportTask)
-import TaskToNote (TaskToNote)
+import TaskToNote (TaskToNote (TaskToNote))
 import TaskToNote qualified
 import TestUtils (withMemoryDb)
-import Utils (parseUtc, ulid2utc)
+import Utils (emptyUlid, parseUtc, setDateTime, ulidText2utc, zeroTime)
 
 
 spec :: Config -> SpecWith ()
@@ -78,7 +81,7 @@ spec conf = do
 
       (utcTxt & parseUtc <&> timePrint printFmt) `shouldBe` Just expected
 
-    it "imports a JSON task" $ do
+    it "imports a JSON task with notes" $ do
       withMemoryDb conf $ \memConn -> do
         let jsonTask = "{\"body\":\"Just a test\", \"notes\":[\"A note\"]}"
 
@@ -138,6 +141,41 @@ spec conf = do
             _ <- insertImportTask memConn importTaskRecord
             tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
             case tasks of
-              [updatedTask] ->
-                ulid2utc updatedTask.ulid `shouldBe` Just utcFromUlid
+              [insertedTask] ->
+                ulidText2utc insertedTask.ulid `shouldBe` Just utcFromUlid
               _ -> P.die "More than one task found"
+
+    it "imports JSON task with notes and sets the created_utc for notes" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          utc = "2024-03-15 10:32:51"
+          jsonTask =
+            "{\"body\":\"Just a test\",\
+            \\"created_at\":\"{{utc}}\",\
+            \\"notes\": [\"Just a note\"]}"
+              & T.replace "{{utc}}" utc
+
+          expectedTaskToNote =
+            TaskToNote
+              { ulid =
+                  emptyUlid
+                    & P.flip setDateTime (utc & parseUtc & fromMaybe zeroTime)
+                    & show @ULID
+                    & T.toLower
+              , task_ulid = "01hs0tqw1r0007h0mj78s1jntz"
+              , note = "Just a note"
+              }
+
+        case eitherDecodeStrictText jsonTask of
+          Left error ->
+            P.die $ "Error decoding JSON: " <> show error
+          Right importTaskRecord -> do
+            _ <- insertImportTask memConn importTaskRecord
+            taskToNoteList :: [TaskToNote] <-
+              query_ memConn "SELECT * FROM task_to_note"
+            case taskToNoteList of
+              [taskToNote] -> do
+                taskToNote.ulid `shouldNotBe` expectedTaskToNote.ulid
+                (taskToNote.ulid & T.take 10)
+                  `shouldBe` (expectedTaskToNote.ulid & T.take 10)
+              _ -> P.die "Found more than one note"

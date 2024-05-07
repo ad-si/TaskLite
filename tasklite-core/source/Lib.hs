@@ -375,13 +375,13 @@ insertTags
 insertTags connection mbCreatedUtc task tags = do
   let uniqueTags = nub tags
   taskToTags <- forM uniqueTags $ \tag -> do
-    tagUlid <- getULID
+    newUlid <- getULID
     pure $
       TaskToTag
         { ulid =
             mbCreatedUtc
-              <&> setDateTime tagUlid
-              & fromMaybe tagUlid
+              <&> setDateTime newUlid
+              & fromMaybe newUlid
               & show
               & T.toLower
         , task_ulid = task.ulid
@@ -402,20 +402,17 @@ insertTags connection mbCreatedUtc task tags = do
 insertNotes :: Connection -> Maybe DateTime -> Task -> [Note] -> IO ()
 insertNotes connection mbCreatedUtc task notes = do
   taskToNotes <- forM notes $ \theNote -> do
-    let
-      noteUlidTxt = theNote.ulid
-      mbNoteUlid = parseUlidText noteUlidTxt
-      mbNewUlid = do
-        createdUtc <- mbCreatedUtc
-        noteUlid <- mbNoteUlid
-
-        pure $ show $ setDateTime noteUlid createdUtc
-
+    newUlid <- getULID
     pure $
       TaskToNote
         { ulid =
-            mbNewUlid
-              & fromMaybe noteUlidTxt
+            theNote.ulid
+              & parseUlidText
+              & fromMaybe newUlid
+              & case mbCreatedUtc of
+                Nothing -> P.identity
+                Just createdUtc -> P.flip setDateTime createdUtc
+              & show @ULID
               & T.toLower
         , task_ulid = task.ulid
         , note = theNote.body
