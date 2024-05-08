@@ -15,7 +15,7 @@ import Data.Hourglass (
   ElapsedP (ElapsedP),
   timeGetDateTimeOfDay,
  )
-import Test.Hspec (SpecWith, describe, it, shouldBe)
+import Test.Hspec (Spec, it, shouldBe)
 
 import Task (
   Task (body, due_utc, metadata, modified_utc, state, ulid, user),
@@ -37,20 +37,19 @@ exampleTask =
     }
 
 
-spec :: SpecWith ()
+spec :: Spec
 spec = do
-  describe "Utils" $ do
-    it "correctly parses beginning of UNIX epoch" $
-      do
-        parseUlidUtcSection "0000000000"
-        `shouldBe` Just (timeGetDateTimeOfDay $ Elapsed 0)
+  it "correctly parses beginning of UNIX epoch" $
+    do
+      parseUlidUtcSection "0000000000"
+      `shouldBe` Just (timeGetDateTimeOfDay $ Elapsed 0)
 
-    it "correctly parses 36 ms after UNIX epoch" $
-      do
-        parseUlidUtcSection "0000000014"
-        `shouldBe` Just (timeGetDateTimeOfDay $ ElapsedP 0 36000000)
+  it "correctly parses 36 ms after UNIX epoch" $
+    do
+      parseUlidUtcSection "0000000014"
+      `shouldBe` Just (timeGetDateTimeOfDay $ ElapsedP 0 36000000)
 
-    it "correctly parses a ULID string" $ do
-      let ulidText = "0000000014T4R3JR7HMQNREEW8" :: Text
+  it "correctly parses a ULID string" $ do
+    let ulidText = "0000000014T4R3JR7HMQNREEW8" :: Text
 
-      fmap show (parseUlidText ulidText) `shouldBe` Just ulidText
+    fmap show (parseUlidText ulidText) `shouldBe` Just ulidText

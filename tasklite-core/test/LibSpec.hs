@@ -17,7 +17,7 @@ import Protolude (
  )
 import Protolude qualified as P
 
-import Data.Hourglass (DateTime)
+import Data.Aeson (decode)
 import Data.List.Utils (subIndex)
 import Data.Text (unpack)
 import Data.Text qualified as T
@@ -26,7 +26,6 @@ import Database.SQLite.Simple (query_)
 import Test.Hspec (
   Spec,
   context,
-  describe,
   it,
   shouldBe,
   shouldContain,
@@ -39,8 +38,7 @@ import Test.Hspec (
   shouldThrow,
  )
 
-import Config (Config (..), defaultConfig)
-import Data.Aeson (decode)
+import Config (defaultConfig)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
 import ImportExport (PreEdit (ApplyPreEdit), editTaskByTask)
@@ -91,7 +89,7 @@ import TaskToNote qualified
 import TaskToTag (TaskToTag)
 import TaskToTag qualified
 import TestUtils (withMemoryDb)
-import Utils (parseUtc, zeroUlidTxt)
+import Utils (parseUtc, zeroTime, zeroUlidTxt)
 
 
 exampleTask :: Task
@@ -136,400 +134,407 @@ normTask task =
     }
 
 
-spec :: Config -> DateTime -> Spec
-spec conf now = do
-  describe "Lib" $ do
-    it "initially contains no tasks" $ do
-      withMemoryDb conf $ \memConn -> do
-        tasks <- headTasks conf now memConn
-        unpack (show tasks) `shouldStartWith` "No tasks available"
+spec :: Spec
+spec = do
+  let
+    now = "2024-05-08 10:04:17" & parseUtc & P.fromMaybe zeroTime
+    conf = defaultConfig
 
-    it "inserts a task" $ do
-      withMemoryDb conf $ \memConn -> do
-        let task =
-              emptyTask
-                { Task.ulid = "01hrvhc0h1pncbczxym16642mm"
-                , Task.body = "Directly inserted task"
-                , Task.state = Just Done
-                }
+  it "initially contains no tasks" $ do
+    withMemoryDb conf $ \memConn -> do
+      tasks <- headTasks conf now memConn
+      unpack (show tasks) `shouldStartWith` "No tasks available"
 
-        insertRecord "tasks" memConn task
-        tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
-        tasks `shouldBe` [task]
-
-    it "adds a new task" $ do
-      withMemoryDb conf $ \memConn -> do
-        result <- addTask conf memConn ["Just a test"]
-        unpack (show result)
-          `shouldStartWith` "🆕 Added task \"Just a test\" with id"
-
-    context "When a task exists" $ do
-      it "updates a task" $ do
-        withMemoryDb conf $ \memConn -> do
-          let initialTask =
-                emptyTask
-                  { Task.ulid = "01hrvhdddfwsrnp6dd8h7tp8h4"
-                  , Task.body = "New task"
-                  , Task.state = Just Done
-                  }
-              newTask = initialTask{body = "Updated task"}
-
-          insertRecord "tasks" memConn initialTask
-          updateTask memConn newTask
-          tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
-
-          case tasks of
-            [updatedTask] -> do
-              -- Task should have a different `modified_utc` value
-              updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
-              updatedTask{modified_utc = ""} `shouldBe` newTask
-            _ ->
-              P.die "More than one task found"
-
-      it "lists next task" $ do
-        withMemoryDb conf $ \memConn -> do
-          insertRecord "tasks" memConn exampleTask
-          result <- nextTask conf memConn
-          unpack (show result) `shouldContain` "Buy milk"
-
-      it "adds a tag" $ do
-        withMemoryDb conf $ \memConn -> do
-          insertRecord "tasks" memConn exampleTask
-          tagResult <- addTag conf memConn "test" [exampleTask.ulid]
-          unpack (show tagResult)
-            `shouldStartWith` "🏷  Added tag \"test\" to task"
-          taskToTags :: [TaskToTag] <-
-            query_ memConn "SELECT * FROM task_to_tag"
-          case taskToTags of
-            [taskToTag] -> do
-              taskToTag `shouldSatisfy` (\t -> t.ulid /= "")
-              taskToTag `shouldSatisfy` (\t -> t.task_ulid /= "")
-              taskToTag `shouldSatisfy` (\t -> t.tag == "test")
-            _ -> P.die "More than one task_to_tag row found"
-
-      it "deletes a tag" $ do
-        withMemoryDb conf $ \memConn -> do
-          insertRecord "tasks" memConn exampleTask
-          _ <- addTag conf memConn "test" [exampleTask.ulid]
-          delResult <- deleteTag conf memConn "test" [exampleTask.ulid]
-          unpack (show delResult)
-            `shouldStartWith` "💥 Removed tag \"test\" of task"
-          taskToTags :: [TaskToTag] <-
-            query_ memConn "SELECT * FROM task_to_tag"
-          taskToTags `shouldBe` []
-
-      it "doesn't delete a tag that does not exist" $ do
-        withMemoryDb conf $ \memConn -> do
-          insertRecord "tasks" memConn exampleTask
-          delResult <- deleteTag conf memConn "test" [exampleTask.ulid]
-          unpack (show delResult) `shouldContain` "not set"
-
-      it "adds a note" $ do
-        withMemoryDb conf $ \memConn -> do
-          insertRecord "tasks" memConn exampleTask
-          noteResult <- addNote conf memConn "A test note" [exampleTask.ulid]
-          unpack (show noteResult)
-            `shouldStartWith` "🗒  Added a note to task"
-
-      it "sets due UTC" $ do
-        withMemoryDb conf $ \memConn -> do
-          insertRecord "tasks" memConn exampleTask
-          let utcTxt = "2087-03-21 17:43:00"
-          case parseUtc utcTxt of
-            Nothing -> P.die "Invalid UTC string"
-            Just utcStamp -> do
-              result <- setDueUtc conf memConn utcStamp [exampleTask.ulid]
-              unpack (show result)
-                `shouldStartWith` ( "📅 Set due UTC of task \""
-                                      <> T.unpack exampleTask.body
-                                      <> "\" with id \""
-                                      <> T.unpack exampleTask.ulid
-                                      <> "\" to \""
-                                      <> T.unpack utcTxt
-                                      <> "\""
-                                  )
-
-      it "sets ready UTC" $ do
-        withMemoryDb conf $ \memConn -> do
-          insertRecord "tasks" memConn exampleTask
-          let utcTxt = "2059-07-11 04:55:16"
-          case parseUtc utcTxt of
-            Nothing -> P.die "Invalid UTC string"
-            Just utcStamp -> do
-              result <- setReadyUtc conf memConn utcStamp [exampleTask.ulid]
-              unpack (show result)
-                `shouldStartWith` ( "📅 Set ready UTC of task \""
-                                      <> T.unpack exampleTask.body
-                                      <> "\" with id \""
-                                      <> T.unpack exampleTask.ulid
-                                      <> "\" to \""
-                                      <> T.unpack utcTxt
-                                      <> "\""
-                                  )
-              tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
-              case tasks of
-                [updatedTask] -> do
-                  updatedTask `shouldSatisfy` (\task -> isJust task.ready_utc)
-                _ -> P.die "More than one task found"
-
-      it "completes it" $ do
-        withMemoryDb conf $ \memConn -> do
-          insertRecord "tasks" memConn exampleTask
-          doResult <- doTasks conf memConn Nothing [exampleTask.ulid]
-          unpack (show doResult) `shouldStartWith` "✅ Finished task"
-          tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
-          case tasks of
-            [updatedTask] -> do
-              updatedTask `shouldSatisfy` (\task -> task.state == Just Done)
-              updatedTask `shouldSatisfy` (\task -> isJust task.closed_utc)
-            _ -> P.die "More than one task found"
-
-      it "deletes it" $ do
-        withMemoryDb conf $ \memConn -> do
-          insertRecord "tasks" memConn exampleTask
-          deleteResult <- deleteTasks conf memConn [exampleTask.ulid]
-          unpack (show deleteResult) `shouldStartWith` "❌ Deleted task"
-          tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
-          tasks `shouldBe` []
-          tags :: [TaskToTag] <- query_ memConn "SELECT * FROM task_to_tag"
-          tags `shouldBe` []
-          notes :: [Note] <- query_ memConn "SELECT * FROM task_to_note"
-          notes `shouldBe` []
-
-      it "duplicates a task" $ do
-        withMemoryDb conf $ \memConn -> do
-          insertRecord "tasks" memConn exampleTask
-          duplicationResult <- duplicateTasks conf memConn [exampleTask.ulid]
-          unpack (show duplicationResult)
-            `shouldStartWith` "👯  Created a duplicate of task \"Buy milk\""
-          tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
-          case tasks of
-            [taskA, taskB] -> do
-              normTask taskA `shouldBe` normTask exampleTask
-              normTask taskB `shouldBe` normTask exampleTask
-            _ -> P.die "Must have exactly two tasks"
-
-      it "deletes obsolete fields on duplication" $ do
-        withMemoryDb conf $ \memConn -> do
-          insertRecord "tasks" memConn exampleTask
-          let
-            zeroDur = Iso.DurationWeek (Iso.DurWeek 0)
-            oneMonth = "P1M" & Iso.parseDuration & P.fromRight zeroDur
-          _ <- repeatTasks conf memConn oneMonth [exampleTask.ulid]
-          _ <- duplicateTasks conf memConn [exampleTask.ulid]
-          tasks :: [Task] <-
-            query_ memConn "SELECT * FROM tasks ORDER BY ulid DESC"
-          case tasks of
-            [dupe, original] -> do
-              original.group_ulid `shouldSatisfy` P.isJust
-              original.repetition_duration `shouldSatisfy` P.isJust
-              dupe.group_ulid `shouldSatisfy` P.isNothing
-              dupe.repetition_duration `shouldSatisfy` P.isNothing
-              dupe.user `shouldNotBe` original.user
-              normTask dupe `shouldBe` normTask exampleTask
-            _ -> P.die "Must have exactly two tasks"
-
-    it "adds a task with tags and due date" $ do
-      withMemoryDb conf $ \memConn -> do
-        _ <- addTask conf memConn ["Just a test +tag due:2082-10-03 +what"]
-        (tasks :: [FullTask]) <- query_ memConn "SELECT * FROM tasks_view"
-        case tasks of
-          [updatedTask] -> do
-            updatedTask `shouldSatisfy` (\task -> task.ulid /= "")
-            updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
-            updatedTask `shouldSatisfy` (\task -> task.user /= "")
-            updatedTask
-              { FullTask.ulid = ""
-              , FullTask.modified_utc = ""
-              , FullTask.user = ""
-              }
-              `shouldBe` emptyFullTask
-                { FullTask.body = "Just a test"
-                , FullTask.due_utc = Just "2082-10-03 00:00:00"
-                , FullTask.priority = Just 2.0
-                , FullTask.tags = Just ["tag", "what"]
-                }
-          _ -> P.die "More than one task found"
-
-    it "deduplicates tags when adding a task" $ do
-      withMemoryDb conf $ \memConn -> do
-        _ <- addTask conf memConn ["Buy milk +drink +drink"]
-        (tasks :: [FullTask]) <- query_ memConn "SELECT * FROM tasks_view"
-        case tasks of
-          [updatedTask] -> do
-            updatedTask `shouldSatisfy` (\task -> task.ulid /= "")
-            updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
-            updatedTask `shouldSatisfy` (\task -> task.user /= "")
-            updatedTask
-              { FullTask.ulid = ""
-              , FullTask.modified_utc = ""
-              , FullTask.user = ""
-              }
-              `shouldBe` emptyFullTask
-                { FullTask.body = "Buy milk"
-                , FullTask.priority = Just 2.0
-                , FullTask.tags = Just ["drink"]
-                }
-          _ -> P.die "More than one task found"
-
-    it "logs a task" $ do
-      withMemoryDb conf $ \memConn -> do
-        result <- logTask conf memConn ["Just a test"]
-        unpack (show result)
-          `shouldStartWith` "📝 Logged task \"Just a test\" with id"
-
-    it "dies on invalid filter expressions" $ do
-      withMemoryDb conf $ \memConn -> do
-        runFilter conf now memConn [" "] `shouldThrow` (== ExitFailure 1)
-
-    it "counts tasks" $ do
-      withMemoryDb defaultConfig $ \memConn -> do
-        let
-          task2 =
+  it "inserts a task" $ do
+    withMemoryDb conf $ \memConn -> do
+      let task =
             emptyTask
-              { Task.ulid = "01hs690f9hkzk9z7zews9j2k1d"
-              , Task.body = "New task 2"
-              }
-
-        count0 <- countTasks defaultConfig memConn P.mempty
-        show count0 `shouldBe` ("0" :: Text)
-
-        insertRecord "tasks" memConn task1
-        count1 <- countTasks defaultConfig memConn P.mempty
-        show count1 `shouldBe` ("1" :: Text)
-
-        insertRecord "tasks" memConn task2
-        count2 <- countTasks defaultConfig memConn P.mempty
-        show count2 `shouldBe` ("2" :: Text)
-
-        warnings <- insertTags memConn Nothing task2 ["test"]
-        P.show warnings `shouldBe` T.empty
-        countWithTag <- countTasks defaultConfig memConn (Just ["+test"])
-        show countWithTag `shouldBe` ("1" :: Text)
-
-        pure ()
-
-    it "gets new tasks" $ do
-      withMemoryDb defaultConfig $ \memConn -> do
-        let
-          task2 =
-            emptyTask
-              { Task.ulid = "01hs6zsf3c0vqx6egfnmbqtmvy"
-              , Task.body = "New task 2"
-              , Task.closed_utc = Just "2024-04-10T18:54:10Z"
+              { Task.ulid = "01hrvhc0h1pncbczxym16642mm"
+              , Task.body = "Directly inserted task"
               , Task.state = Just Done
               }
 
-        insertRecord "tasks" memConn task1
-        insertRecord "tasks" memConn task2
+      insertRecord "tasks" memConn task
+      tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+      tasks `shouldBe` [task]
 
-        cliOutput <- newTasks defaultConfig now memConn (Just ["state:done"])
-        show cliOutput `shouldContain` "New task 2"
-        show cliOutput `shouldNotContain` "New task 1"
+  it "adds a new task" $ do
+    withMemoryDb conf $ \memConn -> do
+      result <- addTask conf memConn ["Just a test"]
+      unpack (show result)
+        `shouldStartWith` "🆕 Added task \"Just a test\" with id"
 
-    it "shows warning if a tag is duplicated" $ do
-      withMemoryDb defaultConfig $ \memConn -> do
-        let newTag = "test"
-        insertRecord "tasks" memConn task1
-        warnings <- insertTags memConn Nothing task1 [newTag]
-        P.show warnings `shouldBe` T.empty
+  context "When a task exists" $ do
+    it "updates a task" $ do
+      withMemoryDb conf $ \memConn -> do
+        let initialTask =
+              emptyTask
+                { Task.ulid = "01hrvhdddfwsrnp6dd8h7tp8h4"
+                , Task.body = "New task"
+                , Task.state = Just Done
+                }
+            newTask = initialTask{body = "Updated task"}
 
-        cliOutput <- addTag defaultConfig memConn newTag [task1.ulid]
-        show cliOutput `shouldEndWith` "Tag \"test\" is already assigned"
+        insertRecord "tasks" memConn initialTask
+        updateTask memConn newTask
+        tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
 
-    it "lets you edit a task and shows warning if a tag was duplicated" $ do
-      withMemoryDb defaultConfig $ \memConn -> do
-        let existTag = "existing-tag"
-        insertRecord "tasks" memConn task1
-        warnings <- insertTags memConn Nothing task1 [existTag]
-        P.show warnings `shouldBe` T.empty
+        case tasks of
+          [updatedTask] -> do
+            -- Task should have a different `modified_utc` value
+            updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
+            updatedTask{modified_utc = ""} `shouldBe` newTask
+          _ ->
+            P.die "More than one task found"
 
-        cliOutput <-
-          editTaskByTask
-            (ApplyPreEdit (<> ("\ntags: " <> P.show [existTag, "new-tag"])))
-            memConn
-            task1
-        let errMsg = "Tag \"" <> T.unpack existTag <> "\" is already assigned"
-        show cliOutput `shouldContain` errMsg
+    it "lists next task" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        result <- nextTask conf memConn
+        unpack (show result) `shouldContain` "Buy milk"
 
-    it "lets you add notes while editing a task" $ do
-      withMemoryDb defaultConfig $ \memConn -> do
-        insertRecord "tasks" memConn task1
-        cliOutput <-
-          editTaskByTask
-            (ApplyPreEdit (<> ("\nnotes: " <> P.show ["A short note" :: Text])))
-            memConn
-            task1
-        show cliOutput `shouldStartWith` "✏️  Edited task \"New task 1\""
+    it "adds a tag" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        tagResult <- addTag conf memConn "test" [exampleTask.ulid]
+        unpack (show tagResult)
+          `shouldStartWith` "🏷  Added tag \"test\" to task"
+        taskToTags :: [TaskToTag] <-
+          query_ memConn "SELECT * FROM task_to_tag"
+        case taskToTags of
+          [taskToTag] -> do
+            taskToTag `shouldSatisfy` (\t -> t.ulid /= "")
+            taskToTag `shouldSatisfy` (\t -> t.task_ulid /= "")
+            taskToTag `shouldSatisfy` (\t -> t.tag == "test")
+          _ -> P.die "More than one task_to_tag row found"
 
-        taskToNotes :: [TaskToNote] <-
-          query_ memConn "SELECT * FROM task_to_note"
-        case taskToNotes of
-          [taskToNote] -> do
-            taskToNote.ulid
-              `shouldNotSatisfy` (\ulid -> zeroUlidTxt `T.isPrefixOf` ulid)
-            taskToNote.note `shouldBe` "A short note"
-          _ -> P.die "Found more than one task_to_tag row"
+    it "deletes a tag" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        _ <- addTag conf memConn "test" [exampleTask.ulid]
+        delResult <- deleteTag conf memConn "test" [exampleTask.ulid]
+        unpack (show delResult)
+          `shouldStartWith` "💥 Removed tag \"test\" of task"
+        taskToTags :: [TaskToTag] <-
+          query_ memConn "SELECT * FROM task_to_tag"
+        taskToTags `shouldBe` []
 
-    it "keeps line breaks of multi-line tasks in info view" $ do
-      withMemoryDb defaultConfig $ \memConn -> do
-        insertRecord "tasks" memConn taskMultiLine
+    it "doesn't delete a tag that does not exist" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        delResult <- deleteTag conf memConn "test" [exampleTask.ulid]
+        unpack (show delResult) `shouldContain` "not set"
 
-        cliOutput <- infoTask defaultConfig memConn taskMultiLine.ulid
-        show cliOutput
-          `shouldContain` "New task\n\
-                          \with several lines\n\
-                          \and line breaks"
+    it "adds a note" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        noteResult <- addNote conf memConn "A test note" [exampleTask.ulid]
+        unpack (show noteResult)
+          `shouldStartWith` "🗒  Added a note to task"
 
-    it "lists all notes descending by creation UTC" $ do
-      withMemoryDb defaultConfig $ \memConn -> do
-        insertRecord "tasks" memConn task1
+    -- it "correctly wraps multiline notes" $ do
+    --   See error:
+    --   tl info x795vqf
+
+    it "sets due UTC" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        let utcTxt = "2087-03-21 17:43:00"
+        case parseUtc utcTxt of
+          Nothing -> P.die "Invalid UTC string"
+          Just utcStamp -> do
+            result <- setDueUtc conf memConn utcStamp [exampleTask.ulid]
+            unpack (show result)
+              `shouldStartWith` ( "📅 Set due UTC of task \""
+                                    <> T.unpack exampleTask.body
+                                    <> "\" with id \""
+                                    <> T.unpack exampleTask.ulid
+                                    <> "\" to \""
+                                    <> T.unpack utcTxt
+                                    <> "\""
+                                )
+
+    it "sets ready UTC" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        let utcTxt = "2059-07-11 04:55:16"
+        case parseUtc utcTxt of
+          Nothing -> P.die "Invalid UTC string"
+          Just utcStamp -> do
+            result <- setReadyUtc conf memConn utcStamp [exampleTask.ulid]
+            unpack (show result)
+              `shouldStartWith` ( "📅 Set ready UTC of task \""
+                                    <> T.unpack exampleTask.body
+                                    <> "\" with id \""
+                                    <> T.unpack exampleTask.ulid
+                                    <> "\" to \""
+                                    <> T.unpack utcTxt
+                                    <> "\""
+                                )
+            tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+            case tasks of
+              [updatedTask] -> do
+                updatedTask `shouldSatisfy` (\task -> isJust task.ready_utc)
+              _ -> P.die "More than one task found"
+
+    it "completes it" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        doResult <- doTasks conf memConn Nothing [exampleTask.ulid]
+        unpack (show doResult) `shouldStartWith` "✅ Finished task"
+        tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+        case tasks of
+          [updatedTask] -> do
+            updatedTask `shouldSatisfy` (\task -> task.state == Just Done)
+            updatedTask `shouldSatisfy` (\task -> isJust task.closed_utc)
+          _ -> P.die "More than one task found"
+
+    it "deletes it" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        deleteResult <- deleteTasks conf memConn [exampleTask.ulid]
+        unpack (show deleteResult) `shouldStartWith` "❌ Deleted task"
+        tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+        tasks `shouldBe` []
+        tags :: [TaskToTag] <- query_ memConn "SELECT * FROM task_to_tag"
+        tags `shouldBe` []
+        notes :: [Note] <- query_ memConn "SELECT * FROM task_to_note"
+        notes `shouldBe` []
+
+    it "duplicates a task" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        duplicationResult <- duplicateTasks conf memConn [exampleTask.ulid]
+        unpack (show duplicationResult)
+          `shouldStartWith` "👯  Created a duplicate of task \"Buy milk\""
+        tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+        case tasks of
+          [taskA, taskB] -> do
+            normTask taskA `shouldBe` normTask exampleTask
+            normTask taskB `shouldBe` normTask exampleTask
+          _ -> P.die "Must have exactly two tasks"
+
+    it "deletes obsolete fields on duplication" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
         let
-          taskToNote1 =
-            TaskToNote
-              { TaskToNote.ulid = "01hx4eyxxvs5b75ynxrztcz87f"
-              , TaskToNote.task_ulid = task1.ulid
-              , TaskToNote.note = "The first note"
+          zeroDur = Iso.DurationWeek (Iso.DurWeek 0)
+          oneMonth = "P1M" & Iso.parseDuration & P.fromRight zeroDur
+        _ <- repeatTasks conf memConn oneMonth [exampleTask.ulid]
+        _ <- duplicateTasks conf memConn [exampleTask.ulid]
+        tasks :: [Task] <-
+          query_ memConn "SELECT * FROM tasks ORDER BY ulid DESC"
+        case tasks of
+          [dupe, original] -> do
+            original.group_ulid `shouldSatisfy` P.isJust
+            original.repetition_duration `shouldSatisfy` P.isJust
+            dupe.group_ulid `shouldSatisfy` P.isNothing
+            dupe.repetition_duration `shouldSatisfy` P.isNothing
+            dupe.user `shouldNotBe` original.user
+            normTask dupe `shouldBe` normTask exampleTask
+          _ -> P.die "Must have exactly two tasks"
+
+  it "adds a task with tags and due date" $ do
+    withMemoryDb conf $ \memConn -> do
+      _ <- addTask conf memConn ["Just a test +tag due:2082-10-03 +what"]
+      (tasks :: [FullTask]) <- query_ memConn "SELECT * FROM tasks_view"
+      case tasks of
+        [updatedTask] -> do
+          updatedTask `shouldSatisfy` (\task -> task.ulid /= "")
+          updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
+          updatedTask `shouldSatisfy` (\task -> task.user /= "")
+          updatedTask
+            { FullTask.ulid = ""
+            , FullTask.modified_utc = ""
+            , FullTask.user = ""
+            }
+            `shouldBe` emptyFullTask
+              { FullTask.body = "Just a test"
+              , FullTask.due_utc = Just "2082-10-03 00:00:00"
+              , FullTask.priority = Just 2.0
+              , FullTask.tags = Just ["tag", "what"]
               }
-          note1Id = taskToNote1.ulid & T.takeEnd 3 & T.unpack
-          taskToNote2 =
-            TaskToNote
-              { TaskToNote.ulid = "01hx4f3f764sma7n8bahvwjeed"
-              , TaskToNote.task_ulid = task1.ulid
-              , TaskToNote.note = "The second note"
+        _ -> P.die "More than one task found"
+
+  it "deduplicates tags when adding a task" $ do
+    withMemoryDb conf $ \memConn -> do
+      _ <- addTask conf memConn ["Buy milk +drink +drink"]
+      (tasks :: [FullTask]) <- query_ memConn "SELECT * FROM tasks_view"
+      case tasks of
+        [updatedTask] -> do
+          updatedTask `shouldSatisfy` (\task -> task.ulid /= "")
+          updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
+          updatedTask `shouldSatisfy` (\task -> task.user /= "")
+          updatedTask
+            { FullTask.ulid = ""
+            , FullTask.modified_utc = ""
+            , FullTask.user = ""
+            }
+            `shouldBe` emptyFullTask
+              { FullTask.body = "Buy milk"
+              , FullTask.priority = Just 2.0
+              , FullTask.tags = Just ["drink"]
               }
-          note2Id = taskToNote2.ulid & T.takeEnd 3 & T.unpack
+        _ -> P.die "More than one task found"
 
-        insertRecord "task_to_note" memConn taskToNote1
-        insertRecord "task_to_note" memConn taskToNote2
+  it "logs a task" $ do
+    withMemoryDb conf $ \memConn -> do
+      result <- logTask conf memConn ["Just a test"]
+      unpack (show result)
+        `shouldStartWith` "📝 Logged task \"Just a test\" with id"
 
-        cliOutput <- listNotes defaultConfig memConn
+  it "dies on invalid filter expressions" $ do
+    withMemoryDb conf $ \memConn -> do
+      runFilter conf now memConn [" "] `shouldThrow` (== ExitFailure 1)
 
-        show cliOutput `shouldContain` note1Id
-        show cliOutput `shouldContain` note2Id
-
-        let
-          posUlid1 = subIndex note1Id (show cliOutput)
-          posUlid2 = subIndex note2Id (show cliOutput)
-
-        --  Newer notes should be listed first
-        (posUlid2 < posUlid1) `shouldBe` True
-
-    it "lets you delete a note" $ do
-      withMemoryDb defaultConfig $ \memConn -> do
-        insertRecord "tasks" memConn task1
-        let noteId = "01hwcqk9nnwjypzw9kr646nqce"
-        insertRecord
-          "task_to_note"
-          memConn
-          TaskToNote
-            { TaskToNote.ulid = noteId
-            , TaskToNote.task_ulid = task1.ulid
-            , TaskToNote.note = "The note content"
+  it "counts tasks" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      let
+        task2 =
+          emptyTask
+            { Task.ulid = "01hs690f9hkzk9z7zews9j2k1d"
+            , Task.body = "New task 2"
             }
 
-        cliOutput <- deleteNote defaultConfig memConn noteId
+      count0 <- countTasks defaultConfig memConn P.mempty
+      show count0 `shouldBe` ("0" :: Text)
 
-        (show cliOutput :: Text)
-          `shouldBe` "\128165 Deleted note \"01hwcqk9nnwjypzw9kr646nqce\" \
-                     \of task \"01hs68z7mdg4ktpxbv0yfafznq\""
+      insertRecord "tasks" memConn task1
+      count1 <- countTasks defaultConfig memConn P.mempty
+      show count1 `shouldBe` ("1" :: Text)
+
+      insertRecord "tasks" memConn task2
+      count2 <- countTasks defaultConfig memConn P.mempty
+      show count2 `shouldBe` ("2" :: Text)
+
+      warnings <- insertTags memConn Nothing task2 ["test"]
+      P.show warnings `shouldBe` T.empty
+      countWithTag <- countTasks defaultConfig memConn (Just ["+test"])
+      show countWithTag `shouldBe` ("1" :: Text)
+
+      pure ()
+
+  it "gets new tasks" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      let
+        task2 =
+          emptyTask
+            { Task.ulid = "01hs6zsf3c0vqx6egfnmbqtmvy"
+            , Task.body = "New task 2"
+            , Task.closed_utc = Just "2024-04-10T18:54:10Z"
+            , Task.state = Just Done
+            }
+
+      insertRecord "tasks" memConn task1
+      insertRecord "tasks" memConn task2
+
+      cliOutput <- newTasks defaultConfig now memConn (Just ["state:done"])
+      show cliOutput `shouldContain` "New task 2"
+      show cliOutput `shouldNotContain` "New task 1"
+
+  it "shows warning if a tag is duplicated" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      let newTag = "test"
+      insertRecord "tasks" memConn task1
+      warnings <- insertTags memConn Nothing task1 [newTag]
+      P.show warnings `shouldBe` T.empty
+
+      cliOutput <- addTag defaultConfig memConn newTag [task1.ulid]
+      show cliOutput `shouldEndWith` "Tag \"test\" is already assigned"
+
+  it "lets you edit a task and shows warning if a tag was duplicated" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      let existTag = "existing-tag"
+      insertRecord "tasks" memConn task1
+      warnings <- insertTags memConn Nothing task1 [existTag]
+      P.show warnings `shouldBe` T.empty
+
+      cliOutput <-
+        editTaskByTask
+          (ApplyPreEdit (<> ("\ntags: " <> P.show [existTag, "new-tag"])))
+          memConn
+          task1
+      let errMsg = "Tag \"" <> T.unpack existTag <> "\" is already assigned"
+      show cliOutput `shouldContain` errMsg
+
+  it "lets you add notes while editing a task" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord "tasks" memConn task1
+      cliOutput <-
+        editTaskByTask
+          (ApplyPreEdit (<> ("\nnotes: " <> P.show ["A short note" :: Text])))
+          memConn
+          task1
+      show cliOutput `shouldStartWith` "✏️  Edited task \"New task 1\""
+
+      taskToNotes :: [TaskToNote] <-
+        query_ memConn "SELECT * FROM task_to_note"
+      case taskToNotes of
+        [taskToNote] -> do
+          taskToNote.ulid
+            `shouldNotSatisfy` (\ulid -> zeroUlidTxt `T.isPrefixOf` ulid)
+          taskToNote.note `shouldBe` "A short note"
+        _ -> P.die "Found more than one task_to_tag row"
+
+  it "keeps line breaks of multi-line tasks in info view" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord "tasks" memConn taskMultiLine
+
+      cliOutput <- infoTask defaultConfig memConn taskMultiLine.ulid
+      show cliOutput
+        `shouldContain` "New task\n\
+                        \with several lines\n\
+                        \and line breaks"
+
+  it "lists all notes descending by creation UTC" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord "tasks" memConn task1
+      let
+        taskToNote1 =
+          TaskToNote
+            { TaskToNote.ulid = "01hx4eyxxvs5b75ynxrztcz87f"
+            , TaskToNote.task_ulid = task1.ulid
+            , TaskToNote.note = "The first note"
+            }
+        note1Id = taskToNote1.ulid & T.takeEnd 3 & T.unpack
+        taskToNote2 =
+          TaskToNote
+            { TaskToNote.ulid = "01hx4f3f764sma7n8bahvwjeed"
+            , TaskToNote.task_ulid = task1.ulid
+            , TaskToNote.note = "The second note"
+            }
+        note2Id = taskToNote2.ulid & T.takeEnd 3 & T.unpack
+
+      insertRecord "task_to_note" memConn taskToNote1
+      insertRecord "task_to_note" memConn taskToNote2
+
+      cliOutput <- listNotes defaultConfig memConn
+
+      show cliOutput `shouldContain` note1Id
+      show cliOutput `shouldContain` note2Id
+
+      let
+        posUlid1 = subIndex note1Id (show cliOutput)
+        posUlid2 = subIndex note2Id (show cliOutput)
+
+      --  Newer notes should be listed first
+      (posUlid2 < posUlid1) `shouldBe` True
+
+  it "lets you delete a note" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord "tasks" memConn task1
+      let noteId = "01hwcqk9nnwjypzw9kr646nqce"
+      insertRecord
+        "task_to_note"
+        memConn
+        TaskToNote
+          { TaskToNote.ulid = noteId
+          , TaskToNote.task_ulid = task1.ulid
+          , TaskToNote.note = "The note content"
+          }
+
+      cliOutput <- deleteNote defaultConfig memConn noteId
+
+      (show cliOutput :: Text)
+        `shouldBe` "\128165 Deleted note \"01hwcqk9nnwjypzw9kr646nqce\" \
+                   \of task \"01hs68z7mdg4ktpxbv0yfafznq\""

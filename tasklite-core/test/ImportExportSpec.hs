@@ -22,8 +22,7 @@ import Data.Text qualified as T
 import Data.ULID (ULID)
 import Database.SQLite.Simple (query_)
 import Test.Hspec (
-  SpecWith,
-  describe,
+  Spec,
   it,
   shouldBe,
   shouldNotBe,
@@ -31,7 +30,7 @@ import Test.Hspec (
   shouldStartWith,
  )
 
-import Config (Config (..))
+import Config (defaultConfig)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
 import ImportExport (insertImportTask)
@@ -41,141 +40,142 @@ import TestUtils (withMemoryDb)
 import Utils (emptyUlid, parseUtc, setDateTime, ulidText2utc, zeroTime)
 
 
-spec :: Config -> SpecWith ()
-spec conf = do
-  describe "Import & Export" $ do
-    it "parses any sensible datetime string" $ do
-      -- TODO: Maybe keep microseconds and nanoseconds
-      -- , ("YYYY-MM-DDTH:MI:S.msusZ", "2024-03-15T22:20:05.637913Z")
-      -- , ("YYYY-MM-DDTH:MI:S.msusnsZ", "2024-03-15T22:20:05.637913438Z")
+spec :: Spec
+spec = do
+  let conf = defaultConfig
 
-      let dateMap :: [(Text, Text)] =
-            [ ("YYYY-MM-DD", "2024-03-15")
-            , ("YYYY-MM-DD H:MI", "2024-03-15 22:20")
-            , ("YYYY-MM-DDTH:MIZ", "2024-03-15T22:20Z")
-            , ("YYYY-MM-DD H:MI:S", "2024-03-15 22:20:05")
-            , ("YYYY-MM-DDTH:MI:SZ", "2024-03-15T22:20:05Z")
-            , ("YYYYMMDDTHMIS", "20240315T222005")
-            , ("YYYY-MM-DDTH:MI:S.msZ", "2024-03-15T22:20:05.637Z")
-            , ("YYYY-MM-DDTH:MI:S.msZ", "2024-03-15T22:20:05.637123Z")
-            , ("YYYY-MM-DDTH:MI:S.msZ", "2024-03-15T22:20:05.637123456Z")
-            ]
+  it "parses any sensible datetime string" $ do
+    -- TODO: Maybe keep microseconds and nanoseconds
+    -- , ("YYYY-MM-DDTH:MI:S.msusZ", "2024-03-15T22:20:05.637913Z")
+    -- , ("YYYY-MM-DDTH:MI:S.msusnsZ", "2024-03-15T22:20:05.637913438Z")
 
-      P.forM_ dateMap $ \(formatTxt, utcTxt) -> do
-        case parseUtc utcTxt of
-          Nothing -> P.die "Invalid UTC string"
-          Just utcStamp ->
-            let timeFmt = formatTxt & T.unpack & toFormat
-            in  (utcStamp & timePrint timeFmt)
-                  `shouldBe` T.unpack
-                    ( utcTxt
-                        & T.replace "123" ""
-                        & T.replace "456" ""
-                    )
+    let dateMap :: [(Text, Text)] =
+          [ ("YYYY-MM-DD", "2024-03-15")
+          , ("YYYY-MM-DD H:MI", "2024-03-15 22:20")
+          , ("YYYY-MM-DDTH:MIZ", "2024-03-15T22:20Z")
+          , ("YYYY-MM-DD H:MI:S", "2024-03-15 22:20:05")
+          , ("YYYY-MM-DDTH:MI:SZ", "2024-03-15T22:20:05Z")
+          , ("YYYYMMDDTHMIS", "20240315T222005")
+          , ("YYYY-MM-DDTH:MI:S.msZ", "2024-03-15T22:20:05.637Z")
+          , ("YYYY-MM-DDTH:MI:S.msZ", "2024-03-15T22:20:05.637123Z")
+          , ("YYYY-MM-DDTH:MI:S.msZ", "2024-03-15T22:20:05.637123456Z")
+          ]
 
-      let
-        utcTxt = "2024-03-15T22:20:05.386777444Z"
-        printFmt = "YYYY-MM-DDTH:MI:S.ms" & T.unpack & toFormat
-        -- Truncates microseconds and nanoseconds
-        expected = "2024-03-15T22:20:05.386"
+    P.forM_ dateMap $ \(formatTxt, utcTxt) -> do
+      case parseUtc utcTxt of
+        Nothing -> P.die "Invalid UTC string"
+        Just utcStamp ->
+          let timeFmt = formatTxt & T.unpack & toFormat
+          in  (utcStamp & timePrint timeFmt)
+                `shouldBe` T.unpack
+                  ( utcTxt
+                      & T.replace "123" ""
+                      & T.replace "456" ""
+                  )
 
-      (utcTxt & parseUtc <&> timePrint printFmt) `shouldBe` Just expected
+    let
+      utcTxt = "2024-03-15T22:20:05.386777444Z"
+      printFmt = "YYYY-MM-DDTH:MI:S.ms" & T.unpack & toFormat
+      -- Truncates microseconds and nanoseconds
+      expected = "2024-03-15T22:20:05.386"
 
-    it "imports a JSON task with notes" $ do
-      withMemoryDb conf $ \memConn -> do
-        let jsonTask = "{\"body\":\"Just a test\", \"notes\":[\"A note\"]}"
+    (utcTxt & parseUtc <&> timePrint printFmt) `shouldBe` Just expected
 
-        case eitherDecode jsonTask of
-          Left error ->
-            P.die $ "Error decoding JSON: " <> show error
-          Right importTaskRecord -> do
-            result <- insertImportTask memConn importTaskRecord
+  it "imports a JSON task with notes" $ do
+    withMemoryDb conf $ \memConn -> do
+      let jsonTask = "{\"body\":\"Just a test\", \"notes\":[\"A note\"]}"
 
-            unpack (show result)
-              `shouldStartWith` "📥 Imported task \"Just a test\" with ulid "
+      case eitherDecode jsonTask of
+        Left error ->
+          P.die $ "Error decoding JSON: " <> show error
+        Right importTaskRecord -> do
+          result <- insertImportTask memConn importTaskRecord
 
-            taskToNotes :: [TaskToNote] <-
-              query_ memConn "SELECT * FROM task_to_note"
-            case taskToNotes of
-              [taskToNote] -> do
-                taskToNote `shouldSatisfy` (\task -> task.ulid /= "")
-                taskToNote `shouldSatisfy` (\task -> task.task_ulid /= "")
-                taskToNote `shouldSatisfy` (\task -> task.note == "A note")
-              _ -> P.die "More than one task_to_note row found"
+          unpack (show result)
+            `shouldStartWith` "📥 Imported task \"Just a test\" with ulid "
 
-            tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+          taskToNotes :: [TaskToNote] <-
+            query_ memConn "SELECT * FROM task_to_note"
+          case taskToNotes of
+            [taskToNote] -> do
+              taskToNote `shouldSatisfy` (\task -> task.ulid /= "")
+              taskToNote `shouldSatisfy` (\task -> task.task_ulid /= "")
+              taskToNote `shouldSatisfy` (\task -> task.note == "A note")
+            _ -> P.die "More than one task_to_note row found"
 
-            case tasks of
-              [updatedTask] -> do
-                updatedTask `shouldSatisfy` (\task -> task.ulid /= "")
-                updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
-                updatedTask `shouldSatisfy` (\task -> task.user /= "")
-                updatedTask
-                  { FullTask.ulid = ""
-                  , FullTask.modified_utc = ""
-                  , FullTask.user = ""
+          tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+
+          case tasks of
+            [updatedTask] -> do
+              updatedTask `shouldSatisfy` (\task -> task.ulid /= "")
+              updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
+              updatedTask `shouldSatisfy` (\task -> task.user /= "")
+              updatedTask
+                { FullTask.ulid = ""
+                , FullTask.modified_utc = ""
+                , FullTask.user = ""
+                }
+                `shouldBe` emptyFullTask
+                  { FullTask.body = "Just a test"
+                  , -- TODO: Fix after notes are returned as a JSON array
+                    FullTask.notes = Just []
+                  , FullTask.priority = Just 1.0
+                  , FullTask.metadata = decode jsonTask
                   }
-                  `shouldBe` emptyFullTask
-                    { FullTask.body = "Just a test"
-                    , -- TODO: Fix after notes are returned as a JSON array
-                      FullTask.notes = Just []
-                    , FullTask.priority = Just 1.0
-                    , FullTask.metadata = decode jsonTask
-                    }
-              _ -> P.die "More than one task found"
+            _ -> P.die "More than one task found"
 
-    it "imports a JSON task with an ISO8601 created_at field" $ do
-      withMemoryDb conf $ \memConn -> do
-        let
-          utc = "2024-03-15T10:32:51.386777444Z"
-          -- ULID only has millisecond precision:
-          utcFromUlid = "2024-03-15 10:32:51.387"
-          jsonTask =
-            "{\"body\":\"Just a test\",\"created_at\":\"{{utc}}\"}"
-              & T.replace "{{utc}}" utc
+  it "imports a JSON task with an ISO8601 created_at field" $ do
+    withMemoryDb conf $ \memConn -> do
+      let
+        utc = "2024-03-15T10:32:51.386777444Z"
+        -- ULID only has millisecond precision:
+        utcFromUlid = "2024-03-15 10:32:51.387"
+        jsonTask =
+          "{\"body\":\"Just a test\",\"created_at\":\"{{utc}}\"}"
+            & T.replace "{{utc}}" utc
 
-        case eitherDecodeStrictText jsonTask of
-          Left error ->
-            P.die $ "Error decoding JSON: " <> show error
-          Right importTaskRecord -> do
-            _ <- insertImportTask memConn importTaskRecord
-            tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
-            case tasks of
-              [insertedTask] ->
-                ulidText2utc insertedTask.ulid `shouldBe` Just utcFromUlid
-              _ -> P.die "More than one task found"
+      case eitherDecodeStrictText jsonTask of
+        Left error ->
+          P.die $ "Error decoding JSON: " <> show error
+        Right importTaskRecord -> do
+          _ <- insertImportTask memConn importTaskRecord
+          tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+          case tasks of
+            [insertedTask] ->
+              ulidText2utc insertedTask.ulid `shouldBe` Just utcFromUlid
+            _ -> P.die "More than one task found"
 
-    it "imports JSON task with notes and sets the created_utc for notes" $ do
-      withMemoryDb conf $ \memConn -> do
-        let
-          utc = "2024-03-15 10:32:51"
-          jsonTask =
-            "{\"body\":\"Just a test\",\
-            \\"created_at\":\"{{utc}}\",\
-            \\"notes\": [\"Just a note\"]}"
-              & T.replace "{{utc}}" utc
+  it "imports JSON task with notes and sets the created_utc for notes" $ do
+    withMemoryDb conf $ \memConn -> do
+      let
+        utc = "2024-03-15 10:32:51"
+        jsonTask =
+          "{\"body\":\"Just a test\",\
+          \\"created_at\":\"{{utc}}\",\
+          \\"notes\": [\"Just a note\"]}"
+            & T.replace "{{utc}}" utc
 
-          expectedTaskToNote =
-            TaskToNote
-              { ulid =
-                  emptyUlid
-                    & P.flip setDateTime (utc & parseUtc & fromMaybe zeroTime)
-                    & show @ULID
-                    & T.toLower
-              , task_ulid = "01hs0tqw1r0007h0mj78s1jntz"
-              , note = "Just a note"
-              }
+        expectedTaskToNote =
+          TaskToNote
+            { ulid =
+                emptyUlid
+                  & P.flip setDateTime (utc & parseUtc & fromMaybe zeroTime)
+                  & show @ULID
+                  & T.toLower
+            , task_ulid = "01hs0tqw1r0007h0mj78s1jntz"
+            , note = "Just a note"
+            }
 
-        case eitherDecodeStrictText jsonTask of
-          Left error ->
-            P.die $ "Error decoding JSON: " <> show error
-          Right importTaskRecord -> do
-            _ <- insertImportTask memConn importTaskRecord
-            taskToNoteList :: [TaskToNote] <-
-              query_ memConn "SELECT * FROM task_to_note"
-            case taskToNoteList of
-              [taskToNote] -> do
-                taskToNote.ulid `shouldNotBe` expectedTaskToNote.ulid
-                (taskToNote.ulid & T.take 10)
-                  `shouldBe` (expectedTaskToNote.ulid & T.take 10)
-              _ -> P.die "Found more than one note"
+      case eitherDecodeStrictText jsonTask of
+        Left error ->
+          P.die $ "Error decoding JSON: " <> show error
+        Right importTaskRecord -> do
+          _ <- insertImportTask memConn importTaskRecord
+          taskToNoteList :: [TaskToNote] <-
+            query_ memConn "SELECT * FROM task_to_note"
+          case taskToNoteList of
+            [taskToNote] -> do
+              taskToNote.ulid `shouldNotBe` expectedTaskToNote.ulid
+              (taskToNote.ulid & T.take 10)
+                `shouldBe` (expectedTaskToNote.ulid & T.take 10)
+            _ -> P.die "Found more than one note"

@@ -119,6 +119,8 @@ test-suite tasklite-test
   other-modules:
       ImportExportSpec
       LibSpec
+      MigrationsSpec
+      SpecHook
       TestUtils
       TypesSpec
       UtilsSpec

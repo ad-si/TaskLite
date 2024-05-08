@@ -38,22 +38,21 @@ sampleNotes =
 
 spec :: Spec
 spec = do
-  describe "Types" $ do
-    describe "Task" $ do
+  describe "Task" $ do
+    let
+      sampleTask =
+        emptyTask
+          { Task.ulid = "01hs68z7mdg4ktpxbv0yfafznq"
+          , Task.body = "Sample task"
+          }
+
+    it "can be converted to YAML" $ do
       let
-        sampleTask =
-          emptyTask
-            { Task.ulid = "01hs68z7mdg4ktpxbv0yfafznq"
-            , Task.body = "Sample task"
-            }
+        taskYaml = sampleTask & Data.Yaml.encode & P.decodeUtf8
 
-      it "can be converted to YAML" $ do
-        let
-          taskYaml = sampleTask & Data.Yaml.encode & P.decodeUtf8
-
-          expected :: Text
-          expected =
-            [trimming|
+        expected :: Text
+        expected =
+          [trimming|
               awake_utc: null
               body: Sample task
               closed_utc: null
@@ -71,23 +70,23 @@ spec = do
               user: ''
               waiting_utc: null
             |]
-              <> "\n"
+            <> "\n"
 
-        taskYaml `shouldBe` expected
+      taskYaml `shouldBe` expected
 
-      it "can be converted to YAML for editing" $ do
-        withMemoryDb defaultConfig $ \memConn -> do
-          Lib.insertRecord "tasks" memConn sampleTask
-          let tags = [0 .. 9] <&> \(i :: P.Int) -> "tag-" <> P.show i
-          warnings <- Lib.insertTags memConn Nothing sampleTask tags
-          P.show warnings `shouldBe` T.empty
-          Lib.insertNotes memConn Nothing sampleTask sampleNotes
+    it "can be converted to YAML for editing" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        Lib.insertRecord "tasks" memConn sampleTask
+        let tags = [0 .. 9] <&> \(i :: P.Int) -> "tag-" <> P.show i
+        warnings <- Lib.insertTags memConn Nothing sampleTask tags
+        P.show warnings `shouldBe` T.empty
+        Lib.insertNotes memConn Nothing sampleTask sampleNotes
 
-          taskYaml <- taskToEditableYaml memConn sampleTask
-          let
-            expected :: P.ByteString
-            expected =
-              [trimming|
+        taskYaml <- taskToEditableYaml memConn sampleTask
+        let
+          expected :: P.ByteString
+          expected =
+            [trimming|
                 awake_utc: null
                 body: Sample task
                 closed_utc: null
@@ -118,28 +117,28 @@ spec = do
                 #     line breaks.
                 notes: []
               |]
-                <> "\n"
-                  & P.encodeUtf8
+              <> "\n"
+                & P.encodeUtf8
 
-          taskYaml `shouldBe` expected
+        taskYaml `shouldBe` expected
 
-    describe "FullTask" $ do
+  describe "FullTask" $ do
+    let
+      sampleFullTask =
+        emptyFullTask
+          { FullTask.ulid = "01hs68z7mdg4ktpxbv0yfafznq"
+          , FullTask.body = "Sample task"
+          , FullTask.tags = Just ["tag1", "tag2"]
+          , FullTask.notes = Just sampleNotes
+          }
+
+    it "can be converted to YAML" $ do
       let
-        sampleFullTask =
-          emptyFullTask
-            { FullTask.ulid = "01hs68z7mdg4ktpxbv0yfafznq"
-            , FullTask.body = "Sample task"
-            , FullTask.tags = Just ["tag1", "tag2"]
-            , FullTask.notes = Just sampleNotes
-            }
+        taskYaml = sampleFullTask & Data.Yaml.encode & P.decodeUtf8
 
-      it "can be converted to YAML" $ do
-        let
-          taskYaml = sampleFullTask & Data.Yaml.encode & P.decodeUtf8
-
-          expected :: Text
-          expected =
-            [trimming|
+        expected :: Text
+        expected =
+          [trimming|
               awake_utc: null
               body: Sample task
               closed_utc: null
@@ -166,6 +165,6 @@ spec = do
               user: ''
               waiting_utc: null
             |]
-              <> "\n"
+            <> "\n"
 
-        taskYaml `shouldBe` expected
+      taskYaml `shouldBe` expected
