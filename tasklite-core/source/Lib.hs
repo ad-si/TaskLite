@@ -2197,7 +2197,7 @@ formatTaskLine conf now taskWidth task =
                       Just date_ -> if date_ < now then "🔎 " else ""
                   )
                   <> ( if dueIn mempty{durationHours = 24} && isOpen
-                        then "⚠️️  "
+                        then "⚠️️ "
                         else ""
                      )
                   <> ( if dueIn mempty && isOpen
