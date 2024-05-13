@@ -8,7 +8,7 @@ Functions to create, update, and delete tasks / tags / notes
 -}
 module Lib where
 
-import Protolude as P (
+import Protolude (
   Applicative (liftA2, pure),
   Bool (..),
   Char,
@@ -19,7 +19,6 @@ import Protolude as P (
   FilePath,
   Float,
   Floating (logBase),
-  Foldable (foldMap, length, maximum, null),
   Fractional ((/)),
   Functor (fmap),
   IO,
@@ -38,45 +37,34 @@ import Protolude as P (
   Semigroup ((<>)),
   Show,
   Text,
-  any,
   catMaybes,
   const,
   decodeUtf8,
-  dropWhile,
   either,
   encodeUtf8,
   exitFailure,
-  filter,
   forM,
   forM_,
   fromIntegral,
   fromMaybe,
   fst,
   getArgs,
-  head,
   identity,
-  intersperse,
   isJust,
   isNothing,
   isSpace,
-  lastMay,
   listToMaybe,
   maybe,
   maybeToEither,
   not,
   on,
   otherwise,
-  print,
   realToFrac,
-  repeat,
-  reverse,
   show,
   snd,
   sortBy,
   sortOn,
   stderr,
-  take,
-  takeWhile,
   unlines,
   unwords,
   ($),
@@ -107,40 +95,22 @@ import Data.Hourglass (
   timePrint,
  )
 import Data.List (nub)
-import Data.Text as T (
-  breakOn,
-  dropEnd,
-  intercalate,
-  isPrefixOf,
-  justifyRight,
-  length,
-  pack,
-  replace,
-  replicate,
-  take,
-  takeEnd,
-  toLower,
-  unpack,
-  unwords,
-  words,
- )
+import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TL
 import Data.Time.Clock (UTCTime)
 import Data.Time.ISO8601.Duration qualified as Iso
 import Data.ULID (ULID, getULID)
-import Data.Yaml as Yaml (encode)
+import Data.Yaml qualified as Yaml
 import Database.SQLite.Simple (
-  Error (ErrorConstraint),
-  Only (Only),
-  SQLError (sqlError),
- )
-import Database.SQLite.Simple as Sql (
   Connection,
+  Error (ErrorConstraint),
   FromRow (..),
   NamedParam ((:=)),
+  Only (Only),
   Query (Query),
   SQLData (SQLText),
+  SQLError (sqlError),
   ToRow,
   changes,
   execute,
@@ -190,7 +160,7 @@ import System.FilePath ((</>))
 import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
 import Text.Fuzzily qualified as Fuzzily
-import Text.ParserCombinators.ReadP as ReadP (
+import Text.ParserCombinators.ReadP (
   ReadP,
   char,
   eof,
@@ -459,7 +429,7 @@ insertNoteTuples connection task notes = do
 
 formatElapsedP :: Config -> IO ElapsedP -> IO Text
 formatElapsedP conf =
-  fmap (pack . timePrint conf.utcFormat)
+  fmap (T.pack . timePrint conf.utcFormat)
 
 
 formatUlid :: IO ULID -> IO Text
@@ -496,7 +466,7 @@ parseTaskBody bodyWords =
         <&> T.replace "due:" ""
         & P.lastMay
         >>= parseUtc
-          <&> (timePrint utcFormatReadable >>> pack)
+          <&> (timePrint utcFormatReadable >>> T.pack)
     createdUtcMb =
       metadata
         & P.filter isCreatedUtc
@@ -658,7 +628,7 @@ setClosedWithState connection task theTaskState = do
 setReadyUtc
   :: Config -> Connection -> DateTime -> [IdText] -> IO (Doc AnsiStyle)
 setReadyUtc conf connection datetime ids = do
-  let utcText = pack $ timePrint conf.utcFormat datetime
+  let utcText = T.pack $ timePrint conf.utcFormat datetime
 
   docs <- forM ids $ \idSubstr ->
     execWithTask conf connection idSubstr $ \task -> do
@@ -686,9 +656,9 @@ waitFor conf connection duration ids = do
     execWithTask conf connection idSubstr $ \task -> do
       now <- timeCurrentP
       let
-        nowAsText = (pack . timePrint conf.utcFormat) now
+        nowAsText = (T.pack . timePrint conf.utcFormat) now
         threeDays =
-          (pack . timePrint conf.utcFormat)
+          (T.pack . timePrint conf.utcFormat)
             ( utcTimeToDateTime $
                 Iso.addDuration duration $
                   dateTimeToUtcTime $
@@ -751,7 +721,7 @@ reviewTasksIn conf connection duration ids = do
       now <- timeCurrentP
       let
         xDays =
-          (pack . timePrint conf.utcFormat)
+          (T.pack . timePrint conf.utcFormat)
             ( utcTimeToDateTime $
                 Iso.addDuration duration $
                   dateTimeToUtcTime $
@@ -787,7 +757,7 @@ reviewTasksIn conf connection duration ids = do
 
 showDateTime :: Config -> DateTime -> Text
 showDateTime conf =
-  pack . timePrint conf.utcFormat
+  T.pack . timePrint conf.utcFormat
 
 
 showEither :: Config -> Either a UTCTime -> Maybe Text
@@ -851,7 +821,7 @@ createNextRepetition conf connection task = do
               & showEither conf
         , Task.modified_utc =
             nowMb
-              <&> (timePrint conf.utcFormat >>> pack)
+              <&> (timePrint conf.utcFormat >>> T.pack)
               & fromMaybe ""
         }
 
@@ -933,7 +903,7 @@ createNextRecurrence conf connection task = do
         , Task.modified_utc =
             newUlidText
               & ulidTextToDateTime
-              <&> (timePrint conf.utcFormat >>> pack)
+              <&> (timePrint conf.utcFormat >>> T.pack)
               & fromMaybe ""
         }
 
@@ -1291,7 +1261,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
     stateHierarchy = getStateHierarchy now $ cpTimesAndState taskV
     mbCreatedUtc =
       fmap
-        (pack . timePrint (utcFormat defaultConfig))
+        (T.pack . timePrint (utcFormat defaultConfig))
         (ulidTextToDateTime taskV.ulid)
     tagsPretty =
       tags
@@ -1299,7 +1269,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
                 annotate (tagStyle conf) (pretty t.tag)
                   <++> maybe
                     mempty
-                    (grayOut . pretty . pack . timePrint conf.utcFormat)
+                    (grayOut . pretty . T.pack . timePrint conf.utcFormat)
                     (ulidTextToDateTime t.ulid)
                   <++> grayOut (pretty t.ulid)
             )
@@ -1308,7 +1278,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         <&> ( \n ->
                 maybe
                   mempty
-                  (grayOut . pretty . pack . timePrint conf.utcFormat)
+                  (grayOut . pretty . T.pack . timePrint conf.utcFormat)
                   (ulidTextToDateTime n.ulid)
                   <++> grayOut (pretty n.ulid)
                   <> hardline
@@ -1353,7 +1323,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
                             mempty
                             ( grayOut
                                 . pretty
-                                . pack
+                                . T.pack
                                 . timePrint
                                   (utcFormatShort conf)
                             )
@@ -1649,16 +1619,20 @@ findTask connection aPattern = do
 
 addTag :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
 addTag conf conn tag ids = do
+  let tagNorm = T.dropWhile (== '+') tag
   docs <- forM ids $ \idSubstr ->
     execWithTask conf conn idSubstr $ \task -> do
-      now <- fmap (pack . timePrint conf.utcFormat) timeCurrentP
+      now <- fmap (T.pack . timePrint conf.utcFormat) timeCurrentP
       ulid <- formatUlid getULID
 
       catchIf
         -- TODO: Find out why it's not `ErrorConstraintUnique`
         (\(err :: SQLError) -> err.sqlError == ErrorConstraint)
         ( do
-            insertRecord "task_to_tag" conn TaskToTag{ulid, task_ulid = task.ulid, tag}
+            insertRecord
+              "task_to_tag"
+              conn
+              TaskToTag{ulid, task_ulid = task.ulid, tag = tagNorm}
 
             -- TODO: Check if modified_utc could be set via SQL trigger
             executeNamed
@@ -1678,13 +1652,13 @@ addTag conf conn tag ids = do
 
             pure $
               "🏷  Added tag"
-                <+> dquotes (pretty tag)
+                <+> dquotes (pretty tagNorm)
                 <+> "to task"
                 <+> prettyBody
                 <+> "with id"
                 <+> prettyId
         )
-        (handleTagDupError tag)
+        (handleTagDupError tagNorm)
 
   pure $ vsep docs
 
@@ -1724,7 +1698,7 @@ addNote :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
 addNote conf connection noteBody ids = do
   docs <- forM ids $ \idSubstr ->
     execWithTask conf connection idSubstr $ \task -> do
-      now <- timeCurrentP <&> (timePrint conf.utcFormat >>> pack)
+      now <- timeCurrentP <&> (timePrint conf.utcFormat >>> T.pack)
       ulid <- formatUlid getULID
 
       insertRecord
@@ -1797,7 +1771,7 @@ setDueUtc :: Config -> Connection -> DateTime -> [IdText] -> IO (Doc AnsiStyle)
 setDueUtc conf connection datetime ids = do
   let
     utcText :: Text
-    utcText = pack $ timePrint conf.utcFormat datetime
+    utcText = T.pack $ timePrint conf.utcFormat datetime
 
   docs <- forM ids $ \idSubstr ->
     execWithTask conf connection idSubstr $ \task -> do
@@ -2129,7 +2103,7 @@ duplicateTasks conf connection ids = do
 showAtPrecision :: Int -> Double -> Text
 showAtPrecision numOfDigits number =
   let
-    tuple = breakOn "." (show number)
+    tuple = T.breakOn "." (show number)
     clipDecimalPart =
       if snd tuple == ".0"
         then T.replace ".0" (T.replicate (1 + numOfDigits) " ")
@@ -2154,7 +2128,7 @@ formatTaskLine conf now taskWidth task =
     id = pretty $ T.takeEnd taskWidth task.ulid
     createdUtc =
       fmap
-        (pack . timePrint ISO8601_Date)
+        (T.pack . timePrint ISO8601_Date)
         (ulidTextToDateTime task.ulid)
     tags = fromMaybe [] task.tags
     closedUtcMaybe =
@@ -2199,7 +2173,7 @@ formatTaskLine conf now taskWidth task =
               , annotate
                   (priorityStyle conf)
                   ( pretty $
-                      justifyRight 4 ' ' $
+                      T.justifyRight 4 ' ' $
                         showAtPrecision 1 $
                           realToFrac $
                             fromMaybe 0 task.priority
@@ -2697,28 +2671,28 @@ tagParser :: ReadP FilterExp
 tagParser = do
   _ <- char '+'
   aTag <- munch (not . isSpace)
-  pure $ HasTag $ pack aTag
+  pure $ HasTag $ T.pack aTag
 
 
 notTagParser :: ReadP FilterExp
 notTagParser = do
   _ <- char '-'
   aTag <- munch (not . isSpace)
-  pure $ NotTag $ pack aTag
+  pure $ NotTag $ T.pack aTag
 
 
 dueParser :: ReadP FilterExp
 dueParser = do
   _ <- string "due:"
   utcStr <- munch (not . isSpace)
-  pure $ HasDue $ pack utcStr
+  pure $ HasDue $ T.pack utcStr
 
 
 stateParser :: ReadP FilterExp
 stateParser = do
   _ <- string "state:"
   stateStr <- munch (not . isSpace)
-  pure $ HasStatus $ textToDerivedState $ pack stateStr
+  pure $ HasStatus $ textToDerivedState $ T.pack stateStr
 
 
 filterExpParser :: ReadP FilterExp
@@ -2728,7 +2702,7 @@ filterExpParser =
     <++ notTagParser
     <++ dueParser
     <++ stateParser
-    <++ (InvalidFilter . pack <$> munch1 (not . isSpace))
+    <++ (InvalidFilter . T.pack <$> munch1 (not . isSpace))
 
 
 filterExpsParser :: ReadP [FilterExp]
@@ -2905,15 +2879,15 @@ formatTagLine conf maxTagLength (tag, open_count, closed_count, progress) =
         then "     "
         else
           pretty
-            ( justifyRight 3 ' ' $
+            ( T.justifyRight 3 ' ' $
                 T.pack $
                   showFFloat (Just 0) (progress * 100) ""
             )
             <+> "%"
   in
     fill maxTagLength (pretty tag)
-      <++> pretty (justifyRight (T.length "open") ' ' $ show open_count)
-      <++> pretty (justifyRight (T.length "closed") ' ' $ show closed_count)
+      <++> pretty (T.justifyRight (T.length "open") ' ' $ show open_count)
+      <++> pretty (T.justifyRight (T.length "closed") ' ' $ show closed_count)
       <++> progressPercentage
       <+> getProgressBar barWidth progress
 
@@ -3038,7 +3012,7 @@ getStats _ connection = do
         fill widthKey (pretty name)
           <++> fill
             widthValue
-            (pretty $ justifyRight widthValue ' ' $ show numTasks)
+            (pretty $ T.justifyRight widthValue ' ' $ show numTasks)
           <++> pretty share
 
   pure $

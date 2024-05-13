@@ -214,9 +214,21 @@ spec = do
           query_ memConn "SELECT * FROM task_to_tag"
         case taskToTags of
           [taskToTag] -> do
-            taskToTag `shouldSatisfy` (\t -> t.ulid /= "")
-            taskToTag `shouldSatisfy` (\t -> t.task_ulid /= "")
-            taskToTag `shouldSatisfy` (\t -> t.tag == "test")
+            taskToTag.ulid `shouldNotBe` ""
+            taskToTag.task_ulid `shouldNotBe` ""
+            taskToTag.tag `shouldBe` "test"
+          _ -> P.die "More than one task_to_tag row found"
+
+    it "strips leading + when adding a tag" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        tagResult <- addTag conf memConn "+test" [exampleTask.ulid]
+        unpack (show tagResult)
+          `shouldStartWith` "🏷  Added tag \"test\" to task"
+        taskToTags :: [TaskToTag] <-
+          query_ memConn "SELECT * FROM task_to_tag"
+        case taskToTags of
+          [taskToTag] -> taskToTag.tag `shouldBe` "test"
           _ -> P.die "More than one task_to_tag row found"
 
     it "deletes a tag" $ do
