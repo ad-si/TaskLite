@@ -125,7 +125,7 @@ import Text.Parsec.Rfc2822 (GenericMessage (..), message)
 import Text.Parsec.Rfc2822 qualified as Email
 import Text.ParserCombinators.Parsec as Parsec (parse)
 import Text.PortableLines.ByteString.Lazy (lines8)
-import Time.System (timeCurrent)
+import Time.System (dateCurrent, timeCurrent)
 import Utils (
   IdText,
   emptyUlid,
@@ -766,6 +766,8 @@ editTaskByTask preEdit conn taskToEdit = do
                     if hasMetadata == Just True
                       then importTaskRecord.task.metadata
                       else Nothing
+                , -- Set to previous value to force SQL trigger to update it
+                  Task.modified_utc = taskToEdit.modified_utc
                 }
             notesCorrectUtc =
               importTaskRecord.notes
@@ -780,6 +782,14 @@ editTaskByTask preEdit conn taskToEdit = do
                     )
 
           updateTask conn taskFixed
+
+          -- TODO: Remove after it was added to `createSetClosedUtcTrigger`
+          -- Update again with the same `state` field to avoid firing
+          -- SQL trigger which would overwrite the `closed_utc` field.
+          P.when (isJust taskFixed.closed_utc) $ do
+            now_ <- dateCurrent
+            updateTask conn taskFixed{Task.modified_utc = show @DateTime now_}
+
           tagWarnings <- insertTags conn Nothing taskFixed importTaskRecord.tags
           insertNotes conn Nothing taskFixed notesCorrectUtc
           pure $

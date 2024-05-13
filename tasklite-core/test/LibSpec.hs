@@ -39,6 +39,7 @@ import Test.Hspec (
  )
 
 import Config (defaultConfig)
+import Control.Arrow ((>>>))
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
 import ImportExport (PreEdit (ApplyPreEdit), editTaskByTask)
@@ -67,6 +68,7 @@ import Lib (
   updateTask,
  )
 import Note (Note)
+import System.Hourglass (dateCurrent)
 import Task (
   Task (
     body,
@@ -110,6 +112,7 @@ task1 =
   emptyTask
     { Task.ulid = "01hs68z7mdg4ktpxbv0yfafznq"
     , Task.body = "New task 1"
+    , Task.modified_utc = "2024-03-17 13:17:44.461"
     }
 
 
@@ -456,6 +459,40 @@ spec = do
           task1
       let errMsg = "Tag \"" <> T.unpack existTag <> "\" is already assigned"
       show cliOutput `shouldContain` errMsg
+
+  it "lets you edit a task and specify closed_utc" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord "tasks" memConn task1
+
+      let
+        replaceBs needle replacement haystack = do
+          haystack
+            & P.decodeUtf8
+            & T.replace (P.decodeUtf8 needle) (P.decodeUtf8 replacement)
+            & P.encodeUtf8
+
+      cliOutput <-
+        editTaskByTask
+          ( ApplyPreEdit $
+              replaceBs
+                "state: null"
+                "state: Done"
+                >>> replaceBs
+                  "closed_utc: null"
+                  "closed_utc: 2024-05-08 10:04"
+          )
+          memConn
+          task1
+      show cliOutput `shouldContain` "Edited task"
+      tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+      case tasks of
+        [task] -> do
+          task.closed_utc `shouldBe` Just "2024-05-08 10:04:00"
+          task.state `shouldBe` Just Done
+          now_ <- dateCurrent
+          let today = now_ & show & T.take 10
+          task.modified_utc `shouldSatisfy` (today `T.isPrefixOf`)
+        _ -> P.die "More than one task found"
 
   it "lets you add notes while editing a task" $ do
     withMemoryDb defaultConfig $ \memConn -> do
