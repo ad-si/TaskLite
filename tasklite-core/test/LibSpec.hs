@@ -137,6 +137,14 @@ normTask task =
     }
 
 
+replaceBs :: P.ByteString -> P.ByteString -> P.ByteString -> P.ByteString
+replaceBs needle replacement haystack = do
+  haystack
+    & P.decodeUtf8
+    & T.replace (P.decodeUtf8 needle) (P.decodeUtf8 replacement)
+    & P.encodeUtf8
+
+
 spec :: Spec
 spec = do
   let
@@ -465,13 +473,6 @@ spec = do
       withMemoryDb defaultConfig $ \memConn -> do
         insertRecord "tasks" memConn task1
 
-        let
-          replaceBs needle replacement haystack = do
-            haystack
-              & P.decodeUtf8
-              & T.replace (P.decodeUtf8 needle) (P.decodeUtf8 replacement)
-              & P.encodeUtf8
-
         cliOutput <-
           editTaskByTask
             ( ApplyPreEdit $
@@ -512,6 +513,42 @@ spec = do
             taskToNote.ulid
               `shouldNotSatisfy` (\ulid -> zeroUlidTxt `T.isPrefixOf` ulid)
             taskToNote.note `shouldBe` "A short note"
+          _ -> P.die "Found more than one task_to_tag row"
+
+    it "de-duplicates notes" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        let note = "A short note"
+        insertRecord
+          "task_to_note"
+          memConn
+          TaskToNote
+            { TaskToNote.ulid = "01hxsjgzmdx48yzk39v852razr"
+            , TaskToNote.task_ulid = task1.ulid
+            , TaskToNote.note = note
+            }
+        taskInfo <- infoTask defaultConfig memConn task1.ulid
+        show taskInfo `shouldContain` T.unpack note
+        cliOutput <-
+          editTaskByTask
+            ( ApplyPreEdit $
+                replaceBs "notes: []" $
+                  "notes: " <> P.show [note, note]
+            )
+            memConn
+            task1
+        show cliOutput `shouldStartWith` "✏️  Edited task \"New task 1\""
+
+        taskToNotes :: [TaskToNote] <-
+          query_ memConn "SELECT * FROM task_to_note"
+        case taskToNotes of
+          [taskToNoteA, taskToNoteB] -> do
+            taskToNoteA.ulid
+              `shouldNotSatisfy` (\ulid -> zeroUlidTxt `T.isPrefixOf` ulid)
+            taskToNoteB.ulid
+              `shouldNotSatisfy` (\ulid -> zeroUlidTxt `T.isPrefixOf` ulid)
+            taskToNoteA.note `shouldBe` "A short note"
+            taskToNoteB.note `shouldBe` "A short note"
           _ -> P.die "Found more than one task_to_tag row"
 
     it "lets you set metadata to null" $ do

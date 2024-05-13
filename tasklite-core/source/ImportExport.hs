@@ -459,19 +459,21 @@ insertImportTask connection importTaskRecord = do
         then taskParsed{Task.user = T.pack effectiveUserName}
         else taskParsed
   insertRecord "tasks" connection theTask
-  warnings <-
+  tagWarnings <-
     insertTags
       connection
       (ulidTextToDateTime taskParsed.ulid)
       theTask
       importTaskRecord.tags
-  insertNotes
-    connection
-    (ulidTextToDateTime taskParsed.ulid)
-    theTask
-    importTaskRecord.notes
+  noteWarnings <-
+    insertNotes
+      connection
+      (ulidTextToDateTime taskParsed.ulid)
+      theTask
+      importTaskRecord.notes
   pure $
-    warnings
+    tagWarnings
+      <$$> noteWarnings
       <$$> "📥 Imported task"
       <+> dquotes (pretty theTask.body)
       <+> "with ulid"
@@ -754,7 +756,7 @@ editTaskByTask preEdit conn taskToEdit = do
         Left error -> die $ show error <> " in task \n" <> show newContent
         Right importTaskRecord -> do
           effectiveUserName <- getEffectiveUserName
-          now <- getULIDTimeStamp
+          now <- getULIDTimeStamp <&> (show >>> T.toLower)
           let
             taskFixed =
               importTaskRecord.task
@@ -775,8 +777,7 @@ editTaskByTask preEdit conn taskToEdit = do
                         note
                           { Note.ulid =
                               if zeroUlidTxt `T.isPrefixOf` note.ulid
-                                then
-                                  note.ulid & T.replace zeroUlidTxt (show now)
+                                then note.ulid & T.replace zeroUlidTxt now
                                 else note.ulid
                           }
                     )
@@ -791,9 +792,10 @@ editTaskByTask preEdit conn taskToEdit = do
             updateTask conn taskFixed{Task.modified_utc = show @DateTime now_}
 
           tagWarnings <- insertTags conn Nothing taskFixed importTaskRecord.tags
-          insertNotes conn Nothing taskFixed notesCorrectUtc
+          noteWarnings <- insertNotes conn Nothing taskFixed notesCorrectUtc
           pure $
             tagWarnings
+              <$$> noteWarnings
               <$$> "✏️  Edited task"
               <+> dquotes (pretty taskFixed.body)
               <+> "with ulid"

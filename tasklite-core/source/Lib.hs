@@ -230,7 +230,7 @@ import Config (
   HooksConfig (add),
   defaultConfig,
  )
-import Control.Monad.Catch (catchIf)
+import Control.Monad.Catch (catchAll, catchIf)
 import FullTask (
   FullTask (
     awake_utc,
@@ -399,9 +399,11 @@ insertTags connection mbCreatedUtc task tags = do
   pure $ vsepCollapse insertWarnings
 
 
-insertNotes :: Connection -> Maybe DateTime -> Task -> [Note] -> IO ()
+insertNotes
+  :: Connection -> Maybe DateTime -> Task -> [Note] -> IO (Doc AnsiStyle)
 insertNotes connection mbCreatedUtc task notes = do
-  taskToNotes <- forM notes $ \theNote -> do
+  let uniqueNotes = nub notes
+  taskToNotes <- forM uniqueNotes $ \theNote -> do
     newUlid <- getULID
     pure $
       TaskToNote
@@ -418,8 +420,20 @@ insertNotes connection mbCreatedUtc task notes = do
         , note = theNote.body
         }
 
-  P.forM_ taskToNotes $ \taskToNote ->
-    insertRecord "task_to_note" connection taskToNote
+  insertWarnings <- P.forM taskToNotes $ \taskToNote ->
+    catchAll
+      (insertRecord "task_to_note" connection taskToNote P.>> pure "")
+      ( \exception ->
+          pure $
+            annotate (color Yellow) $
+              "⚠️ Note "
+                <> dquotes (pretty taskToNote.note)
+                <> " could not be inserted"
+                  <+> "ERROR:"
+                  <+> pretty (show exception :: Text)
+      )
+
+  pure $ vsepCollapse insertWarnings
 
 
 -- | Tuple is (Maybe createdUtc, noteBody)
