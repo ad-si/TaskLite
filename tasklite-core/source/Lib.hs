@@ -1298,7 +1298,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
                   (ulidTextToDateTime n.ulid)
                   <++> grayOut (pretty n.ulid)
                   <> hardline
-                  <> indent 2 (reflow n.note)
+                  <> indent 2 (pretty n.note)
                   <> hardline
             )
 
@@ -1344,7 +1344,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
                                   (utcFormatShort conf)
                             )
                             (ulidTextToDateTime n.ulid)
-                            <++> align (reflow n.note)
+                            <++> align (pretty n.note)
                       )
                   & vsep
               )
