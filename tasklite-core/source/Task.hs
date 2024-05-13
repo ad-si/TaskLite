@@ -73,7 +73,8 @@ import Test.QuickCheck (Arbitrary (arbitrary))
 import Test.QuickCheck.Instances.Text ()
 
 import Config (defaultConfig, utcFormat)
-import Database.SQLite.Simple (Connection, Only (Only), query)
+import Control.Arrow ((>>>))
+import Database.SQLite.Simple (Connection, Only (Only), SQLData (SQLNull), query)
 import Database.SQLite.Simple.QQ (sql)
 
 
@@ -332,7 +333,9 @@ instance ToRow Task where
     , Sql.ToField.toField task.recurrence_duration
     , Sql.ToField.toField task.priority_adjustment
     , Sql.ToField.toField task.user
-    , SQLText $ task.metadata & (decodeUtf8 . BSL.toStrict . Aeson.encode)
+    , case task.metadata of
+        Nothing -> SQLNull
+        Just val -> SQLText $ val & (Aeson.encode >>> BSL.toStrict >>> decodeUtf8)
     ]
 
 

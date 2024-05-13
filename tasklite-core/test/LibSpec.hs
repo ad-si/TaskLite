@@ -22,7 +22,7 @@ import Data.List.Utils (subIndex)
 import Data.Text (unpack)
 import Data.Text qualified as T
 import Data.Time.ISO8601.Duration qualified as Iso
-import Database.SQLite.Simple (query_)
+import Database.SQLite.Simple (SQLData (SQLNull), query_)
 import Test.Hspec (
   Spec,
   context,
@@ -188,7 +188,7 @@ spec = do
             updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
             updatedTask{modified_utc = ""} `shouldBe` newTask
           _ ->
-            P.die "More than one task found"
+            P.die "Found more than one task"
 
     it "lists next task" $ do
       withMemoryDb conf $ \memConn -> do
@@ -278,7 +278,7 @@ spec = do
             case tasks of
               [updatedTask] -> do
                 updatedTask `shouldSatisfy` (\task -> isJust task.ready_utc)
-              _ -> P.die "More than one task found"
+              _ -> P.die "Found more than one task"
 
     it "completes it" $ do
       withMemoryDb conf $ \memConn -> do
@@ -290,7 +290,7 @@ spec = do
           [updatedTask] -> do
             updatedTask `shouldSatisfy` (\task -> task.state == Just Done)
             updatedTask `shouldSatisfy` (\task -> isJust task.closed_utc)
-          _ -> P.die "More than one task found"
+          _ -> P.die "Found more than one task"
 
     it "deletes it" $ do
       withMemoryDb conf $ \memConn -> do
@@ -357,7 +357,7 @@ spec = do
               , FullTask.priority = Just 2.0
               , FullTask.tags = Just ["tag", "what"]
               }
-        _ -> P.die "More than one task found"
+        _ -> P.die "Found more than one task"
 
   it "deduplicates tags when adding a task" $ do
     withMemoryDb conf $ \memConn -> do
@@ -378,7 +378,7 @@ spec = do
               , FullTask.priority = Just 2.0
               , FullTask.tags = Just ["drink"]
               }
-        _ -> P.die "More than one task found"
+        _ -> P.die "Found more than one task"
 
   it "logs a task" $ do
     withMemoryDb conf $ \memConn -> do
@@ -445,73 +445,89 @@ spec = do
       cliOutput <- addTag defaultConfig memConn newTag [task1.ulid]
       show cliOutput `shouldEndWith` "Tag \"test\" is already assigned"
 
-  it "lets you edit a task and shows warning if a tag was duplicated" $ do
-    withMemoryDb defaultConfig $ \memConn -> do
-      let existTag = "existing-tag"
-      insertRecord "tasks" memConn task1
-      warnings <- insertTags memConn Nothing task1 [existTag]
-      P.show warnings `shouldBe` T.empty
+  context "Editing a task" $ do
+    it "shows warning if a tag was duplicated" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        let existTag = "existing-tag"
+        insertRecord "tasks" memConn task1
+        warnings <- insertTags memConn Nothing task1 [existTag]
+        P.show warnings `shouldBe` T.empty
 
-      cliOutput <-
-        editTaskByTask
-          (ApplyPreEdit (<> ("\ntags: " <> P.show [existTag, "new-tag"])))
-          memConn
-          task1
-      let errMsg = "Tag \"" <> T.unpack existTag <> "\" is already assigned"
-      show cliOutput `shouldContain` errMsg
+        cliOutput <-
+          editTaskByTask
+            (ApplyPreEdit (<> ("\ntags: " <> P.show [existTag, "new-tag"])))
+            memConn
+            task1
+        let errMsg = "Tag \"" <> T.unpack existTag <> "\" is already assigned"
+        show cliOutput `shouldContain` errMsg
 
-  it "lets you edit a task and specify closed_utc" $ do
-    withMemoryDb defaultConfig $ \memConn -> do
-      insertRecord "tasks" memConn task1
+    it "lets you change the closed_utc" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        insertRecord "tasks" memConn task1
 
-      let
-        replaceBs needle replacement haystack = do
-          haystack
-            & P.decodeUtf8
-            & T.replace (P.decodeUtf8 needle) (P.decodeUtf8 replacement)
-            & P.encodeUtf8
+        let
+          replaceBs needle replacement haystack = do
+            haystack
+              & P.decodeUtf8
+              & T.replace (P.decodeUtf8 needle) (P.decodeUtf8 replacement)
+              & P.encodeUtf8
 
-      cliOutput <-
-        editTaskByTask
-          ( ApplyPreEdit $
-              replaceBs
-                "state: null"
-                "state: Done"
-                >>> replaceBs
-                  "closed_utc: null"
-                  "closed_utc: 2024-05-08 10:04"
-          )
-          memConn
-          task1
-      show cliOutput `shouldContain` "Edited task"
-      tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
-      case tasks of
-        [task] -> do
-          task.closed_utc `shouldBe` Just "2024-05-08 10:04:00"
-          task.state `shouldBe` Just Done
-          now_ <- dateCurrent
-          let today = now_ & show & T.take 10
-          task.modified_utc `shouldSatisfy` (today `T.isPrefixOf`)
-        _ -> P.die "More than one task found"
+        cliOutput <-
+          editTaskByTask
+            ( ApplyPreEdit $
+                replaceBs
+                  "state: null"
+                  "state: Done"
+                  >>> replaceBs
+                    "closed_utc: null"
+                    "closed_utc: 2024-05-08 10:04"
+            )
+            memConn
+            task1
+        show cliOutput `shouldContain` "Edited task"
+        tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+        case tasks of
+          [task] -> do
+            task.closed_utc `shouldBe` Just "2024-05-08 10:04:00"
+            task.state `shouldBe` Just Done
+            now_ <- dateCurrent
+            let today = now_ & show & T.take 10
+            task.modified_utc `shouldSatisfy` (today `T.isPrefixOf`)
+          _ -> P.die "Found more than one task"
 
-  it "lets you add notes while editing a task" $ do
-    withMemoryDb defaultConfig $ \memConn -> do
-      insertRecord "tasks" memConn task1
-      cliOutput <-
-        editTaskByTask
-          (ApplyPreEdit (<> ("\nnotes: " <> P.show ["A short note" :: Text])))
-          memConn
-          task1
-      show cliOutput `shouldStartWith` "✏️  Edited task \"New task 1\""
+    it "lets you add notes" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        cliOutput <-
+          editTaskByTask
+            (ApplyPreEdit (<> ("\nnotes: " <> P.show ["A short note" :: Text])))
+            memConn
+            task1
+        show cliOutput `shouldStartWith` "✏️  Edited task \"New task 1\""
 
-      taskToNotes :: [TaskToNote] <-
-        query_ memConn "SELECT * FROM task_to_note"
-      case taskToNotes of
-        [taskToNote] -> do
-          taskToNote.ulid
-            `shouldNotSatisfy` (\ulid -> zeroUlidTxt `T.isPrefixOf` ulid)
-          taskToNote.note `shouldBe` "A short note"
-        _ -> P.die "Found more than one task_to_tag row"
+        taskToNotes :: [TaskToNote] <-
+          query_ memConn "SELECT * FROM task_to_note"
+        case taskToNotes of
+          [taskToNote] -> do
+            taskToNote.ulid
+              `shouldNotSatisfy` (\ulid -> zeroUlidTxt `T.isPrefixOf` ulid)
+            taskToNote.note `shouldBe` "A short note"
+          _ -> P.die "Found more than one task_to_tag row"
+
+    it "lets you set metadata to null" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        insertRecord "tasks" memConn task1{metadata = Just "{\"a\":\"b\"}"}
+        cliOutput <-
+          editTaskByTask
+            (ApplyPreEdit (<> "\nmetadata: null"))
+            memConn
+            task1
+        show cliOutput `shouldStartWith` "✏️  Edited task \"New task 1\""
+        tasks :: [[SQLData]] <- query_ memConn "SELECT metadata FROM tasks"
+        case tasks of
+          [[metadata]] -> do
+            metadata `shouldBe` SQLNull
+          _ -> P.die "Found more than one task"
 
   it "keeps line breaks of multi-line tasks in info view" $ do
     withMemoryDb defaultConfig $ \memConn -> do
