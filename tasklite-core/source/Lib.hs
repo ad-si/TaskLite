@@ -750,7 +750,7 @@ reviewTasksIn conf connection duration ids = do
           pure $
             if numOfChanges == 0
               then warningStart <+> "could not be reviewed"
-              else getResultMsg "🔎 Finished review" task
+              else getResultMsg task "🔎 Finished review"
 
   pure $ vsep docs
 
@@ -1689,7 +1689,7 @@ deleteTag conf connection tag ids = do
                 <+> dquotes (pretty tag)
                 <+> "is not set for task"
                 <+> dquotes (pretty task.ulid)
-          else getResultMsg ("💥 Removed tag \"" <> pretty tag <> "\"") task
+          else getResultMsg task ("💥 Removed tag \"" <> pretty tag <> "\"")
 
   pure $ vsep docs
 
@@ -1792,13 +1792,23 @@ setDueUtc conf connection datetime ids = do
   pure $ vsep docs
 
 
-getResultMsg :: Doc AnsiStyle -> Task -> Doc AnsiStyle
-getResultMsg msg task = do
+getResultMsg :: Task -> Doc AnsiStyle -> Doc AnsiStyle
+getResultMsg task msg = do
   let
     prettyBody = dquotes $ pretty task.body
     prettyId = dquotes $ pretty task.ulid
 
   msg <+> "of task" <+> prettyBody <+> "with id" <+> prettyId
+
+
+getWarnMsg :: Task -> Doc AnsiStyle -> Doc AnsiStyle
+getWarnMsg task msg = do
+  let
+    prettyBody = dquotes $ pretty task.body
+    prettyId = dquotes $ pretty task.ulid
+
+  annotate (color Yellow) $
+    "⚠️ Task" <+> prettyBody <+> "with id" <+> prettyId <+> msg
 
 
 uncloseTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
@@ -1812,11 +1822,18 @@ uncloseTasks conf connection ids = do
           SET
             closed_utc = NULL,
             state = NULL
-          WHERE ulid == :ulid
+          WHERE
+            ulid == :ulid AND
+            closed_utc IS NOT NULL AND
+            state IS NOT NULL
         |]
         [":ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Removed close timestamp and state field" task
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then getWarnMsg task "is still open"
+          else getResultMsg task "💥 Removed close timestamp and state field"
 
   pure $ vsep docs
 
@@ -1830,11 +1847,17 @@ undueTasks conf connection ids = do
         [sql|
           UPDATE tasks
           SET due_utc = NULL
-          WHERE ulid == :ulid
+          WHERE
+            ulid == :ulid AND
+            due_utc IS NOT NULL
         |]
         [":ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Removed due timestamp" task
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then getWarnMsg task "does not have a due timestamp"
+          else getResultMsg task "💥 Removed due timestamp"
 
   pure $ vsep docs
 
@@ -1848,11 +1871,17 @@ unwaitTasks conf connection ids = do
         [sql|
           UPDATE tasks
           SET waiting_utc = NULL
-          WHERE ulid == :ulid
+          WHERE
+            ulid == :ulid AND
+            waiting_utc IS NOT NULL
         |]
         [":ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Removed waiting and review timestamps" task
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then getWarnMsg task "does not have a waiting timestamp"
+          else getResultMsg task "💥 Removed waiting and review timestamps"
 
   pure $ vsep docs
 
@@ -1866,11 +1895,17 @@ unwakeTasks conf connection ids = do
         [sql|
           UPDATE tasks
           SET awake_utc = NULL
-          WHERE ulid == :ulid
+          WHERE
+            ulid == :ulid AND
+            awake_utc IS NOT NULL
         |]
         [":ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Removed awake timestamp" task
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then getWarnMsg task "does not have an awake timestamp"
+          else getResultMsg task "💥 Removed awake timestamp"
 
   pure $ vsep docs
 
@@ -1884,11 +1919,17 @@ unreadyTasks conf connection ids = do
         [sql|
           UPDATE tasks
           SET ready_utc = NULL
-          WHERE ulid == :ulid
+          WHERE
+            ulid == :ulid AND
+            ready_utc IS NOT NULL
         |]
         [":ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Removed ready timestamp" task
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then getWarnMsg task "does not have a ready timestamp"
+          else getResultMsg task "💥 Removed ready timestamp"
 
   pure $ vsep docs
 
@@ -1902,11 +1943,17 @@ unreviewTasks conf connection ids = do
         [sql|
           UPDATE tasks
           SET review_utc = NULL
-          WHERE ulid == :ulid
+          WHERE
+            ulid == :ulid AND
+            review_utc IS NOT NULL
         |]
         [":ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Removed review timestamp" task
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then getWarnMsg task "does not have a review timestamp"
+          else getResultMsg task "💥 Removed review timestamp"
 
   pure $ vsep docs
 
@@ -1920,11 +1967,17 @@ unrepeatTasks conf connection ids = do
         [sql|
           UPDATE tasks
           SET repetition_duration = NULL
-          WHERE ulid == :ulid
+          WHERE
+            ulid == :ulid AND
+            repetition_duration IS NOT NULL
         |]
         [":ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Removed repetition duration" task
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then getWarnMsg task "does not have a repetition duration"
+          else getResultMsg task "💥 Removed repetition duration"
 
   pure $ vsep docs
 
@@ -1938,11 +1991,17 @@ unrecurTasks conf connection ids = do
         [sql|
           UPDATE tasks
           SET recurrence_duration = NULL
-          WHERE ulid == :ulid
+          WHERE
+            ulid == :ulid AND
+            recurrence_duration IS NOT NULL
         |]
         [":ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Removed recurrence duration" task
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then getWarnMsg task "does not have a recurrence duration"
+          else getResultMsg task "💥 Removed recurrence duration"
 
   pure $ vsep docs
 
@@ -1959,7 +2018,11 @@ untagTasks conf connection ids = do
         |]
         [":task_ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Removed all tags" task
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then getWarnMsg task "does not have any tags"
+          else getResultMsg task "💥 Removed all tags"
 
   pure $ vsep docs
 
@@ -1976,7 +2039,11 @@ unnoteTasks conf connection ids = do
         |]
         [":task_ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Deleted all notes" task
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then getWarnMsg task "does not have any notes"
+          else getResultMsg task "💥 Deleted all notes"
 
   pure $ vsep docs
 
@@ -1990,11 +2057,17 @@ unprioTasks conf connection ids = do
         [sql|
           UPDATE tasks
           SET priority_adjustment = NULL
-          WHERE ulid == :ulid
+          WHERE
+            ulid == :ulid AND
+            priority_adjustment IS NOT NULL
         |]
         [":ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Removed priority adjustment" task
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then getWarnMsg task "does not have a priority adjustment"
+          else getResultMsg task "💥 Removed priority adjustment"
 
   pure $ vsep docs
 
@@ -2008,11 +2081,17 @@ unmetaTasks conf connection ids = do
         [sql|
           UPDATE tasks
           SET metadata = NULL
-          WHERE ulid == :ulid
+          WHERE
+            ulid == :ulid AND
+            metadata IS NOT NULL
         |]
         [":ulid" := task.ulid]
 
-      pure $ getResultMsg "💥 Removed metadata" task
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then getWarnMsg task "does not have any metadata"
+          else getResultMsg task "💥 Removed metadata"
 
   pure $ vsep docs
 

@@ -78,9 +78,11 @@ spec = do
       withMemoryDb defaultConfig $ \memConn -> do
         Lib.insertRecord "tasks" memConn sampleTask
         let tags = [0 .. 9] <&> \(i :: P.Int) -> "tag-" <> P.show i
-        warnings <- Lib.insertTags memConn Nothing sampleTask tags
-        P.show warnings `shouldBe` T.empty
-        Lib.insertNotes memConn Nothing sampleTask sampleNotes
+        tagWarnings <- Lib.insertTags memConn Nothing sampleTask tags
+        P.show tagWarnings `shouldBe` T.empty
+
+        noteWarnings <- Lib.insertNotes memConn Nothing sampleTask sampleNotes
+        P.show noteWarnings `shouldBe` T.empty
 
         taskYaml <- taskToEditableYaml memConn sampleTask
         let
