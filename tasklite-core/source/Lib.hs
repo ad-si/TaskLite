@@ -823,6 +823,7 @@ createNextRepetition conf connection task = do
             nowMb
               <&> (timePrint conf.utcFormat >>> T.pack)
               & fromMaybe ""
+        , Task.review_utc = Nothing
         }
 
   insertRecord "tasks" connection newTask
@@ -843,7 +844,7 @@ createNextRepetition conf connection task = do
     pure $
       Just $
         warnings
-          <$$> "➡️  Created next task"
+          <$$> "➡️ Created next task"
           <+> dquotes (pretty newTask.body)
           <+> "in repetition series"
           <+> dquotes (pretty newTask.group_ulid)
@@ -905,6 +906,7 @@ createNextRecurrence conf connection task = do
               & ulidTextToDateTime
               <&> (timePrint conf.utcFormat >>> T.pack)
               & fromMaybe ""
+        , Task.review_utc = Nothing
         }
 
   tags <-
@@ -923,7 +925,7 @@ createNextRecurrence conf connection task = do
     pure $
       Just $
         warnings
-          <$$> "➡️  Created next task"
+          <$$> "➡️ Created next task"
           <+> dquotes (pretty task.body)
           <+> "in recurrence series"
           <+> dquotes (pretty task.group_ulid)
