@@ -712,8 +712,7 @@ commandParser conf =
           "List newest tasks by creation UTC desc (Open and Closed)")
 
     <> command "old" (toParserInfo (pure ListOld)
-        ("List " <> numTasks
-          <> " oldest open tasks by creation UTC asc"))
+        ("List " <> numTasks <> " oldest open tasks by creation UTC asc"))
 
     -- <> command "asleep" (toParserInfo (pure ListAwake)
     --     "List all sleeping tasks by priority")
@@ -732,14 +731,13 @@ commandParser conf =
 
 
     <> command "done" (toParserInfo (pure ListDone)
-        ("List " <> numTasks
-          <> "  done tasks by closing UTC desc"))
+        ("List " <> numTasks <> " done tasks by closing UTC desc"))
 
     <> command "obsolete" (toParserInfo (pure ListObsolete)
-        "List all obsolete tasks by closing UTC")
+        ("List " <> numTasks <> " obsolete tasks by closing UTC"))
 
     <> command "deletable" (toParserInfo (pure ListDeletable)
-        "List all deletable tasks by closing UTC")
+        ("List " <> numTasks <> " deletable tasks by closing UTC"))
 
     -- <> command "expired"
     -- "List tasks which are obsolete, \
