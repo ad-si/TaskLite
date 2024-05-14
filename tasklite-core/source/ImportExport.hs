@@ -29,11 +29,13 @@ import Protolude (
   hush,
   isJust,
   optional,
+  putErrLn,
   rightToMaybe,
   show,
   toStrict,
   ($),
   (&),
+  (+),
   (.),
   (<$>),
   (<&>),
@@ -70,7 +72,8 @@ import Data.Time.ISO8601.Duration qualified as Iso
 import Data.ULID (ULID, ulidFromInteger)
 import Data.ULID.TimeStamp (getULIDTimeStamp)
 import Data.Vector qualified as V
-import Data.Yaml as Yaml (ParseException, decodeEither')
+import Data.Yaml (ParseException (InvalidYaml), YamlException (YamlException, YamlParseException), YamlMark (YamlMark))
+import Data.Yaml qualified as Yaml
 import Database.SQLite.Simple as Sql (Connection, query_)
 import FullTask (FullTask)
 import Lib (
@@ -723,18 +726,53 @@ data PreEdit
   | NoPreEdit
 
 
+{-| Edit the task until it is valid YAML and can be decoded.
+| Return the the tuple `(task, valid YAML content)`
+-}
+editUntilValidYaml
+  :: PreEdit
+  -> Connection
+  -> P.ByteString
+  -> P.ByteString
+  -> IO (Either ParseException (ImportTask, P.ByteString))
+editUntilValidYaml preEdit conn initialYaml wipYaml = do
+  yamlAfterEdit <- case preEdit of
+    ApplyPreEdit editFunc -> pure $ editFunc wipYaml
+    NoPreEdit -> runUserEditorDWIM yamlTemplate wipYaml
+
+  if yamlAfterEdit == initialYaml
+    then pure $ Left $ InvalidYaml $ Just $ YamlException "⚠️ Nothing changed"
+    else do
+      case yamlAfterEdit & Yaml.decodeEither' of
+        Left error -> do
+          case error of
+            -- Adjust the line and column numbers to be 1-based
+            InvalidYaml
+              (Just (YamlParseException prblm ctxt (YamlMark idx line col))) ->
+                let yamlMark = YamlMark (idx + 1) (line + 1) (col + 1)
+                in  putErrLn $
+                      Yaml.prettyPrintParseException
+                        ( InvalidYaml
+                            (Just (YamlParseException prblm ctxt yamlMark))
+                        )
+                        <> "\n"
+            _ ->
+              putErrLn $ Yaml.prettyPrintParseException error <> "\n"
+          editUntilValidYaml preEdit conn initialYaml yamlAfterEdit
+        ---
+        Right newTask -> do
+          pure $ Right (newTask, yamlAfterEdit)
+
+
 editTaskByTask :: PreEdit -> Connection -> Task -> IO (Doc AnsiStyle)
 editTaskByTask preEdit conn taskToEdit = do
   taskYaml <- taskToEditableYaml conn taskToEdit
-  newContent <- case preEdit of
-    ApplyPreEdit editFunc -> pure $ editFunc taskYaml
-    NoPreEdit -> runUserEditorDWIM yamlTemplate taskYaml
-
-  if newContent == taskYaml
-    then
-      pure $
-        "⚠️  Nothing changed" <+> hardline
-    else do
+  taskYamlTupleRes <- editUntilValidYaml preEdit conn taskYaml taskYaml
+  case taskYamlTupleRes of
+    Left error -> pure $ pretty $ Yaml.prettyPrintParseException error
+    Right (importTaskRecord, newContent) -> do
+      effectiveUserName <- getEffectiveUserName
+      now <- getULIDTimeStamp <&> (show >>> T.toLower)
       let
         parseMetadata :: Value -> Parser Bool
         parseMetadata val = case val of
@@ -747,60 +785,51 @@ editTaskByTask preEdit conn taskToEdit = do
 
         hasMetadata =
           parseMaybe parseMetadata
-            =<< (rightToMaybe $ Yaml.decodeEither' newContent :: Maybe Value)
+            =<< rightToMaybe (Yaml.decodeEither' newContent)
 
-        decodeResult :: Either ParseException ImportTask
-        decodeResult = Yaml.decodeEither' newContent
+        taskFixed =
+          importTaskRecord.task
+            { Task.user =
+                if importTaskRecord.task.user == ""
+                  then T.pack effectiveUserName
+                  else importTaskRecord.task.user
+            , Task.metadata =
+                if hasMetadata == Just True
+                  then importTaskRecord.task.metadata
+                  else Nothing
+            , -- Set to previous value to force SQL trigger to update it
+              Task.modified_utc = taskToEdit.modified_utc
+            }
+        notesCorrectUtc =
+          importTaskRecord.notes
+            <&> ( \note ->
+                    note
+                      { Note.ulid =
+                          if zeroUlidTxt `T.isPrefixOf` note.ulid
+                            then note.ulid & T.replace zeroUlidTxt now
+                            else note.ulid
+                      }
+                )
 
-      case decodeResult of
-        Left error -> die $ show error <> " in task \n" <> show newContent
-        Right importTaskRecord -> do
-          effectiveUserName <- getEffectiveUserName
-          now <- getULIDTimeStamp <&> (show >>> T.toLower)
-          let
-            taskFixed =
-              importTaskRecord.task
-                { Task.user =
-                    if importTaskRecord.task.user == ""
-                      then T.pack effectiveUserName
-                      else importTaskRecord.task.user
-                , Task.metadata =
-                    if hasMetadata == Just True
-                      then importTaskRecord.task.metadata
-                      else Nothing
-                , -- Set to previous value to force SQL trigger to update it
-                  Task.modified_utc = taskToEdit.modified_utc
-                }
-            notesCorrectUtc =
-              importTaskRecord.notes
-                <&> ( \note ->
-                        note
-                          { Note.ulid =
-                              if zeroUlidTxt `T.isPrefixOf` note.ulid
-                                then note.ulid & T.replace zeroUlidTxt now
-                                else note.ulid
-                          }
-                    )
+      updateTask conn taskFixed
 
-          updateTask conn taskFixed
+      -- TODO: Remove after it was added to `createSetClosedUtcTrigger`
+      -- Update again with the same `state` field to avoid firing
+      -- SQL trigger which would overwrite the `closed_utc` field.
+      P.when (isJust taskFixed.closed_utc) $ do
+        now_ <- dateCurrent
+        updateTask conn taskFixed{Task.modified_utc = show @DateTime now_}
 
-          -- TODO: Remove after it was added to `createSetClosedUtcTrigger`
-          -- Update again with the same `state` field to avoid firing
-          -- SQL trigger which would overwrite the `closed_utc` field.
-          P.when (isJust taskFixed.closed_utc) $ do
-            now_ <- dateCurrent
-            updateTask conn taskFixed{Task.modified_utc = show @DateTime now_}
-
-          tagWarnings <- insertTags conn Nothing taskFixed importTaskRecord.tags
-          noteWarnings <- insertNotes conn Nothing taskFixed notesCorrectUtc
-          pure $
-            tagWarnings
-              <$$> noteWarnings
-              <$$> "✏️  Edited task"
-              <+> dquotes (pretty taskFixed.body)
-              <+> "with ulid"
-              <+> dquotes (pretty taskFixed.ulid)
-              <+> hardline
+      tagWarnings <- insertTags conn Nothing taskFixed importTaskRecord.tags
+      noteWarnings <- insertNotes conn Nothing taskFixed notesCorrectUtc
+      pure $
+        tagWarnings
+          <$$> noteWarnings
+          <$$> "✏️  Edited task"
+          <+> dquotes (pretty taskFixed.body)
+          <+> "with ulid"
+          <+> dquotes (pretty taskFixed.ulid)
+          <+> hardline
 
 
 editTask :: Config -> Connection -> IdText -> IO (Doc AnsiStyle)
