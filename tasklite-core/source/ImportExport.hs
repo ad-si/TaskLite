@@ -712,7 +712,7 @@ dumpSql conf = do
   result <-
     readProcess
       "sqlite3"
-      [ dataDir conf </> dbName conf
+      [ conf.dataDir </> conf.dbName
       , ".dump"
       ]
       []
@@ -726,7 +726,7 @@ backupDatabase conf = do
   let
     fileUtcFormat = toFormat ("YYYY-MM-DDtHMI" :: [Char])
     backupDirName = "backups"
-    backupDirPath = dataDir conf </> backupDirName
+    backupDirPath = conf.dataDir </> backupDirName
     backupFilePath = backupDirPath </> timePrint fileUtcFormat now <> ".db"
 
   -- Create directory (and parents because of True)
@@ -736,7 +736,7 @@ backupDatabase conf = do
     pretty
       <$> readProcess
         "sqlite3"
-        [ dataDir conf </> dbName conf
+        [ conf.dataDir </> conf.dbName
         , ".backup '" <> backupFilePath <> "'"
         ]
         []
@@ -746,7 +746,7 @@ backupDatabase conf = do
       <> hardline
       <> pretty
         ( "✅ Backed up database \""
-            <> dbName conf
+            <> conf.dbName
             <> "\" to \""
             <> backupFilePath
             <> "\""

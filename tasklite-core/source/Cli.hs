@@ -847,7 +847,9 @@ commandParser conf =
         "Show SQL commands to create and populate database")
 
     <> command "backup" (toParserInfo (pure Backup)
-        "Create a backup of the tasks database at ~/tasklite/backups")
+        ("Create a backup of the tasks database at "
+        <> T.pack conf.dataDir <> "/backups"))
+
     )
 
   <|> hsubparser
@@ -1111,9 +1113,7 @@ handleExternalCommand conf cmd argsMb = do
           then pretty (show exception :: Text)
           else do
             let
-              theHelp =
-                parserHelp defaultPrefs $
-                  (helper <*> commandParser conf)
+              theHelp = parserHelp defaultPrefs (helper <*> commandParser conf)
               newHeader =
                 Chunk
                   ( Just $
