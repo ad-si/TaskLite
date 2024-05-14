@@ -990,6 +990,14 @@ endTasks conf connection noteWordsMaybe ids = do
               <+> prettyId
               <+> "is already marked as obsolete"
         else do
+          logMessageMaybe <-
+            if isJust task.repetition_duration
+              then createNextRepetition conf connection task
+              else
+                if isJust task.recurrence_duration
+                  then createNextRecurrence conf connection task
+                  else pure Nothing
+
           noteMessageMaybe <- case noteWordsMaybe of
             Nothing -> pure Nothing
             Just noteWords ->
@@ -1006,6 +1014,7 @@ endTasks conf connection noteWordsMaybe ids = do
                     <+> prettyId
                     <+> "as obsolete"
                  )
+              <> fromMaybe "" (logMessageMaybe <&> (hardline <>))
 
   pure $ vsep docs
 
