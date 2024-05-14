@@ -101,6 +101,7 @@ tests:
     source-dirs: test
     dependencies:
       - aeson
+      - bytestring
       - hourglass
       - hspec >= 2.11 && < 3.0
       - iso8601-duration

@@ -144,6 +144,7 @@ test-suite tasklite-test
       MissingH >=1.4 && <1.7
     , aeson
     , base >=4.18 && <5
+    , bytestring
     , hourglass
     , hspec >=2.11 && <3.0
     , iso8601-duration

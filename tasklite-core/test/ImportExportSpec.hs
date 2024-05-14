@@ -14,6 +14,7 @@ import Protolude (
 import Protolude qualified as P
 
 import Data.Aeson (decode, eitherDecode, eitherDecodeStrictText)
+import Data.ByteString.Lazy qualified as BSL
 import Data.Hourglass (timePrint, toFormat)
 import Data.Text (unpack)
 import Data.Text qualified as T
@@ -30,7 +31,8 @@ import Test.Hspec (
 import Config (defaultConfig)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
-import ImportExport (insertImportTask)
+import ImportExport (ImportTask (ImportTask, notes, tags, task), insertImportTask)
+import Task (Task (body, ulid, user, modified_utc), emptyTask)
 import TaskToNote (TaskToNote (TaskToNote))
 import TaskToNote qualified
 import TestUtils (withMemoryDb)
@@ -175,4 +177,35 @@ spec = do
               taskToNote.ulid `shouldNotBe` expectedTaskToNote.ulid
               (taskToNote.ulid & T.take 10)
                 `shouldBe` (expectedTaskToNote.ulid & T.take 10)
+            _ -> P.die "Found more than one note"
+
+  it "imports a GitHub issue" $ do
+    gitHubIssue <- BSL.readFile "test/fixtures/github-issue.json"
+    withMemoryDb conf $ \memConn -> do
+      let
+        expectedImpTask =
+          ImportTask
+            { task =
+                emptyTask
+                  { Task.ulid = "01hrz2qz7g0000f4wgrw89nzvm"
+                  , Task.body = "Support getting the note body from stdin"
+                  , Task.user = "ad-si"
+                  , Task.modified_utc = "2024-03-14 18:14:14"
+                  }
+            , notes = []
+            , tags = []
+            }
+
+      case eitherDecode gitHubIssue of
+        Left error -> P.die $ "Error decoding JSON: " <> show error
+        Right importTaskRecord -> do
+          _ <- insertImportTask memConn importTaskRecord
+          taskList :: [Task] <- query_ memConn "SELECT * FROM tasks"
+          case taskList of
+            [task] -> do
+              task.ulid `shouldBe` expectedImpTask.task.ulid
+              task.body `shouldBe` expectedImpTask.task.body
+              task.user `shouldBe` expectedImpTask.task.user
+              task.modified_utc `shouldBe` expectedImpTask.task.modified_utc
+
             _ -> P.die "Found more than one note"

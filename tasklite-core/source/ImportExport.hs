@@ -40,12 +40,14 @@ import Protolude (
   (<$>),
   (<&>),
   (=<<),
+  (>>=),
   (||),
  )
 import Protolude qualified as P
 
 import Config (Config (dataDir, dbName))
 import Control.Arrow ((>>>))
+import Data.Aeson (Value)
 import Data.Aeson as Aeson (
   FromJSON (parseJSON),
   ToJSON,
@@ -53,6 +55,7 @@ import Data.Aeson as Aeson (
   eitherDecode,
   encode,
   withObject,
+  (.!=),
   (.:),
   (.:?),
  )
@@ -243,9 +246,10 @@ instance FromJSON ImportTask where
               )
       createdUtc = fromMaybe zeroTime parsedCreatedUtc
 
+    o_title <- o .:? "title"
     o_body <- o .:? "body"
     description <- o .:? "description"
-    let body = fromMaybe "" (o_body <|> description)
+    let body = fromMaybe "" (o_title <|> o_body <|> description)
 
     o_priority_adjustment <- o .:? "priority_adjustment"
     urgency <- o .:? "urgency"
@@ -281,11 +285,23 @@ instance FromJSON ImportTask where
           else Nothing
 
     o_tags <- o .:? "tags"
-    o_labels <- o .:? "labels"
+    (o_labelsMb :: Maybe [Value]) <- o .:? "labels"
+    let labels =
+          o_labelsMb
+            <&> ( ( \o_labels ->
+                      o_labels <&> \case
+                        String txt -> Just txt
+                        Object obj ->
+                          P.flip parseMaybe obj (\o_ -> o_ .:? "name" .!= "")
+                        _ -> Nothing
+                  )
+                    >>> P.catMaybes
+                )
+
     project <- o .:? "project"
     let
-      projects = fmap (: []) project
-      tags = fromMaybe [] (o_tags <> o_labels <> projects)
+      projects = project <&> (: [])
+      tags = fromMaybe [] (o_tags <> labels <> projects)
 
     due <- o .:? "due"
     o_due_utc <- o .:? "due_utc"
@@ -423,10 +439,16 @@ instance FromJSON ImportTask where
                   )
           Nothing -> theNotes
 
-    o_user <- o .:? "user"
+    (o_userMb :: Maybe Value) <- o .:? "user"
     o_author <- o .:? "author"
     let
-      userMaybe = o_user <|> o_author
+      o_userNormMb =
+        o_userMb >>= \case
+          String txt -> Just txt
+          Object obj ->
+            P.flip parseMaybe obj (\o_ -> o_ .:? "login" .!= "")
+          _ -> Nothing
+      userMaybe = o_userNormMb <|> o_author
       user = fromMaybe "" userMaybe
 
     o_metadata <- o .:? "metadata"
