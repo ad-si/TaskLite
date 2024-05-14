@@ -17,6 +17,7 @@ import Protolude (
  )
 import Protolude qualified as P
 
+import Control.Arrow ((>>>))
 import Data.Aeson (decode)
 import Data.List.Utils (subIndex)
 import Data.Text (unpack)
@@ -39,7 +40,6 @@ import Test.Hspec (
  )
 
 import Config (defaultConfig)
-import Control.Arrow ((>>>))
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
 import ImportExport (EditMode (ApplyPreEdit), editTaskByTask)
@@ -61,10 +61,12 @@ import Lib (
   logTask,
   newTasks,
   nextTask,
+  recurTasks,
   repeatTasks,
   runFilter,
   setDueUtc,
   setReadyUtc,
+  unrepeatTasks,
   updateTask,
  )
 import Note (Note)
@@ -464,6 +466,25 @@ spec = do
 
       cliOutput <- addTag defaultConfig memConn newTag [task1.ulid]
       show cliOutput `shouldEndWith` "Tag \"test\" is already assigned"
+
+  it "repeats a task and prevents recurring same task" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord "tasks" memConn task1
+      let oneWeek = Iso.DurationWeek (Iso.DurWeek 1)
+      repeatRes <- repeatTasks defaultConfig memConn oneWeek [task1.ulid]
+      P.show repeatRes `shouldContain` "Set repeat duration of task"
+
+      recurRes <- recurTasks defaultConfig memConn oneWeek [task1.ulid]
+      P.show recurRes `shouldContain` "is already in a repetition series"
+
+      unrepeatRes <- unrepeatTasks defaultConfig memConn [task1.ulid]
+      P.show unrepeatRes `shouldContain` "Removed repetition duration"
+
+      recurRes2 <- recurTasks defaultConfig memConn oneWeek [task1.ulid]
+      P.show recurRes2 `shouldContain` "Set recurrence duration of task"
+
+      repeatRes2 <- repeatTasks defaultConfig memConn oneWeek [task1.ulid]
+      P.show repeatRes2 `shouldContain` "is already in a recurrence series"
 
   context "Editing a task" $ do
     it "shows warning if a tag was duplicated" $ do

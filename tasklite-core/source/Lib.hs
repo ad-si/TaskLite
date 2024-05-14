@@ -108,7 +108,7 @@ import Database.SQLite.Simple (
   NamedParam ((:=)),
   Only (Only),
   Query (Query),
-  SQLData (SQLText),
+  SQLData (SQLNull, SQLText),
   SQLError (sqlError),
   ToRow,
   changes,
@@ -1090,44 +1090,57 @@ repeatTasks conf connection duration ids = do
     execWithTask conf connection idSubstr $ \task -> do
       groupUlid <- formatUlid getULID
 
-      executeNamed
-        connection
-        [sql|
+      recDur :: [Only SQLData] <-
+        queryNamed
+          connection
+          [sql|
           UPDATE tasks
           SET
             repetition_duration = :repetition_duration,
             group_ulid = :group_ulid
-          WHERE ulid == :ulid
+          WHERE
+            ulid == :ulid AND
+            recurrence_duration IS NULL
+          RETURNING recurrence_duration
         |]
-        [ ":repetition_duration" := durationIsoText
-        , ":group_ulid" := groupUlid
-        , ":ulid" := task.ulid
-        ]
+          [ ":repetition_duration" := durationIsoText
+          , ":group_ulid" := groupUlid
+          , ":ulid" := task.ulid
+          ]
 
-      -- If repetition is set for already closed task,
-      -- next task in series must be created immediately
-      creationMb <-
-        if isNothing task.closed_utc
-          then pure $ Just mempty
-          else
-            liftIO $
-              createNextRepetition conf connection $
-                task
-                  { Task.repetition_duration = Just durationIsoText
-                  , Task.group_ulid = Just groupUlid
-                  }
+      if recDur /= [Only SQLNull]
+        then
+          pure $
+            "⚠️ Task"
+              <+> dquotes (pretty task.body)
+              <+> "with id"
+              <+> dquotes (pretty task.ulid)
+              <+> "is already in a recurrence series"
+        else do
+          -- If repetition is set for already closed task,
+          -- next task in series must be created immediately
+          creationMb <-
+            if isNothing task.closed_utc
+              then pure $ Just mempty
+              else
+                liftIO $
+                  createNextRepetition conf connection $
+                    task
+                      { Task.repetition_duration = Just durationIsoText
+                      , Task.group_ulid = Just groupUlid
+                      }
 
-      pure $
-        "📅 Set repeat duration of task"
-          <+> dquotes (pretty task.body)
-          <+> "with id"
-          <+> dquotes (pretty task.ulid)
-          <+> "to"
-          <+> dquotes (pretty durationIsoText)
-          <++> ( creationMb
-                  & fromMaybe
-                    "⚠️ Next task in repetition series could not be created!"
-               )
+          pure $
+            "📅 Set repeat duration of task"
+              <+> dquotes (pretty task.body)
+              <+> "with id"
+              <+> dquotes (pretty task.ulid)
+              <+> "to"
+              <+> dquotes (pretty durationIsoText)
+              <++> ( creationMb
+                      & fromMaybe
+                        "⚠️ Next task in repetition series could not be created!"
+                   )
 
   pure $ vsep docs
 
@@ -1141,44 +1154,57 @@ recurTasks conf connection duration ids = do
     execWithTask conf connection idSubstr $ \task -> do
       groupUlid <- formatUlid getULID
 
-      executeNamed
-        connection
-        [sql|
+      repDur :: [Only SQLData] <-
+        queryNamed
+          connection
+          [sql|
           UPDATE tasks
           SET
             recurrence_duration = :recurrence_duration,
             group_ulid = :group_ulid
-          WHERE ulid == :ulid
+          WHERE
+            ulid == :ulid AND
+            repetition_duration IS NULL
+          RETURNING repetition_duration
         |]
-        [ ":recurrence_duration" := durationIsoText
-        , ":group_ulid" := groupUlid
-        , ":ulid" := task.ulid
-        ]
+          [ ":recurrence_duration" := durationIsoText
+          , ":group_ulid" := groupUlid
+          , ":ulid" := task.ulid
+          ]
 
-      -- If recurrence is set for already closed task,
-      -- next task in series must be created immediately
-      creationMb <-
-        if isNothing task.closed_utc
-          then pure $ Just mempty
-          else
-            liftIO $
-              createNextRecurrence conf connection $
-                task
-                  { Task.recurrence_duration = Just durationIsoText
-                  , Task.group_ulid = Just groupUlid
-                  }
+      if repDur /= [Only SQLNull]
+        then
+          pure $
+            "⚠️ Task"
+              <+> dquotes (pretty task.body)
+              <+> "with id"
+              <+> dquotes (pretty task.ulid)
+              <+> "is already in a repetition series"
+        else do
+          -- If recurrence is set for already closed task,
+          -- next task in series must be created immediately
+          creationMb <-
+            if isNothing task.closed_utc
+              then pure $ Just mempty
+              else
+                liftIO $
+                  createNextRecurrence conf connection $
+                    task
+                      { Task.recurrence_duration = Just durationIsoText
+                      , Task.group_ulid = Just groupUlid
+                      }
 
-      pure $
-        "📅 Set recurrence duration of task"
-          <+> dquotes (pretty task.body)
-          <+> "with id"
-          <+> dquotes (pretty task.ulid)
-          <+> "to"
-          <+> dquotes (pretty durationIsoText)
-          <++> ( creationMb
-                  & fromMaybe
-                    "⚠️ Next task in recurrence series could not be created!"
-               )
+          pure $
+            "📅 Set recurrence duration of task"
+              <+> dquotes (pretty task.body)
+              <+> "with id"
+              <+> dquotes (pretty task.ulid)
+              <+> "to"
+              <+> dquotes (pretty durationIsoText)
+              <++> ( creationMb
+                      & fromMaybe
+                        "⚠️ Next task in recurrence series could not be created!"
+                   )
 
   pure $ vsep docs
 
