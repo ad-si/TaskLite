@@ -86,7 +86,6 @@ import Data.Generics (Data, constrFields, toConstr)
 import Data.Hourglass (
   DateTime (dtTime),
   Duration (durationHours, durationMinutes),
-  ElapsedP,
   ISO8601_Date (ISO8601_Date),
   Minutes (Minutes),
   Time (timeFromElapsedP),
@@ -244,6 +243,7 @@ import Utils (
   applyColorMode,
   dateTimeToUtcTime,
   executeHooks,
+  formatElapsedP,
   numDigits,
   parseUlidText,
   parseUtc,
@@ -425,11 +425,6 @@ insertNoteTuples connection task notes = do
 
   forM_ taskToNotes $ \taskToNote ->
     insertRecord "task_to_note" connection taskToNote
-
-
-formatElapsedP :: Config -> IO ElapsedP -> IO Text
-formatElapsedP conf =
-  fmap (T.pack . timePrint conf.utcFormat)
 
 
 formatUlid :: IO ULID -> IO Text

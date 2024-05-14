@@ -2,14 +2,12 @@ module ImportExportSpec where
 
 import Protolude (
   Either (Left, Right),
-  Eq ((==)),
   Maybe (..),
   Text,
   fromMaybe,
   show,
   ($),
   (&),
-  (/=),
   (<&>),
   (<>),
  )
@@ -26,7 +24,6 @@ import Test.Hspec (
   it,
   shouldBe,
   shouldNotBe,
-  shouldSatisfy,
   shouldStartWith,
  )
 
@@ -98,18 +95,18 @@ spec = do
             query_ memConn "SELECT * FROM task_to_note"
           case taskToNotes of
             [taskToNote] -> do
-              taskToNote `shouldSatisfy` (\task -> task.ulid /= "")
-              taskToNote `shouldSatisfy` (\task -> task.task_ulid /= "")
-              taskToNote `shouldSatisfy` (\task -> task.note == "A note")
+              taskToNote.ulid `shouldNotBe` ""
+              taskToNote.task_ulid `shouldNotBe` ""
+              taskToNote.note `shouldBe` "A note"
             _ -> P.die "More than one task_to_note row found"
 
           tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
 
           case tasks of
             [updatedTask] -> do
-              updatedTask `shouldSatisfy` (\task -> task.ulid /= "")
-              updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
-              updatedTask `shouldSatisfy` (\task -> task.user /= "")
+              updatedTask.ulid `shouldNotBe` ""
+              updatedTask.modified_utc `shouldNotBe` ""
+              updatedTask.user `shouldNotBe` ""
               updatedTask
                 { FullTask.ulid = ""
                 , FullTask.modified_utc = ""

@@ -89,10 +89,7 @@ import System.Console.ANSI (ConsoleLayer (..), hGetLayerColor)
 import System.Process (readProcess)
 
 import Base32 (decode)
-import Config (
-  Config (bodyStyle),
-  Hook (body, filePath, interpreter),
- )
+import Config (Config (bodyStyle, utcFormat), Hook (body, filePath, interpreter))
 import Control.Arrow ((>>>))
 import Prettyprinter.Internal.Type (Doc (Empty))
 import System.Random (mkStdGen)
@@ -246,6 +243,11 @@ rationalToElapsedP secondsFrac =
 elapsedPToRational :: ElapsedP -> Rational
 elapsedPToRational (ElapsedP (Elapsed (Seconds s)) (NanoSeconds ns)) =
   ((1e9 * fromIntegral s) + fromIntegral ns) / 1e9
+
+
+formatElapsedP :: Config -> IO ElapsedP -> IO Text
+formatElapsedP conf =
+  fmap (timePrint conf.utcFormat >>> T.pack)
 
 
 toUlidTime :: DateTime -> ULIDTimeStamp

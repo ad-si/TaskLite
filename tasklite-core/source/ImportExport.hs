@@ -40,6 +40,7 @@ import Protolude (
   (<$>),
   (<&>),
   (=<<),
+  (||),
  )
 import Protolude qualified as P
 
@@ -134,7 +135,9 @@ import Utils (
   emptyUlid,
   parseUlidText,
   parseUtc,
+  parseUtcNum,
   setDateTime,
+  toUlidTime,
   ulidTextToDateTime,
   zeroTime,
   zeroUlidTxt,
@@ -433,8 +436,10 @@ instance FromJSON ImportTask where
 
     o_ulid <- o .:? "ulid"
     let
-      ulidGeneratedRes = tempTask & (hash >>> toInteger >>> abs >>> ulidFromInteger)
-      ulidCombined = (ulidGeneratedRes & P.fromRight emptyUlid) `setDateTime` createdUtc
+      ulidGeneratedRes =
+        tempTask & (hash >>> toInteger >>> abs >>> ulidFromInteger)
+      ulidCombined =
+        (ulidGeneratedRes & P.fromRight emptyUlid) `setDateTime` createdUtc
       ulid =
         T.toLower $
           fromMaybe
@@ -452,35 +457,64 @@ instance FromJSON ImportTask where
     pure $ ImportTask finalTask notes tags
 
 
+setMissingFields :: ImportTask -> IO ImportTask
+setMissingFields importTaskRec = do
+  now <- dateCurrent
+  let nowUlidTxt = now & toUlidTime & show & T.toLower
+  pure $
+    importTaskRec
+      { task =
+          importTaskRec.task
+            { Task.ulid =
+                if zeroUlidTxt `T.isPrefixOf` importTaskRec.task.ulid
+                  then
+                    importTaskRec.task.ulid
+                      & T.replace zeroUlidTxt nowUlidTxt
+                  else importTaskRec.task.ulid
+            , Task.modified_utc =
+                if importTaskRec.task.modified_utc == ""
+                  || importTaskRec.task.modified_utc == "1970-01-01 00:00:00"
+                  || parseUtc importTaskRec.task.modified_utc == parseUtcNum 0
+                  then
+                    now
+                      & timePrint
+                        (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [P.Char]))
+                      & T.pack
+                  else show importTaskRec.task.modified_utc
+            }
+      }
+
+
 insertImportTask :: Connection -> ImportTask -> IO (Doc AnsiStyle)
-insertImportTask connection importTaskRecord = do
+insertImportTask connection importTask = do
   effectiveUserName <- getEffectiveUserName
-  let
-    taskParsed = task importTaskRecord
-    theTask =
-      if taskParsed.user == ""
-        then taskParsed{Task.user = T.pack effectiveUserName}
-        else taskParsed
-  insertRecord "tasks" connection theTask
+  let taskNorm =
+        importTask.task
+          { Task.user =
+              if importTask.task.user == ""
+                then T.pack effectiveUserName
+                else importTask.task.user
+          }
+  insertRecord "tasks" connection taskNorm
   tagWarnings <-
     insertTags
       connection
-      (ulidTextToDateTime taskParsed.ulid)
-      theTask
-      importTaskRecord.tags
+      (ulidTextToDateTime taskNorm.ulid)
+      taskNorm
+      importTask.tags
   noteWarnings <-
     insertNotes
       connection
-      (ulidTextToDateTime taskParsed.ulid)
-      theTask
-      importTaskRecord.notes
+      (ulidTextToDateTime taskNorm.ulid)
+      taskNorm
+      importTask.notes
   pure $
     tagWarnings
       <$$> noteWarnings
       <$$> "📥 Imported task"
-      <+> dquotes (pretty theTask.body)
+      <+> dquotes (pretty taskNorm.body)
       <+> "with ulid"
-      <+> dquotes (pretty theTask.ulid)
+      <+> dquotes (pretty taskNorm.ulid)
       <+> hardline
 
 
@@ -490,7 +524,9 @@ importJson _ connection = do
 
   case Aeson.eitherDecode content of
     Left error -> die $ T.pack error <> " in task \n" <> show content
-    Right importTaskRecord -> insertImportTask connection importTaskRecord
+    Right importTaskRec -> do
+      importTaskNorm <- importTaskRec & setMissingFields
+      insertImportTask connection importTaskNorm
 
 
 importEml :: Config -> Connection -> IO (Doc AnsiStyle)
@@ -596,13 +632,14 @@ importFile _ connection filePath = do
     fileExt = takeExtension filePath
 
   case fileExt of
-    ".json" ->
+    ".json" -> do
       let decodeResult = Aeson.eitherDecode content :: Either [Char] ImportTask
-      in  case decodeResult of
-            Left error ->
-              die $ T.pack error <> " in task \n" <> show content
-            Right importTaskRecord ->
-              insertImportTask connection importTaskRecord
+      case decodeResult of
+        Left error ->
+          die $ T.pack error <> " in task \n" <> show content
+        Right importTaskRec -> do
+          importTaskNorm <- importTaskRec & setMissingFields
+          insertImportTask connection importTaskNorm
     ".eml" ->
       case Parsec.parse message filePath content of
         Left error -> die $ show error
@@ -614,39 +651,34 @@ ingestFile :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
 ingestFile _config connection filePath = do
   content <- BSL.readFile filePath
 
-  let
-    fileExt = takeExtension filePath
-
-  resultDocs <- case fileExt of
-    ".json" ->
+  resultDocs <- case takeExtension filePath of
+    ".json" -> do
       let decodeResult = Aeson.eitherDecode content :: Either [Char] ImportTask
-      in  case decodeResult of
-            Left error ->
-              die $ T.pack error <> " in task \n" <> show content
-            Right importTaskRecord@ImportTask{task} ->
-              sequence
-                [ insertImportTask connection importTaskRecord
-                , editTaskByTask NoPreEdit connection task
-                ]
+      case decodeResult of
+        Left error ->
+          die $ T.pack error <> " in task \n" <> show content
+        Right importTaskRec -> do
+          importTaskNorm <- importTaskRec & setMissingFields
+          sequence
+            [ insertImportTask connection importTaskNorm
+            , editTaskByTask OpenEditor connection importTaskNorm.task
+            ]
     ".eml" ->
       case Parsec.parse message filePath content of
         Left error -> die $ show error
-        Right email ->
-          let taskRecord@ImportTask{task} =
-                emailToImportTask email
-          in  sequence
-                [ insertImportTask connection taskRecord
-                , editTaskByTask NoPreEdit connection task
-                ]
-    _ -> die $ T.pack $ "File type " <> fileExt <> " is not supported"
+        Right email -> do
+          let taskRecord@ImportTask{task} = emailToImportTask email
+          sequence
+            [ insertImportTask connection taskRecord
+            , editTaskByTask OpenEditor connection task
+            ]
+    fileExt -> die $ T.pack $ "File type " <> fileExt <> " is not supported"
 
   removeFile filePath
 
   pure $
     P.fold resultDocs
-      <+> "❌ Deleted file \""
-      <> pretty filePath
-      <> "\""
+      <> ("❌ Deleted file" <+> dquotes (pretty filePath))
 
 
 -- TODO: Use Task instead of FullTask to fix broken notes export
@@ -721,27 +753,32 @@ backupDatabase conf = do
         )
 
 
-data PreEdit
+data EditMode
   = ApplyPreEdit (P.ByteString -> P.ByteString)
-  | NoPreEdit
+  | OpenEditor
+  | OpenEditorRequireEdit
 
 
 {-| Edit the task until it is valid YAML and can be decoded.
 | Return the the tuple `(task, valid YAML content)`
 -}
 editUntilValidYaml
-  :: PreEdit
+  :: EditMode
   -> Connection
   -> P.ByteString
   -> P.ByteString
   -> IO (Either ParseException (ImportTask, P.ByteString))
-editUntilValidYaml preEdit conn initialYaml wipYaml = do
-  yamlAfterEdit <- case preEdit of
+editUntilValidYaml editMode conn initialYaml wipYaml = do
+  yamlAfterEdit <- case editMode of
     ApplyPreEdit editFunc -> pure $ editFunc wipYaml
-    NoPreEdit -> runUserEditorDWIM yamlTemplate wipYaml
+    OpenEditor -> runUserEditorDWIM yamlTemplate wipYaml
+    OpenEditorRequireEdit -> runUserEditorDWIM yamlTemplate wipYaml
 
   if yamlAfterEdit == initialYaml
-    then pure $ Left $ InvalidYaml $ Just $ YamlException "⚠️ Nothing changed"
+    then pure $ Left $ InvalidYaml $ Just $ YamlException $ case editMode of
+      -- Content doesn't have to be changed -> log nothing
+      OpenEditor -> ""
+      _ -> "⚠️ Nothing changed"
     else do
       case yamlAfterEdit & Yaml.decodeEither' of
         Left error -> do
@@ -758,19 +795,21 @@ editUntilValidYaml preEdit conn initialYaml wipYaml = do
                         <> "\n"
             _ ->
               putErrLn $ Yaml.prettyPrintParseException error <> "\n"
-          editUntilValidYaml preEdit conn initialYaml yamlAfterEdit
+          editUntilValidYaml editMode conn initialYaml yamlAfterEdit
         ---
         Right newTask -> do
           pure $ Right (newTask, yamlAfterEdit)
 
 
-editTaskByTask :: PreEdit -> Connection -> Task -> IO (Doc AnsiStyle)
-editTaskByTask preEdit conn taskToEdit = do
+editTaskByTask :: EditMode -> Connection -> Task -> IO (Doc AnsiStyle)
+editTaskByTask editMode conn taskToEdit = do
   taskYaml <- taskToEditableYaml conn taskToEdit
-  taskYamlTupleRes <- editUntilValidYaml preEdit conn taskYaml taskYaml
+  taskYamlTupleRes <- editUntilValidYaml editMode conn taskYaml taskYaml
   case taskYamlTupleRes of
-    Left error -> pure $ pretty $ Yaml.prettyPrintParseException error
-    Right (importTaskRecord, newContent) -> do
+    Left error -> case error of
+      InvalidYaml (Just (YamlException "")) -> pure P.mempty
+      _ -> pure $ pretty $ Yaml.prettyPrintParseException error
+    Right (importTaskRec, newContent) -> do
       effectiveUserName <- getEffectiveUserName
       now <- getULIDTimeStamp <&> (show >>> T.toLower)
       let
@@ -788,20 +827,20 @@ editTaskByTask preEdit conn taskToEdit = do
             =<< rightToMaybe (Yaml.decodeEither' newContent)
 
         taskFixed =
-          importTaskRecord.task
+          importTaskRec.task
             { Task.user =
-                if importTaskRecord.task.user == ""
+                if importTaskRec.task.user == ""
                   then T.pack effectiveUserName
-                  else importTaskRecord.task.user
+                  else importTaskRec.task.user
             , Task.metadata =
                 if hasMetadata == Just True
-                  then importTaskRecord.task.metadata
+                  then importTaskRec.task.metadata
                   else Nothing
             , -- Set to previous value to force SQL trigger to update it
               Task.modified_utc = taskToEdit.modified_utc
             }
         notesCorrectUtc =
-          importTaskRecord.notes
+          importTaskRec.notes
             <&> ( \note ->
                     note
                       { Note.ulid =
@@ -820,7 +859,7 @@ editTaskByTask preEdit conn taskToEdit = do
         now_ <- dateCurrent
         updateTask conn taskFixed{Task.modified_utc = show @DateTime now_}
 
-      tagWarnings <- insertTags conn Nothing taskFixed importTaskRecord.tags
+      tagWarnings <- insertTags conn Nothing taskFixed importTaskRec.tags
       noteWarnings <- insertNotes conn Nothing taskFixed notesCorrectUtc
       pure $
         tagWarnings
@@ -835,4 +874,4 @@ editTaskByTask preEdit conn taskToEdit = do
 editTask :: Config -> Connection -> IdText -> IO (Doc AnsiStyle)
 editTask conf conn idSubstr = do
   execWithTask conf conn idSubstr $ \taskToEdit -> do
-    editTaskByTask NoPreEdit conn taskToEdit
+    editTaskByTask OpenEditorRequireEdit conn taskToEdit

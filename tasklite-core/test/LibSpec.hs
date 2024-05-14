@@ -42,7 +42,7 @@ import Config (defaultConfig)
 import Control.Arrow ((>>>))
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
-import ImportExport (PreEdit (ApplyPreEdit), editTaskByTask)
+import ImportExport (EditMode (ApplyPreEdit), editTaskByTask)
 import Lib (
   addNote,
   addTag,
