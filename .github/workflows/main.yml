@@ -9,6 +9,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Lua
+        uses: leafo/gh-actions-lua@v10
+
       - name: Cache .stack-work
         uses: actions/cache@v4
         with:
@@ -55,7 +58,11 @@ jobs:
   macos:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Lua
+        uses: leafo/gh-actions-lua@v10
 
       - name: Cache .stack-work
         uses: actions/cache@v4
