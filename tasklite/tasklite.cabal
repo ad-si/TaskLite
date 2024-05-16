@@ -65,6 +65,7 @@ test-suite tasklite-test
   main-is: Spec.hs
   other-modules:
       CliSpec
+      Utils
       Paths_tasklite
   autogen-modules:
       Paths_tasklite
@@ -83,8 +84,11 @@ test-suite tasklite-test
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
   build-depends:
       base >=4.18 && <5
+    , directory
     , hspec >=2.11 && <3.0
     , optparse-applicative >=0.16 && <0.19
     , protolude ==0.3.*
     , tasklite-core
+    , template-haskell >=2.17 && <2.23
+    , temporary ==1.3.*
   default-language: GHC2021

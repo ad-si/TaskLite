@@ -7,6 +7,7 @@ import Protolude (
   Bool (True),
   Either (..),
   IO,
+  Maybe (Nothing),
   die,
   writeFile,
   ($),
@@ -49,7 +50,7 @@ main = do
 
           case configResult2 of
             Left error2 -> die $ T.pack $ prettyPrintParseException error2
-            Right configUser -> printOutput appName configUser
+            Right configUser -> printOutput appName Nothing configUser
         else die $ T.pack $ prettyPrintParseException error
     Right configUser ->
-      printOutput appName configUser
+      printOutput appName Nothing configUser

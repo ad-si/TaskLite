@@ -4,6 +4,7 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use camelCase" #-}
+{-# HLINT ignore "Replace case with maybe" #-}
 
 module Cli where
 
@@ -1259,22 +1260,20 @@ executeCLiCommand conf now connection progName args = do
         ExternalCommand cmd argsMb -> handleExternalCommand conf cmd argsMb
 
 
-printOutput :: String -> Config -> IO ()
-printOutput appName config = do
-  let dataPath = config.dataDir
-
+printOutput :: String -> Maybe [String] -> Config -> IO ()
+printOutput appName argsMb config = do
   configNormDataDir <-
-    if null dataPath
+    if null config.dataDir
       then do
         xdgDataDir <- getXdgDirectory XdgData appName
         pure $ config{dataDir = xdgDataDir}
-      else case T.stripPrefix "~/" $ T.pack dataPath of
+      else case T.stripPrefix "~/" $ T.pack config.dataDir of
         Nothing -> pure config
         Just rest -> do
           homeDir <- getHomeDirectory
           pure $ config{dataDir = homeDir </> T.unpack rest}
 
-  let hooksPath = configNormDataDir & hooks & directory
+  let hooksPath = configNormDataDir.hooks.directory
 
   configNormHookDir <-
     if null hooksPath
@@ -1282,8 +1281,8 @@ printOutput appName config = do
         pure $
           configNormDataDir
             { hooks =
-                (configNormDataDir & hooks)
-                  { directory = dataDir configNormDataDir </> "hooks"
+                configNormDataDir.hooks
+                  { directory = configNormDataDir.dataDir </> "hooks"
                   }
             }
       else case T.stripPrefix "~/" $ T.pack hooksPath of
@@ -1293,12 +1292,12 @@ printOutput appName config = do
           pure $
             configNormDataDir
               { hooks =
-                  (configNormDataDir & hooks)
+                  configNormDataDir.hooks
                     { directory = homeDir </> T.unpack rest
                     }
               }
 
-  let hooksPathNorm = configNormHookDir & hooks & directory
+  let hooksPathNorm = configNormHookDir.hooks.directory
 
   createDirectoryIfMissing True hooksPathNorm
 
@@ -1328,7 +1327,7 @@ printOutput appName config = do
 
   let configNorm = addHookFilesToConfig configNormHookDir hookFilesPermContent
 
-  preLaunchResult <- executeHooks "" (configNorm.hooks & launch & pre)
+  preLaunchResult <- executeHooks "" configNorm.hooks.launch.pre
   putDoc preLaunchResult
 
   connection <- setupConnection configNorm
@@ -1343,7 +1342,9 @@ printOutput appName config = do
     now = timeFromElapsedP nowElapsed :: DateTime
 
   progName <- getProgName
-  args <- getArgs
+  args <- case argsMb of
+    Just args -> pure args
+    Nothing -> getArgs
   postLaunchResult <-
     executeHooks
       ( TL.toStrict $
@@ -1351,7 +1352,7 @@ printOutput appName config = do
             Aeson.encode $
               object ["arguments" .= args]
       )
-      (configNorm.hooks & launch & post)
+      configNorm.hooks.launch.post
   putDoc postLaunchResult
 
   doc <- executeCLiCommand configNorm now connection progName args

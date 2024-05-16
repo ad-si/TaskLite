@@ -92,6 +92,7 @@ import Base32 (decode)
 import Config (Config (bodyStyle, utcFormat), Hook (body, filePath, interpreter))
 import Control.Arrow ((>>>))
 import Prettyprinter.Internal.Type (Doc (Empty))
+import System.FilePath (takeExtension)
 import System.Random (mkStdGen)
 
 
@@ -315,27 +316,33 @@ numDigits base num =
 
 executeHooks :: Text -> [Hook] -> IO (Doc AnsiStyle)
 executeHooks stdinText hooks = do
-  let stdinStr = T.unpack stdinText
-  cmdOutput <- forM hooks $ \hook ->
-    case hook.filePath of
-      Just fPath -> readProcess fPath [] stdinStr
-      Nothing -> do
-        let ipret = hook.interpreter
-        if
-          | ipret `P.elem` ["ruby", "rb"] ->
-              readProcess "ruby" ["-e", T.unpack hook.body] stdinStr
-          | ipret `P.elem` ["javascript", "js", "node", "node.js"] ->
-              readProcess "node" ["-e", T.unpack hook.body] stdinStr
-          | ipret `P.elem` ["python", "python3", "py"] ->
-              readProcess "python3" ["-c", T.unpack hook.body] stdinStr
-          | otherwise ->
-              pure mempty
+  let
+    stdinStr = T.unpack stdinText
+    getInterpreter s =
+      if
+        | s `P.elem` ["javascript", "js", "node", "node.js"] -> ("node", "-e")
+        | s `P.elem` ["lua"] -> ("lua", "-e")
+        | s `P.elem` ["python", "python3", "py"] -> ("python3", "-c")
+        | s `P.elem` ["ruby", "rb"] -> ("ruby", "-e")
+        | otherwise -> pure mempty
 
-  pure $
-    cmdOutput
-      <&> T.pack
-      & T.unlines
-      & pretty
+  cmdOutput <- forM hooks $ \hook -> do
+    case hook.filePath of
+      Just fPath -> do
+        case fPath & takeExtension & P.drop 1 of
+          "" ->
+            -- Is excuted with shell
+            readProcess fPath [] stdinStr
+          ext -> do
+            let (interpreter, cliFlag) = getInterpreter ext
+            fileContent <- P.readFile fPath
+            readProcess interpreter [cliFlag, T.unpack fileContent] stdinStr
+      ---
+      Nothing -> do
+        let (interpreter, cliFlag) = getInterpreter hook.interpreter
+        readProcess interpreter [cliFlag, T.unpack hook.body] stdinStr
+
+  pure $ cmdOutput <&> T.pack & T.unlines & pretty
 
 
 applyColorMode :: Config -> IO Config

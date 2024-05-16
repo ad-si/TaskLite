@@ -1,4 +1,5 @@
-import Protolude (IO)
+import Protolude (IO, ($))
+import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec (hspec)
 
 import CliSpec qualified
@@ -6,4 +7,5 @@ import CliSpec qualified
 
 main :: IO ()
 main = do
-  hspec CliSpec.spec
+  withSystemTempDirectory "tasklite-test" $ \dirPath -> do
+    hspec $ CliSpec.spec dirPath

@@ -195,7 +195,7 @@ import Config (
     utcFormat,
     utcFormatShort
   ),
-  HookSet (pre),
+  HookSet (post, pre),
   HooksConfig (add),
   defaultConfig,
  )
@@ -511,19 +511,43 @@ addTask conf connection bodyWords = do
                 -- TODO: Add tags and notes to task
                 ]
       )
-      (conf.hooks & add & pre)
+      conf.hooks.add.pre
   putDoc preAddResult
 
   insertRecord "tasks" connection task
   warnings <- insertTags connection Nothing task tags
 
-  pure $
-    warnings
-      <$$> ( "🆕 Added task"
-              <+> dquotes (pretty task.body)
-              <+> "with id"
-              <+> dquotes (pretty task.ulid)
-           )
+  -- TODO: Use RETURNING clause in `insertRecord` instead
+  (insertedTasks :: [FullTask]) <-
+    queryNamed
+      connection
+      "SELECT * FROM tasks_view WHERE ulid == :ulid"
+      [":ulid" := task.ulid]
+
+  case insertedTasks of
+    [insertedTask] -> do
+      postAddResult <-
+        executeHooks
+          ( TL.toStrict $
+              TL.decodeUtf8 $
+                Aeson.encode $
+                  object
+                    [ "arguments" .= args
+                    , "taskAdded" .= insertedTask
+                    -- TODO: Add tags and notes to task
+                    ]
+          )
+          conf.hooks.add.post
+      putDoc postAddResult
+
+      pure $
+        warnings
+          <$$> ( "🆕 Added task"
+                  <+> dquotes (pretty task.body)
+                  <+> "with id"
+                  <+> dquotes (pretty task.ulid)
+               )
+    _ -> pure "Task could not be added"
 
 
 logTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
@@ -1103,15 +1127,15 @@ repeatTasks conf connection duration ids = do
         queryNamed
           connection
           [sql|
-          UPDATE tasks
-          SET
-            repetition_duration = :repetition_duration,
-            group_ulid = :group_ulid
-          WHERE
-            ulid == :ulid AND
-            recurrence_duration IS NULL
-          RETURNING recurrence_duration
-        |]
+            UPDATE tasks
+            SET
+              repetition_duration = :repetition_duration,
+              group_ulid = :group_ulid
+            WHERE
+              ulid == :ulid AND
+              recurrence_duration IS NULL
+            RETURNING recurrence_duration
+          |]
           [ ":repetition_duration" := durationIsoText
           , ":group_ulid" := groupUlid
           , ":ulid" := task.ulid
@@ -1167,15 +1191,15 @@ recurTasks conf connection duration ids = do
         queryNamed
           connection
           [sql|
-          UPDATE tasks
-          SET
-            recurrence_duration = :recurrence_duration,
-            group_ulid = :group_ulid
-          WHERE
-            ulid == :ulid AND
-            repetition_duration IS NULL
-          RETURNING repetition_duration
-        |]
+            UPDATE tasks
+            SET
+              recurrence_duration = :recurrence_duration,
+              group_ulid = :group_ulid
+            WHERE
+              ulid == :ulid AND
+              repetition_duration IS NULL
+            RETURNING repetition_duration
+          |]
           [ ":recurrence_duration" := durationIsoText
           , ":group_ulid" := groupUlid
           , ":ulid" := task.ulid

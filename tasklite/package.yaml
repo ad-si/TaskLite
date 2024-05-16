@@ -62,5 +62,8 @@ tests:
     main: Spec.hs
     source-dirs: test
     dependencies:
+      - directory
       - hspec >= 2.11 && < 3.0
       - optparse-applicative >= 0.16 && < 0.19
+      - template-haskell >= 2.17 && < 2.23
+      - temporary >= 1.3 && < 1.4
