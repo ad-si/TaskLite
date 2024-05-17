@@ -40,6 +40,7 @@ import Test.Hspec (
  )
 
 import Config (defaultConfig)
+import Data.Hourglass (TimeFormat (..), timePrint)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
 import ImportExport (EditMode (ApplyPreEdit), editTaskByTask)
@@ -522,11 +523,11 @@ spec = do
         tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
         case tasks of
           [task] -> do
-            task.closed_utc `shouldBe` Just "2024-05-08 10:04:00"
+            task.closed_utc `shouldBe` Just "2024-05-08 10:04:00.000"
             task.state `shouldBe` Just Done
             now_ <- dateCurrent
-            let today = now_ & show & T.take 10
-            task.modified_utc `shouldSatisfy` (today `T.isPrefixOf`)
+            let today = now_ & timePrint (toFormat ("YYYY-MM-DD" :: [P.Char]))
+            T.unpack task.modified_utc `shouldStartWith` today
           _ -> P.die "Found more than one task"
 
     it "lets you add notes" $ do

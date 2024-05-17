@@ -196,7 +196,7 @@ textToNote utc body =
 
 importUtcFormat :: TimeFormatString
 importUtcFormat =
-  toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
+  toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])
 
 
 data ImportTask = ImportTask
@@ -496,11 +496,11 @@ setMissingFields importTaskRec = do
             , Task.modified_utc =
                 if importTaskRec.task.modified_utc == ""
                   || importTaskRec.task.modified_utc == "1970-01-01 00:00:00"
+                  || importTaskRec.task.modified_utc == "1970-01-01 00:00:00.000"
                   || parseUtc importTaskRec.task.modified_utc == parseUtcNum 0
                   then
                     now
-                      & timePrint
-                        (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [P.Char]))
+                      & timePrint (toFormat importUtcFormat)
                       & T.pack
                   else show importTaskRec.task.modified_utc
             }
@@ -879,7 +879,14 @@ editTaskByTask editMode conn taskToEdit = do
       -- SQL trigger which would overwrite the `closed_utc` field.
       P.when (isJust taskFixed.closed_utc) $ do
         now_ <- dateCurrent
-        updateTask conn taskFixed{Task.modified_utc = show @DateTime now_}
+        updateTask
+          conn
+          taskFixed
+            { Task.modified_utc =
+                now_
+                  & timePrint (toFormat importUtcFormat)
+                  & T.pack
+            }
 
       tagWarnings <- insertTags conn Nothing taskFixed importTaskRec.tags
       noteWarnings <- insertNotes conn Nothing taskFixed notesCorrectUtc
