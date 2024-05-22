@@ -13,7 +13,8 @@ import Protolude (
  )
 import Protolude qualified as P
 
-import Data.Aeson (decode, eitherDecode, eitherDecodeStrictText)
+import Data.Aeson (Value (Object), decode, eitherDecode, eitherDecodeStrictText)
+import Data.Aeson.KeyMap qualified as KeyMap
 import Data.ByteString.Lazy qualified as BSL
 import Data.Hourglass (timePrint, toFormat)
 import Data.Text (unpack)
@@ -80,6 +81,48 @@ spec = do
 
     (utcTxt & parseUtc <&> timePrint printFmt) `shouldBe` Just expected
 
+  it "imports a JSON task and puts unused fields into metadata" $ do
+    withMemoryDb conf $ \memConn -> do
+      let
+        jsonTask =
+          "\
+          \ { 'body': 'Just a test' \
+          \ , 'utc': '2024-03-15T10:32:51.853Z' \
+          \ , 'tags': ['one', 'two'] \
+          \ , 'notes': ['first note', 'second note'] \
+          \ , 'xxx': 'yyy' \
+          \ } \
+          \"
+            & T.replace "'" "\""
+
+      case eitherDecodeStrictText jsonTask of
+        Left error ->
+          P.die $ "Error decoding JSON: " <> show error
+        Right importTaskRecord -> do
+          _ <- insertImportTask memConn importTaskRecord
+          tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+          case tasks of
+            [insertedTask] -> do
+              insertedTask.body `shouldBe` "Just a test"
+              insertedTask.tags `shouldBe` Just ["one", "two"]
+              insertedTask.metadata
+                `shouldBe` Just (Object $ KeyMap.fromList [("xxx", "yyy")])
+            _ -> P.die "More than one task found"
+
+          taskToNotes :: [TaskToNote] <-
+            query_ memConn "SELECT * FROM task_to_note"
+          taskToNotes
+            `shouldBe` [ TaskToNote
+                          { ulid = "01hs0tqwwd0002xgp98sbejja9"
+                          , task_ulid = "01hs0tqwwd0003ctc29vaj647b"
+                          , note = "first note"
+                          }
+                       , TaskToNote
+                          { ulid = "01hs0tqwwd0007hagxf79yypwa"
+                          , task_ulid = "01hs0tqwwd0003ctc29vaj647b"
+                          , note = "second note"
+                          }
+                       ]
   it "imports a JSON task with notes" $ do
     withMemoryDb conf $ \memConn -> do
       let jsonTask = "{\"body\":\"Just a test\", \"notes\":[\"A note\"]}"
@@ -119,7 +162,16 @@ spec = do
                   , -- TODO: Fix after notes are returned as a JSON array
                     FullTask.notes = Just []
                   , FullTask.priority = Just 1.0
-                  , FullTask.metadata = decode jsonTask
+                  , FullTask.metadata = case decode jsonTask of
+                      Just (Object keyMap) ->
+                        keyMap
+                          & KeyMap.delete "body"
+                          & KeyMap.delete "notes"
+                          & \kMap ->
+                            if KeyMap.null kMap
+                              then Nothing
+                              else Just $ Object kMap
+                      _ -> Nothing
                   }
             _ -> P.die "More than one task found"
 
@@ -187,7 +239,7 @@ spec = do
           ImportTask
             { task =
                 emptyTask
-                  { Task.ulid = "01hrz2qz7g0004gmhn6t73xt9a"
+                  { Task.ulid = "01hrz2qz7g000577et78w9cpst"
                   , Task.body = "Support getting the note body from stdin"
                   , Task.user = "ad-si"
                   , Task.modified_utc = "2024-03-14 18:14:14.000"

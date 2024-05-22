@@ -38,6 +38,7 @@ import Protolude (
   (&),
   (+),
   (.),
+  (/=),
   (<$>),
   (<&>),
   (=<<),
@@ -265,6 +266,7 @@ instance FromJSON ImportTask where
     modification_date <- o .:? "modification_date"
     updated_at <- o .:? "updated_at"
     let
+      -- TODO: Parse the fields first and then combine them with `<|>`
       maybeModified =
         modified
           <|> modified_at
@@ -272,9 +274,11 @@ instance FromJSON ImportTask where
           <|> modification_date
           <|> updated_at
       modified_utc =
-        T.pack $
-          timePrint importUtcFormat $
-            fromMaybe createdUtc (parseUtc =<< maybeModified)
+        maybeModified
+          >>= parseUtc
+            & fromMaybe createdUtc
+            & timePrint importUtcFormat
+            & T.pack
 
     o_state <- o .:? "state"
     status <- o .:? "status"
@@ -456,7 +460,29 @@ instance FromJSON ImportTask where
 
     o_metadata <- o .:? "metadata"
     let
-      metadata = o_metadata <|> Just (Object o)
+      -- Only delete fields with highest priority,
+      -- as they would definitely have been used if available
+      -- TODO: Check which fields were actually used and delete only them
+      --       (Crudly done for title and body)
+      metadata =
+        o_metadata
+          <|> ( ( o
+                    & ( case (o_title, o_body) of
+                          (Nothing, Just _) -> KeyMap.delete "body"
+                          _ -> KeyMap.delete "title"
+                      )
+                    & KeyMap.delete "utc"
+                    & KeyMap.delete "priority_adjustment"
+                    & KeyMap.delete "tags"
+                    & (if notes /= [] then KeyMap.delete "notes" else P.identity)
+                )
+                  & ( \val ->
+                        if val == KeyMap.empty
+                          then
+                            Nothing
+                          else Just (Object val)
+                    )
+              )
       tempTask = Task{ulid = "", ..}
 
     o_ulid <- o .:? "ulid"
