@@ -147,9 +147,11 @@ import ImportExport (
   dumpNdjson,
   dumpSql,
   editTask,
+  importDir,
   importEml,
   importFile,
   importJson,
+  ingestDir,
   ingestFile,
  )
 import Lib (
@@ -283,9 +285,11 @@ data Command
   | FindTask Text --
   {- I/O -}
   | ImportFile FilePath
+  | ImportDir FilePath
   | ImportJson
   | ImportEml
   | IngestFile FilePath
+  | IngestDir FilePath
   | Csv
   | Json
   | Ndjson
@@ -820,6 +824,10 @@ commandParser conf =
         (metavar "FILEPATH" <> help "Path to import file"))
         "Import a .json or .eml file containing one task")
 
+    <> command "importdir" (toParserInfo (ImportDir <$> strArgument
+        (metavar "DIRECTORY_PATH" <> help "Path to directory"))
+        "Import all .json and .eml files in a directory")
+
     <> command "importjson" (toParserInfo (pure ImportJson)
         "Import one JSON object from stdin")
 
@@ -830,6 +838,10 @@ commandParser conf =
         (metavar "FILEPATH" <> help "Path to file"))
         ("Ingest a .json or .eml file containing one task "
           <> "(import, open in editor, delete the original file)"))
+
+    <> command "ingestdir" (toParserInfo (IngestDir <$> strArgument
+        (metavar "DIRECTORY_PATH" <> help "Path to directory"))
+        "Ingest all .json and .eml files in a directory")
 
     <> command "csv" (toParserInfo (pure Csv)
         "Show tasks in CSV format")
@@ -1187,9 +1199,11 @@ executeCLiCommand conf now connection progName args = do
         Notes -> listNotes conf connection
         Stats -> getStats conf connection
         ImportFile filePath -> importFile conf connection filePath
+        ImportDir filePath -> importDir conf connection filePath
         ImportJson -> importJson conf connection
         ImportEml -> importEml conf connection
         IngestFile filePath -> ingestFile conf connection filePath
+        IngestDir filePath -> ingestDir conf connection filePath
         Csv -> dumpCsv conf
         Json -> dumpJson conf
         Ndjson -> dumpNdjson conf

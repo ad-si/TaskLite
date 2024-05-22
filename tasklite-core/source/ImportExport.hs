@@ -32,6 +32,7 @@ import Protolude (
   putErrLn,
   rightToMaybe,
   show,
+  stderr,
   toStrict,
   ($),
   (&),
@@ -47,6 +48,7 @@ import Protolude qualified as P
 
 import Config (Config (dataDir, dbName))
 import Control.Arrow ((>>>))
+import Control.Monad.Catch (catchAll)
 import Data.Aeson (Value)
 import Data.Aeson as Aeson (
   FromJSON (parseJSON),
@@ -92,14 +94,15 @@ import Note (Note (..))
 import Prettyprinter (
   Doc,
   Pretty (pretty),
+  annotate,
   dquotes,
   hardline,
   vsep,
   (<+>),
  )
-import Prettyprinter.Render.Terminal (AnsiStyle)
-import System.Directory (createDirectoryIfMissing, removeFile)
-import System.FilePath (takeExtension, (</>))
+import Prettyprinter.Render.Terminal (AnsiStyle, Color (Red), color, hPutDoc)
+import System.Directory (createDirectoryIfMissing, listDirectory, removeFile)
+import System.FilePath (isExtensionOf, takeExtension, (</>))
 import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
 import Task (
@@ -646,61 +649,107 @@ emailToImportTask email@(Message headerFields msgBody) =
     foldl addHeaderToTask (addBody emptyImportTask) headerFields
 
 
+isDirError :: FilePath -> P.SomeException -> IO (Doc AnsiStyle)
+isDirError filePath exception = do
+  if "is a directory" `T.isInfixOf` show exception
+    then do
+      hPutDoc stderr $
+        annotate (color Red) $
+          ("ERROR: \"" <> pretty filePath <> "\" is a directory. ")
+            <> "Use `importdir` instead."
+      die ""
+    else die $ show exception
+
+
 importFile :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
-importFile _ connection filePath = do
-  content <- BSL.readFile filePath
+importFile _ conn filePath = do
+  catchAll
+    ( do
+        content <- BSL.readFile filePath
+        let fileExt = filePath & takeExtension
+        case fileExt of
+          ".json" -> do
+            let decodeResult = Aeson.eitherDecode content
+            case decodeResult of
+              Left error ->
+                die $ T.pack error <> " in task \n" <> show content
+              Right importTaskRec -> do
+                importTaskNorm <- importTaskRec & setMissingFields
+                insertImportTask conn importTaskNorm
+          ".eml" ->
+            case Parsec.parse message filePath content of
+              Left error -> die $ show error
+              Right email -> insertImportTask conn $ emailToImportTask email
+          _ ->
+            die $ T.pack $ "File type " <> fileExt <> " is not supported"
+    )
+    (isDirError filePath)
 
-  let
-    fileExt = takeExtension filePath
 
-  case fileExt of
-    ".json" -> do
-      let decodeResult = Aeson.eitherDecode content :: Either [Char] ImportTask
-      case decodeResult of
-        Left error ->
-          die $ T.pack error <> " in task \n" <> show content
-        Right importTaskRec -> do
-          importTaskNorm <- importTaskRec & setMissingFields
-          insertImportTask connection importTaskNorm
-    ".eml" ->
-      case Parsec.parse message filePath content of
-        Left error -> die $ show error
-        Right email -> insertImportTask connection $ emailToImportTask email
-    _ -> die $ T.pack $ "File type " <> fileExt <> " is not supported"
+filterImportable :: FilePath -> Bool
+filterImportable filePath =
+  (".json" `isExtensionOf` filePath)
+    || (".eml" `isExtensionOf` filePath)
+
+
+importDir :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
+importDir conf connection dirPath = do
+  files <- listDirectory dirPath
+  resultDocs <-
+    files
+      & P.filter filterImportable
+      <&> (dirPath </>)
+      & P.mapM (importFile conf connection)
+  pure $ P.fold resultDocs
 
 
 ingestFile :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
 ingestFile _config connection filePath = do
-  content <- BSL.readFile filePath
+  catchAll
+    ( do
+        content <- BSL.readFile filePath
+        resultDocs <- case takeExtension filePath of
+          ".json" -> do
+            let decodeResult = Aeson.eitherDecode content
+            case decodeResult of
+              Left error ->
+                die $ T.pack error <> " in task \n" <> show content
+              Right importTaskRec -> do
+                importTaskNorm <- importTaskRec & setMissingFields
+                sequence
+                  [ insertImportTask connection importTaskNorm
+                  , editTaskByTask OpenEditor connection importTaskNorm.task
+                  ]
+          ".eml" ->
+            case Parsec.parse message filePath content of
+              Left error -> die $ show error
+              Right email -> do
+                let taskRecord@ImportTask{task} = emailToImportTask email
+                sequence
+                  [ insertImportTask connection taskRecord
+                  , editTaskByTask OpenEditor connection task
+                  ]
+          fileExt ->
+            die $ T.pack $ "File type " <> fileExt <> " is not supported"
 
-  resultDocs <- case takeExtension filePath of
-    ".json" -> do
-      let decodeResult = Aeson.eitherDecode content :: Either [Char] ImportTask
-      case decodeResult of
-        Left error ->
-          die $ T.pack error <> " in task \n" <> show content
-        Right importTaskRec -> do
-          importTaskNorm <- importTaskRec & setMissingFields
-          sequence
-            [ insertImportTask connection importTaskNorm
-            , editTaskByTask OpenEditor connection importTaskNorm.task
-            ]
-    ".eml" ->
-      case Parsec.parse message filePath content of
-        Left error -> die $ show error
-        Right email -> do
-          let taskRecord@ImportTask{task} = emailToImportTask email
-          sequence
-            [ insertImportTask connection taskRecord
-            , editTaskByTask OpenEditor connection task
-            ]
-    fileExt -> die $ T.pack $ "File type " <> fileExt <> " is not supported"
+        removeFile filePath
 
-  removeFile filePath
+        pure $
+          P.fold resultDocs
+            <> ("❌ Deleted file" <+> dquotes (pretty filePath))
+    )
+    (isDirError filePath)
 
-  pure $
-    P.fold resultDocs
-      <> ("❌ Deleted file" <+> dquotes (pretty filePath))
+
+ingestDir :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
+ingestDir conf connection dirPath = do
+  files <- listDirectory dirPath
+  resultDocs <-
+    files
+      & P.filter filterImportable
+      <&> (dirPath </>)
+      & P.mapM (importFile conf connection)
+  pure $ P.fold resultDocs
 
 
 -- TODO: Use Task instead of FullTask to fix broken notes export
