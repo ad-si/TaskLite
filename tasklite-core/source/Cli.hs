@@ -130,7 +130,7 @@ import System.Directory (
   getXdgDirectory,
   listDirectory,
  )
-import System.FilePath ((</>))
+import System.FilePath (hasExtension, (</>))
 import System.Process (readProcess)
 import Time.System (timeCurrentP)
 
@@ -1332,7 +1332,7 @@ printOutput appName argsMb config = do
 
   hookFilesPermContent <-
     hookFilesPerm
-      & filter (\(_, perm) -> executable perm)
+      & filter (\(filePath, perm) -> hasExtension filePath || executable perm)
       & P.mapM
         ( \(filePath, perm) -> do
             fileContent <- readFile filePath
