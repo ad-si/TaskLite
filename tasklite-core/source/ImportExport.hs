@@ -774,7 +774,7 @@ ingestDir conf connection dirPath = do
     files
       & P.filter filterImportable
       <&> (dirPath </>)
-      & P.mapM (importFile conf connection)
+      & P.mapM (ingestFile conf connection)
   pure $ P.fold resultDocs
 
 
