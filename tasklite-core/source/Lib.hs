@@ -538,7 +538,6 @@ addTask conf connection bodyWords = do
                     ]
           )
           conf.hooks.add.post
-      putDoc postAddResult
 
       pure $
         warnings
@@ -547,6 +546,8 @@ addTask conf connection bodyWords = do
                   <+> "with id"
                   <+> dquotes (pretty task.ulid)
                )
+          <$$> postAddResult
+    ---
     _ -> pure "Task could not be added"
 
 
