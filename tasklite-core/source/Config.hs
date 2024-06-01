@@ -3,12 +3,11 @@ The default config primarily defines the styling and formatting
 -}
 module Config where
 
-import Protolude as P (
+import Protolude (
   Applicative (pure),
   Char,
   Eq ((==)),
   FilePath,
-  Foldable (foldl),
   Functor (fmap),
   Generic,
   Int,
@@ -25,6 +24,7 @@ import Protolude as P (
   (&),
   (.),
  )
+import Protolude qualified as P
 
 import Data.Aeson (
   FromJSON (parseJSON),
@@ -143,7 +143,7 @@ defaultHooksConfig =
 
 
 addHookFilesToConfig :: Config -> [(FilePath, b, Text)] -> Config
-addHookFilesToConfig =
+addHookFilesToConfig = do
   let
     buildHook :: FilePath -> Text -> Hook
     buildHook filePath content =
@@ -189,19 +189,19 @@ addHookFilesToConfig =
             { exit = addToHookSet hook stage (hConfig & exit)
             }
         _ -> hConfig
-  in
-    P.foldl $ \conf (filePath, _, fileContent) ->
-      case split (== '-') $ pack $ takeBaseName filePath of
-        [stage, event] ->
-          conf
-            { hooks =
-                addToHooksConfig
-                  event
-                  stage
-                  (buildHook filePath fileContent)
-                  conf.hooks
-            }
-        _ -> conf
+
+  P.foldl $ \conf (filePath, _, fileContent) ->
+    case split (== '-') $ pack $ takeBaseName filePath of
+      [stage, event] ->
+        conf
+          { hooks =
+              addToHooksConfig
+                event
+                stage
+                (buildHook filePath fileContent)
+                conf.hooks
+          }
+      _ -> conf
 
 
 data Config = Config
