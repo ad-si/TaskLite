@@ -14,7 +14,7 @@ import Protolude (
   Char,
   Double,
   Down (Down),
-  Either,
+  Either (Left, Right),
   Eq (..),
   FilePath,
   Float,
@@ -223,6 +223,8 @@ import FullTask (
   cpTimesAndState,
   selectQuery,
  )
+import Hooks (HookResult (message, taskToAdd), executeHooks)
+import ImportTask (setMissingFields, task)
 import Note (Note (body, ulid))
 import SqlUtils (quoteKeyword, quoteText)
 import Task (
@@ -242,7 +244,6 @@ import Utils (
   ListModifiedFlag (..),
   applyColorMode,
   dateTimeToUtcTime,
-  executeHooks,
   formatElapsedP,
   numDigits,
   parseUlidText,
@@ -488,7 +489,7 @@ addTask conf connection bodyWords = do
   (ulid, modified_utc, effectiveUserName) <- getTriple conf
   let
     (body, tags, dueUtcMb, createdUtcMb) = parseTaskBody bodyWords
-    task =
+    taskDraft =
       emptyTask
         { Task.ulid = T.toLower $ show $ case createdUtcMb of
             Nothing -> ulid
@@ -500,19 +501,39 @@ addTask conf connection bodyWords = do
         }
 
   args <- getArgs
-  preAddResult <-
+  preAddResults <-
     executeHooks
       ( TL.toStrict $
           TL.decodeUtf8 $
             Aeson.encode $
               object
                 [ "arguments" .= args
-                , "taskToAdd" .= task
+                , "taskToAdd" .= taskDraft
                 -- TODO: Add tags and notes to task
                 ]
       )
       conf.hooks.add.pre
-  putDoc preAddResult
+
+  -- Maybe the task was changed by the hook
+  task <- case preAddResults of
+    [] -> pure taskDraft
+    [Left error] -> do
+      putDoc $ pretty error
+      _ <- exitFailure
+      pure taskDraft
+    [Right hookResult] -> do
+      case hookResult.taskToAdd of
+        Nothing -> pure taskDraft
+        Just taskToAdd -> do
+          putDoc $ pretty hookResult.message
+          fullImportTask <- setMissingFields taskToAdd
+          pure fullImportTask.task
+    _ -> do
+      putDoc $
+        annotate (color Red) $
+          "ERROR: Multiple pre-add hooks are not supported yet. "
+            <> "None of the hooks were executed."
+      pure taskDraft
 
   insertRecord "tasks" connection task
   warnings <- insertTags connection Nothing task tags
@@ -526,7 +547,7 @@ addTask conf connection bodyWords = do
 
   case insertedTasks of
     [insertedTask] -> do
-      postAddResult <-
+      postAddResults <-
         executeHooks
           ( TL.toStrict $
               TL.decodeUtf8 $
@@ -539,6 +560,15 @@ addTask conf connection bodyWords = do
           )
           conf.hooks.add.post
 
+      let
+        hookResultMsg :: Doc AnsiStyle
+        hookResultMsg =
+          postAddResults
+            <&> \case
+              Left error -> "ERROR:" <+> pretty error
+              Right hookResult -> pretty hookResult.message
+            & P.fold
+
       pure $
         warnings
           <$$> ( "🆕 Added task"
@@ -546,7 +576,7 @@ addTask conf connection bodyWords = do
                   <+> "with id"
                   <+> dquotes (pretty task.ulid)
                )
-          <$$> postAddResult
+          <$$> hookResultMsg
     ---
     _ -> pure "Task could not be added"
 

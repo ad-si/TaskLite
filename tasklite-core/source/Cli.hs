@@ -140,6 +140,7 @@ import Config (
   HooksConfig (..),
   addHookFilesToConfig,
  )
+import Hooks (HookResult (message), executeHooks)
 import ImportExport (
   backupDatabase,
   dumpCsv,
@@ -225,9 +226,9 @@ import Utils (
   IdText,
   ListModifiedFlag (AllItems, ModifiedItemsOnly),
   TagText,
-  executeHooks,
   parseUtc,
   ulidText2utc,
+  (<$$>),
  )
 
 
@@ -1341,8 +1342,13 @@ printOutput appName argsMb config = do
 
   let configNorm = addHookFilesToConfig configNormHookDir hookFilesPermContent
 
-  preLaunchResult <- executeHooks "" configNorm.hooks.launch.pre
-  putDoc preLaunchResult
+  preLaunchResults <- executeHooks "" configNorm.hooks.launch.pre
+  let preLaunchHookMsg =
+        preLaunchResults
+          <&> \case
+            Left error -> pretty error
+            Right hookResult -> pretty hookResult.message
+          & P.fold
 
   connection <- setupConnection configNorm
 
@@ -1359,7 +1365,7 @@ printOutput appName argsMb config = do
   args <- case argsMb of
     Just args -> pure args
     Nothing -> getArgs
-  postLaunchResult <-
+  postLaunchResults <-
     executeHooks
       ( TL.toStrict $
           TL.decodeUtf8 $
@@ -1367,7 +1373,13 @@ printOutput appName argsMb config = do
               object ["arguments" .= args]
       )
       configNorm.hooks.launch.post
-  putDoc postLaunchResult
+
+  let postLaunchHookMsg =
+        postLaunchResults
+          <&> \case
+            Left error -> pretty error
+            Right hookResult -> pretty hookResult.message
+          & P.fold
 
   doc <- executeCLiCommand configNorm now connection progName args
 
@@ -1375,7 +1387,11 @@ printOutput appName argsMb config = do
   SQLite.close connection
 
   -- TODO: Remove color when piping into other command
-  putDoc $ migrationsStatus <> doc <> hardline
+  putDoc $
+    preLaunchHookMsg
+      <$$> migrationsStatus
+      <> doc
+        <$$> postLaunchHookMsg
 
 
 exampleConfig :: Text

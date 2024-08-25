@@ -71,26 +71,46 @@ spec tmpDirPath = do
         preAddHook =
           getLuaHook
             [raw|
-              print("🏃 Executing pre-add script …")
-              print("ℹ️ Receives an object with arguments:", io.read("*a"))
+              io.stderr:write("🏃 Executing pre-add script …\n")
+              io.stderr:write(
+                "ℹ️ Receives an object with arguments:\n",
+                io.read("*a"),
+                "\n"
+              )
+              -- print("{}")
             |]
         postAddHook =
           getLuaHook
             [raw|
-              print("🏃 Executing post-add script …")
-              print("ℹ️ Receives an object with arguments:", io.read("*a"))
+              io.stderr:write("🏃 Executing post-add script …\n")
+              io.stderr:write(
+                "ℹ️ Receives an object with arguments:\n",
+                  io.read("*a"),
+                  "\n"
+              )
+              -- print("{}")
             |]
         preModifyHook =
           getLuaHook
             [raw|
-              print("🏃 Executing pre-modify script …")
-              print("ℹ️ Receives an object with arguments:", io.read("*a"))
+              io.stderr:write("🏃 Executing pre-modify script …\n")
+              io.stderr:write(
+                "ℹ️ Receives an object with arguments:\n",
+                io.read("*a"),
+                "\n"
+              )
+              -- print("{}")
             |]
         postModifyHook =
           getLuaHook
             [raw|
-              print("🏃 Executing post-modify script …")
-              print("ℹ️ Receives an object with arguments:", io.read("*a"))
+              io.stderr:write("🏃 Executing post-modify script …\n")
+              io.stderr:write(
+                "ℹ️ Receives an object with arguments:\n",
+                io.read("*a"),
+                "\n"
+              )
+              -- print("{}")
             |]
         testConf =
           defaultConfig
@@ -125,15 +145,23 @@ spec tmpDirPath = do
       hookFor
         "pre-launch.lua"
         [raw|
-          print("🏃 Executing pre-launch script …")
-          print("ℹ️ Receives no input:", io.read("*a"))
+          io.stderr:write("🏃 Executing pre-launch script …\n")
+          io.stderr:write(
+            "ℹ️ Receives no input:",
+            io.read("*a"),
+            "\n"
+          )
         |]
 
       hookFor
         "post-launch.lua"
         [raw|
-          print("🏃 Executing post-launch script …")
-          print("ℹ️ Receives an object with arguments:", io.read("*a"))
+          io.stderr:write("🏃 Executing post-launch script …\n")
+          io.stderr:write(
+            "ℹ️ Receives an object with arguments:",
+            io.read("*a"),
+            "\n"
+          )
         |]
 
       _ <- printOutput "test-app" (Just ["head"]) testConf

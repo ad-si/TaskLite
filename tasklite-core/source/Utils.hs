@@ -20,7 +20,6 @@ import Protolude (
   Integer,
   Integral (div, mod),
   Maybe (..),
-  Monoid (mempty),
   Num ((*), (+)),
   Ord ((<), (>)),
   Rational,
@@ -30,7 +29,6 @@ import Protolude (
   Show,
   Word16,
   flip,
-  forM,
   fromIntegral,
   fromMaybe,
   fst,
@@ -71,7 +69,6 @@ import Data.Text as T (
   pack,
   take,
   toLower,
-  unlines,
   unpack,
  )
 import Data.Time (UTCTime, ZonedTime, addUTCTime, zonedTimeToUTC)
@@ -79,20 +76,17 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Data.ULID (ULID (ULID, random, timeStamp))
 import Data.ULID.Random (ULIDRandom, mkULIDRandom)
 import Data.ULID.TimeStamp (ULIDTimeStamp, mkULIDTimeStamp)
-import Prettyprinter (Doc, Pretty (pretty), softline)
+import Prettyprinter (Doc, softline)
 import Prettyprinter.Render.Terminal (
-  AnsiStyle,
   Color (Black),
   colorDull,
  )
 import System.Console.ANSI (ConsoleLayer (..), hGetLayerColor)
-import System.Process (readProcess)
 
 import Base32 (decode)
-import Config (Config (bodyStyle, utcFormat), Hook (body, filePath, interpreter))
+import Config (Config (bodyStyle, utcFormat))
 import Control.Arrow ((>>>))
 import Prettyprinter.Internal.Type (Doc (Empty))
-import System.FilePath (takeExtension)
 import System.Random (mkStdGen)
 
 
@@ -312,37 +306,6 @@ numDigits base num =
           in  if r < b then (2 * e, r) else (2 * e + 1, r `div` b)
   in
     1 + fst (ilog base num)
-
-
-executeHooks :: Text -> [Hook] -> IO (Doc AnsiStyle)
-executeHooks stdinText hooks = do
-  let
-    stdinStr = T.unpack stdinText
-    getInterpreter s =
-      if
-        | s `P.elem` ["javascript", "js", "node", "node.js"] -> ("node", "-e")
-        | s `P.elem` ["lua"] -> ("lua", "-e")
-        | s `P.elem` ["python", "python3", "py"] -> ("python3", "-c")
-        | s `P.elem` ["ruby", "rb"] -> ("ruby", "-e")
-        | otherwise -> pure mempty
-
-  cmdOutput <- forM hooks $ \hook -> do
-    case hook.filePath of
-      Just fPath -> do
-        case fPath & takeExtension & P.drop 1 of
-          "" ->
-            -- Is excuted with shell
-            readProcess fPath [] stdinStr
-          ext -> do
-            let (interpreter, cliFlag) = getInterpreter ext
-            fileContent <- P.readFile fPath
-            readProcess interpreter [cliFlag, T.unpack fileContent] stdinStr
-      ---
-      Nothing -> do
-        let (interpreter, cliFlag) = getInterpreter hook.interpreter
-        readProcess interpreter [cliFlag, T.unpack hook.body] stdinStr
-
-  pure $ cmdOutput <&> T.pack & T.unlines & pretty
 
 
 applyColorMode :: Config -> IO Config

@@ -59,7 +59,7 @@ Included fields are:
 }
 ```
 
-After execution, a called hook can print a JSON object to stdout.
+During execution, a called hook should print a result JSON object to stdout.
 All fields of the JSON are optional.
 
 Possible values:
@@ -69,14 +69,14 @@ Possible values:
   message: "…",  // A message to display on stdout
   warning: "…",  // A warning to display on stderr
   error: "…",  // An error to display on stderr
-  …  // Any other fields you want to include
+  …  // Other fields depending on hook type (check out table below)
 }
 ```
 
-Hooks can write to stdout at any time, but it's not recommended.
-Rather write a `{ message: "…" }` object to stdout and
-let TaskLite print the message with improved formatting and coloring.
-Same goes for stderr.
+Hooks can write to stderr at any time, but it's not recommended.
+Rather write a JSON object to stdout and
+let TaskLite print the message / warning / error
+with improved formatting and coloring.
 
 <small>
 <table>
@@ -135,7 +135,13 @@ Same goes for stderr.
   taskAdded: {}
 }
       </pre></td>
-      <td><pre>{ message: "…", … }</pre></td>
+      <td><pre>
+{
+  taskAdded: {},
+  message: "…",
+  …
+}
+      </pre></td>
       <td>
         <pre>{ message: "…", … }</pre>
         <small>Processing terminates</small>
@@ -151,7 +157,7 @@ Same goes for stderr.
       </pre></td>
       <td><pre>
 {
-  taskModified: {},
+  taskToModify: {},
   message: "…",
   …
 }
@@ -184,15 +190,6 @@ Same goes for stderr.
     </tr>
     <tr>
       <td><code>pre&#8209;exit</code></td>
-      <td><pre>❌</pre></td>
-      <td><pre>{ message: "…", … }</pre></td>
-      <td>
-        <pre>{ message: "…", … }</pre>
-        <small>Processing terminates</small>
-      </td>
-    </tr>
-    <tr>
-      <td><code>post&#8209;exit</code></td>
       <td><pre>❌</pre></td>
       <td><pre>{ message: "…", … }</pre></td>
       <td>

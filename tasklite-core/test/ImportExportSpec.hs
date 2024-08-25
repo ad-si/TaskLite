@@ -32,7 +32,8 @@ import Test.Hspec (
 import Config (defaultConfig)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
-import ImportExport (ImportTask (ImportTask, notes, tags, task), insertImportTask)
+import ImportExport (insertImportTask)
+import ImportTask (ImportTask (ImportTask, notes, tags, task))
 import Task (Task (body, modified_utc, ulid, user), emptyTask)
 import TaskToNote (TaskToNote (TaskToNote))
 import TaskToNote qualified

@@ -37,7 +37,9 @@ library
       Cli
       Config
       FullTask
+      Hooks
       ImportExport
+      ImportTask
       Lib
       Migrations
       Note
