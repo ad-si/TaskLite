@@ -44,7 +44,7 @@
 [LiteCLI]: https://litecli.com
 [performance]: /performance
 [SQLite]: https://sqlite.org
-[TW Bugs]: https://github.com/GothenburgBitFactory/taskwarrior/labels/bug
+[TW Bugs]: https://github.com/GothenburgBitFactory/taskwarrior/labels/type:bug
 [VisiData]: https://visidata.org
 
 

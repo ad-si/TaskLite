@@ -13,8 +13,8 @@ fits the bill:
 Name          | Description
 --------------|-----------------------------------------------------------------
 [Buku]        | Store and manage your bookmarks from the command line
-[Dstask]      | Single binary CLI todo manager with git sync and markdown notes
 [Dooit]       | A TUI todo manager
+[Dstask]      | Single binary CLI todo manager with git sync and markdown notes
 [Etm]         | Event and task manager
 [Eureka]      | CLI tool to input and store ideas without leaving the terminal
 [nb]          | CLI note-taking, bookmarking, archiving, and knowledge base app
@@ -29,6 +29,7 @@ Name          | Description
 [Toodles]     | Project management from the TODO's in your codebase
 [TTDL]        | Terminal Todo List Manager
 [Unfog]       | A simple CLI task and time manager
+[Vikunja]     | Self-hostable to-do app
 [Vim-OrgMode] | Text outlining and task management based on Emacs' Org-Mode
 
 
@@ -52,13 +53,18 @@ Nr|Name          |Stars|Commits|Contrib.| Code             | 1. Commit
  9|[Toodles]     |  966|    211|     13 |[Haskell][TooGH]  |2018‑09‑04
 10|[Dstask]      |  770|    882|     14 |[Go][Dstask]      |2018‑12‑08
 11|[Eureka]      |  738|    258|      8 |[Rust][Eureka]    |2017‑11‑20
-12|[Todoman]     |  472|    974|     35 |[Python][TmGH]    |2015‑03‑29
-13|[Smos]        |  283|   2741|     23 |[Haskell][SmosGH] |2018‑07‑29
-14|[TTDL]        |  193|    247|      7 |[Rust][TTDL]      |2018‑12‑30
-15|[TaskLite]    |  191|    444|      5 |[Haskell][TLGH]   |2018‑06‑04
-16|[Unfog]       |  184|    198|      4 |[Haskell][Unfog]  |2019‑10‑22
-17|[td-cli]      |  184|    310|      2 |[Python][td-cli]  |2018‑06‑03
-18|[Etm]         |   40|   3879|      4 |[Python][Etm]     |2017‑09‑02
+12|[Vikunja]     |  707|   9732|     56 |[Go][VikGH]       |2018-06-10
+13|[Todoman]     |  472|    974|     35 |[Python][TmGH]    |2015‑03‑29
+14|[Smos]        |  283|   2741|     23 |[Haskell][SmosGH] |2018‑07‑29
+15|[TTDL]        |  193|    247|      7 |[Rust][TTDL]      |2018‑12‑30
+16|[TaskLite]    |  191|    444|      5 |[Haskell][TLGH]   |2018‑06‑04
+17|[Unfog]       |  184|    198|      4 |[Haskell][Unfog]  |2019‑10‑22
+18|[td-cli]      |  184|    310|      2 |[Python][td-cli]  |2018‑06‑03
+19|[Etm]         |   40|   3879|      4 |[Python][Etm]     |2017‑09‑02
+
+
+Numbers with a `~` are not necessarily comparable,
+as they are either estimated or from another platform than GitHub.
 
 
 ## Commercial Alternatives
@@ -201,6 +207,9 @@ Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 [UlGH]: https://github.com/ultralist/ultralist
 
 [Unfog]: https://github.com/unfog-io/unfog-cli
+
+[Vikunja]: https://vikunja.io/
+[VikGH]: https://github.com/go-vikunja/vikunja
 
 [Vim-OrgMode]: https://github.com/jceb/vim-orgmode
 [VomGH]: https://github.com/jceb/vim-orgmode
