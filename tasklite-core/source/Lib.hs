@@ -150,7 +150,6 @@ import Prettyprinter.Render.Terminal (
   color,
   colorDull,
   hPutDoc,
-  putDoc,
   underlined,
  )
 import Prettyprinter.Util (reflow)
@@ -223,9 +222,10 @@ import FullTask (
   cpTimesAndState,
   selectQuery,
  )
-import Hooks (HookResult (message, taskToAdd), executeHooks)
+import Hooks (HookResult (error, message, taskToAdd, warning), executeHooks)
 import ImportTask (setMissingFields, task)
 import Note (Note (body, ulid))
+import Prettyprinter.Internal.Type (Doc (Empty))
 import SqlUtils (quoteKeyword, quoteText)
 import Task (
   DerivedState (IsOpen),
@@ -515,25 +515,37 @@ addTask conf connection bodyWords = do
       conf.hooks.add.pre
 
   -- Maybe the task was changed by the hook
-  task <- case preAddResults of
-    [] -> pure taskDraft
+  (task, preAddHookMsg) <- case preAddResults of
+    [] -> pure (taskDraft, Empty)
     [Left error] -> do
-      putDoc $ pretty error
       _ <- exitFailure
-      pure taskDraft
+      pure (taskDraft, pretty error)
     [Right hookResult] -> do
       case hookResult.taskToAdd of
-        Nothing -> pure taskDraft
+        Nothing -> pure (taskDraft, Empty)
         Just taskToAdd -> do
-          putDoc $ pretty hookResult.message
+          let msg =
+                [ hookResult.message
+                    <&> pretty
+                    & fromMaybe Empty
+                , hookResult.warning
+                    <&> (pretty >>> annotate (color Yellow))
+                    & fromMaybe Empty
+                , hookResult.error
+                    <&> (pretty >>> annotate (color Red))
+                    & fromMaybe Empty
+                ]
+                  & P.filter (\d -> show d /= T.empty)
+                  & vsep
           fullImportTask <- setMissingFields taskToAdd
-          pure fullImportTask.task
+          pure (fullImportTask.task, msg)
     _ -> do
-      putDoc $
-        annotate (color Red) $
-          "ERROR: Multiple pre-add hooks are not supported yet. "
-            <> "None of the hooks were executed."
-      pure taskDraft
+      pure
+        ( taskDraft
+        , annotate (color Red) $
+            "ERROR: Multiple pre-add hooks are not supported yet. "
+              <> "None of the hooks were executed."
+        )
 
   insertRecord "tasks" connection task
   warnings <- insertTags connection Nothing task tags
@@ -561,8 +573,8 @@ addTask conf connection bodyWords = do
           conf.hooks.add.post
 
       let
-        hookResultMsg :: Doc AnsiStyle
-        hookResultMsg =
+        postAddHookMsg :: Doc AnsiStyle
+        postAddHookMsg =
           postAddResults
             <&> \case
               Left error -> "ERROR:" <+> pretty error
@@ -570,13 +582,16 @@ addTask conf connection bodyWords = do
             & P.fold
 
       pure $
-        warnings
-          <$$> ( "🆕 Added task"
-                  <+> dquotes (pretty task.body)
-                  <+> "with id"
-                  <+> dquotes (pretty task.ulid)
-               )
-          <$$> hookResultMsg
+        [ preAddHookMsg
+        , warnings
+        , "🆕 Added task"
+            <+> dquotes (pretty task.body)
+            <+> "with id"
+            <+> dquotes (pretty task.ulid)
+        , postAddHookMsg
+        ]
+          & P.filter (\d -> show d /= T.empty)
+          & vsep
     ---
     _ -> pure "Task could not be added"
 
