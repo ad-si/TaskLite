@@ -76,7 +76,7 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Data.ULID (ULID (ULID, random, timeStamp))
 import Data.ULID.Random (ULIDRandom, mkULIDRandom)
 import Data.ULID.TimeStamp (ULIDTimeStamp, mkULIDTimeStamp)
-import Prettyprinter (Doc, softline)
+import Prettyprinter (Doc, hardline, softline)
 import Prettyprinter.Render.Terminal (
   Color (Black),
   colorDull,
@@ -100,6 +100,12 @@ data Filter a = NoFilter | Only a
 
 data ListModifiedFlag = AllItems | ModifiedItemsOnly
   deriving (Eq, Show)
+
+
+-- | Always add a hardline after non-empty documents
+(<!!>) :: Doc ann -> Doc ann -> Doc ann
+Empty <!!> y = y
+x <!!> y = x <> hardline <> y
 
 
 -- | Combine documents with 2 newlines

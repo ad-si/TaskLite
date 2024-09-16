@@ -36,15 +36,8 @@ import Data.Aeson (
   (.:?),
  )
 import Data.Hourglass (TimeFormat (toFormat), TimeFormatString)
-import Data.Text as T (
-  dropEnd,
-  isInfixOf,
-  pack,
-  replace,
-  split,
-  strip,
-  stripPrefix,
- )
+import Data.Text (dropEnd, pack, split, stripPrefix)
+import Data.Text qualified as T
 import Data.Yaml (encode)
 import Prettyprinter.Internal (Pretty (pretty))
 import Prettyprinter.Render.Terminal (
@@ -142,8 +135,8 @@ defaultHooksConfig =
     }
 
 
-addHookFilesToConfig :: Config -> [(FilePath, b, Text)] -> Config
-addHookFilesToConfig = do
+addHookFilesToConfig :: Config -> [(FilePath, b, Text)] -> (Config, [Text])
+addHookFilesToConfig config = do
   let
     buildHook :: FilePath -> Text -> Hook
     buildHook filePath content =
@@ -190,18 +183,50 @@ addHookFilesToConfig = do
             }
         _ -> hConfig
 
-  P.foldl $ \conf (filePath, _, fileContent) ->
-    case split (== '-') $ pack $ takeBaseName filePath of
-      [stage, event] ->
-        conf
-          { hooks =
-              addToHooksConfig
-                event
-                stage
-                (buildHook filePath fileContent)
-                conf.hooks
-          }
-      _ -> conf
+    getStageAndEvent :: FilePath -> [Text]
+    getStageAndEvent filePath = do
+      let fileName =
+            filePath
+              & takeBaseName
+              & pack
+
+      -- Prefix with "_" to ignore files
+      if "_" `T.isPrefixOf` fileName
+        then []
+        else
+          fileName
+            & split (== '_')
+            & P.headMay
+            & fromMaybe ""
+            & split (== '-')
+
+  P.foldl'
+    ( \(conf, errors) (filePath, _, fileContent) ->
+        case getStageAndEvent filePath of
+          [stage, event] ->
+            ( conf
+                { hooks =
+                    addToHooksConfig
+                      event
+                      stage
+                      (buildHook filePath fileContent)
+                      conf.hooks
+                }
+            , errors <> []
+            )
+          [] -> (conf, errors)
+          filenameParts ->
+            ( conf
+            , errors
+                <> [ ("`" <> (filenameParts & T.intercalate "-") <> "` ")
+                      <> "is not a correct hook name.\n"
+                      <> "Hook file names must be in the format: "
+                      <> "<stage>-<event>_<description>.<ext>\n"
+                      <> "E.g `post-launch.v`, or `pre-exit.lua`.\n"
+                   ]
+            )
+    )
+    (config, [])
 
 
 data Config = Config

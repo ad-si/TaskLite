@@ -57,6 +57,7 @@ import Data.Hourglass (
 import Data.Text qualified as T
 import Data.Time.ISO8601.Duration qualified as Iso
 import Data.ULID (ULID, ulidFromInteger)
+import FullTask qualified
 import Note (Note (..))
 import System.Hourglass (dateCurrent)
 import Task (
@@ -475,3 +476,27 @@ setMissingFields importTaskRec = do
                   else show importTaskRec.task.modified_utc
             }
       }
+
+
+importTaskToFullTask :: ImportTask -> FullTask.FullTask
+importTaskToFullTask ImportTask{task, notes, tags} =
+  FullTask.FullTask
+    { FullTask.ulid = task.ulid
+    , FullTask.body = task.body
+    , FullTask.modified_utc = task.modified_utc
+    , FullTask.awake_utc = task.awake_utc
+    , FullTask.ready_utc = task.ready_utc
+    , FullTask.waiting_utc = task.waiting_utc
+    , FullTask.review_utc = task.review_utc
+    , FullTask.due_utc = task.due_utc
+    , FullTask.closed_utc = task.closed_utc
+    , FullTask.state = task.state
+    , FullTask.group_ulid = task.group_ulid
+    , FullTask.repetition_duration = task.repetition_duration
+    , FullTask.recurrence_duration = task.recurrence_duration
+    , FullTask.tags = Just tags
+    , FullTask.notes = Just notes
+    , FullTask.priority = task.priority_adjustment
+    , FullTask.user = task.user
+    , FullTask.metadata = task.metadata
+    }

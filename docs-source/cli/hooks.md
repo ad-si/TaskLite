@@ -14,15 +14,40 @@ Hooks can either be specified via the config file or via hook files.
 If the files have an extension (e.g. `post-add.lua`) the corresponding
 interpreter will be used.
 Otherwise the file will be executed as a shell script.
-Currently supported interpreters are: `lua`, `python3`, `ruby`, `node`.
+
+Currently supported interpreters are:
+`lua`, `python3`, `ruby`, `node`, and [`v`][vlang].
+It's recommended to write you scripts in the [V programming language][vlang]
+due to its high performance (script is compiled on first execution),
+its great ergonomics, and its comprehensive standard library.
+The compiled versions of the script will be cached as
+`_v_executable_.<name-of-script>` in the hooks directory.
+?
+[vlang]: https://vlang.io
+
+Another good alternative is [Lua](https://www.lua.org/)
+as it is simple, lightweight, and fast.
+Futhermore, future versions of TaskLite will include the Lua interpreter
+to make it independent of the system's installed Lua interpreter.
 
 If the hook files are shell scripts, they must be executable (`chmod +x`).
 Otherwise they can't be executed directly by TaskLite.
 
-It's recommended to use [Lua](https://www.lua.org/) for hooks
-as it's simple, lightweight, and has the best performance.
-Futhermore, future versions of TaskLite will include a Lua interpreter
-for even better performance.
+The file names must start with the stage they are for (`pre` or `post`),
+followed by a dash and the stage name (e.g. `pre-add`), and optionally
+followed by an underscore and a description.
+E.g `pre-add_validate_task.v` or `pre-exit_sync.v`.
+
+They are executed in alphabetical order.
+If you want to ensure a specific order,
+you can include a number in the description.
+E.g. `pre-add_01_x.v`, `pre-add_02_y.v`, ….
+
+> [!WARNING]
+> Multiple `pre-add` hooks are not supported yet,
+> but will be in the future.
+
+To ignore a hook, you can prefix the file name with an underscore (`_`).
 
 
 ## Stages
@@ -44,8 +69,7 @@ Following stages are available:
       Can be used to prevent modification of task.
   - `post-modify` - After task was modified.
 - Exit
-  - `pre-exit` - Pre printing results
-  - `post-exit` - Last thing before program termination
+  - `pre-exit` - Last thing before program termination
 
 The hooks receive JSON data from TaskLite via stdin.
 We're using JSON5 here for better readability.
@@ -117,7 +141,7 @@ with improved formatting and coloring.
       </pre></td>
       <td><pre>
 {
-  taskToAdd: {},
+  task: {},
   message: "…",
   …,
 }
@@ -136,11 +160,7 @@ with improved formatting and coloring.
 }
       </pre></td>
       <td><pre>
-{
-  taskAdded: {},
-  message: "…",
-  …
-}
+{ message: "…", … }
       </pre></td>
       <td>
         <pre>{ message: "…", … }</pre>
@@ -152,12 +172,12 @@ with improved formatting and coloring.
       <td><pre>
 {
   arguments: […],
-  taskOriginal: {}
+  taskToModify: {}
 }
       </pre></td>
       <td><pre>
 {
-  taskToModify: {},
+  task: {},
   message: "…",
   …
 }
@@ -177,11 +197,7 @@ with improved formatting and coloring.
 }
       </pre></td>
       <td><pre>
-{
-  taskModified: {},
-  message: "…",
-  …
-}
+{ message: "…", … }
       </pre></td>
       <td>
         <pre>{ message: "…", … }</pre>
@@ -208,6 +224,57 @@ To see the JSON for a single task run:
 
 ```sh
 tl ndjson | grep $ULID_OF_TASK | head -n 1 | jq
+```
+
+
+## Config
+
+You can add a `hooks` field to your config file like this:
+
+```yaml
+hooks:
+  directory: /Users/adrian/Dropbox/TaskLite/hooks
+  launch:
+    post: []
+    pre: []
+  add:
+    post: []
+    pre:
+      -
+        interpreter: v
+        body: |
+          import json
+
+          struct Task {
+            mut:
+            body string
+          }
+
+          struct TaskData {
+            mut:
+            task_to_add Task   @[json: 'taskToAdd']
+            message     string @[omitempty]
+            warning     string @[omitempty]
+          }
+
+          fn main() {
+            stdin := os.get_raw_lines_joined()
+            mut task_data := json.decode(TaskData, stdin)!
+            task_body := task_data.task_to_add.body
+
+            if task_body.contains('coke') {
+              task_data.warning = 'Coke? Rather have some milk!'
+              task_data.task_to_add.body = task_body.replace('coke', 'milk')
+            }
+
+            println(json.encode(task_data))
+          }
+  modify:
+    post: []
+    pre: []
+  exit:
+    post: []
+    pre: []
 ```
 
 

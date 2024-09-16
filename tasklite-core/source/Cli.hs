@@ -140,7 +140,8 @@ import Config (
   HooksConfig (..),
   addHookFilesToConfig,
  )
-import Hooks (HookResult (message), executeHooks)
+import Control.Arrow ((>>>))
+import Hooks (executeHooks, formatHookResult)
 import ImportExport (
   backupDatabase,
   dumpCsv,
@@ -228,7 +229,7 @@ import Utils (
   TagText,
   parseUtc,
   ulidText2utc,
-  (<$$>),
+  (<!!>),
  )
 
 
@@ -1339,15 +1340,24 @@ printOutput appName argsMb config = do
             fileContent <- readFile filePath
             pure (filePath, perm, fileContent)
         )
+  let (configNorm, errors) =
+        addHookFilesToConfig configNormHookDir hookFilesPermContent
+  P.when (not $ null errors) $
+    ["WARNING:\n"]
+      <> errors
+        & P.traverse_
+          ( pretty
+              >>> annotate (color Yellow)
+              >>> hPutDoc P.stderr
+          )
 
-  let configNorm = addHookFilesToConfig configNormHookDir hookFilesPermContent
-
+  -- Run pre-launch hooks
   preLaunchResults <- executeHooks "" configNorm.hooks.launch.pre
   let preLaunchHookMsg =
         preLaunchResults
           <&> \case
             Left error -> pretty error
-            Right hookResult -> pretty hookResult.message
+            Right hookResult -> formatHookResult hookResult
           & P.fold
 
   connection <- setupConnection configNorm
@@ -1356,11 +1366,8 @@ printOutput appName argsMb config = do
   -- SQLite.setTrace connection $ Just P.putStrLn
 
   migrationsStatus <- runMigrations configNorm connection
-  nowElapsed <- timeCurrentP
 
-  let
-    now = timeFromElapsedP nowElapsed :: DateTime
-
+  -- Run post-launch hooks
   progName <- getProgName
   args <- case argsMb of
     Just args -> pure args
@@ -1378,20 +1385,32 @@ printOutput appName argsMb config = do
         postLaunchResults
           <&> \case
             Left error -> pretty error
-            Right hookResult -> pretty hookResult.message
+            Right hookResult -> formatHookResult hookResult
           & P.fold
 
+  nowElapsed <- timeCurrentP
+  let now = timeFromElapsedP nowElapsed :: DateTime
   doc <- executeCLiCommand configNorm now connection progName args
 
   -- TODO: Use withConnection instead
   SQLite.close connection
 
+  -- Run pre-exit hooks
+  preExitResults <- executeHooks "" configNorm.hooks.exit.pre
+  let preExitHookMsg =
+        preExitResults
+          <&> \case
+            Left error -> pretty error
+            Right hookResult -> formatHookResult hookResult
+          & P.fold
+
   -- TODO: Remove color when piping into other command
   putDoc $
     preLaunchHookMsg
-      <$$> migrationsStatus
-      <> doc
-        <$$> postLaunchHookMsg
+      <!!> migrationsStatus
+      <!!> postLaunchHookMsg
+      <!!> doc
+      <!!> preExitHookMsg
 
 
 exampleConfig :: Text

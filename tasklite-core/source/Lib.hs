@@ -222,8 +222,12 @@ import FullTask (
   cpTimesAndState,
   selectQuery,
  )
-import Hooks (HookResult (error, message, taskToAdd, warning), executeHooks)
-import ImportTask (setMissingFields, task)
+import Hooks (HookResult (error, message, task, warning), executeHooks)
+import ImportTask (
+  ImportTask (ImportTask, notes, tags, task),
+  importTaskToFullTask,
+  setMissingFields,
+ )
 import Note (Note (body, ulid))
 import Prettyprinter.Internal.Type (Doc (Empty))
 import SqlUtils (quoteKeyword, quoteText)
@@ -489,15 +493,20 @@ addTask conf connection bodyWords = do
   (ulid, modified_utc, effectiveUserName) <- getTriple conf
   let
     (body, tags, dueUtcMb, createdUtcMb) = parseTaskBody bodyWords
-    taskDraft =
-      emptyTask
-        { Task.ulid = T.toLower $ show $ case createdUtcMb of
-            Nothing -> ulid
-            Just createdUtc -> setDateTime ulid createdUtc
-        , Task.body = body
-        , Task.due_utc = dueUtcMb
-        , Task.modified_utc = modified_utc
-        , Task.user = T.pack effectiveUserName
+    importTaskDraft =
+      ImportTask
+        { task =
+            emptyTask
+              { Task.ulid = T.toLower $ show $ case createdUtcMb of
+                  Nothing -> ulid
+                  Just createdUtc -> setDateTime ulid createdUtc
+              , Task.body = body
+              , Task.due_utc = dueUtcMb
+              , Task.modified_utc = modified_utc
+              , Task.user = T.pack effectiveUserName
+              }
+        , tags = tags
+        , notes = [] -- TODO: Add notes to task
         }
 
   args <- getArgs
@@ -508,22 +517,21 @@ addTask conf connection bodyWords = do
             Aeson.encode $
               object
                 [ "arguments" .= args
-                , "taskToAdd" .= taskDraft
-                -- TODO: Add tags and notes to task
+                , "taskToAdd" .= importTaskToFullTask importTaskDraft
                 ]
       )
       conf.hooks.add.pre
 
   -- Maybe the task was changed by the hook
-  (task, preAddHookMsg) <- case preAddResults of
-    [] -> pure (taskDraft, Empty)
+  (importTask, preAddHookMsg) <- case preAddResults of
+    [] -> pure (importTaskDraft, Empty)
     [Left error] -> do
       _ <- exitFailure
-      pure (taskDraft, pretty error)
+      pure (importTaskDraft, pretty error)
     [Right hookResult] -> do
-      case hookResult.taskToAdd of
-        Nothing -> pure (taskDraft, Empty)
-        Just taskToAdd -> do
+      case hookResult.task of
+        Nothing -> pure (importTaskDraft, Empty)
+        Just task -> do
           let msg =
                 [ hookResult.message
                     <&> pretty
@@ -537,25 +545,25 @@ addTask conf connection bodyWords = do
                 ]
                   & P.filter (\d -> show d /= T.empty)
                   & vsep
-          fullImportTask <- setMissingFields taskToAdd
-          pure (fullImportTask.task, msg)
+          fullImportTask <- setMissingFields task
+          pure (fullImportTask, msg)
     _ -> do
       pure
-        ( taskDraft
+        ( importTaskDraft
         , annotate (color Red) $
             "ERROR: Multiple pre-add hooks are not supported yet. "
               <> "None of the hooks were executed."
         )
 
-  insertRecord "tasks" connection task
-  warnings <- insertTags connection Nothing task tags
+  insertRecord "tasks" connection importTask.task
+  warnings <- insertTags connection Nothing importTask.task importTask.tags
 
   -- TODO: Use RETURNING clause in `insertRecord` instead
   (insertedTasks :: [FullTask]) <-
     queryNamed
       connection
       "SELECT * FROM tasks_view WHERE ulid == :ulid"
-      [":ulid" := task.ulid]
+      [":ulid" := importTask.task.ulid]
 
   case insertedTasks of
     [insertedTask] -> do
@@ -575,19 +583,21 @@ addTask conf connection bodyWords = do
       let
         postAddHookMsg :: Doc AnsiStyle
         postAddHookMsg =
-          postAddResults
-            <&> \case
-              Left error -> "ERROR:" <+> pretty error
-              Right hookResult -> pretty hookResult.message
-            & P.fold
+          ( postAddResults
+              <&> \case
+                Left error -> "ERROR:" <+> pretty error
+                Right hookResult -> pretty hookResult.message
+              & P.fold
+          )
+            <> hardline
 
       pure $
         [ preAddHookMsg
         , warnings
         , "🆕 Added task"
-            <+> dquotes (pretty task.body)
+            <+> dquotes (pretty importTask.task.body)
             <+> "with id"
-            <+> dquotes (pretty task.ulid)
+            <+> dquotes (pretty importTask.task.ulid)
         , postAddHookMsg
         ]
           & P.filter (\d -> show d /= T.empty)

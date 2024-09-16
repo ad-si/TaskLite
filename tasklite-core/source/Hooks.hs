@@ -25,7 +25,10 @@ import Config (Hook (body, filePath, interpreter))
 import Control.Arrow ((>>>))
 import ImportTask (ImportTask)
 import Options.Applicative.Arrows (left)
+import Prettyprinter (Doc, annotate, pretty)
+import Prettyprinter.Render.Terminal (AnsiStyle, Color (Red, Yellow), color)
 import System.FilePath (takeExtension)
+import Utils ((<!!>))
 
 
 data HookTiming = PreEvent | PostEvent
@@ -44,32 +47,15 @@ data HookEvent = HookEvent HookType HookTiming
   deriving (Show)
 
 
+-- | Output of a hook that must be parsed by TaskLite
 data HookResult
   = BasicHookResult
       { message :: Maybe Text
       , warning :: Maybe Text
       , error :: Maybe Text
       }
-  | PreAddHookResult
-      { taskToAdd :: Maybe ImportTask
-      , message :: Maybe Text
-      , warning :: Maybe Text
-      , error :: Maybe Text
-      }
-  | PostAddHookResult
-      { taskAdded :: ImportTask
-      , message :: Maybe Text
-      , warning :: Maybe Text
-      , error :: Maybe Text
-      }
-  | PreModifyHookResult
-      { taskToModify :: ImportTask
-      , message :: Maybe Text
-      , warning :: Maybe Text
-      , error :: Maybe Text
-      }
-  | PostModifyHookResult
-      { taskModified :: ImportTask
+  | TaskHookResult
+      { task :: Maybe ImportTask
       , message :: Maybe Text
       , warning :: Maybe Text
       , error :: Maybe Text
@@ -78,27 +64,15 @@ data HookResult
 
 
 instance Aeson.FromJSON HookResult where
-  parseJSON = Aeson.withObject "PreAddHookResult" $ \v -> do
-    message <- v Aeson..:? "message"
-    warning <- v Aeson..:? "warning"
-    error <- v Aeson..:? "error"
+  parseJSON = Aeson.withObject "HookResult" $ \v -> do
+    taskMb <- v Aeson..:? "task"
+    messageMb <- v Aeson..:? "message"
+    warningMb <- v Aeson..:? "warning"
+    errorMb <- v Aeson..:? "error"
 
-    taskToAddMb <- v Aeson..:? "taskToAdd"
-    taskAddedMb <- v Aeson..:? "taskAdded"
-    taskToModifyMb <- v Aeson..:? "taskToModify"
-    taskModifiedMb <- v Aeson..:? "taskModified"
-
-    case (taskToAddMb, taskAddedMb, taskToModifyMb, taskModifiedMb) of
-      (Just taskToAdd, _, _, _) -> do
-        pure $ PreAddHookResult taskToAdd message warning error
-      (_, Just taskAdded, _, _) -> do
-        pure $ PostAddHookResult taskAdded message warning error
-      (_, _, Just taskToModify, _) -> do
-        pure $ PreModifyHookResult taskToModify message warning error
-      (_, _, _, Just taskModified) -> do
-        pure $ PostModifyHookResult taskModified message warning error
-      (_, _, _, _) -> do
-        pure $ BasicHookResult message warning error
+    case taskMb of
+      Just task -> pure $ TaskHookResult task messageMb warningMb errorMb
+      Nothing -> pure $ BasicHookResult messageMb warningMb errorMb
 
 
 data ExecMode = ExecFile | ExecStdin
@@ -172,3 +146,12 @@ executeHooks stdinText hooks = do
               )
 
   pure parsedHookResults
+
+
+formatHookResult :: HookResult -> Doc AnsiStyle
+formatHookResult hookResult =
+  ""
+    <!!> pretty hookResult.message
+    <!!> annotate (color Yellow) (pretty hookResult.warning)
+    <!!> annotate (color Red) (pretty hookResult.error)
+    <!!> ""
