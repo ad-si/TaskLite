@@ -1,3 +1,7 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use maybe" #-}
+
 {-|
 Functions to import and export tasks
 -}
@@ -22,7 +26,6 @@ import Protolude (
   Traversable (sequence),
   die,
   fromMaybe,
-  isJust,
   putErrLn,
   rightToMaybe,
   show,
@@ -39,10 +42,14 @@ import Protolude (
  )
 import Protolude qualified as P
 
-import Config (Config (dataDir, dbName))
+import Config (
+  Config (dataDir, dbName, hooks),
+  HookSet (post, pre),
+  HooksConfig (modify),
+ )
 import Control.Arrow ((>>>))
 import Control.Monad.Catch (catchAll)
-import Data.Aeson (Value)
+import Data.Aeson (Value, object, (.=))
 import Data.Aeson as Aeson (
   Value (Array, Object, String),
   eitherDecode,
@@ -57,15 +64,27 @@ import Data.Hourglass (
   timePrint,
  )
 import Data.Text qualified as T
+import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TL
 import Data.ULID (ulidFromInteger)
 import Data.ULID.TimeStamp (getULIDTimeStamp)
 import Data.Vector qualified as V
-import Data.Yaml (ParseException (InvalidYaml), YamlException (YamlException, YamlParseException), YamlMark (YamlMark))
+import Data.Yaml (
+  ParseException (InvalidYaml),
+  YamlException (YamlException, YamlParseException),
+  YamlMark (YamlMark),
+ )
 import Data.Yaml qualified as Yaml
 import Database.SQLite.Simple as Sql (Connection, query_)
 import FullTask (FullTask)
-import ImportTask (ImportTask (..), emptyImportTask, importUtcFormat, setMissingFields)
+import Hooks (HookResult (message, task), executeHooks, formatHookResult)
+import ImportTask (
+  ImportTask (..),
+  emptyImportTask,
+  importTaskToFullTask,
+  importUtcFormat,
+  setMissingFields,
+ )
 import Lib (
   execWithConn,
   execWithTask,
@@ -84,14 +103,20 @@ import Prettyprinter (
   vsep,
   (<+>),
  )
-import Prettyprinter.Render.Terminal (AnsiStyle, Color (Red), color, hPutDoc)
+import Prettyprinter.Internal.Type (Doc (Empty))
+import Prettyprinter.Render.Terminal (
+  AnsiStyle,
+  Color (Red),
+  color,
+  hPutDoc,
+  putDoc,
+ )
 import System.Directory (createDirectoryIfMissing, listDirectory, removeFile)
 import System.FilePath (isExtensionOf, takeExtension, (</>))
 import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
-import Task (Task (body, closed_utc, metadata, modified_utc, ulid, user), setMetadataField, taskToEditableYaml)
+import Task (Task (..), setMetadataField, taskToEditableYaml)
 import Text.Editor (runUserEditorDWIM, yamlTemplate)
-import Text.Parsec.Rfc2822 (GenericMessage (..), message)
 import Text.Parsec.Rfc2822 qualified as Email
 import Text.ParserCombinators.Parsec as Parsec (parse)
 import Text.PortableLines.ByteString.Lazy (lines8)
@@ -103,6 +128,7 @@ import Utils (
   ulidTextToDateTime,
   zeroUlidTxt,
   zonedTimeToDateTime,
+  (<!!>),
   (<$$>),
  )
 
@@ -155,13 +181,13 @@ importEml :: Config -> Connection -> IO (Doc AnsiStyle)
 importEml _ connection = do
   content <- BSL.getContents
 
-  case Parsec.parse message "<stdin>" content of
+  case Parsec.parse Email.message "<stdin>" content of
     Left error -> die $ show error
     Right email -> insertImportTask connection $ emailToImportTask email
 
 
-emailToImportTask :: GenericMessage BSL.ByteString -> ImportTask
-emailToImportTask email@(Message headerFields msgBody) =
+emailToImportTask :: Email.GenericMessage BSL.ByteString -> ImportTask
+emailToImportTask email@(Email.Message headerFields msgBody) =
   let
     addBody (ImportTask task notes tags) =
       ImportTask
@@ -274,7 +300,7 @@ importFile _ conn filePath = do
                 importTaskNorm <- importTaskRec & setMissingFields
                 insertImportTask conn importTaskNorm
           ".eml" ->
-            case Parsec.parse message filePath content of
+            case Parsec.parse Email.message filePath content of
               Left error -> die $ show error
               Right email -> insertImportTask conn $ emailToImportTask email
           _ ->
@@ -301,7 +327,7 @@ importDir conf connection dirPath = do
 
 
 ingestFile :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
-ingestFile _config connection filePath = do
+ingestFile conf connection filePath = do
   catchAll
     ( do
         content <- BSL.readFile filePath
@@ -315,16 +341,20 @@ ingestFile _config connection filePath = do
                 importTaskNorm <- importTaskRec & setMissingFields
                 sequence
                   [ insertImportTask connection importTaskNorm
-                  , editTaskByTask OpenEditor connection importTaskNorm.task
+                  , editTaskByTask
+                      conf
+                      OpenEditor
+                      connection
+                      importTaskNorm.task
                   ]
           ".eml" ->
-            case Parsec.parse message filePath content of
+            case Parsec.parse Email.message filePath content of
               Left error -> die $ show error
               Right email -> do
                 let taskRecord@ImportTask{task} = emailToImportTask email
                 sequence
                   [ insertImportTask connection taskRecord
-                  , editTaskByTask OpenEditor connection task
+                  , editTaskByTask conf OpenEditor connection task
                   ]
           fileExt ->
             die $ T.pack $ "File type " <> fileExt <> " is not supported"
@@ -469,8 +499,8 @@ editUntilValidYaml editMode conn initialYaml wipYaml = do
           pure $ Right (newTask, yamlAfterEdit)
 
 
-editTaskByTask :: EditMode -> Connection -> Task -> IO (Doc AnsiStyle)
-editTaskByTask editMode conn taskToEdit = do
+editTaskByTask :: Config -> EditMode -> Connection -> Task -> IO (Doc AnsiStyle)
+editTaskByTask conf editMode conn taskToEdit = do
   taskYaml <- taskToEditableYaml conn taskToEdit
   taskYamlTupleRes <- editUntilValidYaml editMode conn taskYaml taskYaml
   case taskYamlTupleRes of
@@ -520,22 +550,51 @@ editTaskByTask editMode conn taskToEdit = do
 
       updateTask conn taskFixed
 
+      nowDateTime <- dateCurrent
+
+      let taskFixedUtc =
+            if P.isNothing taskFixed.closed_utc
+              then taskFixed
+              else
+                taskFixed
+                  { Task.modified_utc =
+                      nowDateTime
+                        & timePrint (toFormat importUtcFormat)
+                        & T.pack
+                  }
+
       -- TODO: Remove after it was added to `createSetClosedUtcTrigger`
       -- Update again with the same `state` field to avoid firing
       -- SQL trigger which would overwrite the `closed_utc` field.
-      P.when (isJust taskFixed.closed_utc) $ do
-        now_ <- dateCurrent
-        updateTask
-          conn
-          taskFixed
-            { Task.modified_utc =
-                now_
-                  & timePrint (toFormat importUtcFormat)
-                  & T.pack
-            }
+      P.when (P.isJust taskFixed.closed_utc) $ do
+        updateTask conn taskFixedUtc
 
-      tagWarnings <- insertTags conn Nothing taskFixed importTaskRec.tags
-      noteWarnings <- insertNotes conn Nothing taskFixed notesCorrectUtc
+      tagWarnings <- insertTags conn Nothing taskFixedUtc importTaskRec.tags
+      noteWarnings <- insertNotes conn Nothing taskFixedUtc notesCorrectUtc
+
+      args <- P.getArgs
+      postModifyResults <-
+        executeHooks
+          ( TL.toStrict $
+              TL.decodeUtf8 $
+                Aeson.encode $
+                  object
+                    [ "arguments" .= args
+                    , "taskModified" .= taskFixedUtc
+                    -- TODO: Add tags and notes to task
+                    ]
+          )
+          conf.hooks.modify.post
+
+      let postModifyHookMsg =
+            ( postModifyResults
+                <&> \case
+                  Left error -> "ERROR:" <+> pretty error
+                  Right hookResult -> pretty hookResult.message
+                & P.fold
+            )
+              <> hardline
+
       pure $
         tagWarnings
           <$$> noteWarnings
@@ -543,10 +602,58 @@ editTaskByTask editMode conn taskToEdit = do
           <+> dquotes (pretty taskFixed.body)
           <+> "with ulid"
           <+> dquotes (pretty taskFixed.ulid)
-          <+> hardline
+          <!!> postModifyHookMsg
 
 
+-- TODO: Eliminate code duplications with `addTask`
 editTask :: Config -> Connection -> IdText -> IO (Doc AnsiStyle)
 editTask conf conn idSubstr = do
   execWithTask conf conn idSubstr $ \taskToEdit -> do
-    editTaskByTask OpenEditorRequireEdit conn taskToEdit
+    let importTaskDraft =
+          emptyImportTask
+            { ImportTask.task = taskToEdit
+            , tags = []
+            , notes = []
+            }
+    args <- P.getArgs
+    preModifyResults <-
+      executeHooks
+        ( TL.toStrict $
+            TL.decodeUtf8 $
+              Aeson.encode $
+                object
+                  [ "arguments" .= args
+                  , "taskToModify" .= importTaskToFullTask importTaskDraft
+                  ]
+        )
+        conf.hooks.modify.pre
+
+    -- Maybe the task was changed by the hook
+    (importTask, preModifyHookMsg) <- case preModifyResults of
+      [] -> pure (importTaskDraft, Empty)
+      [Left error] -> do
+        _ <- P.exitFailure
+        pure (importTaskDraft, pretty error)
+      [Right hookResult] -> do
+        case hookResult.task of
+          Nothing -> pure (importTaskDraft, Empty)
+          Just task -> do
+            fullImportTask <- setMissingFields task
+            pure (fullImportTask, formatHookResult hookResult)
+      _ -> do
+        pure
+          ( importTaskDraft
+          , annotate (color Red) $
+              "ERROR: Multiple pre-add hooks are not supported yet. "
+                <> "None of the hooks were executed."
+          )
+
+    insertRecord "tasks" conn importTask.task
+    warnings <- insertTags conn Nothing importTask.task importTask.tags
+
+    putDoc $
+      preModifyHookMsg
+        <!!> warnings
+
+    -- TODO: Use `hookResult.task` instead of `taskToEdit`
+    editTaskByTask conf OpenEditorRequireEdit conn taskToEdit

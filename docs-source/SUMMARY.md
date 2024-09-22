@@ -6,7 +6,8 @@
     - [Installation](./cli/installation.md)
     - [Usage](./cli/usage.md)
     - [Import](./cli/import.md)
-    - [Hooks](./cli/hooks.md)
+    - [Hooks](./cli/hooks/main.md)
+        - [Examples](./cli/hooks/examples.md)
 
 - [Web Based GUIs](./web_based_guis/main.md)
     - [Web App](./web_based_guis/web_app.md)

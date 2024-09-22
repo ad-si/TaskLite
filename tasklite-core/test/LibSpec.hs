@@ -497,6 +497,7 @@ spec = do
 
         cliOutput <-
           editTaskByTask
+            conf
             (ApplyPreEdit (<> ("\ntags: " <> P.show [existTag, "new-tag"])))
             memConn
             task1
@@ -509,6 +510,7 @@ spec = do
 
         cliOutput <-
           editTaskByTask
+            conf
             ( ApplyPreEdit $
                 replaceBs
                   "state: null"
@@ -535,6 +537,7 @@ spec = do
         insertRecord "tasks" memConn task1
         cliOutput <-
           editTaskByTask
+            conf
             (ApplyPreEdit (<> ("\nnotes: " <> P.show ["A short note" :: Text])))
             memConn
             task1
@@ -565,6 +568,7 @@ spec = do
         show taskInfo `shouldContain` T.unpack note
         cliOutput <-
           editTaskByTask
+            conf
             ( ApplyPreEdit $
                 replaceBs "notes: []" $
                   "notes: " <> P.show [note, note]
@@ -590,6 +594,7 @@ spec = do
         insertRecord "tasks" memConn task1{metadata = Just "{\"a\":\"b\"}"}
         cliOutput <-
           editTaskByTask
+            conf
             (ApplyPreEdit (<> "\nmetadata: null"))
             memConn
             task1

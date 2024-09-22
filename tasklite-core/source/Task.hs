@@ -74,7 +74,12 @@ import Test.QuickCheck.Instances.Text ()
 
 import Config (defaultConfig, utcFormat)
 import Control.Arrow ((>>>))
-import Database.SQLite.Simple (Connection, Only (Only), SQLData (SQLNull), query)
+import Database.SQLite.Simple (
+  Connection,
+  Only (Only),
+  SQLData (SQLNull),
+  query,
+ )
 import Database.SQLite.Simple.QQ (sql)
 
 

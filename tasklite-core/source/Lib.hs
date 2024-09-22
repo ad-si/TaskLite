@@ -222,7 +222,7 @@ import FullTask (
   cpTimesAndState,
   selectQuery,
  )
-import Hooks (HookResult (error, message, task, warning), executeHooks)
+import Hooks (HookResult (message, task), executeHooks, formatHookResult)
 import ImportTask (
   ImportTask (ImportTask, notes, tags, task),
   importTaskToFullTask,
@@ -488,6 +488,7 @@ getTriple conf = do
   pure (ulid, modified_utc, effectiveUserName)
 
 
+-- TODO: Eliminate code duplications with `editTask`
 addTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 addTask conf connection bodyWords = do
   (ulid, modified_utc, effectiveUserName) <- getTriple conf
@@ -532,21 +533,8 @@ addTask conf connection bodyWords = do
       case hookResult.task of
         Nothing -> pure (importTaskDraft, Empty)
         Just task -> do
-          let msg =
-                [ hookResult.message
-                    <&> pretty
-                    & fromMaybe Empty
-                , hookResult.warning
-                    <&> (pretty >>> annotate (color Yellow))
-                    & fromMaybe Empty
-                , hookResult.error
-                    <&> (pretty >>> annotate (color Red))
-                    & fromMaybe Empty
-                ]
-                  & P.filter (\d -> show d /= T.empty)
-                  & vsep
           fullImportTask <- setMissingFields task
-          pure (fullImportTask, msg)
+          pure (fullImportTask, formatHookResult hookResult)
     _ -> do
       pure
         ( importTaskDraft

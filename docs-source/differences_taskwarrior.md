@@ -29,7 +29,7 @@
 
   Furthermore, extensive tooling is available for SQLite
   to supercharge your TaskLite installation.
-  For example [Datasette] as an instant REST API, or [DB Browser for SQLite]
+  E.g. [AirGQL] for an instant GraphQL API, or [DB Browser for SQLite]
   to view, manipulate, and plot your tasks in a GUI.
 
   Other 3rd party tools to edit SQLite databases are:
@@ -38,7 +38,7 @@
   - [LiteCLI] - CLI SQLite browser with auto-completion and syntax highlighting.
 
 
-[Datasette]: https://github.com/simonw/datasette
+[AirGQL]: https://github.com/Airsequel/AirGQL
 [DB Browser for SQLite]: https://sqlitebrowser.org
 [Haskell]: https://haskell.org
 [LiteCLI]: https://litecli.com
