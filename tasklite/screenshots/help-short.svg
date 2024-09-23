@@ -61,7 +61,7 @@
         <foreignObject width="720" height="568">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
             <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> tasklite help | head -n 30</pre></div>
-            <div class="output"><pre><span class="bold fg12">TaskLite</span> <span class="fg8">0.3.0.0</span>
+            <div class="output"><pre><span class="bold fg12">TaskLite</span> <span class="fg8">0.4.0.0</span>
 
 <span class="fg12">Task-list manager powered by Haskell and SQLite</span>
 

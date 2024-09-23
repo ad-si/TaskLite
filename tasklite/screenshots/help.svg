@@ -1,24 +1,24 @@
 <!-- Created with term-transcript v0.3.0 (https://github.com/slowli/term-transcript) -->
-<svg viewBox="0 0 720 2532" width="720" height="2532" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 720 2604" width="720" height="2604" xmlns="http://www.w3.org/2000/svg">
   <switch>
     <g requiredExtensions="http://www.w3.org/1999/xhtml">
       <style>
         .container {
-          padding: 0 10px;
-          color: #e5e5e5;
-          line-height: 18px;
+        padding: 0 10px;
+        color: #e5e5e5;
+        line-height: 18px;
         }
         .container pre {
-          padding: 0;
-          margin: 0;
-          font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
-          line-height: inherit;
+        padding: 0;
+        margin: 0;
+        font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+        line-height: inherit;
         }
         .input {
-          margin: 0 -10px 6px;
-          color: #e5e5e5;
-          background: rgba(255, 255, 255, 0.1);
-          padding: 2px 10px;
+        margin: 0 -10px 6px;
+        color: #e5e5e5;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 2px 10px;
         }
         .input-hidden { display: none; }
         .output { margin-bottom: 6px; }
@@ -27,17 +27,17 @@
         .underline { text-decoration: underline; }
         .dimmed { opacity: 0.7; }
         .hard-br {
-          position: relative;
-          margin-left: 5px;
+        position: relative;
+        margin-left: 5px;
         }
         .hard-br:before {
-          content: '↓';
-          font-size: 16px;
-          height: 16px;
-          position: absolute;
-          bottom: 0;
-          transform: rotate(45deg);
-          opacity: 0.8;
+        content: '↓';
+        font-size: 16px;
+        height: 16px;
+        position: absolute;
+        bottom: 0;
+        transform: rotate(45deg);
+        opacity: 0.8;
         }
         .fg0 { color: #1c1c1c; } .bg0 { background: #1c1c1c; }
         .fg1 { color: #ff005b; } .bg1 { background: #ff005b; }
@@ -57,19 +57,22 @@
         .fg15 { color: #f3f3f3; } .bg15 { background: #f3f3f3; }
       </style>
       <rect width="100%" height="100%" y="0" rx="4.5" style="fill: #1c1c1c;" />
-      <svg x="0" y="10" width="720" height="2512" viewBox="0 0 720 2512">
-        <foreignObject width="720" height="2512">
+      <svg x="0" y="10" width="720" height="2584" viewBox="0 0 720 2584">
+        <foreignObject width="720" height="2584">
           <div xmlns="http://www.w3.org/1999/xhtml" class="container">
-            <div class="input" data-exit-status="0"><pre><span class="prompt">$</span> tasklite help</pre></div>
-            <div class="output"><pre><span class="bold fg12">TaskLite</span> <span class="fg8">0.3.0.0</span>
+            <div class="input" data-exit-status="0">
+              <pre><span class="prompt">$</span> tasklite help</pre>
+            </div>
+            <div class="output">
+              <pre><span class="bold fg12">TaskLite</span> <span class="fg8">0.4.0.0</span>
 
 <span class="fg12">Task-list manager powered by Haskell and SQLite</span>
 
-Usage: tasklite [Basic Commands | Shortcuts to Add a Task | List Commands | 
-                  Visualizations | I/O Commands | Advanced Commands | 
+Usage: tasklite [Basic Commands | Shortcuts to Add a Task | List Commands |
+                  Visualizations | I/O Commands | Advanced Commands |
                   Unset Commands | Utils]
 
-  
+
     <span class="bold">             Add an alias:</span> `<span class="fg14">alias tl tasklite</span>`
     <span class="bold">    Add a task with a tag:</span> `<span class="fg14">tl add Buy milk +groceries</span>`
     <span class="bold">   … or with the shortcut:</span> `<span class="fg14">tl buy milk +groceries</span>`
@@ -91,7 +94,8 @@ Available options:
   do                       Mark a task as done and add optional closing note
   doonly                   Mark only one task as done
   doall                    Mark one or more tasks as done
-  end                      Mark a task as obsolete
+  end                      Mark a task as obsolete and add optional closing note
+  endall                   Mark a task as obsolete
   edit                     Edit YAML version of task in your $EDITOR
   trash                    Mark a task as deletable
   delete                   Delete a task from the database (Attention:
@@ -142,8 +146,8 @@ Available options:
   ready                    List 20 most important ready tasks by priority desc
   waiting                  List all waiting tasks by priority
   done                     List 20 done tasks by closing UTC desc
-  obsolete                 List all obsolete tasks by closing UTC
-  deletable                List all deletable tasks by closing UTC
+  obsolete                 List 20 obsolete tasks by closing UTC
+  deletable                List 20 deletable tasks by closing UTC
   notag                    List tasks without any tags
   withtag                  List tasks which have all of the specified tags
   get                      Get all tasks filtered by the specified expressions
@@ -154,21 +158,24 @@ Available options:
   tags                     List all used tags and their progress
   projects                 List all active tags (a.k.a projects) and their
                            progress
+  notes                    List all notes descending by creation UTC
   stats                    Show statistics about tasks
 
 <span class="fg3">I/O Commands:</span>
   import                   Import a .json or .eml file containing one task
+  importdir                Import all .json and .eml files in a directory
   importjson               Import one JSON object from stdin
   importeml                Import one email from stdin
   ingest                   Ingest a .json or .eml file containing one task
                            (import, open in editor, delete the original file)
+  ingestdir                Ingest all .json and .eml files in a directory
   csv                      Show tasks in CSV format
   runsql                   Run any SQL query and show result as CSV
   json                     Show tasks in JSON format
   ndjson                   Show tasks in NDJSON format
   sql                      Show SQL commands to create and populate database
   backup                   Create a backup of the tasks database at
-                           ~/tasklite/backups
+                           ~/TaskLite/backups
 
 <span class="fg3">Advanced Commands:</span>
   count                    Output total number of tasks filtered by the
@@ -198,15 +205,19 @@ Available options:
 <span class="fg3">Utils:</span>
   ulid2utc                 Extract UTC timestamp from ULID
 
-Version v0.3.0.0-209-gede3ef0-dirty, developed by &lt;adriansieber.com&gt;
-</pre></div>
+Version v0.4.0.0, developed by &lt;adriansieber.com&gt;
+</pre>
+            </div>
           </div>
         </foreignObject>
       </svg>
     </g>
-    <text x="10" y="18" style="font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace; fill: #ff005b;">
-      HTML embedding not supported.
-      Consult <tspan style="text-decoration: underline; text-decoration-thickness: 1px;"><a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a></tspan> for details.
-    </text>
+    <text x="10" y="18"
+      style="font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace; fill: #ff005b;">
+      HTML embedding not supported. Consult <tspan
+        style="text-decoration: underline; text-decoration-thickness: 1px;">
+        <a href="https://github.com/slowli/term-transcript/blob/HEAD/FAQ.md">term-transcript docs</a>
+      </tspan>
+      for details. </text>
   </switch>
 </svg>

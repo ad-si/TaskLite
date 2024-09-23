@@ -7,17 +7,15 @@ This document lists all notable changes to the functionality of TaskLite.
 ---
 
 
-## 2024-05-03 - <small>[28bf7b9]</small>
+## 2024-09-23 - <small>[0.4]</small>
 
-[28bf7b9]: https://github.com/ad-si/TaskLite/commit/28bf7b9
+[0.4]: https://github.com/ad-si/TaskLite/releases/tag/v0.4.0.0
 
 
 #### General
 
 - Add simple webapp powered by [elm.land](https://elm.land)
 - Add support for hooks to execute code during a task's lifecycle ([ba2054b])
-  - `pre-launch` and `post-launch` hooks ([7f23203])
-  - `pre-add` hooks ([ff607f6])
 - Set text color according to current background color ([1d9ae64])
 - Add support for recurring tasks ([8028190])
 - Add support for external CLI commands ([9cb8fa3])
@@ -26,26 +24,36 @@ This document lists all notable changes to the functionality of TaskLite.
 - Add support for filter expressions to sub-command `new` ([9ab3992])
 - Improve design of detail view (used by "info" & "next" commands) ([c32be9f])
 - Extend and restructure the documentation
+- Webapp: Show selected tags in header ([ff1bf2e])
+- Edit mode: If parsing fails, re-open editor with modified content ([2b5a0e1])
+- Improve import of user, title, labels fields
+    (needed for importing GitHub issues) ([af51aaa])
 
 
 #### New Subcommands
 
 - `stats` - List share of Done, Obsolete, Deletable tasks ([c2a2d70])
 - `server` - Starts an API + GraphQL server powered by [AirGQL] ([4669498])
+- `random` - Show a random task ([88a999d])
 - `deletetag` ([d3ab4de])
 - `deletenote` ([581ffae])
-- `random` ([88a999d])
 - `json` - Show tasks in JSON format ([45ad3f3])
 - `reviewin` - Set review date in x days ([b05c81a])
 - `idea` - Quickly capture ideas ([6545500])
-- `modified` ([71e4603])
-- `modifiedonly` ([4809d5b])
+- `modified` - List all tasks by modified UTC desc ([71e4603])
+- `modifiedonly` - List tasks where modified UTC /= creation UTC
+    by modified UTC desc ([4809d5b])
+- `notes` - List all notes descending by creation UTC ([81e6885])
 - `recurring` - List recurring tasks ([0c11309])
-- `unrecur` ([2ee1c21])
-- `unwake` ([987a4fe])
-- `unready` ([987a4fe])
-- `unreview` ([1d82631])
 - `ingest` - Runs `import` -> `edit` -> `delete` workflow on files ([325e0ac])
+- `importdir` - Import all .json and .eml files in a directory ([4c3c50a])
+- `ingestdir` - Ingest all .json and .eml files in a directory ([4c3c50a])
+- `endall` - End all provided tasks
+    (change `end` to accept a closing note) ([4d2032e])
+- `unrecur` - Remove recurring timestamp ([2ee1c21])
+- `unwake` - Remove awake timestamp ([987a4fe])
+- `unready` - Remove ready timestamp ([987a4fe])
+- `unreview` - Remove review timestamp ([1d82631])
 
 [AirGQL]: https://github.com/Airsequel/AirGQL
 
@@ -64,9 +72,9 @@ Check out the [commit history] for all changes.
 [commit history]: https://github.com/ad-si/TaskLite/commits/master/
 
 
-## 2020-03-01 - <small>[0.3.0.0]</small>
+## 2020-03-01 - <small>[0.3]</small>
 
-[0.3.0.0]: https://github.com/ad-si/TaskLite/releases/tag/v0.3.0.0
+[0.3]: https://github.com/ad-si/TaskLite/releases/tag/v0.3.0.0
 
 - Add `edit` command to edit YAML version of task in `$EDITOR` ([1add89e])
 - Add several `un*` commands to erase fields ([0f09c3d])
@@ -93,9 +101,9 @@ Check out the [commit history] for all changes.
 [8d0657c]: https://github.com/ad-si/TaskLite/commit/8d0657c
 
 
-## 2019-10-04 - <small>[0.2.2.0]</small>
+## 2019-10-04 - <small>[0.2.2]</small>
 
-[0.2.2.0]: https://github.com/ad-si/TaskLite/releases/tag/v0.2.2.0
+[0.2.2]: https://github.com/ad-si/TaskLite/releases/tag/v0.2.2.0
 
 - Support optional filter expression after "count" command ([61e87b7])
 - Automatically create a config file if it doesn't exist ([7407f87])
@@ -105,17 +113,17 @@ Check out the [commit history] for all changes.
 [7407f87]: https://github.com/ad-si/TaskLite/commit/7407f87
 
 
-## 2019-07-14 - <small>[0.2.1.0]</small>
+## 2019-07-14 - <small>[0.2.1]</small>
 
-[0.2.1.0]: https://github.com/ad-si/TaskLite/releases/tag/v0.2.1.0
+[0.2.1]: https://github.com/ad-si/TaskLite/releases/tag/v0.2.1.0
 
 - Fix creation of Docker image, extend documentation accordingly ([fa4cad3])
 
 [fa4cad3]: https://github.com/ad-si/TaskLite/commit/fa4cad3
 
 
-## 2019-06-13 - <small>[0.2.0.0]</small>
+## 2019-06-13 - <small>[0.2]</small>
 
-[0.2.0.0]: https://github.com/ad-si/TaskLite/releases/tag/v0.2.0.0
+[0.2]: https://github.com/ad-si/TaskLite/releases/tag/v0.2.0.0
 
 - Initial release
