@@ -7,7 +7,7 @@ This document lists all notable changes to the functionality of TaskLite.
 ---
 
 
-## 2024-09-23 - <small>[0.4]</small>
+## 2024-09-23 - [0.4]
 
 [0.4]: https://github.com/ad-si/TaskLite/releases/tag/v0.4.0.0
 
@@ -72,7 +72,45 @@ Check out the [commit history] for all changes.
 [commit history]: https://github.com/ad-si/TaskLite/commits/master/
 
 
-## 2020-03-01 - <small>[0.3]</small>
+[ba2054b]: https://github.com/ad-si/TaskLite/commit/ba2054b
+[1d9ae64]: https://github.com/ad-si/TaskLite/commit/1d9ae64
+[8028190]: https://github.com/ad-si/TaskLite/commit/8028190
+[9cb8fa3]: https://github.com/ad-si/TaskLite/commit/9cb8fa3
+[10e1e52]: https://github.com/ad-si/TaskLite/commit/10e1e52
+[8df1c65]: https://github.com/ad-si/TaskLite/commit/8df1c65
+[9ab3992]: https://github.com/ad-si/TaskLite/commit/9ab3992
+[c32be9f]: https://github.com/ad-si/TaskLite/commit/c32be9f
+[ff1bf2e]: https://github.com/ad-si/TaskLite/commit/ff1bf2e
+[2b5a0e1]: https://github.com/ad-si/TaskLite/commit/2b5a0e1
+[af51aaa]: https://github.com/ad-si/TaskLite/commit/af51aaa
+[c2a2d70]: https://github.com/ad-si/TaskLite/commit/c2a2d70
+[4669498]: https://github.com/ad-si/TaskLite/commit/4669498
+[88a999d]: https://github.com/ad-si/TaskLite/commit/88a999d
+[d3ab4de]: https://github.com/ad-si/TaskLite/commit/d3ab4de
+[581ffae]: https://github.com/ad-si/TaskLite/commit/581ffae
+[45ad3f3]: https://github.com/ad-si/TaskLite/commit/45ad3f3
+[b05c81a]: https://github.com/ad-si/TaskLite/commit/b05c81a
+[6545500]: https://github.com/ad-si/TaskLite/commit/6545500
+[71e4603]: https://github.com/ad-si/TaskLite/commit/71e4603
+[4809d5b]: https://github.com/ad-si/TaskLite/commit/4809d5b
+[81e6885]: https://github.com/ad-si/TaskLite/commit/81e6885
+[0c11309]: https://github.com/ad-si/TaskLite/commit/0c11309
+[325e0ac]: https://github.com/ad-si/TaskLite/commit/325e0ac
+[4c3c50a]: https://github.com/ad-si/TaskLite/commit/4c3c50a
+[4c3c50a]: https://github.com/ad-si/TaskLite/commit/4c3c50a
+[4d2032e]: https://github.com/ad-si/TaskLite/commit/4d2032e
+[2ee1c21]: https://github.com/ad-si/TaskLite/commit/2ee1c21
+[987a4fe]: https://github.com/ad-si/TaskLite/commit/987a4fe
+[987a4fe]: https://github.com/ad-si/TaskLite/commit/987a4fe
+[1d82631]: https://github.com/ad-si/TaskLite/commit/1d82631
+[8a821de]: https://github.com/ad-si/TaskLite/commit/8a821de
+[d07a328]: https://github.com/ad-si/TaskLite/commit/d07a328
+[ce0392d]: https://github.com/ad-si/TaskLite/commit/ce0392d
+[2e580ba]: https://github.com/ad-si/TaskLite/commit/2e580ba
+[ac15d47]: https://github.com/ad-si/TaskLite/commit/ac15d47
+
+
+## 2020-03-01 - [0.3]
 
 [0.3]: https://github.com/ad-si/TaskLite/releases/tag/v0.3.0.0
 
@@ -101,7 +139,7 @@ Check out the [commit history] for all changes.
 [8d0657c]: https://github.com/ad-si/TaskLite/commit/8d0657c
 
 
-## 2019-10-04 - <small>[0.2.2]</small>
+## 2019-10-04 - [0.2.2]
 
 [0.2.2]: https://github.com/ad-si/TaskLite/releases/tag/v0.2.2.0
 
@@ -113,7 +151,7 @@ Check out the [commit history] for all changes.
 [7407f87]: https://github.com/ad-si/TaskLite/commit/7407f87
 
 
-## 2019-07-14 - <small>[0.2.1]</small>
+## 2019-07-14 - [0.2.1]
 
 [0.2.1]: https://github.com/ad-si/TaskLite/releases/tag/v0.2.1.0
 
@@ -122,7 +160,7 @@ Check out the [commit history] for all changes.
 [fa4cad3]: https://github.com/ad-si/TaskLite/commit/fa4cad3
 
 
-## 2019-06-13 - <small>[0.2]</small>
+## 2019-06-13 - [0.2]
 
 [0.2]: https://github.com/ad-si/TaskLite/releases/tag/v0.2.0.0
 
