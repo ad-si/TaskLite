@@ -637,9 +637,13 @@ editTask conf conn idSubstr = do
       [Right hookResult] -> do
         case hookResult.task of
           Nothing -> pure (importTaskDraft, Empty)
-          Just task -> do
-            fullImportTask <- setMissingFields task
-            pure (fullImportTask, formatHookResult hookResult)
+          Just importTask -> do
+            fullImportTask <- setMissingFields
+              importTask
+                { ImportTask.task = importTask.task
+                    { Task.ulid = taskToEdit.ulid }
+                }
+            pure ( fullImportTask, formatHookResult hookResult )
       _ -> do
         pure
           ( importTaskDraft
@@ -648,12 +652,12 @@ editTask conf conn idSubstr = do
                 <> "None of the hooks were executed."
           )
 
-    insertRecord "tasks" conn importTask.task
+    updateTask conn importTask.task
     warnings <- insertTags conn Nothing importTask.task importTask.tags
 
     putDoc $
       preModifyHookMsg
         <!!> warnings
+        <!!> hardline
 
-    -- TODO: Use `hookResult.task` instead of `taskToEdit`
-    editTaskByTask conf OpenEditorRequireEdit conn taskToEdit
+    editTaskByTask conf OpenEditorRequireEdit conn importTask.task
