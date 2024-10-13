@@ -1,5 +1,5 @@
 # ATTENTION: Also update the version of the final image
-FROM haskell:9.6.6-slim-buster as builder
+FROM haskell:9.6.6-slim-bullseye as builder
 
 WORKDIR /tasklite
 
@@ -31,7 +31,7 @@ RUN stack install tasklite
 
 
 # Same OS version as the builder image
-FROM haskell:9.6.6-slim-buster
+FROM haskell:9.6.6-slim-bullseye
 RUN apt-get update && \
     apt-get install -y libgmp10
 COPY --from=builder \
