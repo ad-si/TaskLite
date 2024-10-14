@@ -27,58 +27,35 @@
 [ULID]: https://github.com/ulid/spec
 
 
-**Check out the [makefile] for all development tasks**
+## Development Environment
+
+The recommended way to develop Haskell
+is with [VS Code] and the [Haskell Language Server].
+
+[VS Code]: https://code.visualstudio.com
+[Haskell Language Server]:
+  https://marketplace.visualstudio.com/items?itemName=haskell.haskell
+
+
+## Getting Started
+
+Check out the [makefile] for all development tasks.
 
 [makefile]: https://github.com/ad-si/TaskLite/blob/master/makefile
 
+The most important command is `make test` to run the tests after any changes.
+They should always pass before committing.
 
-## Ghcid
-
-Ghcid with color output for GHC 8.4 (probably obsolete in 8.6):
+To try out local changes via the CLI you can use the following command:
 
 ```sh
-ghcid \
-  --command="stack ghci --ghci-options=-fdiagnostics-color=always"
+stack run -- add "Buy milk"
 ```
 
 
-## HLint
+## Deployment
 
-```sh
-hlint \
-  --ignore="Redundant do" \
-  --ignore="Use list literal" \
-  --ignore="Use String" \
-  --ignore="Redundant bracket" \
-  --ignore="Use camelCase" \
-  .
-```
-
-
-## Webapp
-
-### Build Images
-
-Build base image for webapp runtime image:
-
-```sh
-docker build \
-  --file tasklite-core/dockerfiles/haskell-datasette \
-  --tag haskell-datasette \
-  dockerfiles
-```
-
-Build runtime image:
-
-```sh
-stack image container
-docker tag adius/tasklite-tasklite:latest adius/tasklite:latest
-```
-
-
-### Deployment
-
-On Google Cloud:
+### Google Cloud
 
 ```sh
 docker tag adius/tasklite-tasklite:latest gcr.io/deploy-219812/tasklite:latest

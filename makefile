@@ -10,6 +10,17 @@ start-app:
 	npx elm-app start
 
 
+.PHONY: lint
+lint:
+	hlint \
+		--ignore="Redundant do" \
+		--ignore="Use list literal" \
+		--ignore="Use String" \
+		--ignore="Redundant bracket" \
+		--ignore="Use camelCase" \
+		.
+
+
 # Explicitly run tests for each package for better console output
 .PHONY: test
 test:
