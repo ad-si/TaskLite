@@ -3072,7 +3072,7 @@ formatTagLine conf maxTagLength (tag, open_count, closed_count, progress) =
 
 
 formatTags :: Config -> [(Text, Integer, Integer, Double)] -> Doc AnsiStyle
-formatTags conf tagTuples =
+formatTags conf tagTuples = do
   let
     percWidth = 6 -- Width of e.g. 100 %
     progressWith = conf.progressBarWidth + percWidth
@@ -3081,13 +3081,19 @@ formatTags conf tagTuples =
       tagTuples
         <&> (T.length . firstOf4)
         & P.maximum
-  in
-    annotate (bold <> underlined) (fill maxTagLength "Tag")
-      <++> annotate (bold <> underlined) "Open"
-      <++> annotate (bold <> underlined) "Closed"
-      <++> annotate (bold <> underlined) (fill progressWith "Progress")
-      <> line
-      <> vsep (fmap (formatTagLine conf maxTagLength) tagTuples)
+
+  if P.null tagTuples
+    then
+      annotate
+        (color Yellow)
+        "⚠️ No tags available"
+    else
+      annotate (bold <> underlined) (fill maxTagLength "Tag")
+        <++> annotate (bold <> underlined) "Open"
+        <++> annotate (bold <> underlined) "Closed"
+        <++> annotate (bold <> underlined) (fill progressWith "Progress")
+        <> line
+        <> vsep (fmap (formatTagLine conf maxTagLength) tagTuples)
 
 
 listTags :: Config -> Connection -> IO (Doc AnsiStyle)
@@ -3110,7 +3116,13 @@ listProjects conf connection = do
           closed > 0
       |]
 
-  pure $ formatTags conf tags
+  pure $
+    if P.null tags
+      then
+        annotate (color Yellow) $
+          "⚠️ No projects available yet. "
+            <> "Tag some tasks to populate this list."
+      else formatTags conf tags
 
 
 listNotes :: Config -> Connection -> IO (Doc AnsiStyle)
