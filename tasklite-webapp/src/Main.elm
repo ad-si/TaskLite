@@ -21,7 +21,7 @@ import Css exposing (hover, url)
 import Css.Media exposing (withMediaQuery)
 import Graphql.Http
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
-import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html.Styled
     exposing
         ( a
@@ -76,6 +76,7 @@ dark =
 type alias TodoItem =
     { ulid : Maybe String
     , body : Maybe String
+    , state : Maybe String
     , closed_utc : Maybe String
     , due_utc : Maybe String
     , review_utc : Maybe String
@@ -89,6 +90,7 @@ emptyTodo : TodoItem
 emptyTodo =
     { ulid = Nothing
     , body = Nothing
+    , state = Nothing
     , closed_utc = Nothing
     , due_utc = Nothing
     , review_utc = Nothing
@@ -111,8 +113,7 @@ type Msg
     | AddTaskAt Posix
     | AddTask Posix Ulid
     | InsertAffectedRowsResponse (RemoteData (Graphql.Http.Error Int) Int)
-    | SetCompletedNow String
-    | SetCompletedAt Posix String
+    | SetDone String
     | CompleteAffectedRowsResponse (RemoteData (Graphql.Http.Error Int) Int)
     | DeleteTask String
     | DeleteAffectedRowsResponse (RemoteData (Graphql.Http.Error Int) Int)
@@ -272,7 +273,7 @@ viewTodo now todo =
                         onCheck
                             (\bool ->
                                 if bool then
-                                    SetCompletedNow ulid
+                                    SetDone ulid
 
                                 else
                                     -- TODO: Implement
@@ -519,28 +520,30 @@ view model =
 
 tasksHeadSelection : SelectionSet TodoItem Tasks_head_row
 tasksHeadSelection =
-    SelectionSet.map8 TodoItem
-        Tasks_head_row.ulid
-        Tasks_head_row.body
-        Tasks_head_row.closed_utc
-        Tasks_head_row.due_utc
-        Tasks_head_row.review_utc
-        Tasks_head_row.tags
-        Tasks_head_row.repetition_duration
-        Tasks_head_row.recurrence_duration
+    SelectionSet.succeed TodoItem
+        |> with Tasks_head_row.ulid
+        |> with Tasks_head_row.body
+        |> with Tasks_head_row.state
+        |> with Tasks_head_row.closed_utc
+        |> with Tasks_head_row.due_utc
+        |> with Tasks_head_row.review_utc
+        |> with Tasks_head_row.tags
+        |> with Tasks_head_row.repetition_duration
+        |> with Tasks_head_row.recurrence_duration
 
 
 tasksViewSelection : SelectionSet TodoItem Tasks_view_row
 tasksViewSelection =
-    SelectionSet.map8 TodoItem
-        Tasks_view_row.ulid
-        Tasks_view_row.body
-        Tasks_view_row.closed_utc
-        Tasks_view_row.due_utc
-        Tasks_view_row.review_utc
-        Tasks_view_row.tags
-        Tasks_view_row.repetition_duration
-        Tasks_view_row.recurrence_duration
+    SelectionSet.succeed TodoItem
+        |> with Tasks_view_row.ulid
+        |> with Tasks_view_row.body
+        |> with Tasks_view_row.state
+        |> with Tasks_view_row.closed_utc
+        |> with Tasks_view_row.due_utc
+        |> with Tasks_view_row.review_utc
+        |> with Tasks_view_row.tags
+        |> with Tasks_view_row.repetition_duration
+        |> with Tasks_view_row.recurrence_duration
 
 
 getTodos : Cmd Msg
@@ -628,11 +631,11 @@ insertTodo now ulid body =
             (RemoteData.fromResult >> InsertAffectedRowsResponse)
 
 
-{-| Set task as completed (aka set `closed_utc`)
-TODO: Allow completing repetition and recurrence tasks
+{-| Set task as done
+TODO: Support completing repetition and recurrence tasks
 -}
-setTodoCompleted : Posix -> String -> Cmd Msg
-setTodoCompleted closedUtc ulid =
+setTodoCompleted : String -> Cmd Msg
+setTodoCompleted ulid =
     Mutation.update_tasks
         { filter =
             buildTasks_filter
@@ -656,22 +659,25 @@ setTodoCompleted closedUtc ulid =
                     }
                 )
         , set =
-            { closed_utc = Present (Iso8601.fromTime closedUtc)
+            { state = Present "Done" -- SQL trigger will update `closed_utc`
+
+            -- TODO: Figure out why setting `modified_utc`
+            --       prevents recursive trigger calls
+            , modified_utc = Present ""
 
             --
+            , closed_utc = Absent
             , awake_utc = Absent
             , body = Absent
             , due_utc = Absent
             , group_ulid = Absent
             , metadata = Absent
-            , modified_utc = Absent
             , priority_adjustment = Absent
             , ready_utc = Absent
             , recurrence_duration = Absent
             , repetition_duration = Absent
             , review_utc = Absent
             , rowid = Absent
-            , state = Absent
             , ulid = Absent
             , user = Absent
             , waiting_utc = Absent
@@ -835,12 +841,7 @@ update msg model =
             , getTodos
             )
 
-        SetCompletedNow ulid ->
-            ( { model | submissionStatus = RemoteData.Loading }
-            , Task.perform (\time -> SetCompletedAt time ulid) Time.now
-            )
-
-        SetCompletedAt time ulid ->
+        SetDone ulid ->
             ( { model
                 | remoteTodos =
                     model.remoteTodos
@@ -848,18 +849,14 @@ update msg model =
                             (List.map
                                 (\todo ->
                                     if todo.ulid == Just ulid then
-                                        { todo
-                                            | closed_utc =
-                                                Just <|
-                                                    Iso8601.fromTime time
-                                        }
+                                        { todo | state = Just "Done" }
 
                                     else
                                         todo
                                 )
                             )
               }
-            , setTodoCompleted time ulid
+            , setTodoCompleted ulid
             )
 
         CompleteAffectedRowsResponse response ->
