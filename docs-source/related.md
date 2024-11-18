@@ -27,6 +27,7 @@ Name          | Description
 [Todo.txt]    | Simple and extensible shell script for managing a todotxt file
 [Todoman]     | Simple iCalendar + CalDAV based CLI todo manager
 [Toodles]     | Project management from the TODO's in your codebase
+[Topydo]      | Powerful todo list application for the console based on todo.txt
 [TTDL]        | Terminal Todo List Manager
 [Unfog]       | A simple CLI task and time manager
 [Vikunja]     | Self-hostable to-do app
@@ -52,6 +53,7 @@ Nr|Name          |Stars|Commits|Contrib.| Code             | 1. Commit
  9|[Dooit]       | 1908|    948|     14 |[Python][Dooit]   |2022‑04‑17
  9|[Toodles]     |  966|    211|     13 |[Haskell][TooGH]  |2018‑09‑04
 10|[Dstask]      |  770|    882|     14 |[Go][Dstask]      |2018‑12‑08
+10|[Topydo]      |  750|   1446|     13 |[Python][Topydo]  |2014‑10‑19
 11|[Eureka]      |  738|    258|      8 |[Rust][Eureka]    |2017‑11‑20
 12|[Vikunja]     |  707|   9732|     56 |[Go][VikGH]       |2018-06-10
 13|[Todoman]     |  472|    974|     35 |[Python][TmGH]    |2015‑03‑29
@@ -197,6 +199,8 @@ Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 
 [Toodles]: https://github.com/aviaviavi/toodles
 [TooGH]: https://github.com/aviaviavi/toodles
+
+[Topydo]: https://github.com/topydo/topydo
 
 [Tracli]: https://github.com/ridvankaradag/tracli-terminal
 [TrGH]: https://github.com/ridvankaradag/tracli-terminal
