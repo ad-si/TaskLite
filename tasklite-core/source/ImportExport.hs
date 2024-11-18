@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use maybe" #-}
@@ -75,8 +76,9 @@ import Data.Yaml (
   YamlMark (YamlMark),
  )
 import Data.Yaml qualified as Yaml
-import Database.SQLite.Simple as Sql (Connection, query_)
-import FullTask (FullTask)
+import Database.SQLite.Simple (Connection, Only (Only), query, query_)
+import Database.SQLite.Simple.QQ (sql)
+import FullTask (FullTask (..))
 import Hooks (HookResult (message, task), executeHooks, formatHookResult)
 import ImportTask (
   ImportTask (..),
@@ -387,14 +389,39 @@ dumpCsv conf = do
     pure $ pretty $ TL.decodeUtf8 $ Csv.encodeDefaultOrderedByName rows
 
 
+getNdjsonLines :: Connection -> IO [Doc AnsiStyle]
+getNdjsonLines conn = do
+  -- TODO: Fix after tasks_view is updated to include notes
+  tasksWithoutNotes :: [FullTask] <- query_ conn "SELECT * FROM tasks_view"
+  tasks <-
+    tasksWithoutNotes
+      & P.mapM
+        ( \task -> do
+            notes <-
+              query
+                conn
+                [sql|
+                  SELECT ulid, note
+                  FROM task_to_note
+                  WHERE task_ulid == ?
+                |]
+                (Only task.ulid)
+
+            pure $
+              task
+                { FullTask.notes =
+                    if P.null notes then Nothing else Just notes
+                }
+        )
+
+  pure $ tasks <&> (Aeson.encode >>> TL.decodeUtf8 >>> pretty)
+
+
 dumpNdjson :: Config -> IO (Doc AnsiStyle)
 dumpNdjson conf = do
-  -- TODO: Use Task instead of FullTask to fix broken notes export
-  execWithConn conf $ \connection -> do
-    tasks :: [FullTask] <- query_ connection "SELECT * FROM tasks_view"
-    pure $
-      vsep $
-        fmap (pretty . TL.decodeUtf8 . Aeson.encode) tasks
+  execWithConn conf $ \conn -> do
+    lines <- getNdjsonLines conn
+    pure $ vsep lines
 
 
 dumpJson :: Config -> IO (Doc AnsiStyle)
@@ -612,8 +639,8 @@ editTask conf conn idSubstr = do
     let importTaskDraft =
           emptyImportTask
             { ImportTask.task = taskToEdit
-            , tags = []
-            , notes = []
+            , ImportTask.tags = []
+            , ImportTask.notes = []
             }
     args <- P.getArgs
     preModifyResults <-
@@ -638,12 +665,13 @@ editTask conf conn idSubstr = do
         case hookResult.task of
           Nothing -> pure (importTaskDraft, Empty)
           Just importTask -> do
-            fullImportTask <- setMissingFields
-              importTask
-                { ImportTask.task = importTask.task
-                    { Task.ulid = taskToEdit.ulid }
-                }
-            pure ( fullImportTask, formatHookResult hookResult )
+            fullImportTask <-
+              setMissingFields
+                importTask
+                  { ImportTask.task =
+                      importTask.task{Task.ulid = taskToEdit.ulid}
+                  }
+            pure (fullImportTask, formatHookResult hookResult)
       _ -> do
         pure
           ( importTaskDraft
