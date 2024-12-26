@@ -56,7 +56,18 @@ jobs:
           name: tasklite_linux_x86_64.zip
 
   macos:
-    runs-on: macos-14
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
+        include:
+          - arch: x86_64
+            runner: macos-14
+            artifact: tasklite_macos_x86_64
+          - arch: arm64
+            runner: macos-latest
+            artifact: tasklite_macos_arm64
+
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -68,8 +79,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .stack-work
-          key: tasklite_stack-work_macos
-          restore-keys: tasklite_stack-work_macos
+          key: tasklite_stack-work_macos_${{ matrix.arch }}
+          restore-keys: tasklite_stack-work_macos_${{ matrix.arch }}
 
       - name: Setup Stack
         uses: haskell-actions/setup@v2
@@ -93,7 +104,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: /Users/runner/.local/bin/tasklite
-          name: tasklite_macos_x86_64.zip
+          name: ${{ matrix.artifact }}
 
   docker:
     runs-on: ubuntu-20.04
