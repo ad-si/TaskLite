@@ -5,7 +5,9 @@
 ---
 
 
-## Comparison to Open Source Alternatives
+## Task Managers
+
+### Open Source
 
 If TaskLite isn't your cup of tea, maybe one of the other free task managers
 fits the bill:
@@ -34,7 +36,7 @@ Name          | Description
 [Vim-OrgMode] | Text outlining and task management based on Emacs' Org-Mode
 
 
-### Stats
+#### Stats
 
 Updated on 2024-05-05.
 
@@ -69,7 +71,7 @@ Numbers with a `~` are not necessarily comparable,
 as they are either estimated or from another platform than GitHub.
 
 
-## Commercial Alternatives
+### Commercial
 
 For completeness sake here is also a list of popular commercial apps
 and SaaS providers:
@@ -99,7 +101,7 @@ and SaaS providers:
 [Trello]: https://trello.com
 
 
-## Archive
+### Archive
 
 The following projects appear to be inactive or no longer actively maintained:
 
@@ -119,7 +121,7 @@ Name          | Description
 [Yokadi]      | Command line oriented, SQLite powered todo list
 
 
-### Stats
+#### Stats
 
 Updated on 2024-05-05.
 
@@ -222,6 +224,20 @@ Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 
 [Yokadi]: https://yokadi.github.io/
 [YGH]: https://github.com/agateau/yokadi
+
+
+
+## Note Taking Apps
+
+### Open Source
+
+Name          | Description
+--------------|-----------------------------------------------------------------
+[Heynote]     | Dedicated scratchpad for developers.
+[Joplin]      | Privacy-focused note taking app with sync capabilities
+
+[Heynote]: https://heynote.com/
+[Joplin]: https://joplinapp.org/
 
 
 ## How to Get Latest Stats
