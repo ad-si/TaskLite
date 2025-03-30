@@ -28,9 +28,14 @@ test:
 	stack test --fast tasklite
 
 
-.PHONY: install
+.PHONY: install  # Install `tasklite` with performance optimizations enabled.
+# `force-dirty` is needed as stack doesn't recompile when only flags change.
 install:
-	stack build --fast --copy-bins tasklite
+	stack build \
+		--ghc-options '-O2' \
+		--copy-bins \
+		--force-dirty \
+		tasklite
 
 
 # Build the documentation
