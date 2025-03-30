@@ -80,7 +80,7 @@ To build TaskLite from source, you need to [install Stack] first.
 ```shell
 git clone https://github.com/ad-si/TaskLite
 cd TaskLite
-stack install tasklite-core
+make install
 ```
 
 To test the installation run:
