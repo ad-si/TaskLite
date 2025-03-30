@@ -79,6 +79,7 @@ import Protolude (
  )
 import Protolude qualified as P
 
+import Control.Applicative ((<|>))
 import Control.Arrow ((>>>))
 import Data.Aeson as Aeson (KeyValue ((.=)), encode, object)
 import Data.Coerce (coerce)
@@ -934,11 +935,18 @@ createNextRecurrence conf connection task = do
         <&> encodeUtf8
         >>= Iso.parseDuration
 
+    -- If task has no due UTC, use current UTC as the base for recurrence
+    nowMb = ulidTextToDateTime newUlidText
+    baseDateMb = dueUtcMb <|> nowMb
+
     nextDueMb =
       liftA2
         Iso.addDuration
         isoDurEither
-        (maybeToEither "Task has no due UTC" (dueUtcMb <&> dateTimeToUtcTime))
+        ( maybeToEither
+            "Task has no due UTC current time couldn't be determined"
+            (baseDateMb <&> dateTimeToUtcTime)
+        )
 
     newTask =
       task
@@ -971,6 +979,8 @@ createNextRecurrence conf connection task = do
               & fromMaybe ""
         , Task.review_utc = Nothing
         }
+
+  insertRecord "tasks" connection newTask
 
   tags <-
     query
@@ -1032,9 +1042,9 @@ doTasks conf connection noteWordsMaybe ids = do
           pure $
             fromMaybe "" (noteMessageMaybe <&> (<> hardline))
               <> ( "✅ Finished task"
-                    <+> dquotes (pretty task.body)
-                    <+> "with id"
-                    <+> dquotes (pretty task.ulid)
+                     <+> dquotes (pretty task.body)
+                     <+> "with id"
+                     <+> dquotes (pretty task.ulid)
                  )
               <> fromMaybe "" (logMessageMaybe <&> (hardline <>))
 
@@ -1077,10 +1087,10 @@ endTasks conf connection noteWordsMaybe ids = do
           pure $
             fromMaybe "" (noteMessageMaybe <&> (<> hardline))
               <> ( "⏹  Marked task"
-                    <+> prettyBody
-                    <+> "with id"
-                    <+> prettyId
-                    <+> "as obsolete"
+                     <+> prettyBody
+                     <+> "with id"
+                     <+> prettyId
+                     <+> "as obsolete"
                  )
               <> fromMaybe "" (logMessageMaybe <&> (hardline <>))
 
@@ -1215,8 +1225,8 @@ repeatTasks conf connection duration ids = do
               <+> "to"
               <+> dquotes (pretty durationIsoText)
               <++> ( creationMb
-                      & fromMaybe
-                        "⚠️ Next task in repetition series could not be created!"
+                       & fromMaybe
+                         "⚠️ Next task in repetition series could not be created!"
                    )
 
   pure $ vsep docs
@@ -1279,8 +1289,8 @@ recurTasks conf connection duration ids = do
               <+> "to"
               <+> dquotes (pretty durationIsoText)
               <++> ( creationMb
-                      & fromMaybe
-                        "⚠️ Next task in recurrence series could not be created!"
+                       & fromMaybe
+                         "⚠️ Next task in recurrence series could not be created!"
                    )
 
   pure $ vsep docs
@@ -1408,46 +1418,46 @@ formatTaskForInfo conf now (taskV, tags, notes) =
       <> hardline
       <> hardline
       <> ( if P.null tags
-            then mempty
-            else
-              (tags <&> (TaskToTag.tag >>> formatTag conf) & hsep)
-                <> hardline
-                <> hardline
+             then mempty
+             else
+               (tags <&> (TaskToTag.tag >>> formatTag conf) & hsep)
+                 <> hardline
+                 <> hardline
          )
       <> ( if P.null notes
-            then mempty
-            else
-              ( notes
-                  <&> ( \n ->
-                          maybe
-                            mempty
-                            ( grayOut
-                                . pretty
-                                . T.pack
-                                . timePrint
-                                  (utcFormatShort conf)
-                            )
-                            (ulidTextToDateTime n.ulid)
-                            <++> align (pretty n.note)
-                      )
-                  & vsep
-              )
-                <> hardline
-                <> hardline
+             then mempty
+             else
+               ( notes
+                   <&> ( \n ->
+                           maybe
+                             mempty
+                             ( grayOut
+                                 . pretty
+                                 . T.pack
+                                 . timePrint
+                                   (utcFormatShort conf)
+                             )
+                             (ulidTextToDateTime n.ulid)
+                             <++> align (pretty n.note)
+                       )
+                   & vsep
+               )
+                 <> hardline
+                 <> hardline
          )
       <> ( "   State:"
-            <+> mkGreen (pretty stateHierarchy)
-            <> hardline
+             <+> mkGreen (pretty stateHierarchy)
+             <> hardline
          )
       <> ( "Priority:"
-            <+> annotate
-              (priorityStyle conf)
-              (pretty $ FullTask.priority taskV)
-            <> hardline
+             <+> annotate
+               (priorityStyle conf)
+               (pretty $ FullTask.priority taskV)
+             <> hardline
          )
       <> ( "    ULID:"
-            <+> grayOut (pretty $ FullTask.ulid taskV)
-            <> hardline
+             <+> grayOut (pretty $ FullTask.ulid taskV)
+             <> hardline
          )
       <> hardline
       <> ( [ (printIf "🆕  Created  ", mbCreatedUtc)
@@ -1459,10 +1469,10 @@ formatTaskForInfo conf now (taskV, tags, notes) =
            , (printIf "✅   Done    ", mbClosedUtc)
            , (printIf "✏️   Modified ", mbModifiedUtc)
            ]
-            & sortBy (compare `on` snd)
-            & P.mapMaybe (\tup -> fst tup (snd tup))
-            & punctuate (pretty ("       ⬇" :: Text))
-            & vsep
+             & sortBy (compare `on` snd)
+             & P.mapMaybe (\tup -> fst tup (snd tup))
+             & punctuate (pretty ("       ⬇" :: Text))
+             & vsep
          )
       <> hardline
       <> maybe
@@ -1490,8 +1500,8 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         )
         (FullTask.group_ulid taskV)
       <> ( "User:"
-            <+> mkGreen (pretty $ FullTask.user taskV)
-            <> hardline
+             <+> mkGreen (pretty $ FullTask.user taskV)
+             <> hardline
          )
       <> hardline
       <> maybe
@@ -1504,23 +1514,23 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         )
         (FullTask.metadata taskV)
       <> ( if P.null tags
-            then mempty
-            else
-              annotate underlined "Tags Detailed:"
-                <> hardline
-                <> hardline
-                <> vsep tagsPretty
-                <> hardline
-                <> hardline
+             then mempty
+             else
+               annotate underlined "Tags Detailed:"
+                 <> hardline
+                 <> hardline
+                 <> vsep tagsPretty
+                 <> hardline
+                 <> hardline
          )
       <> ( if P.null notes
-            then mempty
-            else
-              annotate underlined "Notes Detailed:"
-                <> hardline
-                <> hardline
-                <> vsep notesPretty
-                <> hardline
+             then mempty
+             else
+               annotate underlined "Notes Detailed:"
+                 <> hardline
+                 <> hardline
+                 <> vsep notesPretty
+                 <> hardline
          )
 
 
@@ -2364,12 +2374,12 @@ formatTaskLine conf now taskWidth task =
                       Just date_ -> if date_ < now then "🔎 " else ""
                   )
                   <> ( if dueIn mempty{durationHours = 24} && isOpen
-                        then "⚠️️ "
-                        else ""
+                         then "⚠️️ "
+                         else ""
                      )
                   <> ( if dueIn mempty && isOpen
-                        then annotate (color Red) (reflow task.body)
-                        else grayOutIfDone (reflow task.body)
+                         then annotate (color Red) (reflow task.body)
+                         else grayOutIfDone (reflow task.body)
                      )
               , annotate (dueStyle conf) (pretty dueUtcMaybe)
               , annotate (closedStyle conf) (pretty closedUtcMaybe)
