@@ -118,7 +118,7 @@ jobs:
           name: ${{ matrix.artifact }}
 
   docker:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Git Repository
         uses: actions/checkout@v4
@@ -134,7 +134,7 @@ jobs:
 
       - name: Build and push
         id: docker_build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
