@@ -13,6 +13,7 @@ start-app:
 .PHONY: lint
 lint:
 	hlint \
+		--ignore-glob="archive" \
 		--ignore="Redundant do" \
 		--ignore="Use list literal" \
 		--ignore="Use String" \
@@ -90,14 +91,12 @@ docker-build:
 
 # Possible alternative: https://github.com/MrMarble/termsvg
 tasklite/screenshots/help.svg:
-	term-transcript exec 'tasklite help' > $@ \
-	|| echo 'ℹ️ Run `cargo install term-transcript-cli`'
+	term-transcript exec 'tasklite help' > $@
 	cp $@ docs-source/images/help.svg
 
 
 tasklite/screenshots/help-short.svg:
-	term-transcript exec 'tasklite help | head -n 30' > $@ \
-	|| @echo 'ℹ️ Run `cargo install term-transcript-cli`'
+	term-transcript exec 'tasklite help | head -n 30' > $@
 
 
 # # TODO: Use an extra demo database to not mess up the local one
@@ -108,8 +107,7 @@ tasklite/screenshots/help-short.svg:
 # 		'tl add Go running +demo' \
 # 		'tl withtag demo' \
 # 		'tl do TODO' \
-# 		> $@ \
-# 	|| @echo 'ℹ️ Run `cargo install term-transcript-cli`'
+# 		> $@
 
 
 .PHONY: screenshots
