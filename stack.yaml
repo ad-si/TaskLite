@@ -1,5 +1,5 @@
 # ATTENTION: Also use the corresponding GHC version in the Dockerfile
-resolver: lts-22.43
+resolver: lts-23.18
 
 packages:
   - tasklite

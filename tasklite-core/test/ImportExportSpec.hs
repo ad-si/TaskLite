@@ -117,15 +117,15 @@ spec = do
               query_ memConn "SELECT * FROM task_to_note"
             taskToNotes
               `shouldBe` [ TaskToNote
-                            { ulid = "01hs0tqwwd0002xgp98sbejja9"
-                            , task_ulid = "01hs0tqwwd0003ctc29vaj647b"
-                            , note = "first note"
-                            }
+                             { ulid = "01hs0tqwwd0006vtdjjey5vdae"
+                             , task_ulid = "01hs0tqwwd0004yy9et9d4wksy"
+                             , note = "first note"
+                             }
                          , TaskToNote
-                            { ulid = "01hs0tqwwd0007hagxf79yypwa"
-                            , task_ulid = "01hs0tqwwd0003ctc29vaj647b"
-                            , note = "second note"
-                            }
+                             { ulid = "01hs0tqwwd0003pynthn2xpd5s"
+                             , task_ulid = "01hs0tqwwd0004yy9et9d4wksy"
+                             , note = "second note"
+                             }
                          ]
     it "imports a JSON task with notes" $ do
       withMemoryDb conf $ \memConn -> do
@@ -243,7 +243,7 @@ spec = do
             ImportTask
               { task =
                   emptyTask
-                    { Task.ulid = "01hrz2qz7g000577et78w9cpst"
+                    { Task.ulid = "01hrz2qz7g0001qzskfchf4dek"
                     , Task.body = "Support getting the note body from stdin"
                     , Task.user = "ad-si"
                     , Task.modified_utc = "2024-03-14 18:14:14.000"
