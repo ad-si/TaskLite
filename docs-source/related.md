@@ -24,6 +24,7 @@ Name          | Description
 [Nvim-OrgMode]| Orgmode clone written in Lua for Neovim
 [Org mode]    | Notes and todo lists powered by an Emacs based plain-text system
 [Smos]        | Purely functional semantic tree-based editor (like [Org mode])
+[taskfinder]  | TUI to extract and display tasks from plain text files
 [Taskwarrior] | Command line task management
 [td-cli]      | Command line todo list manager
 [Todo.txt]    | Simple and extensible shell script for managing a todotxt file
@@ -65,7 +66,7 @@ Nr|Name          |Stars|Commits|Contrib.| Code             | 1. Commit
 17|[Unfog]       |  184|    198|      4 |[Haskell][Unfog]  |2019‑10‑22
 18|[td-cli]      |  184|    310|      2 |[Python][td-cli]  |2018‑06‑03
 19|[Etm]         |   40|   3879|      4 |[Python][Etm]     |2017‑09‑02
-
+20|[taskfinder]  |   20|    203|      3 |[Rust][taskfinder]|2023-12-22
 
 Numbers with a `~` are not necessarily comparable,
 as they are either estimated or from another platform than GitHub.
@@ -187,6 +188,8 @@ Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 
 [TaskLite]: https://tasklite.org
 [TLGH]: https://github.com/ad-si/TaskLite
+
+[taskfinder]: https://codeberg.org/kdwarn/taskfinder
 
 [Taskwarrior]: https://taskwarrior.org
 [TwGH]: https://github.com/GothenburgBitFactory/taskwarrior
