@@ -629,7 +629,7 @@ editTaskByTask conf editMode conn taskToEdit = do
           <+> dquotes (pretty taskFixed.body)
           <+> "with ulid"
           <+> dquotes (pretty taskFixed.ulid)
-          <!!> postModifyHookMsg
+            <!!> postModifyHookMsg
 
 
 -- TODO: Eliminate code duplications with `addTask`

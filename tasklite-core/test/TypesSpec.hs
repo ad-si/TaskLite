@@ -120,7 +120,7 @@ spec = do
                 notes: []
               |]
               <> "\n"
-                & P.encodeUtf8
+              & P.encodeUtf8
 
         taskYaml `shouldBe` expected
 

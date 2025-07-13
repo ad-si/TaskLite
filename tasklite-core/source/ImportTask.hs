@@ -218,9 +218,9 @@ instance FromJSON ImportTask where
       modified_utc =
         maybeModified
           >>= parseUtc
-            & fromMaybe createdUtc
-            & timePrint importUtcFormat
-            & T.pack
+          & fromMaybe createdUtc
+          & timePrint importUtcFormat
+          & T.pack
 
     o_state <- o .:? "state"
     status <- o .:? "status"

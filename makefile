@@ -3,6 +3,11 @@ help: makefile
 	@tail -n +4 makefile | grep ".PHONY"
 
 
+.PHONY: format
+format:
+	fourmolu --mode inplace $$(fd -e hs)
+
+
 .PHONY: start-app
 start-app:
 	cd tasklite-webapp \

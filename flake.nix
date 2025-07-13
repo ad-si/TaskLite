@@ -21,8 +21,11 @@
             bash
             cargo  # To install term-transcript
             coreutils
+            fd
             flyctl
+            fourmolu
             gnumake
+            haskell-language-server
             hlint
             mdbook
             mdbook-alerts

@@ -456,4 +456,4 @@ taskToEditableYaml conn task = do
                )
          )
       <> "notes: []\n"
-        & P.encodeUtf8
+      & P.encodeUtf8

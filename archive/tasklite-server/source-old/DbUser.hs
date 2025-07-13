@@ -17,9 +17,12 @@ data DbUser = DbUser
   , email :: Text
   , password_hash :: Text
   , refresh_token :: Maybe RefreshToken
-  } deriving (Show, Generic)
+  }
+  deriving (Show, Generic)
+
 
 instance ToJSON DbUser
 instance FromJSON DbUser
+
 
 $(deriveSafeCopy 0 'base ''DbUser)

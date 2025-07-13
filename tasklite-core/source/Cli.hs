@@ -397,7 +397,7 @@ aliasWarning alias =
     <+> "Use"
     <+> dquotes (pretty alias)
     <+> "instead."
-    <> hardline
+      <> hardline
 
 
 getCommand :: (Text, Text) -> Mod CommandFields Command
@@ -998,11 +998,11 @@ commandParserInfo conf =
     header =
       annotate (bold <> color Blue) "TaskLite"
         <+> prettyVersion
-        <> hardline
-        <> hardline
-        <> annotate
-          (color Blue)
-          "Task-list manager powered by Haskell and SQLite"
+          <> hardline
+          <> hardline
+          <> annotate
+            (color Blue)
+            "Task-list manager powered by Haskell and SQLite"
 
     examples = do
       let
@@ -1345,11 +1345,11 @@ printOutput appName argsMb config = do
   P.when (not $ null errors) $
     ["WARNING:\n"]
       <> errors
-        & P.traverse_
-          ( pretty
-              >>> annotate (color Yellow)
-              >>> hPutDoc P.stderr
-          )
+      & P.traverse_
+        ( pretty
+            >>> annotate (color Yellow)
+            >>> hPutDoc P.stderr
+        )
 
   -- Run pre-launch hooks
   preLaunchResults <- executeHooks "" configNorm.hooks.launch.pre

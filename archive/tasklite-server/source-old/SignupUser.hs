@@ -17,10 +17,13 @@ data SignupUser = SignupUser
   { name :: Text
   , email :: Text
   , password :: Text
-  } deriving (Show, Generic)
+  }
+  deriving (Show, Generic)
+
 
 instance ToJSON SignupUser
 instance FromJSON SignupUser
+
 
 $(deriveSafeCopy 0 'base ''SignupUser)
 
