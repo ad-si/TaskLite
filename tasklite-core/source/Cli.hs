@@ -283,7 +283,7 @@ data Command
     -- \| Undo -- Revert last change
     InfoTask IdText
   | NextTask
-  | RandomTask
+  | RandomTask (Maybe [Text])
   | FindTask Text --
   {- I/O -}
   | ImportFile FilePath
@@ -573,8 +573,12 @@ commandParser conf =
     <> command "next" (toParserInfo (pure NextTask)
         "Show the task with the highest priority")
 
-    <> command "random" (toParserInfo (pure RandomTask)
-        "Show a random open task")
+    <> command "random"
+        (toParserInfo
+          (RandomTask <$> optional ( some
+            (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions")))
+              "Show a random open task \
+              \from the tasks filtered by the specified expressions")
 
     <> command "find" (toParserInfo (FindTask <$> strArgument
         (metavar "PATTERN" <> help "Search pattern"))
@@ -1245,7 +1249,7 @@ executeCLiCommand conf now connection progName args = do
         Prioritize val ids -> adjustPriority conf val ids
         InfoTask idSubstr -> infoTask conf connection idSubstr
         NextTask -> nextTask conf connection
-        RandomTask -> randomTask conf connection
+        RandomTask taskFilter -> randomTask conf connection taskFilter
         FindTask aPattern -> findTask connection aPattern
         AddTag tagText ids -> addTag conf connection tagText ids
         DeleteTag tagText ids -> deleteTag conf connection tagText ids

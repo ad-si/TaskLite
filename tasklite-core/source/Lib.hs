@@ -1616,22 +1616,58 @@ nextTask conf connection = do
       pure $ pretty noTasksWarning
 
 
-randomTask :: Config -> Connection -> IO (Doc AnsiStyle)
-randomTask conf connection = do
-  (tasks :: [FullTask]) <-
-    query_
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE closed_utc IS NULL
-        ORDER BY random()
-        LIMIT 1
-      |]
+randomTask :: Config -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
+randomTask conf connection filterExpression = do
+  let
+    parserResults =
+      readP_to_S filterExpsParser $
+        T.unpack (unwords $ fromMaybe [""] filterExpression)
+    filterMay = listToMaybe parserResults
 
-  case tasks of
-    [fullTask] -> infoTask conf connection fullTask.ulid
-    _ -> pure $ pretty noTasksWarning
+  case filterMay of
+    Nothing -> do
+      (tasks :: [FullTask]) <-
+        query_
+          connection
+          [sql|
+            SELECT *
+            FROM tasks_view
+            WHERE closed_utc IS NULL
+            ORDER BY random()
+            LIMIT 1
+          |]
+
+      case tasks of
+        [fullTask] -> infoTask conf connection fullTask.ulid
+        _ -> pure $ pretty noTasksWarning
+    --
+    Just (filterExps, _) -> do
+      let
+        ppInvalidFilter = \case
+          (InvalidFilter error) ->
+            dquotes (pretty error) <+> "is an invalid filter"
+          (HasStatus Nothing) -> "Filter contains an invalid state value"
+          _ -> "The functions should not be called with a valid function"
+        errors = P.filter (not . isValidFilter) filterExps
+        errorsDoc =
+          if P.length errors > 0
+            then
+              Just $
+                vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
+                  <> hardline
+                  <> hardline
+            else Nothing
+
+      tasks <-
+        query_ connection $
+          getFilterQuery (HasStatus (Just IsOpen) : filterExps) $
+            Just "random()"
+
+      case P.headMay (tasks :: [FullTask]) of
+        Nothing -> pure $ pretty noTasksWarning
+        Just fullTask -> do
+          taskFormatted <- infoTask conf connection fullTask.ulid
+          pure $ errorsDoc & fromMaybe taskFormatted
 
 
 findTask :: Connection -> Text -> IO (Doc AnsiStyle)
