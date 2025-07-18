@@ -75,6 +75,54 @@ sqlite3 \
 ```
 
 
+## List and Filter
+
+There are several commands to list and filter tasks.
+
+For example:
+
+- `tl all` - Lists all tasks.
+- `tl new` - List newest tasks by creation UTC descending.
+- `tl notag` - List tasks without tags.
+    This is commonly used as a kind of inbox.
+    If you want to capture a thought or idea,
+    use this command to quickly add an entry and then later tag it properly.
+- `tl random` - Prints a random task.
+
+The most powerful command is `tl get`, which allows you to filter tasks
+using an expressive filter language.
+
+- `tl get +chore` - Lists all tasks with the `chore` tag.
+- `tl get state:done` - Lists all completed tasks.
+
+Those can also be combined:
+
+```sh
+tl get +chore state:done
+```
+
+There are several other commands that support filter expressions.
+E.g. `tl random +chore` prints a random task with the `chore` tag.
+
+
+### Advanced Filtering
+
+For advanced use-cases TaskLite supports exporting tasks in various formats
+so you can use other tools to further filter, process, and analyze them.
+
+Among them are the `csv`, `json`, `ndjson`, `runsql`, and `query` commands.
+
+E.g. following example prints all tasks sorted by their number of tags:
+
+```sh
+tl ndjson \
+| jq --raw-output '(.tags | length | tostring) + " " + .ulid' \
+| sort --numeric-sort --reverse
+```
+
+Make sure to check out their help pages for more information.
+
+
 ## Context / Views
 
 There is no first class support for views (or "context" in [GTD] slang),
@@ -93,19 +141,6 @@ tasklite query \
     and state is 'Open' \
     order by priority desc, due_utc asc, ulid desc \
     limit 10"
-```
-
-
-## Analyze and Filter Tasks
-
-In order to further analyze and filter tasks TaskLite includes the
-`ndjson` command, which prints all tasks as newline delimited JSON objects.
-
-This output can then easily be analyzed and filtered with standard UNIX tools.
-E.g. following example prints all tasks related to music:
-
-```sh
-tl ndjson | grep 'music' | jq
 ```
 
 
