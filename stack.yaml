@@ -1,5 +1,6 @@
 # ATTENTION: Also use the corresponding GHC version in the Dockerfile
 resolver: lts-23.18
+system-ghc: true  # Installed via Nix
 
 packages:
   - tasklite

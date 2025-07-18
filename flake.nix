@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     utils.url = "github:numtide/flake-utils";
   };
 
@@ -23,15 +23,18 @@
             coreutils
             fd
             flyctl
-            fourmolu
             gnumake
-            haskell-language-server
-            hlint
+            haskell.compiler.ghc98
+            haskellPackages.cabal-fmt
+            haskellPackages.cabal-install
+            haskellPackages.fourmolu
+            haskellPackages.haskell-language-server
+            haskellPackages.hlint
+            haskellPackages.stack
             mdbook
             mdbook-alerts
             mdbook-toc
             nodejs_24
-            stack
             zlib
           ];
           shellHook = ''
