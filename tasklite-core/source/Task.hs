@@ -195,19 +195,20 @@ instance {-# OVERLAPS #-} Pretty StateHierarchy where
 
 
 textToDerivedState :: Text -> Maybe DerivedState
-textToDerivedState = \case
-  "open" -> Just IsOpen
-  "closed" -> Just IsClosed
-  "asleep" -> Just IsAsleep
-  "awake" -> Just IsAwake
-  "ready" -> Just IsReady
-  "waiting" -> Just IsWaiting
-  "review" -> Just IsReview
-  "done" -> Just IsDone
-  "obsolete" -> Just IsObsolete
-  "deletable" -> Just IsDeletable
-  "blocked" -> Just IsBlocked
-  _ -> Nothing
+textToDerivedState =
+  T.toLower >>> \case
+    "open" -> Just IsOpen
+    "closed" -> Just IsClosed
+    "asleep" -> Just IsAsleep
+    "awake" -> Just IsAwake
+    "ready" -> Just IsReady
+    "waiting" -> Just IsWaiting
+    "review" -> Just IsReview
+    "done" -> Just IsDone
+    "obsolete" -> Just IsObsolete
+    "deletable" -> Just IsDeletable
+    "blocked" -> Just IsBlocked
+    _ -> Nothing
 
 
 derivedStateToQuery :: DerivedState -> Text
