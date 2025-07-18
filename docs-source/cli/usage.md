@@ -131,14 +131,14 @@ and the SQL query API.
 
 [GTD]: https://en.wikipedia.org/wiki/Getting_Things_Done
 
-For example I have following `work` command in my `$PATH`:
+For example, I have following `work` command in my `$PATH`:
 
 ```bash
 #! /usr/bin/env bash
 
 tasklite query \
-  "(tags is null or tags not like '%feram%') \
-    and state is 'Open' \
+  "(tags is null or tags like '%work%') \
+    and closed_utc is null \
     order by priority desc, due_utc asc, ulid desc \
     limit 10"
 ```
