@@ -535,8 +535,8 @@ runMigrations _ connection = do
   currentVersionList <-
     query_
       connection
-      "PRAGMA user_version"
-      :: IO [UserVersion]
+      "PRAGMA user_version" ::
+      IO [UserVersion]
 
   let
     migrations = [_0_, _1_, _2_, _3_, _4_]

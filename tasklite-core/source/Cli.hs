@@ -432,8 +432,8 @@ basic_sec
   , advanced_sec
   , alias_sec
   , unset_sec
-  , utils_sec
-    :: (Text, Text)
+  , utils_sec ::
+    (Text, Text)
 basic_sec = ("{{basic_sec}}", "Basic Commands")
 shortcut_sec = ("{{shortcut_sec}}", "Shortcuts to Add a Task")
 list_sec = ("{{list_sec}}", "List Commands")
@@ -1156,13 +1156,13 @@ handleExternalCommand conf cmd argsMb = do
   catchAll runCmd handleException
 
 
-executeCLiCommand
-  :: Config
-  -> DateTime
-  -> Connection
-  -> String
-  -> [String]
-  -> IO (Doc AnsiStyle)
+executeCLiCommand ::
+  Config ->
+  DateTime ->
+  Connection ->
+  String ->
+  [String] ->
+  IO (Doc AnsiStyle)
 executeCLiCommand conf now connection progName args = do
   let cliCommandRes = execParserPure defaultPrefs (commandParserInfo conf) args
 

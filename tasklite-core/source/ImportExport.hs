@@ -487,12 +487,12 @@ data EditMode
 {-| Edit the task until it is valid YAML and can be decoded.
 | Return the the tuple `(task, valid YAML content)`
 -}
-editUntilValidYaml
-  :: EditMode
-  -> Connection
-  -> P.ByteString
-  -> P.ByteString
-  -> IO (Either ParseException (ImportTask, P.ByteString))
+editUntilValidYaml ::
+  EditMode ->
+  Connection ->
+  P.ByteString ->
+  P.ByteString ->
+  IO (Either ParseException (ImportTask, P.ByteString))
 editUntilValidYaml editMode conn initialYaml wipYaml = do
   yamlAfterEdit <- case editMode of
     ApplyPreEdit editFunc -> pure $ editFunc wipYaml

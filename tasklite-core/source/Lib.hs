@@ -346,8 +346,8 @@ handleTagDupError tag _exception =
       "⚠️ Tag " <> dquotes (pretty tag) <> " is already assigned"
 
 
-insertTags
-  :: Connection -> Maybe DateTime -> Task -> [Text] -> IO (Doc AnsiStyle)
+insertTags ::
+  Connection -> Maybe DateTime -> Task -> [Text] -> IO (Doc AnsiStyle)
 insertTags connection mbCreatedUtc task tags = do
   let uniqueTags = nub tags
   taskToTags <- forM uniqueTags $ \tag -> do
@@ -375,8 +375,8 @@ insertTags connection mbCreatedUtc task tags = do
   pure $ vsepCollapse insertWarnings
 
 
-insertNotes
-  :: Connection -> Maybe DateTime -> Task -> [Note] -> IO (Doc AnsiStyle)
+insertNotes ::
+  Connection -> Maybe DateTime -> Task -> [Note] -> IO (Doc AnsiStyle)
 insertNotes connection mbCreatedUtc task notes = do
   let uniqueNotes = nub notes
   taskToNotes <- forM uniqueNotes $ \theNote -> do
@@ -624,12 +624,12 @@ logTask conf connection bodyWords = do
       <+> dquotes (pretty task.ulid)
 
 
-execWithTask
-  :: Config
-  -> Connection
-  -> Text
-  -> (Task -> IO (Doc AnsiStyle))
-  -> IO (Doc AnsiStyle)
+execWithTask ::
+  Config ->
+  Connection ->
+  Text ->
+  (Task -> IO (Doc AnsiStyle)) ->
+  IO (Doc AnsiStyle)
 execWithTask conf connection idSubstr callback = do
   tasks <-
     query
@@ -639,8 +639,8 @@ execWithTask conf connection idSubstr callback = do
             <> ("FROM \"" <> conf.tableName <> "\"\n")
             <> "WHERE ulid LIKE ?\n"
       )
-      ["%" <> idSubstr :: Text]
-      :: IO [Task]
+      ["%" <> idSubstr :: Text] ::
+      IO [Task]
 
   let
     numOfTasks = P.length tasks
@@ -689,8 +689,8 @@ setClosedWithState connection task theTaskState = do
     ]
 
 
-setReadyUtc
-  :: Config -> Connection -> DateTime -> [IdText] -> IO (Doc AnsiStyle)
+setReadyUtc ::
+  Config -> Connection -> DateTime -> [IdText] -> IO (Doc AnsiStyle)
 setReadyUtc conf connection datetime ids = do
   let utcText = T.pack $ timePrint conf.utcFormat datetime
 
@@ -713,8 +713,8 @@ setReadyUtc conf connection datetime ids = do
   pure $ vsep docs
 
 
-waitFor
-  :: Config -> Connection -> Iso.Duration -> [Text] -> IO (Doc AnsiStyle)
+waitFor ::
+  Config -> Connection -> Iso.Duration -> [Text] -> IO (Doc AnsiStyle)
 waitFor conf connection duration ids = do
   docs <- forM ids $ \idSubstr ->
     execWithTask conf connection idSubstr $ \task -> do
@@ -773,12 +773,12 @@ waitTasks conf connection =
     Iso.DurationDate (Iso.DurDateDay (Iso.DurDay 3) Nothing)
 
 
-reviewTasksIn
-  :: Config
-  -> Connection
-  -> Iso.Duration
-  -> [Text]
-  -> IO (Doc AnsiStyle)
+reviewTasksIn ::
+  Config ->
+  Connection ->
+  Iso.Duration ->
+  [Text] ->
+  IO (Doc AnsiStyle)
 reviewTasksIn conf connection duration ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
@@ -832,8 +832,8 @@ showEither conf theEither =
 
 
 -- TODO: Eliminate code duplication with createNextRecurrence
-createNextRepetition
-  :: Config -> Connection -> Task -> IO (Maybe (Doc AnsiStyle))
+createNextRepetition ::
+  Config -> Connection -> Task -> IO (Maybe (Doc AnsiStyle))
 createNextRepetition conf connection task = do
   newUlidText <- formatUlid getULID
   let
@@ -917,8 +917,8 @@ createNextRepetition conf connection task = do
 
 
 -- TODO: Eliminate code duplication with createNextRepetition
-createNextRecurrence
-  :: Config -> Connection -> Task -> IO (Maybe (Doc AnsiStyle))
+createNextRecurrence ::
+  Config -> Connection -> Task -> IO (Maybe (Doc AnsiStyle))
 createNextRecurrence conf connection task = do
   newUlidText <- formatUlid getULID
   let
@@ -1168,8 +1168,8 @@ durationToIso dur =
   "PT" <> show (coerce (durationMinutes dur) :: Int64) <> "M"
 
 
-repeatTasks
-  :: Config -> Connection -> Iso.Duration -> [IdText] -> IO (Doc AnsiStyle)
+repeatTasks ::
+  Config -> Connection -> Iso.Duration -> [IdText] -> IO (Doc AnsiStyle)
 repeatTasks conf connection duration ids = do
   let durationIsoText = decodeUtf8 $ Iso.formatDuration duration
 
@@ -1232,8 +1232,8 @@ repeatTasks conf connection duration ids = do
   pure $ vsep docs
 
 
-recurTasks
-  :: Config -> Connection -> Iso.Duration -> [IdText] -> IO (Doc AnsiStyle)
+recurTasks ::
+  Config -> Connection -> Iso.Duration -> [IdText] -> IO (Doc AnsiStyle)
 recurTasks conf connection duration ids = do
   let durationIsoText = decodeUtf8 $ Iso.formatDuration duration
 
@@ -1359,11 +1359,11 @@ stopTasks conf connection ids = do
         (show logMessages)
 
 
-formatTaskForInfo
-  :: Config
-  -> DateTime
-  -> (FullTask, [TaskToTag], [TaskToNote])
-  -> Doc AnsiStyle
+formatTaskForInfo ::
+  Config ->
+  DateTime ->
+  (FullTask, [TaskToTag], [TaskToNote]) ->
+  Doc AnsiStyle
 formatTaskForInfo conf now (taskV, tags, notes) =
   let
     mkGreen = annotate (color Green)
@@ -2502,12 +2502,12 @@ headTasks conf now connection = do
   formatTasksColor conf now tasks
 
 
-newTasks
-  :: Config
-  -> DateTime
-  -> Connection
-  -> Maybe [Text]
-  -> IO (Doc AnsiStyle)
+newTasks ::
+  Config ->
+  DateTime ->
+  Connection ->
+  Maybe [Text] ->
+  IO (Doc AnsiStyle)
 newTasks conf now connection filterExp = do
   let
     parserResults =
@@ -2570,8 +2570,8 @@ listOldTasks conf now connection = do
   formatTasksColor conf now tasks
 
 
-openTasks
-  :: Config -> DateTime -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
+openTasks ::
+  Config -> DateTime -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
 openTasks conf now connection filterExpression = do
   let
     parserResults =
@@ -2623,12 +2623,12 @@ openTasks conf now connection filterExpression = do
           formatTasksColor conf now tasks
 
 
-modifiedTasks
-  :: Config
-  -> DateTime
-  -> Connection
-  -> ListModifiedFlag
-  -> IO (Doc AnsiStyle)
+modifiedTasks ::
+  Config ->
+  DateTime ->
+  Connection ->
+  ListModifiedFlag ->
+  IO (Doc AnsiStyle)
 modifiedTasks conf now connection listModifiedFlag = do
   tasks <-
     query_
@@ -3128,8 +3128,8 @@ getProgressBar maxWidthInChars progress =
       annotate (bgColorDull Black) (fill remainingWidth "")
 
 
-formatTagLine
-  :: Config -> Int -> (Text, Integer, Integer, Double) -> Doc AnsiStyle
+formatTagLine ::
+  Config -> Int -> (Text, Integer, Integer, Double) -> Doc AnsiStyle
 formatTagLine conf maxTagLength (tag, open_count, closed_count, progress) =
   let
     barWidth = toInteger $ progressBarWidth conf

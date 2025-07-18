@@ -87,8 +87,8 @@ deleteUserByToken refreshToken = do
       pure Nothing
 
 
-logoutByEmailAndToken
-  :: Text -> RefreshToken -> Update Database (Either (Status, Text) DbUser)
+logoutByEmailAndToken ::
+  Text -> RefreshToken -> Update Database (Either (Status, Text) DbUser)
 logoutByEmailAndToken emailAddress searchForToken = do
   Database users ideas <- State.get
 
@@ -122,8 +122,8 @@ logoutByEmailAndToken emailAddress searchForToken = do
       pure $ Right dbUser
 
 
-logUserIn
-  :: Text -> Text -> RefreshToken -> Update Database (Either (Status, Text) DbUser)
+logUserIn ::
+  Text -> Text -> RefreshToken -> Update Database (Either (Status, Text) DbUser)
 logUserIn email password newToken = do
   Database users ideas <- State.get
   let
@@ -167,8 +167,8 @@ addIdea idea = do
   State.put $ Database users (idea : ideas)
 
 
-updateIdeaIfBy
-  :: Text -> Text -> DbIdea -> Update Database (Either (Status, Text) ())
+updateIdeaIfBy ::
+  Text -> Text -> DbIdea -> Update Database (Either (Status, Text) ())
 updateIdeaIfBy emailAddress id newIdea = do
   Database users ideas <- State.get
   let

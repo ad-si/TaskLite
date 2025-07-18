@@ -106,11 +106,11 @@ unauthorizedError = do
 
 
 -- TODO: Use EitherT stack to avoid pyramid of doom
-runIfRegisteredUser
-  :: AcidState Database
-  -> Maybe TL.Text
-  -> (Text -> JWK -> CompactJWS JWSHeader -> ActionM ())
-  -> ActionM ()
+runIfRegisteredUser ::
+  AcidState Database ->
+  Maybe TL.Text ->
+  (Text -> JWK -> CompactJWS JWSHeader -> ActionM ()) ->
+  ActionM ()
 runIfRegisteredUser database jwtBSMaybe callback =
   case jwtBSMaybe of
     Nothing -> unauthorizedError
@@ -140,12 +140,12 @@ runIfRegisteredUser database jwtBSMaybe callback =
                       callback emailAddress jwkValue jwtValue
 
 
-validateAndAddIdea
-  :: AcidState Database
-  -> Text
-  -> Either JWTError ClaimsSet
-  -> Either Text PostIdea
-  -> ActionM ()
+validateAndAddIdea ::
+  AcidState Database ->
+  Text ->
+  Either JWTError ClaimsSet ->
+  Either Text PostIdea ->
+  ActionM ()
 validateAndAddIdea database emailAddress claimsResult ideaResult =
   case (claimsResult, ideaResult) of
     (Left error, _) -> do
@@ -168,13 +168,13 @@ validateAndAddIdea database emailAddress claimsResult ideaResult =
 
 
 -- TODO: Remove duplications with `validateAndAddIdea`
-validateAndReplaceIdea
-  :: AcidState Database
-  -> Text
-  -> Text
-  -> Either JWTError ClaimsSet
-  -> Either Text PostIdea
-  -> ActionM ()
+validateAndReplaceIdea ::
+  AcidState Database ->
+  Text ->
+  Text ->
+  Either JWTError ClaimsSet ->
+  Either Text PostIdea ->
+  ActionM ()
 validateAndReplaceIdea database emailAddress id claimsResult ideaResult =
   case (claimsResult, ideaResult) of
     (Left error, _) -> do
