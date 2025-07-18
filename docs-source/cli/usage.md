@@ -93,7 +93,8 @@ The most powerful command is `tl get`, which allows you to filter tasks
 using an expressive filter language.
 
 - `tl get +chore` - Lists all tasks with the `chore` tag.
-- `tl get state:done` - Lists all completed tasks.
+- `tl get state:done` - Lists all already completed tasks.
+- `tl get due:2013-01-01` - Lists all tasks due before 2013-01-01.
 
 Those can also be combined:
 
@@ -102,7 +103,8 @@ tl get +chore state:done
 ```
 
 There are several other commands that support filter expressions.
-E.g. `tl random +chore` prints a random task with the `chore` tag.
+E.g. `tl open +chore` lists all open tasks with the `chore` tag
+and `tl random +chore` prints a random task with the `chore` tag.
 
 
 ### Advanced Filtering

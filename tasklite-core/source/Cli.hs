@@ -303,7 +303,7 @@ data Command
   | ListHead
   | ListNewFiltered (Maybe [Text])
   | ListOld
-  | ListOpen
+  | ListOpen (Maybe [Text])
   | ListModified
   | ListModifiedOnly
   | ListDone
@@ -681,8 +681,12 @@ commandParser conf =
     <> command "all" (toParserInfo (pure ListAll)
         "List all tasks by creation UTC asc")
 
-    <> command "open" (toParserInfo (pure ListOpen)
-        "List all open tasks by priority desc")
+    <> command "open"
+        (toParserInfo
+          (ListOpen <$> optional ( some
+            (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions")))
+              "List all open tasks by priority desc \
+              \filtered by the specified expression")
 
     <> command "modified" (toParserInfo (pure ListModified)
         "List all tasks by modified UTC desc")
@@ -1184,7 +1188,7 @@ executeCLiCommand conf now connection progName args = do
         ListHead -> headTasks conf now connection
         ListNewFiltered taskFilter -> newTasks conf now connection taskFilter
         ListOld -> listOldTasks conf now connection
-        ListOpen -> openTasks conf now connection
+        ListOpen taskFilter -> openTasks conf now connection taskFilter
         ListModified -> modifiedTasks conf now connection AllItems
         ListModifiedOnly -> modifiedTasks conf now connection ModifiedItemsOnly
         ListOverdue -> overdueTasks conf now connection

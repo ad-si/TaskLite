@@ -2570,18 +2570,57 @@ listOldTasks conf now connection = do
   formatTasksColor conf now tasks
 
 
-openTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-openTasks conf now connection = do
-  tasks <-
-    query_
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE closed_utc IS NULL
-        ORDER BY priority DESC, due_utc ASC, ulid DESC
-      |]
-  formatTasksColor conf now tasks
+openTasks
+  :: Config -> DateTime -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
+openTasks conf now connection filterExpression = do
+  let
+    parserResults =
+      readP_to_S filterExpsParser $
+        T.unpack (unwords $ fromMaybe [""] filterExpression)
+    filterMay = listToMaybe parserResults
+
+  case filterMay of
+    Nothing -> do
+      (tasks :: [FullTask]) <-
+        query_
+          connection
+          [sql|
+            SELECT *
+            FROM tasks_view
+            WHERE closed_utc IS NULL
+            ORDER BY priority DESC, due_utc ASC, ulid DESC
+          |]
+
+      formatTasksColor conf now tasks
+    --
+    Just (filterExps, _) -> do
+      let
+        ppInvalidFilter = \case
+          (InvalidFilter error) ->
+            dquotes (pretty error) <+> "is an invalid filter"
+          (HasStatus Nothing) -> "Filter contains an invalid state value"
+          _ -> "The functions should not be called with a valid function"
+        errors = P.filter (not . isValidFilter) filterExps
+
+      if P.length errors > 0
+        then
+          pure $
+            vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
+              <> hardline
+              <> hardline
+        else do
+          let
+            isStateExp = \case (HasStatus _) -> True; _ -> False
+            filterExpWithOpen =
+              if P.any isStateExp filterExps
+                then filterExps
+                else HasStatus (Just IsOpen) : filterExps
+            sqlQuery =
+              getFilterQuery filterExpWithOpen $
+                Just "priority DESC, due_utc ASC, ulid DESC"
+
+          tasks <- query_ connection sqlQuery
+          formatTasksColor conf now tasks
 
 
 modifiedTasks
@@ -2988,12 +3027,7 @@ runFilter conf now connection exps = do
           _ ->
             "The functions should not be called with a valid function"
         errors = P.filter (not . isValidFilter) filterExps
-        isStateExp = \case (HasStatus _) -> True; _ -> False
-        updatedFilterExps =
-          if P.any isStateExp filterExps
-            then filterExps
-            else HasStatus (Just IsOpen) : filterExps
-        sqlQuery = getFilterQuery updatedFilterExps Nothing
+        sqlQuery = getFilterQuery filterExps Nothing
 
       tasks <- query_ connection sqlQuery
 
