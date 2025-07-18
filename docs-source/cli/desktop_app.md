@@ -43,7 +43,7 @@ tasklite-app
 
 ## DB Browser for SQLite
 
-Alternatively you can use the [DB Browser for SQLite]
+Alternatively, you can use the [DB Browser for SQLite]
 to view and modify your tasks directly in the SQLite database.
 
 [DB Browser for SQLite]: https://sqlitebrowser.org/

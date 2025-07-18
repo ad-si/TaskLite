@@ -35,7 +35,7 @@ The web app will then be available at
 ## Dashboard
 
 A simple way to create a dashboard with multiple views
-is to create a HTML file with multiple iframes that load the different views.
+is to create an HTML file with multiple iframes that load the different views.
 
 ```html
 <!DOCTYPE html>

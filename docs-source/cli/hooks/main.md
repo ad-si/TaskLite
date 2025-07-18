@@ -13,7 +13,7 @@ Hooks can either be specified via the config file or via hook files.
 
 If the files have an extension (e.g. `post-add.lua`) the corresponding
 interpreter will be used.
-Otherwise the file will be executed as a shell script.
+Otherwise, the file will be executed as a shell script.
 
 Currently supported interpreters are:
 `lua`, `python3`, `ruby`, `node`, and [`v`][vlang].
@@ -27,13 +27,13 @@ The compiled versions of the script will be cached as
 
 Another good alternative is [Lua](https://www.lua.org/)
 as it is simple, lightweight, and fast.
-Futhermore, future versions of TaskLite will include the Lua interpreter
+Furthermore, future versions of TaskLite will include the Lua interpreter
 to make it independent of the system's installed Lua interpreter.
 
 If the hook files are shell scripts, they must be executable (`chmod +x`).
-Otherwise they can't be executed directly by TaskLite.
+Otherwise, they can't be executed directly by TaskLite.
 
-The file names must start with the stage they are for (`pre` or `post`),
+The filenames must start with the stage they are for (`pre` or `post`),
 followed by a dash and the stage name (e.g. `pre-add`), and optionally
 followed by an underscore and a description.
 E.g `pre-add_validate_task.v` or `pre-exit_sync.v`.
@@ -47,7 +47,7 @@ E.g. `pre-add_01_x.v`, `pre-add_02_y.v`, ….
 > Multiple `pre-add` hooks are not supported yet,
 > but will be in the future.
 
-To ignore a hook, you can prefix the file name with an underscore (`_`).
+To ignore a hook, you can prefix the filename with an underscore (`_`).
 
 
 ## Stages

@@ -57,7 +57,7 @@ That means:
 
 I don't like [Org-mode]'s' unstructured combination
 of outlining, notes and tasks.
-Furthermore I don't like interactive document editing UIs in the terminal.
+Furthermore, I don't like interactive document editing UIs in the terminal.
 I prefer REPL style apps which adhere to UNIX conventions and let
 me compose them easily with other CLI tools.
 
@@ -140,7 +140,7 @@ can transfer it to the community.
   <summary><small>Answer:</small></summary>
 
 Not locking you in is one of the most important aspects of TaskLite.
-Therefore it supports numerous export formats:
+Therefore, it supports numerous export formats:
 
 - JSON - All tasks as one JSON array
 - [JSON Lines](https://jsonlines.org) - One JSON object per task

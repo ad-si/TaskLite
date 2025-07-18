@@ -119,7 +119,7 @@ Check out the [commit history] for all changes.
 - Only execute trigger to set `closed_utc` after state changed ([395a8e0])
 - Show descriptive variable names in brief help text ([10f8cf6])
 - Hide aliases from main help ([c52df72])
-- Display alias errors even with subarguments ([c52df72])
+- Display alias errors even with sub-arguments ([c52df72])
 - Fix parsing of timestamp part in ULIDs for small timestamp values ([258df47])
 - Also display full version slug with `tl version` ([0c292d1])
 - Remove unnecessary import logging ([c04b894])

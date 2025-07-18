@@ -20,7 +20,7 @@ You can also get this (and previous) versions from
 Make sure to download the artifacts with `curl` or `wget`
 as macOS prevents the execution of files downloaded via a browser.
 
-Furthermore you can get the latest CI builds on
+Furthermore, you can get the latest CI builds on
 [GitHub's Actions page](https://github.com/ad-si/TaskLite/actions).
 They are pretty stable if the build is successful due to the included tests.
 
@@ -30,7 +30,7 @@ They are pretty stable if the build is successful due to the included tests.
 You can get the latest versions on
 [GitHub's Releases page](https://github.com/ad-si/TaskLite/releases).
 
-Furthermore you can get the latest CI builds on
+Furthermore, you can get the latest CI builds on
 [GitHub's Actions page](https://github.com/ad-si/TaskLite/actions).
 They are pretty stable if the build is successful due to the included tests.
 

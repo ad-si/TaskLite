@@ -10,7 +10,7 @@ with other systems and services.
 ---
 
 
-## Folder Actions on MacOS
+## Folder Actions on macOS
 
 Folder actions are a feature on macOS to execute some code
 when files are added to a specific directory.

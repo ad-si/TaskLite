@@ -83,7 +83,7 @@ and SaaS providers:
 - [Microsoft TODO] - Cloud based task management application.
 - [Nirvana] - To-do app available on macOS, Android, Windows, and web.
 - [Remember The Milk] - Web based task- and time-management.
-- [Tasker] - Tool for managing tasks, processes and employees.
+- [Tasker] - Tool for managing tasks, processes, and employees.
 - [TaskPaper] - Plain text to-do lists (macOS app).
 - [Things] - Personal task manager to achieve your goals (Apple only).
 - [Todoist] - SaaS to-do list to organize work and life.
@@ -245,7 +245,7 @@ Name          | Description
 
 ## How to Get Latest Stats
 
-You can run the GraphgQL query in
+You can run the GraphQL query in
 [`load-related-stats.gql`](load-related-stats.gql`)
 in the GitHub GraphQL Explorer at
 [docs.github.com/en/graphql/overview/explorer](
@@ -253,7 +253,7 @@ in the GitHub GraphQL Explorer at
 to get the latest stats.
 
 Or you can use [Airput](https://github.com/Airsequel/Airput)
-to create an [Aisequel](https://www.airsequel.com) table with the stats.
+to create an [Airsequel](https://www.airsequel.com) table with the stats.
 
 ```sh
 AIRSEQUEL_DB_ID='01…' \

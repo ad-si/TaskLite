@@ -9,7 +9,7 @@
 It's a good idea to customize your config file
 at `~/.config/tasklite/config.yaml` before starting to use TaskLite.
 
-Check out the [example config file] for infos about available settings.
+Check out the [example config file] for information about available settings.
 
 [example config file]:
   https://github.com/ad-si/TaskLite/blob/master/tasklite-core/example-config.yaml
@@ -150,13 +150,13 @@ tasklite query \
 
 TaskLite features a comprehensive and robust JSON importer.
 
-For example to import a GitHub issue simply run:
+For example, to import a GitHub issue simply run:
 
 ```sh
 curl https://api.github.com/repos/$OWNER/$REPO/issues/$NUM | tl import
 ```
 
-Or to import a task from TaskWarrior:
+Or to import a task from Taskwarrior:
 
 ```sh
 task 123 export | tl import
@@ -276,7 +276,7 @@ tags:
 notes:
 ```
 
-To access the the metadata key programmatically you can do following:
+To access the metadata key programmatically you can do following:
 
 ```txt
 $ tl ndjson \
@@ -314,7 +314,7 @@ tl runsql "
 Another great use-case is to automatically extract and store data
 from the body of the task.
 
-E.g. you could set up a CRON job to automatically extract any GitHub link
+E.g. you could set up a cron job to automatically extract any GitHub link
 from the body and store it in an extra `github_url` metadata field:
 
 ```sql

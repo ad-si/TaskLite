@@ -43,7 +43,7 @@ cat tasks.yaml \
 ## Taskwarrior
 
 TaskLite supports all fields of Taskwarrior's [export format].
-Therefore migration is really simple:
+Therefore, a migration is really simple:
 
 ```bash
 task export rc.json.array=off \
@@ -129,8 +129,8 @@ A list of sub-tasks will be converted to a GitHub Flavored Markdown [task list].
 
 ## Telegram
 
-Telegram's "Saved Messages" -- a.k.a. messages to oneself -- are a pretty
-convenient inbox. Here is how to move them to TaskLite afterwards:
+Telegram's "Saved Messages" -- aka messages to oneself -- are a pretty
+convenient inbox. Here is how to move them to TaskLite afterward:
 
 1. Install [Telegram Desktop](https://desktop.telegram.org/)
     `brew install telegram-desktop`
@@ -224,7 +224,7 @@ you might have made during the import process.
 In following example I forgot to use the metadata field `end`
 to set the `closed_utc` column, but used the current date instead.
 
-As I deleted all metadata afterwards,
+As I deleted all metadata afterward,
 I now need to extract the field from an old backup.
 In the meantime I changed some `closed_utc` fields and therefore I can't fully automate it.
 A neat little trick I came up with is to automatically paste the correct value

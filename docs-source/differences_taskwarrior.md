@@ -19,7 +19,7 @@
 
 - **Faster** \
   [Haskell] plus [SQLite] delivers excellent performance.
-  Check out the  section about [performance] for a simple benchmark.
+  Check out the section about [performance] for a simple benchmark.
 
 - **More Powerful** \
   As all tasks are stored in an [SQLite] database, so you can use the most
@@ -50,7 +50,7 @@
 
 ### Command Comparison
 
-TaskWarrior  | TaskLite   | Description & Differences
+Taskwarrior  | TaskLite   | Description & Differences
 -------------|------------|--------------------------
 [add]        | add        | Add a new task
 annotate     | note       | Add a note / comment / annotation to a task
@@ -67,7 +67,7 @@ edit         | edit       | Launch your text editor to modify a task
 execute      | -          | Execute an external command
 [export]     | ndjson     | Export tasks in NDJSON instead of JSON format
 help         | help       | Show high-level help, a cheat-sheet
-import       | import     | Additionally to JSON supports Email files (.eml)
+import       | import     | In addition to JSON supports email files (.eml)
 [log]        | log        | Record an already-completed task
 logo         | -          | Show the Taskwarrior logo
 [modify]     | - (edit)   | Modify one or more tasks

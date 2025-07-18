@@ -88,6 +88,6 @@ and kubectl port-forward \
   (kubectl get pods --selector app=tasklite --output name) 8080
 ```
 
-Afterwards change the health check URL to `/healthcheck`
+Afterward change the health check URL to `/healthcheck`
 for the load balancer at
 <https://console.cloud.google.com/compute/healthChecks>.

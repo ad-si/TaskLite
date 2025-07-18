@@ -110,7 +110,7 @@ executeHooks stdinText hooks = do
           Just fPath -> do
             case fPath & takeExtension & P.drop 1 of
               "" ->
-                -- Is excuted with shell
+                -- Is executed with shell
                 readProcess fPath [] stdinStr
               ext -> do
                 let (interpreter, cliFlags, execMode) = getInterpreter ext

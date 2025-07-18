@@ -774,7 +774,7 @@ commandParser conf =
         (toParserInfo
           (RunFilter <$> some
             (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions"))
-          "Get all tasks filtered by the specified expressions \
+          "Get all tasks filtered by the specified expression \
           \by priority")
 
     -- TODO: Replace with tasks and tags commands

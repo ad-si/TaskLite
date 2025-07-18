@@ -12,9 +12,9 @@ TaskLite tries to adhere to the Unix philosophy:
 This, however, also means that it intentionally
 does not include certain features, which you might expect it to have.
 
-For example there is no support for fuzzy timestamps like "in 2 weeks",
+For example, there is no support for fuzzy timestamps like "in 2 weeks",
 as this should be handled by other CLI tools.
-Since CLI tools can be easily combosed, this is no disadvantage!
+Since CLI tools can be easily composed, this is no disadvantage!
 
 For example, I use [`tu`](https://github.com/ad-si/tu) to convert
 such fuzzy times to exact timestamps:
@@ -39,7 +39,7 @@ The power of the Unix philosophy: \
 ## Priority
 
 The priority of a task is a decimal number
-between negative and positive inifity.
+between negative and positive infinity.
 It is automatically calculated based on the age, the due date,
 and several other values.
 
