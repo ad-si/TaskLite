@@ -26,12 +26,12 @@ packages:
   original:
     hackage: double-x-encoding-1.2.1
 - completed:
-    hackage: fuzzily-0.2.0.0@sha256:72f456227a467ebbf9ecd4b052a594127ec1b6d1ac7a0fca5d4d3bfd7fb96410,1796
+    hackage: fuzzily-0.2.1.0@sha256:dfb7cc0083a42cc0460e23d2205724cd47c4ef58cac1d2edd8f51ac0284e36f2,1796
     pantry-tree:
-      sha256: 39e897ab6b8b3d660dc6033d9d4f7eaa2c4bcede7caf80e76dd0770cd0aef8ce
+      sha256: dbd60f4c54ace13de6f7bcfff9949d5cbccdbe3b47731bc411ae116f1f92b119
       size: 319
   original:
-    hackage: fuzzily-0.2.0.0
+    hackage: fuzzily-0.2.1.0
 - completed:
     hackage: graphql-spice-1.0.2.0@sha256:97d22da8ec38342408bcd237e91e76ffcdad4f14df666f62b0b1ccba6bf39b87,2000
     pantry-tree:

@@ -1683,8 +1683,10 @@ findTask connection aPattern = do
   let
     ulidWidth = 5
     numOfResults = 8
-    minimumScore = 4
+    minimumScore = 5
     ulidColor = Green
+    -- TODO: Escape sequences are counted as several chars and mess up wrapping.
+    --       Implement first: https://github.com/ad-si/Fuzzily/issues/1
     preTag = "\x1b[4m\x1b[34m" -- Set color to blue and underline text
     postTag = "\x1b[0m" -- Reset styling
     metaNorm metadata =
@@ -1705,7 +1707,20 @@ findTask connection aPattern = do
     scoreFunc (ulid, theBody, _, mbNotes, mbMetadata) =
       let
         scoreParts =
-          [ matchFunc theBody
+          [ ( matchFunc theBody
+                -- Weight the body score higher
+                <&> \case
+                  Fuzzily.Fuzzy{score, ..} ->
+                    Fuzzily.Fuzzy{score = score + 1, ..}
+            )
+              -- Always include the body
+              <|> ( Just $
+                      Fuzzily.Fuzzy
+                        { original = theBody
+                        , rendered = theBody
+                        , score = 0
+                        }
+                  )
           , matchFunc (maybe "" unwords mbNotes)
           , -- TODO: Find good way to include tags
             -- , matchFunc (maybe "" unwords mbTags)
