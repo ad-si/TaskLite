@@ -1,5 +1,8 @@
 [![Banner of TaskLite](./docs-source/images/banner@2.png)][TaskLite]
 
+[TaskLite]: https://tasklite.org
+
+
 # TaskLite
 
 CLI task manager built with [Haskell] and [SQLite].
@@ -14,4 +17,4 @@ CLI task manager built with [Haskell] and [SQLite].
 />
 
 
-## [Documentation](https://tasklite.org/)
+## [Documentation][TaskLite]
