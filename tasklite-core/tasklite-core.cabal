@@ -1,6 +1,6 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.37.0.
+-- This file has been generated from package.yaml by hpack version 0.38.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -102,6 +102,7 @@ library
     , simple-sql-parser >=0.6 && <0.8
     , sqlite-simple ==0.4.*
     , syb ==0.7.*
+    , terminal-size ==0.3.*
     , text >=1.2 && <2.2
     , time >=1.11 && <1.15
     , ulid ==0.3.*

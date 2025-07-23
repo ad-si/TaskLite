@@ -23,6 +23,8 @@ import Protolude (
   ($),
   (&),
   (.),
+  (<=),
+  (>>=),
  )
 import Protolude qualified as P
 
@@ -248,7 +250,7 @@ data Config = Config
   , bodyWidth :: Int
   , prioWidth :: Int
   , headCount :: Int
-  , maxWidth :: Int
+  , maxWidth :: Maybe Int -- Automatically uses terminal width if not set
   , progressBarWidth :: Int
   , hooks :: HooksConfig
   }
@@ -277,10 +279,13 @@ instance FromJSON Config where
     bodyWidth       <- o .:? "bodyWidth" .!= defaultConfig.bodyWidth
     prioWidth       <- o .:? "prioWidth" .!= defaultConfig.prioWidth
     headCount       <- o .:? "headCount" .!= defaultConfig.headCount
-    maxWidth        <- o .:? "maxWidth" .!= defaultConfig.maxWidth
+    maxWidthMb     <- o .:? "maxWidth"
     progressBarWidth <- o .:? "progressBarWidth"
                                 .!= defaultConfig.progressBarWidth
     hooks           <- o .:? "hooks" .!= defaultConfig.hooks
+
+    let maxWidth = maxWidthMb >>=
+          \w -> if w <= 0 then defaultConfig.maxWidth else Just w
 
     pure $ Config{..}
 
@@ -370,7 +375,7 @@ defaultConfig =
     , bodyWidth = 10
     , prioWidth = 4
     , headCount = 20
-    , maxWidth = 120
+    , maxWidth = Nothing
     , progressBarWidth = 24
     , hooks =
         HooksConfig

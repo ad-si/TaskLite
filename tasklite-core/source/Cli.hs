@@ -126,6 +126,7 @@ import Prettyprinter.Render.Terminal (
   hPutDoc,
   renderIO,
  )
+import System.Console.Terminal.Size (Window (Window, height, width), size)
 import System.Directory (
   Permissions,
   XdgDirectory (..),
@@ -138,7 +139,6 @@ import System.Directory (
  )
 import System.FilePath (hasExtension, (</>))
 import System.IO (stdout)
-import System.Posix.IO (stdOutput)
 import System.Process (readProcess)
 import Time.System (timeCurrentP)
 
@@ -231,7 +231,6 @@ import Lib (
 import Migrations (runMigrations)
 import Server (startServer)
 import System.Environment (getProgName)
-import System.Posix.Terminal (queryTerminal)
 import Utils (
   IdText,
   ListModifiedFlag (AllItems, ModifiedItemsOnly),
@@ -1406,19 +1405,26 @@ printOutput appName argsMb config = do
             Right hookResult -> formatHookResult hookResult
           & P.fold
 
-  availableLinesStr <- readProcess "tput" ["lines"] ""
-  isTerminal <- queryTerminal stdOutput
-  let linesNumMb =
-        -- Ignore available terminal lines if output isn't printed to a terminal
-        if isTerminal
-          then
-            -- TODO: Use the correct number of terminal prompt lines
-            --       and overflowing lines here.
-            --       We're currently simply assuming
-            --       that 25% of the lines will overflow.
-            P.readMaybe availableLinesStr
-              <&> (\(x :: P.Double) -> P.round ((x - 5) * 0.75))
-          else Nothing
+  termSizeMb <- size
+  let
+    linesNumMb =
+      -- Ignore available terminal lines if output isn't printed to a terminal
+      termSizeMb <&> \(Window{height}) ->
+        -- TODO: Use the correct number of terminal prompt lines
+        --       and overflowing lines here.
+        --       We're currently simply assuming
+        --       that 25% of the lines will overflow.
+        P.round $ (P.fromIntegral height - 5) * (0.75 :: P.Double)
+
+    termWidthMb =
+      termSizeMb <&> \(Window{width}) -> width
+
+    outputWidth =
+      case (termWidthMb, configNorm.maxWidth) of
+        (Just termWidth, Just maxWidth) -> P.min termWidth maxWidth
+        (Just termWidth, Nothing) -> termWidth
+        (Nothing, Just maxWidth) -> maxWidth
+        (Nothing, Nothing) -> P.maxBound @P.Int
 
   nowElapsed <- timeCurrentP
   let now = timeFromElapsedP nowElapsed :: DateTime
@@ -1442,7 +1448,7 @@ printOutput appName argsMb config = do
         stdout
         $ layoutPretty
           ( defaultLayoutOptions
-              { layoutPageWidth = AvailablePerLine configNorm.maxWidth 1.0
+              { layoutPageWidth = AvailablePerLine outputWidth 1.0
               }
           )
           document
