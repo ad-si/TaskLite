@@ -34,7 +34,7 @@
             mdbook
             mdbook-alerts
             mdbook-toc
-            nodejs_24
+            nodejs_22  # For building the webapp
             zlib
           ];
           shellHook = ''
