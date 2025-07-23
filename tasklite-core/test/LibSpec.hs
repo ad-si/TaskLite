@@ -411,7 +411,7 @@ spec = do
 
   it "dies on invalid filter expressions" $ do
     withMemoryDb conf $ \memConn -> do
-      runFilter conf now memConn [" "] `shouldThrow` (== ExitFailure 1)
+      runFilter conf now memConn [" "] Nothing `shouldThrow` (== ExitFailure 1)
 
   it "counts tasks" $ do
     withMemoryDb defaultConfig $ \memConn -> do

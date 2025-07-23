@@ -1212,7 +1212,7 @@ executeCLiCommand conf now connection progName args availableLinesMb = do
         ListWithTag tags -> listWithTag conf now connection tags availableLinesMb
         QueryTasks query -> queryTasks conf now connection query
         RunSql query -> runSql conf query
-        RunFilter expressions -> runFilter conf now connection expressions
+        RunFilter expressions -> runFilter conf now connection expressions availableLinesMb
         Tags -> listTags conf connection
         Projects -> listProjects conf connection
         Notes -> listNotes conf connection

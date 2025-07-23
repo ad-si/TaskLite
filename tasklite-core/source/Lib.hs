@@ -1616,7 +1616,8 @@ nextTask conf connection = do
       pure $ pretty noTasksWarning
 
 
-randomTask :: Config -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
+randomTask ::
+  Config -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
 randomTask conf connection filterExpression = do
   let
     parserResults =
@@ -1660,8 +1661,10 @@ randomTask conf connection filterExpression = do
 
       tasks <-
         query_ connection $
-          getFilterQuery (HasStatus (Just IsOpen) : filterExps) $
-            Just "random()"
+          getFilterQuery
+            (HasStatus (Just IsOpen) : filterExps)
+            (Just "random()")
+            Nothing
 
       case P.headMay (tasks :: [FullTask]) of
         Nothing -> pure $ pretty noTasksWarning
@@ -2491,7 +2494,7 @@ countTasks conf connection filterExpression = do
                   <> hardline
             else Nothing
 
-      tasks <- query_ connection (getFilterQuery filterExps Nothing)
+      tasks <- query_ connection (getFilterQuery filterExps Nothing Nothing)
       pure $ errorsDoc & fromMaybe (pretty $ P.length (tasks :: [FullTask]))
 
 
@@ -2574,7 +2577,7 @@ newTasks conf now connection filterExp availableLinesMb = do
           tasks <-
             query_
               connection
-              (getFilterQuery filterExps (Just "ulid DESC"))
+              (getFilterQuery filterExps (Just "ulid DESC") availableLinesMb)
           formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
@@ -2655,8 +2658,10 @@ openTasks conf now connection filterExpression availableLinesMb = do
                 then filterExps
                 else HasStatus (Just IsOpen) : filterExps
             sqlQuery =
-              getFilterQuery filterExpWithOpen $
-                Just "priority DESC, due_utc ASC, ulid DESC"
+              getFilterQuery
+                filterExpWithOpen
+                (Just "priority DESC, due_utc ASC, ulid DESC")
+                availableLinesMb
 
           tasks <- query_ connection sqlQuery
           formatTasksColor conf now (isJust availableLinesMb) tasks
@@ -3108,8 +3113,9 @@ isValidFilter = \case
   _ -> True
 
 
-runFilter :: Config -> DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
-runFilter conf now connection exps = do
+runFilter ::
+  Config -> DateTime -> Connection -> [Text] -> Maybe Int -> IO (Doc AnsiStyle)
+runFilter conf now connection exps availableLinesMb = do
   let
     parserResults = readP_to_S filterExpsParser $ T.unpack $ unwords exps
     filterHelp =
@@ -3133,7 +3139,7 @@ runFilter conf now connection exps = do
           _ ->
             "The functions should not be called with a valid function"
         errors = P.filter (not . isValidFilter) filterExps
-        sqlQuery = getFilterQuery filterExps Nothing
+        sqlQuery = getFilterQuery filterExps Nothing availableLinesMb
 
       tasks <- query_ connection sqlQuery
 
@@ -3147,8 +3153,8 @@ runFilter conf now connection exps = do
 
 
 -- TODO: Increase performance of this query
-getFilterQuery :: [FilterExp] -> Maybe Text -> Query
-getFilterQuery filterExps orderByMb = do
+getFilterQuery :: [FilterExp] -> Maybe Text -> Maybe Int -> Query
+getFilterQuery filterExps orderByMb availableLinesMb = do
   let
     filterTuple =
       filterToSql <$> P.filter isValidFilter filterExps
@@ -3176,7 +3182,7 @@ getFilterQuery filterExps orderByMb = do
         \  due_utc ASC,\n\
         \  ulid DESC\n"
       Just orderByTxt ->
-        "ORDER BY \n" <> orderByTxt
+        "ORDER BY \n" <> orderByTxt <> "\n"
 
   FullTask.selectQuery
     <> "FROM ("
@@ -3184,6 +3190,14 @@ getFilterQuery filterExps orderByMb = do
     <> ") tasks1\n\
        \LEFT JOIN tasks_view ON tasks1.ulid IS tasks_view.ulid\n"
     <> orderBy
+    <> Query
+      ( "LIMIT "
+          <> ( show @P.Int $ case availableLinesMb of
+                Nothing -> -1 -- No limit
+                Just availableLines -> availableLines
+             )
+          <> "\n"
+      )
 
 
 formatTasks :: Config -> DateTime -> Bool -> [FullTask] -> Doc AnsiStyle
