@@ -101,13 +101,17 @@ import Options.Applicative.Help.Core (parserHelp)
 import Paths_tasklite_core (version)
 import Prettyprinter (
   Doc,
+  LayoutOptions (layoutPageWidth),
+  PageWidth (AvailablePerLine),
   Pretty (pretty),
   annotate,
+  defaultLayoutOptions,
   dquotes,
   enclose,
   hardline,
   hcat,
   indent,
+  layoutPretty,
   parens,
   (<+>),
  )
@@ -118,7 +122,7 @@ import Prettyprinter.Render.Terminal (
   color,
   colorDull,
   hPutDoc,
-  putDoc,
+  renderIO,
  )
 import System.Directory (
   Permissions,
@@ -131,6 +135,7 @@ import System.Directory (
   listDirectory,
  )
 import System.FilePath (hasExtension, (</>))
+import System.IO (stdout)
 import System.Process (readProcess)
 import Time.System (timeCurrentP)
 
@@ -455,7 +460,7 @@ parseDurationString text =
 commandParser :: Config -> Parser Command
 commandParser conf =
   let
-    numTasks = show (headCount conf)
+    numTasks = show conf.headCount
   in
   pure ListReady
   <|>
@@ -1405,15 +1410,25 @@ printOutput appName argsMb config = do
 
   -- Run pre-exit hooks
   preExitResults <- executeHooks "" configNorm.hooks.exit.pre
-  let preExitHookMsg =
-        preExitResults
-          <&> \case
-            Left error -> pretty error
-            Right hookResult -> formatHookResult hookResult
-          & P.fold
+  let
+    preExitHookMsg =
+      preExitResults
+        <&> \case
+          Left error -> pretty error
+          Right hookResult -> formatHookResult hookResult
+        & P.fold
+    putDocCustom document =
+      renderIO
+        stdout
+        $ layoutPretty
+          ( defaultLayoutOptions
+              { layoutPageWidth = AvailablePerLine configNorm.maxWidth 1.0
+              }
+          )
+          document
 
   -- TODO: Remove color when piping into other command
-  putDoc $
+  putDocCustom $
     preLaunchHookMsg
       <!!> migrationsStatus
       <!!> postLaunchHookMsg
