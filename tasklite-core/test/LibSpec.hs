@@ -156,7 +156,7 @@ spec = do
 
   it "initially contains no tasks" $ do
     withMemoryDb conf $ \memConn -> do
-      tasks <- headTasks conf now memConn
+      tasks <- headTasks conf now memConn Nothing
       unpack (show tasks) `shouldStartWith` "No tasks available"
 
   it "inserts a task" $ do
@@ -454,7 +454,7 @@ spec = do
       insertRecord "tasks" memConn task1
       insertRecord "tasks" memConn task2
 
-      cliOutput <- newTasks defaultConfig now memConn (Just ["state:done"])
+      cliOutput <- newTasks defaultConfig now memConn (Just ["state:done"]) Nothing
       show cliOutput `shouldContain` "New task 2"
       show cliOutput `shouldNotContain` "New task 1"
 

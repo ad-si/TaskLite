@@ -2496,10 +2496,16 @@ countTasks conf connection filterExpression = do
 
 
 -- TODO: Print number of remaining tasks and how to display them at the bottom
-headTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-headTasks conf now connection = do
+headTasks :: Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
+headTasks conf now connection availableLinesMb = do
+  let taskCount = do
+        let availableLines = availableLinesMb & fromMaybe 0
+        if P.isJust availableLinesMb && availableLines < conf.headCount
+          then availableLines
+          else conf.headCount
+
   tasks <-
-    query
+    queryNamed
       connection
       -- TODO: Add `wait_utc` < datetime('now')"
       [sql|
@@ -2510,11 +2516,11 @@ headTasks conf now connection = do
           priority DESC,
           due_utc ASC,
           ulid DESC
-        LIMIT ?
+        LIMIT :taskCount
       |]
-      (Only $ headCount conf)
+      [":taskCount" := taskCount]
 
-  formatTasksColor conf now tasks
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
 newTasks ::
@@ -2522,8 +2528,9 @@ newTasks ::
   DateTime ->
   Connection ->
   Maybe [Text] ->
+  Maybe Int ->
   IO (Doc AnsiStyle)
-newTasks conf now connection filterExp = do
+newTasks conf now connection filterExp availableLinesMb = do
   let
     parserResults =
       readP_to_S filterExpsParser $
@@ -2533,17 +2540,20 @@ newTasks conf now connection filterExp = do
   case filterMay of
     Nothing -> do
       tasks <-
-        query
+        queryNamed
           connection
           [sql|
             SELECT *
             FROM tasks_view
             ORDER BY ulid DESC
-            LIMIT ?
+            LIMIT :taskCount
           |]
-          (Only $ headCount conf)
+          [ ":taskCount" := case availableLinesMb of
+              Nothing -> -1 -- No limit
+              Just availableLines -> availableLines
+          ]
 
-      formatTasksColor conf now tasks
+      formatTasksColor conf now (isJust availableLinesMb) tasks
     --
     Just (filterExps, _) -> do
       let
@@ -2565,29 +2575,38 @@ newTasks conf now connection filterExp = do
             query_
               connection
               (getFilterQuery filterExps (Just "ulid DESC"))
-          formatTasksColor conf now tasks
+          formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
-listOldTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-listOldTasks conf now connection = do
+listOldTasks ::
+  Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
+listOldTasks conf now connection availableLinesMb = do
   tasks <-
-    query
+    queryNamed
       connection
       [sql|
         SELECT *
         FROM tasks_view
         WHERE closed_utc IS NULL
         ORDER BY ulid ASC
-        LIMIT ?
+        LIMIT :taskCount
       |]
-      (Only $ headCount conf)
+      [ ":taskCount" := case availableLinesMb of
+          Nothing -> -1 -- No limit
+          Just availableLines -> availableLines
+      ]
 
-  formatTasksColor conf now tasks
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
 openTasks ::
-  Config -> DateTime -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
-openTasks conf now connection filterExpression = do
+  Config ->
+  DateTime ->
+  Connection ->
+  Maybe [Text] ->
+  Maybe Int ->
+  IO (Doc AnsiStyle)
+openTasks conf now connection filterExpression availableLinesMb = do
   let
     parserResults =
       readP_to_S filterExpsParser $
@@ -2597,16 +2616,21 @@ openTasks conf now connection filterExpression = do
   case filterMay of
     Nothing -> do
       (tasks :: [FullTask]) <-
-        query_
+        queryNamed
           connection
           [sql|
             SELECT *
             FROM tasks_view
             WHERE closed_utc IS NULL
             ORDER BY priority DESC, due_utc ASC, ulid DESC
+            LIMIT :taskCount
           |]
+          [ ":taskCount" := case availableLinesMb of
+              Nothing -> -1 -- No limit
+              Just availableLines -> availableLines
+          ]
 
-      formatTasksColor conf now tasks
+      formatTasksColor conf now (isJust availableLinesMb) tasks
     --
     Just (filterExps, _) -> do
       let
@@ -2635,7 +2659,7 @@ openTasks conf now connection filterExpression = do
                 Just "priority DESC, due_utc ASC, ulid DESC"
 
           tasks <- query_ connection sqlQuery
-          formatTasksColor conf now tasks
+          formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
 modifiedTasks ::
@@ -2643,16 +2667,22 @@ modifiedTasks ::
   DateTime ->
   Connection ->
   ListModifiedFlag ->
+  Maybe Int ->
   IO (Doc AnsiStyle)
-modifiedTasks conf now connection listModifiedFlag = do
+modifiedTasks conf now connection listModifiedFlag availableLinesMb = do
   tasks <-
-    query_
+    queryNamed
       connection
       [sql|
         SELECT *
         FROM tasks_view
-        ORDER BY modified_utc DESC
+        ORDER BY modified_utc Desc
+        LIMIT :taskCount
       |]
+      [ ":taskCount" := case availableLinesMb of
+          Nothing -> -1 -- No limit
+          Just availableLines -> availableLines
+      ]
 
   let
     filterModified =
@@ -2675,13 +2705,14 @@ modifiedTasks conf now connection listModifiedFlag = do
         AllItems -> tasks
         ModifiedItemsOnly -> filterModified tasks
 
-  formatTasksColor conf now filteredTasks
+  formatTasksColor conf now (isJust availableLinesMb) filteredTasks
 
 
-overdueTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-overdueTasks conf now connection = do
+overdueTasks ::
+  Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
+overdueTasks conf now connection availableLinesMb = do
   tasks <-
-    query_
+    queryNamed
       connection
       [sql|
         SELECT *
@@ -2692,16 +2723,21 @@ overdueTasks conf now connection = do
         ORDER BY
           priority DESC,
           due_utc ASC,
-          ulid DESC
+          ulid Desc
+        LIMIT :taskCount
       |]
+      [ ":taskCount" := case availableLinesMb of
+          Nothing -> -1 -- No limit
+          Just availableLines -> availableLines
+      ]
 
-  formatTasksColor conf now tasks
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
-doneTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-doneTasks conf now connection = do
+doneTasks :: Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
+doneTasks conf now connection availableLinesMb = do
   tasks <-
-    query
+    queryNamed
       connection
       [sql|
         SELECT *
@@ -2710,17 +2746,21 @@ doneTasks conf now connection = do
           closed_utc IS NOT NULL AND
           state == 'Done'
         ORDER BY closed_utc DESC
-        LIMIT ?
+        LIMIT :taskCount
       |]
-      (Only $ headCount conf)
+      [ ":taskCount" := case availableLinesMb of
+          Nothing -> -1 -- No limit
+          Just availableLines -> availableLines
+      ]
 
-  formatTasksColor conf now tasks
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
-obsoleteTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-obsoleteTasks conf now connection = do
+obsoleteTasks ::
+  Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
+obsoleteTasks conf now connection availableLinesMb = do
   tasks <-
-    query
+    queryNamed
       connection
       [sql|
         SELECT *
@@ -2729,17 +2769,21 @@ obsoleteTasks conf now connection = do
           closed_utc IS NOT NULL AND
           state == 'Obsolete'
         ORDER BY ulid DESC
-        LIMIT ?
+        LIMIT :taskCount
       |]
-      (Only $ headCount conf)
+      [ ":taskCount" := case availableLinesMb of
+          Nothing -> -1 -- No limit
+          Just availableLines -> availableLines
+      ]
 
-  formatTasksColor conf now tasks
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
-deletableTasks :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-deletableTasks conf now connection = do
+deletableTasks ::
+  Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
+deletableTasks conf now connection availableLinesMb = do
   tasks <-
-    query
+    queryNamed
       connection
       [sql|
         SELECT *
@@ -2748,46 +2792,62 @@ deletableTasks conf now connection = do
           closed_utc IS NOT NULL
           AND state == 'Deletable'
         ORDER BY ulid DESC
-        LIMIT ?
+        LIMIT :taskCount
       |]
-      (Only $ headCount conf)
-  formatTasksColor conf now tasks
+      [ ":taskCount" := case availableLinesMb of
+          Nothing -> -1 -- No limit
+          Just availableLines -> availableLines
+      ]
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
-listRepeating :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-listRepeating conf now connection = do
+listRepeating ::
+  Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
+listRepeating conf now connection availableLinesMb = do
   tasks <-
-    query_
+    queryNamed
       connection
       [sql|
         SELECT *
         FROM tasks_view
         WHERE repetition_duration IS NOT NULL
-        ORDER BY repetition_duration DESC
+        ORDER BY repetition_duration Desc
+        LIMIT :taskCount
       |]
+      [ ":taskCount" := case availableLinesMb of
+          Nothing -> -1 -- No limit
+          Just availableLines -> availableLines
+      ]
 
-  formatTasksColor conf now tasks
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
-listRecurring :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-listRecurring conf now connection = do
+listRecurring ::
+  Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
+listRecurring conf now connection availableLinesMb = do
   tasks <-
-    query_
+    queryNamed
       connection
       [sql|
         SELECT *
         FROM tasks_view
         WHERE recurrence_duration IS NOT NULL
         ORDER BY recurrence_duration DESC
+        LIMIT :taskCount
       |]
+      [ ":taskCount" := case availableLinesMb of
+          Nothing -> -1 -- No limit
+          Just availableLines -> availableLines
+      ]
 
-  formatTasksColor conf now tasks
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
-listReady :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-listReady conf now connection = do
+listReady ::
+  Config -> DateTime -> Connection -> Maybe P.Int -> IO (Doc AnsiStyle)
+listReady conf now connection availableLinesMb = do
   tasks <-
-    query
+    queryNamed
       connection
       [sql|
         SELECT *
@@ -2801,17 +2861,21 @@ listReady conf now connection = do
           priority DESC,
           due_utc ASC,
           ulid DESC
-        LIMIT ?
+        LIMIT :taskCount
       |]
-      (Only $ headCount conf)
+      [ ":taskCount" := case availableLinesMb of
+          Nothing -> -1 -- No limit
+          Just availableLines -> availableLines
+      ]
 
-  formatTasksColor conf now tasks
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
-listWaiting :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-listWaiting conf now connection = do
+listWaiting ::
+  Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
+listWaiting conf now connection availableLinesMb = do
   tasks <-
-    query_
+    queryNamed
       connection
       [sql|
         SELECT *
@@ -2820,29 +2884,39 @@ listWaiting conf now connection = do
           AND waiting_utc IS NOT NULL
           AND (review_utc > datetime('now') OR review_utc IS NULL)
         ORDER BY waiting_utc DESC
+        LIMIT :taskCount
       |]
+      [ ":taskCount" := case availableLinesMb of
+          Nothing -> -1 -- No limit
+          Just availableLines -> availableLines
+      ]
 
-  formatTasksColor conf now tasks
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
-listAll :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-listAll conf now connection = do
+listAll :: Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
+listAll conf now connection availableLinesMb = do
   tasks <-
-    query_
+    queryNamed
       connection
       [sql|
         SELECT *
         FROM tasks_view
         ORDER BY ulid ASC
+        LIMIT :taskCount
       |]
+      [ ":taskCount" := case availableLinesMb of
+          Nothing -> -1 -- No limit
+          Just availableLines -> availableLines
+      ]
 
-  formatTasksColor conf now tasks
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
-listNoTag :: Config -> DateTime -> Connection -> IO (Doc AnsiStyle)
-listNoTag conf now connection = do
+listNoTag :: Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
+listNoTag conf now connection availableLinesMb = do
   tasks <-
-    query_
+    queryNamed
       connection
       [sql|
         SELECT *
@@ -2854,13 +2928,23 @@ listNoTag conf now connection = do
           priority DESC,
           due_utc ASC,
           ulid DESC
+        LIMIT :taskCount
       |]
+      [ ":taskCount" := case availableLinesMb of
+          Nothing -> -1 -- No limit
+          Just availableLines -> availableLines
+      ]
 
-  formatTasksColor conf now tasks
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
-getWithTag :: Connection -> Maybe DerivedState -> [Text] -> IO [FullTask]
-getWithTag connection stateMaybe tags = do
+getWithTag ::
+  Connection ->
+  Maybe DerivedState ->
+  Maybe Int ->
+  [Text] ->
+  IO [FullTask]
+getWithTag connection stateMaybe availableLinesMb tags = do
   let
     tagQuery = case tags of
       [] -> ""
@@ -2901,15 +2985,22 @@ getWithTag connection stateMaybe tags = do
            \ORDER BY \n\
            \  priority DESC,\n\
            \  due_utc ASC,\n\
-           \  ulid DESC\n"
+           \  ulid DESC\n\
+           \LIMIT "
+        <> Query
+          ( show @Int $ case availableLinesMb of
+              Nothing -> -1 -- No limit
+              Just availableLines -> availableLines
+          )
 
   query_ connection mainQuery
 
 
-listWithTag :: Config -> DateTime -> Connection -> [Text] -> IO (Doc AnsiStyle)
-listWithTag conf now connection tags = do
-  tasks <- getWithTag connection Nothing tags
-  formatTasksColor conf now tasks
+listWithTag ::
+  Config -> DateTime -> Connection -> [Text] -> Maybe Int -> IO (Doc AnsiStyle)
+listWithTag conf now connection tags availableLinesMb = do
+  tasks <- getWithTag connection Nothing availableLinesMb tags
+  formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
 queryTasks :: Config -> DateTime -> Connection -> Text -> IO (Doc AnsiStyle)
@@ -2918,7 +3009,7 @@ queryTasks conf now connection sqlQuery = do
     query_ connection $
       Query $
         "SELECT * FROM tasks_view WHERE " <> sqlQuery
-  formatTasksColor conf now tasks
+  formatTasksColor conf now False tasks
 
 
 runSql :: Config -> Text -> IO (Doc AnsiStyle)
@@ -3051,7 +3142,7 @@ runFilter conf now connection exps = do
         else
           if P.length tasks <= 0
             then pure "No tasks available for the given filter."
-            else formatTasksColor conf now tasks
+            else formatTasksColor conf now False tasks
     _ -> dieWithError filterHelp
 
 
@@ -3095,8 +3186,8 @@ getFilterQuery filterExps orderByMb = do
     <> orderBy
 
 
-formatTasks :: Config -> DateTime -> [FullTask] -> Doc AnsiStyle
-formatTasks conf now tasks =
+formatTasks :: Config -> DateTime -> Bool -> [FullTask] -> Doc AnsiStyle
+formatTasks conf now isTruncated tasks =
   if P.length tasks == 0
     then pretty noTasksWarning
     else
@@ -3121,12 +3212,21 @@ formatTasks conf now tasks =
         docHeader
           <> vsep (fmap (formatTaskLine conf now taskWidth) tasks)
           <> line
+          <> if isTruncated
+            then
+              annotate
+                (color Yellow)
+                ( "This list is truncated. "
+                    <> "List all by piping into `cat` or `less`."
+                )
+            else mempty
 
 
-formatTasksColor :: Config -> DateTime -> [FullTask] -> IO (Doc AnsiStyle)
-formatTasksColor conf now tasks = do
+formatTasksColor ::
+  Config -> DateTime -> Bool -> [FullTask] -> IO (Doc AnsiStyle)
+formatTasksColor conf now isTruncated tasks = do
   confNorm <- applyColorMode conf
-  pure $ formatTasks confNorm now tasks
+  pure $ formatTasks confNorm now isTruncated tasks
 
 
 getProgressBar :: Integer -> Double -> Doc AnsiStyle

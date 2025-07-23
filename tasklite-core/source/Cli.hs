@@ -39,6 +39,8 @@ import Protolude (
   ($),
   (&),
   (&&),
+  (*),
+  (-),
   (.),
   (<$>),
   (<&>),
@@ -136,6 +138,7 @@ import System.Directory (
  )
 import System.FilePath (hasExtension, (</>))
 import System.IO (stdout)
+import System.Posix.IO (stdOutput)
 import System.Process (readProcess)
 import Time.System (timeCurrentP)
 
@@ -228,6 +231,7 @@ import Lib (
 import Migrations (runMigrations)
 import Server (startServer)
 import System.Environment (getProgName)
+import System.Posix.Terminal (queryTerminal)
 import Utils (
   IdText,
   ListModifiedFlag (AllItems, ModifiedItemsOnly),
@@ -1167,8 +1171,9 @@ executeCLiCommand ::
   Connection ->
   String ->
   [String] ->
+  Maybe P.Int ->
   IO (Doc AnsiStyle)
-executeCLiCommand conf now connection progName args = do
+executeCLiCommand conf now connection progName args availableLinesMb = do
   let cliCommandRes = execParserPure defaultPrefs (commandParserInfo conf) args
 
   case cliCommandRes of
@@ -1189,23 +1194,23 @@ executeCLiCommand conf now connection progName args = do
       let addTaskC = addTask conf connection
 
       case cliCommand of
-        ListAll -> listAll conf now connection
-        ListHead -> headTasks conf now connection
-        ListNewFiltered taskFilter -> newTasks conf now connection taskFilter
-        ListOld -> listOldTasks conf now connection
-        ListOpen taskFilter -> openTasks conf now connection taskFilter
-        ListModified -> modifiedTasks conf now connection AllItems
-        ListModifiedOnly -> modifiedTasks conf now connection ModifiedItemsOnly
-        ListOverdue -> overdueTasks conf now connection
-        ListRepeating -> listRepeating conf now connection
-        ListRecurring -> listRecurring conf now connection
-        ListReady -> listReady conf now connection
-        ListWaiting -> listWaiting conf now connection
-        ListDone -> doneTasks conf now connection
-        ListObsolete -> obsoleteTasks conf now connection
-        ListDeletable -> deletableTasks conf now connection
-        ListNoTag -> listNoTag conf now connection
-        ListWithTag tags -> listWithTag conf now connection tags
+        ListAll -> listAll conf now connection availableLinesMb
+        ListHead -> headTasks conf now connection availableLinesMb
+        ListNewFiltered taskFilter -> newTasks conf now connection taskFilter availableLinesMb
+        ListOld -> listOldTasks conf now connection availableLinesMb
+        ListOpen taskFilter -> openTasks conf now connection taskFilter availableLinesMb
+        ListModified -> modifiedTasks conf now connection AllItems availableLinesMb
+        ListModifiedOnly -> modifiedTasks conf now connection ModifiedItemsOnly availableLinesMb
+        ListOverdue -> overdueTasks conf now connection availableLinesMb
+        ListRepeating -> listRepeating conf now connection availableLinesMb
+        ListRecurring -> listRecurring conf now connection availableLinesMb
+        ListReady -> listReady conf now connection availableLinesMb
+        ListWaiting -> listWaiting conf now connection availableLinesMb
+        ListDone -> doneTasks conf now connection availableLinesMb
+        ListObsolete -> obsoleteTasks conf now connection availableLinesMb
+        ListDeletable -> deletableTasks conf now connection availableLinesMb
+        ListNoTag -> listNoTag conf now connection availableLinesMb
+        ListWithTag tags -> listWithTag conf now connection tags availableLinesMb
         QueryTasks query -> queryTasks conf now connection query
         RunSql query -> runSql conf query
         RunFilter expressions -> runFilter conf now connection expressions
@@ -1401,9 +1406,24 @@ printOutput appName argsMb config = do
             Right hookResult -> formatHookResult hookResult
           & P.fold
 
+  availableLinesStr <- readProcess "tput" ["lines"] ""
+  isTerminal <- queryTerminal stdOutput
+  let linesNumMb =
+        -- Ignore available terminal lines if output isn't printed to a terminal
+        if isTerminal
+          then
+            -- TODO: Use the correct number of terminal prompt lines
+            --       and overflowing lines here.
+            --       We're currently simply assuming
+            --       that 25% of the lines will overflow.
+            P.readMaybe availableLinesStr
+              <&> (\(x :: P.Double) -> P.round ((x - 5) * 0.75))
+          else Nothing
+
   nowElapsed <- timeCurrentP
   let now = timeFromElapsedP nowElapsed :: DateTime
-  doc <- executeCLiCommand configNorm now connection progName args
+
+  doc <- executeCLiCommand configNorm now connection progName args linesNumMb
 
   -- TODO: Use withConnection instead
   SQLite.close connection
