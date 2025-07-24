@@ -2861,6 +2861,8 @@ listReady conf now connection availableLinesMb = do
           (ready_utc IS NULL OR
             (ready_utc IS NOT NULL AND ready_utc < datetime('now'))
           ) AND
+          waiting_utc IS NULL AND
+          ready_utc IS NULL AND
           closed_utc IS NULL
         ORDER BY
           priority DESC,
