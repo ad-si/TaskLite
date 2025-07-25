@@ -69,7 +69,7 @@ import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TL
 import Data.ULID (ulidFromInteger)
-import Data.ULID.TimeStamp (getULIDTimeStamp)
+import Data.ULID.TimeStamp (ULIDTimeStamp, getULIDTimeStamp)
 import Data.Vector qualified as V
 import Data.Yaml (
   ParseException (InvalidYaml),
@@ -89,6 +89,7 @@ import ImportTask (
   setMissingFields,
  )
 import Lib (
+  addEmptyTask,
   execWithConn,
   execWithTask,
   insertNotes,
@@ -116,9 +117,10 @@ import Prettyprinter.Render.Terminal (
  )
 import System.Directory (createDirectoryIfMissing, listDirectory, removeFile)
 import System.FilePath (isExtensionOf, takeExtension, (</>))
+import System.Hourglass (timeCurrentP)
 import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
-import Task (Task (..), setMetadataField, taskToEditableMarkdown)
+import Task (Task (..), emptyTask, setMetadataField, taskToEditableMarkdown)
 import Text.Editor (runUserEditorDWIM, yamlTemplate)
 import Text.Parsec.Rfc2822 qualified as Email
 import Text.ParserCombinators.Parsec as Parsec (parse)
@@ -128,6 +130,7 @@ import Utils (
   IdText,
   countCharTL,
   emptyUlid,
+  formatElapsedP,
   setDateTime,
   ulidTextToDateTime,
   zeroUlidTxt,
@@ -631,6 +634,132 @@ editUntilValidMarkdown editMode conn initialMarkdown wipMarkdown = do
               pure $ Right (newTask, BSL.toStrict yamlContent)
 
 
+insertTaskFromEdit ::
+  Config ->
+  Connection ->
+  ImportTask ->
+  P.ByteString ->
+  P.Text ->
+  IO (Doc AnsiStyle)
+insertTaskFromEdit conf conn importTaskRec newContent modified_utc = do
+  -- Insert empty task if the edited task was newly created
+  ulid <-
+    if T.null importTaskRec.task.ulid
+      then addEmptyTask conf conn <&> Task.ulid
+      else pure importTaskRec.task.ulid
+
+  effectiveUserName <- getEffectiveUserName
+  now <- getULIDTimeStamp <&> (show @ULIDTimeStamp >>> T.toLower)
+  let
+    parseMetadata :: Value -> Parser Bool
+    parseMetadata val = case val of
+      Object obj -> do
+        let mdataMaybe = KeyMap.lookup "metadata" obj
+        pure $ case mdataMaybe of
+          Just (Object _) -> True
+          _ -> False
+      _ -> pure False
+
+    hasMetadata =
+      parseMaybe parseMetadata
+        =<< rightToMaybe (Yaml.decodeEither' newContent)
+
+    taskFixed =
+      importTaskRec.task
+        { Task.ulid = ulid
+        , Task.user =
+            if importTaskRec.task.user == ""
+              then T.pack effectiveUserName
+              else importTaskRec.task.user
+        , Task.metadata =
+            if hasMetadata == Just True
+              then importTaskRec.task.metadata
+              else Nothing
+        , -- Set to previous value to force SQL trigger to update it
+          Task.modified_utc = modified_utc
+        }
+    notesCorrectUtc =
+      importTaskRec.notes
+        <&> ( \note ->
+                note
+                  { Note.ulid =
+                      if zeroUlidTxt `T.isPrefixOf` note.ulid
+                        then note.ulid & T.replace zeroUlidTxt now
+                        else note.ulid
+                  }
+            )
+
+  updateTask conn taskFixed
+
+  nowDateTime <- dateCurrent
+
+  let taskFixedUtc =
+        if P.isNothing taskFixed.closed_utc
+          then taskFixed
+          else
+            taskFixed
+              { Task.modified_utc =
+                  nowDateTime
+                    & timePrint (toFormat importUtcFormat)
+                    & T.pack
+              }
+
+  -- TODO: Remove after it was added to `createSetClosedUtcTrigger`
+  -- Update again with the same `state` field to avoid firing
+  -- SQL trigger which would overwrite the `closed_utc` field.
+  P.when (P.isJust taskFixed.closed_utc) $ do
+    updateTask conn taskFixedUtc
+
+  tagWarnings <- insertTags conn Nothing taskFixedUtc importTaskRec.tags
+  noteWarnings <- insertNotes conn Nothing taskFixedUtc notesCorrectUtc
+
+  args <- P.getArgs
+  postModifyResults <-
+    executeHooks
+      ( TL.toStrict $
+          TL.decodeUtf8 $
+            Aeson.encode $
+              object
+                [ "arguments" .= args
+                , "taskModified" .= taskFixedUtc
+                -- TODO: Add tags and notes to task
+                ]
+      )
+      conf.hooks.modify.post
+
+  let postModifyHookMsg =
+        ( postModifyResults
+            <&> \case
+              Left error -> "ERROR:" <+> pretty error
+              Right hookResult -> pretty hookResult.message
+            & P.fold
+        )
+          <> hardline
+
+  pure $
+    tagWarnings
+      <$$> noteWarnings
+      <$$> "✏️  Edited task"
+      <+> dquotes (pretty taskFixed.body)
+      <+> "with ulid"
+      <+> dquotes (pretty taskFixed.ulid)
+        <!!> postModifyHookMsg
+
+
+enterTask :: Config -> Connection -> IO (Doc AnsiStyle)
+enterTask conf conn = do
+  taskMarkdown <- taskToEditableMarkdown conn emptyTask
+  taskMarkdownTupleRes <-
+    editUntilValidMarkdown OpenEditorRequireEdit conn taskMarkdown taskMarkdown
+  case taskMarkdownTupleRes of
+    Left error -> case error of
+      InvalidYaml (Just (YamlException "")) -> pure P.mempty
+      _ -> pure $ pretty $ Yaml.prettyPrintParseException error
+    Right (importTaskRec, newContent) -> do
+      modified_utc <- formatElapsedP conf timeCurrentP
+      insertTaskFromEdit conf conn importTaskRec newContent modified_utc
+
+
 editTaskByTask :: Config -> EditMode -> Connection -> Task -> IO (Doc AnsiStyle)
 editTaskByTask conf editMode conn taskToEdit = do
   taskMarkdown <- taskToEditableMarkdown conn taskToEdit
@@ -641,101 +770,12 @@ editTaskByTask conf editMode conn taskToEdit = do
       InvalidYaml (Just (YamlException "")) -> pure P.mempty
       _ -> pure $ pretty $ Yaml.prettyPrintParseException error
     Right (importTaskRec, newContent) -> do
-      effectiveUserName <- getEffectiveUserName
-      now <- getULIDTimeStamp <&> (show >>> T.toLower)
-      let
-        parseMetadata :: Value -> Parser Bool
-        parseMetadata val = case val of
-          Object obj -> do
-            let mdataMaybe = KeyMap.lookup "metadata" obj
-            pure $ case mdataMaybe of
-              Just (Object _) -> True
-              _ -> False
-          _ -> pure False
-
-        hasMetadata =
-          parseMaybe parseMetadata
-            =<< rightToMaybe (Yaml.decodeEither' newContent)
-
-        taskFixed =
-          importTaskRec.task
-            { Task.user =
-                if importTaskRec.task.user == ""
-                  then T.pack effectiveUserName
-                  else importTaskRec.task.user
-            , Task.metadata =
-                if hasMetadata == Just True
-                  then importTaskRec.task.metadata
-                  else Nothing
-            , -- Set to previous value to force SQL trigger to update it
-              Task.modified_utc = taskToEdit.modified_utc
-            }
-        notesCorrectUtc =
-          importTaskRec.notes
-            <&> ( \note ->
-                    note
-                      { Note.ulid =
-                          if zeroUlidTxt `T.isPrefixOf` note.ulid
-                            then note.ulid & T.replace zeroUlidTxt now
-                            else note.ulid
-                      }
-                )
-
-      updateTask conn taskFixed
-
-      nowDateTime <- dateCurrent
-
-      let taskFixedUtc =
-            if P.isNothing taskFixed.closed_utc
-              then taskFixed
-              else
-                taskFixed
-                  { Task.modified_utc =
-                      nowDateTime
-                        & timePrint (toFormat importUtcFormat)
-                        & T.pack
-                  }
-
-      -- TODO: Remove after it was added to `createSetClosedUtcTrigger`
-      -- Update again with the same `state` field to avoid firing
-      -- SQL trigger which would overwrite the `closed_utc` field.
-      P.when (P.isJust taskFixed.closed_utc) $ do
-        updateTask conn taskFixedUtc
-
-      tagWarnings <- insertTags conn Nothing taskFixedUtc importTaskRec.tags
-      noteWarnings <- insertNotes conn Nothing taskFixedUtc notesCorrectUtc
-
-      args <- P.getArgs
-      postModifyResults <-
-        executeHooks
-          ( TL.toStrict $
-              TL.decodeUtf8 $
-                Aeson.encode $
-                  object
-                    [ "arguments" .= args
-                    , "taskModified" .= taskFixedUtc
-                    -- TODO: Add tags and notes to task
-                    ]
-          )
-          conf.hooks.modify.post
-
-      let postModifyHookMsg =
-            ( postModifyResults
-                <&> \case
-                  Left error -> "ERROR:" <+> pretty error
-                  Right hookResult -> pretty hookResult.message
-                & P.fold
-            )
-              <> hardline
-
-      pure $
-        tagWarnings
-          <$$> noteWarnings
-          <$$> "✏️  Edited task"
-          <+> dquotes (pretty taskFixed.body)
-          <+> "with ulid"
-          <+> dquotes (pretty taskFixed.ulid)
-            <!!> postModifyHookMsg
+      insertTaskFromEdit
+        conf
+        conn
+        importTaskRec
+        newContent
+        taskToEdit.modified_utc
 
 
 -- TODO: Eliminate code duplications with `addTask`

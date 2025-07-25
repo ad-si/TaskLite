@@ -414,24 +414,30 @@ setMetadataField fieldNameText value task =
 taskToEditableMarkdown :: Connection -> Task -> P.IO P.ByteString
 taskToEditableMarkdown conn task = do
   (tags :: [[P.Text]]) <-
-    query
-      conn
-      [sql|
-        SELECT tag
-        FROM task_to_tag
-        WHERE task_ulid == ?
-      |]
-      (Only $ ulid task)
+    if T.null task.ulid
+      then pure []
+      else
+        query
+          conn
+          [sql|
+            SELECT tag
+            FROM task_to_tag
+            WHERE task_ulid == ?
+          |]
+          (Only task.ulid)
 
   (notes :: [[P.Text]]) <-
-    query
-      conn
-      [sql|
-        SELECT note
-        FROM task_to_note
-        WHERE task_ulid == ?
-      |]
-      (Only $ ulid task)
+    if T.null task.ulid
+      then pure []
+      else
+        query
+          conn
+          [sql|
+            SELECT note
+            FROM task_to_note
+            WHERE task_ulid == ?
+          |]
+          (Only task.ulid)
 
   let
     indentNoteContent noteContent =

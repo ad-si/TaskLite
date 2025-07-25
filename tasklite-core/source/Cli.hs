@@ -157,6 +157,7 @@ import ImportExport (
   dumpNdjson,
   dumpSql,
   editTask,
+  enterTask,
   importDir,
   importEml,
   importFile,
@@ -258,7 +259,8 @@ data Command
   | AddSell [Text]
   | AddPay [Text]
   | AddShip [Text]
-  | LogTask [Text] --
+  | LogTask [Text]
+  | EnterTask --
   {- Modify -}
   | ReadyOn DateTime [IdText]
   | WaitTasks [IdText]
@@ -485,6 +487,9 @@ commandParser conf =
     <> command "log" (toParserInfo (LogTask <$> some (strArgument
         (metavar "BODY" <> help "Body of the task")))
         "Log an already completed task")
+
+    <> command "enter" (toParserInfo (pure EnterTask)
+        "Open your default editor with an empty task template")
 
     <> command "readyon" (toParserInfo (ReadyOn
       <$> argument (maybeReader (parseUtc . T.pack))
@@ -1251,6 +1256,7 @@ executeCLiCommand conf now connection progName args availableLinesMb = do
         AddPay bodyWords -> addTaskC $ ["Pay"] <> bodyWords <> ["+pay"]
         AddShip bodyWords -> addTaskC $ ["Ship"] <> bodyWords <> ["+ship"]
         LogTask bodyWords -> logTask conf connection bodyWords
+        EnterTask -> enterTask conf connection
         ReadyOn datetime ids -> setReadyUtc conf connection datetime ids
         WaitTasks ids -> waitTasks conf connection ids
         WaitFor duration ids -> waitFor conf connection duration ids

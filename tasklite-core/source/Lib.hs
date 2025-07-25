@@ -490,6 +490,24 @@ getTriple conf = do
   pure (ulid, modified_utc, effectiveUserName)
 
 
+addEmptyTask :: Config -> Connection -> IO Task
+addEmptyTask conf conn = do
+  (ulid, modified_utc, effectiveUserName) <- getTriple conf
+  let task =
+        emptyTask
+          { Task.ulid = T.toLower $ show ulid
+          , Task.body = ""
+          , Task.state = Just Done
+          , Task.due_utc = Nothing
+          , Task.closed_utc = Just modified_utc
+          , Task.user = T.pack effectiveUserName
+          , Task.modified_utc = modified_utc
+          }
+
+  insertRecord "tasks" conn task
+  pure task
+
+
 -- TODO: Eliminate code duplications with `editTask`
 addTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 addTask conf connection bodyWords = do
