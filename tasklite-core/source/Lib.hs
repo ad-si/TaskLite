@@ -89,9 +89,11 @@ import Data.Hourglass (
   Duration (durationHours, durationMinutes),
   ISO8601_Date (ISO8601_Date),
   Minutes (Minutes),
+  Seconds (Seconds),
   Time (timeFromElapsedP),
   TimeOfDay (todNSec),
   timeAdd,
+  timeDiff,
   timePrint,
  )
 import Data.List (nub)
@@ -169,14 +171,17 @@ import Text.ParserCombinators.ReadP (
   string,
   (<++),
  )
+import Text.Printf (printf)
 import Time.System (dateCurrent, timeCurrentP)
 
 import Config (
+  Column (..),
   Config (
     bodyClosedStyle,
     bodyStyle,
     bodyWidth,
     closedStyle,
+    columns,
     dataDir,
     dateStyle,
     dateWidth,
@@ -2399,50 +2404,69 @@ invalidUlidMsg task =
     <+> "is an invalid ulid and could not be converted to a datetime"
 
 
+-- | Convert seconds into a short, fractional notation like 1.5y, 2.3mo, …
+formatDuration :: Seconds -> T.Text
+formatDuration (Seconds seconds) = do
+  let
+    secInHour = 3600.0
+    secInDay = 24 * secInHour
+    secInMonth = 30 * secInDay
+    secInYear = 12 * secInMonth
+
+    years = fromIntegral seconds / secInYear
+    months = fromIntegral seconds / secInMonth
+    days = fromIntegral seconds / secInDay
+    hours = fromIntegral seconds / secInHour
+
+    format :: Double -> [Char] -> T.Text
+    format val suffix =
+      T.pack $ printf "%.1f%-2s" val suffix
+
+  case () of
+    _
+      | years > 1 -> format years "y"
+      | months > 1 -> format months "mo"
+      | days > 1 -> format days "d"
+      | otherwise -> format hours "h"
+
+
 formatTaskPriority :: Config -> FullTask -> Doc AnsiStyle
-formatTaskPriority conf task =
+formatTaskPriority conf task = do
   let
     prio = fromMaybe 0 task.priority
     txt = T.justifyRight 4 ' ' $ showAtPrecision 1 $ realToFrac prio
-  in
-    annotate conf.priorityStyle (pretty txt)
+  annotate conf.priorityStyle (pretty txt)
 
 
 formatTaskDue :: Config -> FullTask -> Doc AnsiStyle
-formatTaskDue conf task =
+formatTaskDue conf task = do
   let
     dueUtcMaybe = task.due_utc >>= parseUtc <&> format
     format = T.replace " 00:00:00" "" . T.pack . timePrint conf.utcFormat
-  in
-    annotate conf.dueStyle (pretty dueUtcMaybe)
+  annotate conf.dueStyle (pretty dueUtcMaybe)
 
 
 formatTaskClose :: Config -> FullTask -> Doc AnsiStyle
-formatTaskClose conf task =
-  let
-    closedUtcMaybe = task.closed_utc >>= parseUtc <&> timePrint conf.utcFormat
-  in
-    annotate conf.closedStyle (pretty closedUtcMaybe)
+formatTaskClose conf task = do
+  let closedUtcMaybe = task.closed_utc >>= parseUtc <&> timePrint conf.utcFormat
+  annotate conf.closedStyle (pretty closedUtcMaybe)
 
 
 formatTaskTags :: Config -> FullTask -> Doc AnsiStyle
-formatTaskTags conf task =
-  let
-    tags = fromMaybe [] task.tags
-  in
-    hsep (tags <&> formatTag conf)
+formatTaskTags conf task = do
+  let tags = fromMaybe [] task.tags
+  hsep (tags <&> formatTag conf)
 
 
 formatTaskNotes :: FullTask -> Doc AnsiStyle
-formatTaskNotes task = if not $ P.null task.notes then "📝" else ""
+formatTaskNotes task =
+  if not $ P.null task.notes then "📝" else ""
 
 
 formatTaskId :: Config -> Int -> FullTask -> Doc AnsiStyle
-formatTaskId conf taskWidth task =
-  let
-    id = pretty $ T.takeEnd taskWidth task.ulid
-  in
-    annotate conf.idStyle id
+formatTaskId conf taskWidth task = do
+  let id = pretty $ T.takeEnd taskWidth task.ulid
+  annotate conf.idStyle id
 
 
 formatTaskBody :: Config -> DateTime -> FullTask -> Doc AnsiStyle
@@ -2472,44 +2496,71 @@ formatTaskBody conf now task = pretty reviewIcon <> dueSoon <> body
         else grayOutIfDone taskBody
 
 
-formatTaskCreated :: Config -> FullTask -> Doc AnsiStyle
-formatTaskCreated conf task =
+formatTaskOpenedUTC :: Config -> DateTime -> FullTask -> Doc AnsiStyle
+formatTaskOpenedUTC conf _now task = do
   let
-    createdUtc = maybe "bad Ulid" (T.pack . timePrint ISO8601_Date) date
-    date = ulidTextToDateTime task.ulid
-  in
-    annotate conf.dateStyle (pretty createdUtc)
+    dateMaybe = ulidTextToDateTime task.ulid
+    formatTaskDate = T.pack . timePrint ISO8601_Date
+
+  annotate (dateStyle conf) (pretty $ maybe "bad Ulid" formatTaskDate dateMaybe)
+
+
+formatTaskAge :: Config -> DateTime -> FullTask -> Doc AnsiStyle
+formatTaskAge conf now task = do
+  let
+    dateMaybe = ulidTextToDateTime task.ulid
+    formatTaskDuration =
+      timeDiff now
+        >>> formatDuration
+        >>> T.center (colToWidth conf 0 AgeCol) ' '
+        >>> T.replace ".0" "  "
+
+  annotate
+    (dateStyle conf)
+    (pretty $ maybe "bad Ulid" formatTaskDuration dateMaybe)
+
+
+colToWidth :: Config -> Int -> Column -> Int
+colToWidth conf idColWidth = \case
+  IdCol -> idColWidth
+  PrioCol -> conf.prioWidth
+  OpenedUTCCol -> conf.dateWidth
+  AgeCol -> 6
+  BodyCol -> conf.bodyWidth
+  EmptyCol -> 0
 
 
 formatTaskLine :: Config -> DateTime -> Int -> FullTask -> Doc AnsiStyle
-formatTaskLine conf now taskWidth task =
+formatTaskLine conf now idColWidth task = do
   let
+    columns = conf.columns & P.filter (/= EmptyCol)
     multilineIndent = 2
     hangWidth =
-      taskWidth
-        + 2
-        + conf.dateWidth
-        + 2
-        + conf.prioWidth
-        + 2
-        + multilineIndent
+      ( (columns & P.filter (/= BodyCol) <&> colToWidth conf idColWidth)
+          <> [multilineIndent]
+      )
+        & P.intersperse 2
+        & P.sum
     hhsep = concatWith (<++>)
     isEmptyDoc doc = show doc /= ("" :: Text)
-    -- redOut onTime doc = if onTime
-    --   then annotate conf.bodyStyle doc
-    --   else annotate (colr conf Red) doc
     fields =
-      [ formatTaskId conf taskWidth task
-      , formatTaskPriority conf task
-      , formatTaskCreated conf task
-      , formatTaskBody conf now task
-      , formatTaskDue conf task
-      , formatTaskClose conf task
-      , formatTaskTags conf task
-      , formatTaskNotes task
-      ]
-  in
-    hang hangWidth $ hhsep $ P.filter isEmptyDoc fields
+      columns
+        & P.concatMap
+          ( \case
+              IdCol -> [formatTaskId conf idColWidth task]
+              PrioCol -> [formatTaskPriority conf task]
+              OpenedUTCCol -> [formatTaskOpenedUTC conf now task]
+              AgeCol -> [formatTaskAge conf now task]
+              BodyCol ->
+                [ formatTaskBody conf now task
+                , formatTaskDue conf task
+                , formatTaskClose conf task
+                , formatTaskTags conf task
+                , formatTaskNotes task
+                ]
+              EmptyCol -> []
+          )
+  hang hangWidth $ hhsep $ P.filter isEmptyDoc fields
 
 
 getIdLength :: Float -> Int
@@ -3263,40 +3314,61 @@ getFilterQuery filterExps orderByMb availableLinesMb = do
       )
 
 
+columnToDoc :: Config -> Int -> Column -> Doc AnsiStyle
+columnToDoc conf idColWidth = do
+  let strong = bold <> underlined
+
+  \case
+    IdCol ->
+      annotate
+        (conf.idStyle <> strong)
+        (fill idColWidth "Id")
+    PrioCol ->
+      annotate
+        (conf.priorityStyle <> strong)
+        (fill (colToWidth conf idColWidth PrioCol) "Prio")
+    OpenedUTCCol ->
+      annotate
+        (conf.dateStyle <> strong)
+        (fill (colToWidth conf idColWidth OpenedUTCCol) "Opened UTC")
+    AgeCol ->
+      annotate
+        (conf.dateStyle <> strong)
+        (fill (colToWidth conf idColWidth AgeCol) "Age")
+    BodyCol ->
+      annotate
+        (conf.bodyStyle <> strong)
+        (fill (colToWidth conf idColWidth BodyCol) "Body")
+    EmptyCol ->
+      mempty
+
+
 formatTasks :: Config -> DateTime -> Bool -> [FullTask] -> Doc AnsiStyle
 formatTasks conf now isTruncated tasks =
   if P.length tasks == 0
     then pretty noTasksWarning
-    else
+    else do
       let
-        strong = bold <> underlined
-        taskWidth = getIdLength $ fromIntegral $ P.length tasks
+        idColWidth = getIdLength $ fromIntegral $ P.length tasks
         docHeader =
-          annotate
-            (conf.idStyle <> strong)
-            (fill taskWidth "Id")
-            <++> annotate
-              (conf.priorityStyle <> strong)
-              (fill conf.prioWidth "Prio")
-            <++> annotate
-              (conf.dateStyle <> strong)
-              (fill conf.dateWidth "Opened UTC")
-            <++> annotate
-              (conf.bodyStyle <> strong)
-              (fill conf.bodyWidth "Body")
-            <++> line
-      in
-        docHeader
-          <> vsep (fmap (formatTaskLine conf now taskWidth) tasks)
-          <> line
-          <> if isTruncated
-            then
-              annotate
-                (colr conf Yellow)
-                ( "This list is truncated. "
-                    <> "List all by piping into `cat` or `less`."
-                )
-            else mempty
+          concatWith (<++>) $
+            ( conf.columns
+                & P.filter (/= EmptyCol)
+                <&> columnToDoc conf idColWidth
+            )
+              <> [line]
+
+      docHeader
+        <> vsep (fmap (formatTaskLine conf now idColWidth) tasks)
+        <> line
+        <> if isTruncated
+          then
+            annotate
+              (colr conf Yellow)
+              ( "This list is truncated. "
+                  <> "List all by piping into `cat` or `less`."
+              )
+          else mempty
 
 
 formatTasksColor ::

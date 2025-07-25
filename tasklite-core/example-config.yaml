@@ -1,4 +1,9 @@
 tableName: tasks
+
+# Select columns and their order for the table view.
+# `body` should be the last column, as its width varies for each task.
+columns: [id, prio, openedUtc, age, body]
+
 idWidth: 4
 idStyle: green
 priorityStyle: magenta
@@ -8,6 +13,10 @@ bodyClosedStyle: black
 closedStyle: dull black
 dueStyle: yellow
 overdueStyle: red
+# Shows `Opened UTC` column per default.
+# Set this to `true` to show an `Age` column with a
+# human readable duration of the task's age.
+# useDuration: false
 tagStyle: blue
 utcFormat: YYYY-MM-DD H:MI:S
 #| FIXME: Blocked by https://github.com/vincenthz/hs-hourglass/issue

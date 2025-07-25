@@ -6,7 +6,6 @@ WORKDIR /tasklite
 COPY stack.yaml stack.yaml
 
 COPY tasklite/README.md tasklite/README.md
-COPY tasklite/example-config.yaml tasklite/example-config.yaml
 COPY tasklite/package.yaml tasklite/package.yaml
 
 COPY tasklite-core/README.md tasklite-core/README.md
@@ -35,7 +34,7 @@ FROM haskell:9.8.4-slim-bullseye
 RUN apt-get update && \
     apt-get install -y libgmp10
 COPY --from=builder \
-    /tasklite/tasklite/example-config.yaml \
+    /tasklite-core/example-config.yaml \
     /root/.config/tasklite/config.yaml
 COPY --from=builder /root/.local/bin/tasklite /usr/local/bin/tasklite
 

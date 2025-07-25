@@ -227,6 +227,28 @@ addHookFilesToConfig config = do
     (config, [])
 
 
+data Column = IdCol | PrioCol | OpenedUTCCol | AgeCol | BodyCol | EmptyCol
+  deriving (Eq, Show, Generic)
+
+
+instance ToJSON Column where
+  toJSON IdCol = String "id"
+  toJSON PrioCol = String "prio"
+  toJSON OpenedUTCCol = String "openedUtc"
+  toJSON AgeCol = String "age"
+  toJSON BodyCol = String "body"
+  toJSON EmptyCol = String ""
+instance FromJSON Column where
+  parseJSON = withText "Column" $ \value -> do
+    case value of
+      "id" -> pure IdCol
+      "prio" -> pure PrioCol
+      "openedUtc" -> pure OpenedUTCCol
+      "age" -> pure AgeCol
+      "body" -> pure BodyCol
+      _ -> pure EmptyCol
+
+
 data Config = Config
   { tableName :: Text
   , idStyle :: AnsiStyle
@@ -240,6 +262,7 @@ data Config = Config
   , tagStyle :: AnsiStyle
   , utcFormat :: TimeFormatString
   , utcFormatShort :: TimeFormatString
+  , columns :: [Column]
   , dataDir :: FilePath
   , dbName :: FilePath
   , dateWidth :: Int
@@ -271,6 +294,7 @@ instance FromJSON Config where
     utcFormat       <- o .:? "utcFormat" .!= defaultConfig.utcFormat
     utcFormatShort  <- o .:? "utcFormatShort" .!= defaultConfig.utcFormatShort
     dataDir         <- o .:? "dataDir" .!= defaultConfig.dataDir
+    columns         <- o .:? "columns" .!= defaultConfig.columns
     dbName          <- o .:? "dbName" .!= defaultConfig.dbName
     dateWidth       <- o .:? "dateWidth" .!= defaultConfig.dateWidth
     bodyWidth       <- o .:? "bodyWidth" .!= defaultConfig.bodyWidth
@@ -367,6 +391,7 @@ defaultConfig =
     , tagStyle = color Blue
     , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
     , utcFormatShort = toFormat ("YYYY-MM-DD H:MI" :: [Char])
+    , columns = [IdCol, PrioCol, OpenedUTCCol, BodyCol]
     , dataDir = ""
     , dbName = "main.db"
     , dateWidth = 10

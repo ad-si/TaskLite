@@ -1,6 +1,6 @@
 cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.37.0.
+-- This file has been generated from package.yaml by hpack version 0.38.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -24,8 +24,6 @@ license:        AGPL-3.0-or-later
 build-type:     Simple
 extra-source-files:
     README.md
-data-files:
-    example-config.yaml
 
 source-repository head
   type: git
