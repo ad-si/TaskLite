@@ -1,3 +1,8 @@
+.PHONY: help
+help: makefile
+	@tail -n +4 makefile | grep ".PHONY"
+
+
 node_modules: package.json package-lock.json
 	if test ! -d $@; then npm install; fi
 
