@@ -171,6 +171,7 @@ import Text.ParserCombinators.ReadP (
   string,
   (<++),
  )
+import Text.Printf (printf)
 import Time.System (dateCurrent, timeCurrentP)
 
 import Config (
@@ -2402,18 +2403,29 @@ invalidUlidMsg task =
     <+> "is an invalid ulid and could not be converted to a datetime"
 
 
--- Convert seconds to minutes, hours or days
--- TODO use Iso.formatDuration ?
+-- Convert secodn into a short, fractional notation like 1.5y, 2.3mo up to the hour
 formatDuration :: Seconds -> T.Text
-formatDuration (Seconds totalSeconds) =
+formatDuration (Seconds seconds) =
   let
-    days = totalSeconds `P.div` (24 * 3600)
-    remainingAfterDays = totalSeconds `P.mod` (24 * 3600)
-    hours = remainingAfterDays `P.div` 3600
+    secInHour = 3600 :: Int
+    secInDay = 24 * secInHour
+    secInMonth = 30 * secInDay
+    secInYear = 12 * secInMonth
+
+    years = fromIntegral seconds / fromIntegral secInYear
+    months = fromIntegral seconds / fromIntegral secInMonth
+    days = fromIntegral seconds / fromIntegral secInDay
+    hours = fromIntegral seconds / fromIntegral secInHour
+
+    format :: Double -> [Char] -> T.Text
+    format x suffix = T.pack (printf "%.1f%s" x suffix)
   in
-    if days > 0
-      then T.pack $ show days <> "d"
-      else T.pack $ show hours <> "h"
+    case () of
+      _
+        | years > 1 -> format years "y"
+        | months > 1 -> format months "m"
+        | days > 1 -> format days "d"
+        | otherwise -> format hours "h"
 
 
 formatTaskPriority :: Config -> FullTask -> Doc AnsiStyle
@@ -2493,8 +2505,8 @@ formatTaskDate :: DateTime -> Text
 formatTaskDate = T.pack . timePrint ISO8601_Date
 
 
-formatTaskDuration :: Config -> DateTime -> DateTime -> Text
-formatTaskDuration conf now = T.center (dateWidth conf) ' ' . formatDuration . timeDiff now
+formatTaskDuration :: DateTime -> DateTime -> Text
+formatTaskDuration now = T.center 5 ' ' . formatDuration . timeDiff now
 
 
 formatTaskCreated :: Config -> DateTime -> FullTask -> Doc AnsiStyle
@@ -2503,7 +2515,7 @@ formatTaskCreated conf now task =
     dateMaybe = ulidTextToDateTime task.ulid
     format =
       if conf.useDuration
-        then formatTaskDuration conf now
+        then formatTaskDuration now
         else formatTaskDate
   in
     annotate (dateStyle conf) (pretty $ maybe "bad Ulid" format dateMaybe)
@@ -3307,8 +3319,8 @@ formatTasks conf now isTruncated tasks =
               (conf.priorityStyle <> strong)
               (fill conf.prioWidth "Prio")
             <++> annotate
-               (dateStyle conf <> strong)
-               (fill (dateWidth conf) "Opened")
+              (conf.dateStyle <> strong)
+              (fill conf.dateWidth (if useDuration conf then "Age" else "Opened UTC"))
             <++> annotate
               (conf.bodyStyle <> strong)
               (fill conf.bodyWidth "Body")

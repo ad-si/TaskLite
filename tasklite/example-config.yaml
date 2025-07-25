@@ -8,7 +8,9 @@ bodyClosedStyle: black
 closedStyle: dull black
 dueStyle: yellow
 overdueStyle: red
-# Default dates are in UTC. Set to true if you prefer to see a numbet of days/hours.
+# Shows `Opened UTC` column per default.
+# Set this to `true` to show an `Age` column with a
+# human readable duration of the task's age.
 useDuration: false
 tagStyle: blue
 utcFormat: YYYY-MM-DD H:MI:S
