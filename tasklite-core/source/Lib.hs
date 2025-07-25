@@ -146,10 +146,8 @@ import Prettyprinter as Pp (
 import Prettyprinter.Render.Terminal (
   AnsiStyle,
   Color (Black, Green, Red, Yellow),
-  bgColorDull,
   bold,
   color,
-  colorDull,
   hPutDoc,
   underlined,
  )
@@ -247,7 +245,9 @@ import TaskToTag (TaskToTag (..))
 import Utils (
   IdText,
   ListModifiedFlag (..),
-  applyColorMode,
+  bgColrDull,
+  colr,
+  colrDull,
   countChar,
   dateTimeToUtcTime,
   formatElapsedP,
@@ -340,16 +340,16 @@ updateTask connection task = do
     (toRow task <> [SQLText task.ulid])
 
 
-handleTagDupError :: Text -> (Applicative f) => e -> f (Doc AnsiStyle)
-handleTagDupError tag _exception =
+handleTagDupError :: Config -> Text -> (Applicative f) => e -> f (Doc AnsiStyle)
+handleTagDupError conf tag _exception =
   pure $
-    annotate (color Yellow) $
+    annotate (colr conf Yellow) $
       "⚠️ Tag " <> dquotes (pretty tag) <> " is already assigned"
 
 
 insertTags ::
-  Connection -> Maybe DateTime -> Task -> [Text] -> IO (Doc AnsiStyle)
-insertTags connection mbCreatedUtc task tags = do
+  Config -> Connection -> Maybe DateTime -> Task -> [Text] -> IO (Doc AnsiStyle)
+insertTags conf connection mbCreatedUtc task tags = do
   let uniqueTags = nub tags
   taskToTags <- forM uniqueTags $ \tag -> do
     newUlid <- getULID
@@ -371,14 +371,19 @@ insertTags connection mbCreatedUtc task tags = do
       -- TODO: Find out why it's not `ErrorConstraintUnique`
       (\(err :: SQLError) -> err.sqlError == ErrorConstraint)
       (insertRecord "task_to_tag" connection taskToTag P.>> pure "")
-      (handleTagDupError taskToTag.tag)
+      (handleTagDupError conf taskToTag.tag)
 
   pure $ vsepCollapse insertWarnings
 
 
 insertNotes ::
-  Connection -> Maybe DateTime -> Task -> [Note] -> IO (Doc AnsiStyle)
-insertNotes connection mbCreatedUtc task notes = do
+  Config ->
+  Connection ->
+  Maybe DateTime ->
+  Task ->
+  [Note] ->
+  IO (Doc AnsiStyle)
+insertNotes conf connection mbCreatedUtc task notes = do
   let uniqueNotes = nub notes
   taskToNotes <- forM uniqueNotes $ \theNote -> do
     newUlid <- getULID
@@ -402,7 +407,7 @@ insertNotes connection mbCreatedUtc task notes = do
       (insertRecord "task_to_note" connection taskToNote P.>> pure "")
       ( \exception ->
           pure $
-            annotate (color Yellow) $
+            annotate (colr conf Yellow) $
               "⚠️ Note "
                 <> dquotes (pretty taskToNote.note)
                 <> " could not be inserted"
@@ -554,17 +559,17 @@ addTask conf connection bodyWords = do
         Nothing -> pure (importTaskDraft, Empty)
         Just task -> do
           fullImportTask <- setMissingFields task
-          pure (fullImportTask, formatHookResult hookResult)
+          pure (fullImportTask, formatHookResult conf hookResult)
     _ -> do
       pure
         ( importTaskDraft
-        , annotate (color Red) $
+        , annotate (colr conf Red) $
             "ERROR: Multiple pre-add hooks are not supported yet. "
               <> "None of the hooks were executed."
         )
 
   insertRecord "tasks" connection importTask.task
-  warnings <- insertTags connection Nothing importTask.task importTask.tags
+  warnings <- insertTags conf connection Nothing importTask.task importTask.tags
 
   -- TODO: Use RETURNING clause in `insertRecord` instead
   (insertedTasks :: [FullTask]) <-
@@ -634,7 +639,7 @@ logTask conf connection bodyWords = do
         }
 
   insertRecord "tasks" connection task
-  warnings <- insertTags connection Nothing task tags
+  warnings <- insertTags conf connection Nothing task tags
   pure $
     warnings
       <$$> "📝 Logged task"
@@ -921,7 +926,8 @@ createNextRepetition conf connection task = do
       |]
       (Only task.ulid)
 
-  warnings <- liftIO $ insertTags connection Nothing newTask (tags & P.concat)
+  warnings <-
+    liftIO $ insertTags conf connection Nothing newTask (tags & P.concat)
 
   liftIO $
     pure $
@@ -1011,7 +1017,8 @@ createNextRecurrence conf connection task = do
       |]
       (Only task.ulid)
 
-  warnings <- liftIO $ insertTags connection Nothing newTask (tags & P.concat)
+  warnings <-
+    liftIO $ insertTags conf connection Nothing newTask (tags & P.concat)
 
   liftIO $
     pure $
@@ -1385,8 +1392,8 @@ formatTaskForInfo ::
   Doc AnsiStyle
 formatTaskForInfo conf now (taskV, tags, notes) =
   let
-    mkGreen = annotate (color Green)
-    grayOut = annotate (colorDull Black)
+    mkGreen = annotate (colr conf Green)
+    grayOut = annotate (colrDull conf Black)
     stateHierarchy = getStateHierarchy now $ cpTimesAndState taskV
     mbCreatedUtc =
       fmap
@@ -1395,7 +1402,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
     tagsPretty =
       tags
         <&> ( \t ->
-                annotate (tagStyle conf) (pretty t.tag)
+                annotate conf.tagStyle (pretty t.tag)
                   <++> maybe
                     mempty
                     (grayOut . pretty . T.pack . timePrint conf.utcFormat)
@@ -1428,7 +1435,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
       fmap
         ( \v ->
             name
-              <+> annotate (dueStyle conf) (pretty v)
+              <+> annotate conf.dueStyle (pretty v)
                 <> hardline
         )
   in
@@ -1454,7 +1461,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
                                 . pretty
                                 . T.pack
                                 . timePrint
-                                  (utcFormatShort conf)
+                                  conf.utcFormatShort
                             )
                             (ulidTextToDateTime n.ulid)
                             <++> align (pretty n.note)
@@ -1470,7 +1477,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
          )
       <> ( "Priority:"
             <+> annotate
-              (priorityStyle conf)
+              conf.priorityStyle
               (pretty $ FullTask.priority taskV)
               <> hardline
          )
@@ -1673,7 +1680,7 @@ randomTask conf connection filterExpression = do
           if P.length errors > 0
             then
               Just $
-                vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
+                vsep (fmap (annotate (colr conf Red) . ppInvalidFilter) errors)
                   <> hardline
                   <> hardline
             else Nothing
@@ -1692,8 +1699,8 @@ randomTask conf connection filterExpression = do
           pure $ errorsDoc & fromMaybe taskFormatted
 
 
-findTask :: Connection -> Text -> IO (Doc AnsiStyle)
-findTask connection aPattern = do
+findTask :: Config -> Connection -> Text -> IO (Doc AnsiStyle)
+findTask conf connection aPattern = do
   tasks :: [(Text, Text, Maybe [Text], Maybe [Text], Maybe Text)] <-
     query_
       connection
@@ -1775,7 +1782,7 @@ findTask connection aPattern = do
         & P.take numOfResults
         <&> ( \(_, ulid, combinedText) ->
                 annotate
-                  (color ulidColor)
+                  (colr conf ulidColor)
                   (fill ulidWidth $ pretty $ T.takeEnd ulidWidth ulid)
                   <> indent 2 combinedText
             )
@@ -1787,7 +1794,7 @@ findTask connection aPattern = do
           hardline
             <> hardline
             <> annotate
-              (color Red)
+              (colr conf Red)
               ("There are " <> pretty moreResults <> " more results available")
             <> hardline
         else hardline
@@ -1841,7 +1848,7 @@ addTag conf conn tag ids = do
                 <+> "with id"
                 <+> prettyId
         )
-        (handleTagDupError tagNorm)
+        (handleTagDupError conf tagNorm)
 
   pure $ vsep docs
 
@@ -1867,7 +1874,7 @@ deleteTag conf connection tag ids = do
       pure $
         if numOfChanges == 0
           then
-            annotate (color Yellow) $
+            annotate (colr conf Yellow) $
               "⚠️  Tag"
                 <+> dquotes (pretty tag)
                 <+> "is not set for task"
@@ -1919,7 +1926,7 @@ addNote conf connection noteBody ids = do
 
 
 deleteNote :: Config -> Connection -> IdText -> IO (Doc AnsiStyle)
-deleteNote _conf connection noteId = do
+deleteNote conf connection noteId = do
   taskIds :: [Only Text] <-
     queryNamed
       connection
@@ -1939,11 +1946,11 @@ deleteNote _conf connection noteId = do
           <+> dquotes (pretty taskId)
     [] ->
       pure $
-        annotate (color Yellow) $
+        annotate (colr conf Yellow) $
           "⚠️  Note" <+> dquotes (pretty noteId) <+> "does not exist"
     _ ->
       pure $
-        annotate (color Yellow) $
+        annotate (colr conf Yellow) $
           ("⚠️  Note" <+> dquotes (pretty noteId) <+> "exists multiple times.")
             <++> "This indicates a serious database inconsistency \
                  \and you should clean up the database manually \
@@ -1984,13 +1991,13 @@ getResultMsg task msg = do
   msg <+> "of task" <+> prettyBody <+> "with id" <+> prettyId
 
 
-getWarnMsg :: Task -> Doc AnsiStyle -> Doc AnsiStyle
-getWarnMsg task msg = do
+getWarnMsg :: Config -> Task -> Doc AnsiStyle -> Doc AnsiStyle
+getWarnMsg conf task msg = do
   let
     prettyBody = dquotes $ pretty task.body
     prettyId = dquotes $ pretty task.ulid
 
-  annotate (color Yellow) $
+  annotate (colr conf Yellow) $
     "⚠️ Task" <+> prettyBody <+> "with id" <+> prettyId <+> msg
 
 
@@ -2015,7 +2022,7 @@ uncloseTasks conf connection ids = do
       numOfChanges <- changes connection
       pure $
         if numOfChanges == 0
-          then getWarnMsg task "is still open"
+          then getWarnMsg conf task "is still open"
           else getResultMsg task "💥 Removed close timestamp and state field"
 
   pure $ vsep docs
@@ -2039,7 +2046,7 @@ undueTasks conf connection ids = do
       numOfChanges <- changes connection
       pure $
         if numOfChanges == 0
-          then getWarnMsg task "does not have a due timestamp"
+          then getWarnMsg conf task "does not have a due timestamp"
           else getResultMsg task "💥 Removed due timestamp"
 
   pure $ vsep docs
@@ -2063,7 +2070,7 @@ unwaitTasks conf connection ids = do
       numOfChanges <- changes connection
       pure $
         if numOfChanges == 0
-          then getWarnMsg task "does not have a waiting timestamp"
+          then getWarnMsg conf task "does not have a waiting timestamp"
           else getResultMsg task "💥 Removed waiting and review timestamps"
 
   pure $ vsep docs
@@ -2087,7 +2094,7 @@ unwakeTasks conf connection ids = do
       numOfChanges <- changes connection
       pure $
         if numOfChanges == 0
-          then getWarnMsg task "does not have an awake timestamp"
+          then getWarnMsg conf task "does not have an awake timestamp"
           else getResultMsg task "💥 Removed awake timestamp"
 
   pure $ vsep docs
@@ -2111,7 +2118,7 @@ unreadyTasks conf connection ids = do
       numOfChanges <- changes connection
       pure $
         if numOfChanges == 0
-          then getWarnMsg task "does not have a ready timestamp"
+          then getWarnMsg conf task "does not have a ready timestamp"
           else getResultMsg task "💥 Removed ready timestamp"
 
   pure $ vsep docs
@@ -2135,7 +2142,7 @@ unreviewTasks conf connection ids = do
       numOfChanges <- changes connection
       pure $
         if numOfChanges == 0
-          then getWarnMsg task "does not have a review timestamp"
+          then getWarnMsg conf task "does not have a review timestamp"
           else getResultMsg task "💥 Removed review timestamp"
 
   pure $ vsep docs
@@ -2159,7 +2166,7 @@ unrepeatTasks conf connection ids = do
       numOfChanges <- changes connection
       pure $
         if numOfChanges == 0
-          then getWarnMsg task "does not have a repetition duration"
+          then getWarnMsg conf task "does not have a repetition duration"
           else getResultMsg task "💥 Removed repetition duration"
 
   pure $ vsep docs
@@ -2183,7 +2190,7 @@ unrecurTasks conf connection ids = do
       numOfChanges <- changes connection
       pure $
         if numOfChanges == 0
-          then getWarnMsg task "does not have a recurrence duration"
+          then getWarnMsg conf task "does not have a recurrence duration"
           else getResultMsg task "💥 Removed recurrence duration"
 
   pure $ vsep docs
@@ -2204,7 +2211,7 @@ untagTasks conf connection ids = do
       numOfChanges <- changes connection
       pure $
         if numOfChanges == 0
-          then getWarnMsg task "does not have any tags"
+          then getWarnMsg conf task "does not have any tags"
           else getResultMsg task "💥 Removed all tags"
 
   pure $ vsep docs
@@ -2225,7 +2232,7 @@ unnoteTasks conf connection ids = do
       numOfChanges <- changes connection
       pure $
         if numOfChanges == 0
-          then getWarnMsg task "does not have any notes"
+          then getWarnMsg conf task "does not have any notes"
           else getResultMsg task "💥 Deleted all notes"
 
   pure $ vsep docs
@@ -2249,7 +2256,7 @@ unprioTasks conf connection ids = do
       numOfChanges <- changes connection
       pure $
         if numOfChanges == 0
-          then getWarnMsg task "does not have a priority adjustment"
+          then getWarnMsg conf task "does not have a priority adjustment"
           else getResultMsg task "💥 Removed priority adjustment"
 
   pure $ vsep docs
@@ -2273,7 +2280,7 @@ unmetaTasks conf connection ids = do
       numOfChanges <- changes connection
       pure $
         if numOfChanges == 0
-          then getWarnMsg task "does not have any metadata"
+          then getWarnMsg conf task "does not have any metadata"
           else getResultMsg task "💥 Removed metadata"
 
   pure $ vsep docs
@@ -2310,7 +2317,8 @@ duplicateTasks conf connection ids = do
           |]
           (Only task.ulid)
 
-      warnings <- liftIO $ insertTags connection Nothing dupeTask (tags & P.concat)
+      warnings <-
+        liftIO $ insertTags conf connection Nothing dupeTask (tags & P.concat)
 
       notes <-
         query
@@ -2379,8 +2387,8 @@ showAtPrecision numOfDigits number =
 
 formatTag :: (Pretty a) => Config -> a -> Doc AnsiStyle
 formatTag conf =
-  annotate (tagStyle conf)
-    . (annotate (color Black) "+" <>)
+  annotate conf.tagStyle
+    . (annotate (colr conf Black) "+" <>)
     . pretty
 
 
@@ -2397,7 +2405,7 @@ formatTaskPriority conf task =
     prio = fromMaybe 0 task.priority
     txt = T.justifyRight 4 ' ' $ showAtPrecision 1 $ realToFrac prio
   in
-    annotate (priorityStyle conf) (pretty txt)
+    annotate conf.priorityStyle (pretty txt)
 
 
 formatTaskDue :: Config -> FullTask -> Doc AnsiStyle
@@ -2406,7 +2414,7 @@ formatTaskDue conf task =
     dueUtcMaybe = task.due_utc >>= parseUtc <&> format
     format = T.replace " 00:00:00" "" . T.pack . timePrint conf.utcFormat
   in
-    annotate (dueStyle conf) (pretty dueUtcMaybe)
+    annotate conf.dueStyle (pretty dueUtcMaybe)
 
 
 formatTaskClose :: Config -> FullTask -> Doc AnsiStyle
@@ -2414,7 +2422,7 @@ formatTaskClose conf task =
   let
     closedUtcMaybe = task.closed_utc >>= parseUtc <&> timePrint conf.utcFormat
   in
-    annotate (closedStyle conf) (pretty closedUtcMaybe)
+    annotate conf.closedStyle (pretty closedUtcMaybe)
 
 
 formatTaskTags :: Config -> FullTask -> Doc AnsiStyle
@@ -2445,8 +2453,8 @@ formatTaskBody conf now task = pretty reviewIcon <> dueSoon <> body
       in  isJust dateMaybe && dateMaybe < Just (now `timeAdd` offset)
     grayOutIfDone doc =
       if isOpen
-        then annotate (bodyStyle conf) doc
-        else annotate (bodyClosedStyle conf) doc
+        then annotate conf.bodyStyle doc
+        else annotate conf.bodyClosedStyle doc
 
     isOpen = isNothing task.closed_utc
     reviewIcon = case task.review_utc >>= parseUtc of
@@ -2460,7 +2468,7 @@ formatTaskBody conf now task = pretty reviewIcon <> dueSoon <> body
           else task.body
     body =
       if dueIn mempty && isOpen
-        then annotate (color Red) taskBody
+        then annotate (colr conf Red) taskBody
         else grayOutIfDone taskBody
 
 
@@ -2470,7 +2478,7 @@ formatTaskCreated conf task =
     createdUtc = maybe "bad Ulid" (T.pack . timePrint ISO8601_Date) date
     date = ulidTextToDateTime task.ulid
   in
-    annotate (dateStyle conf) (pretty createdUtc)
+    annotate conf.dateStyle (pretty createdUtc)
 
 
 formatTaskLine :: Config -> DateTime -> Int -> FullTask -> Doc AnsiStyle
@@ -2480,16 +2488,16 @@ formatTaskLine conf now taskWidth task =
     hangWidth =
       taskWidth
         + 2
-        + dateWidth conf
+        + conf.dateWidth
         + 2
-        + prioWidth conf
+        + conf.prioWidth
         + 2
         + multilineIndent
     hhsep = concatWith (<++>)
     isEmptyDoc doc = show doc /= ("" :: Text)
     -- redOut onTime doc = if onTime
-    --   then annotate (bodyStyle conf) doc
-    --   else annotate (color Red) doc
+    --   then annotate conf.bodyStyle doc
+    --   else annotate (colr conf Red) doc
     fields =
       [ formatTaskId conf taskWidth task
       , formatTaskPriority conf task
@@ -2542,7 +2550,7 @@ countTasks conf connection filterExpression = do
           if P.length errors > 0
             then
               Just $
-                vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
+                vsep (fmap (annotate (colr conf Red) . ppInvalidFilter) errors)
                   <> hardline
                   <> hardline
             else Nothing
@@ -2623,7 +2631,7 @@ newTasks conf now connection filterExp availableLinesMb = do
       if P.length errors > 0
         then
           pure $
-            vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
+            vsep (fmap (annotate (colr conf Red) . ppInvalidFilter) errors)
               <> hardline
               <> hardline
         else do
@@ -2700,7 +2708,7 @@ openTasks conf now connection filterExpression availableLinesMb = do
       if P.length errors > 0
         then
           pure $
-            vsep (fmap (annotate (color Red) . ppInvalidFilter) errors)
+            vsep (fmap (annotate (colr conf Red) . ppInvalidFilter) errors)
               <> hardline
               <> hardline
         else do
@@ -3177,7 +3185,7 @@ runFilter conf now connection exps availableLinesMb = do
       "Filter expressions must be a list of key[:value] entries."
         <> hardline
     dieWithError err = do
-      hPutDoc stderr $ annotate (color Red) err
+      hPutDoc stderr $ annotate (colr conf Red) err
       exitFailure
 
   case parserResults of
@@ -3265,17 +3273,17 @@ formatTasks conf now isTruncated tasks =
         taskWidth = getIdLength $ fromIntegral $ P.length tasks
         docHeader =
           annotate
-            (idStyle conf <> strong)
+            (conf.idStyle <> strong)
             (fill taskWidth "Id")
             <++> annotate
-              (priorityStyle conf <> strong)
-              (fill (prioWidth conf) "Prio")
+              (conf.priorityStyle <> strong)
+              (fill conf.prioWidth "Prio")
             <++> annotate
-              (dateStyle conf <> strong)
-              (fill (dateWidth conf) "Opened UTC")
+              (conf.dateStyle <> strong)
+              (fill conf.dateWidth "Opened UTC")
             <++> annotate
-              (bodyStyle conf <> strong)
-              (fill (bodyWidth conf) "Body")
+              (conf.bodyStyle <> strong)
+              (fill conf.bodyWidth "Body")
             <++> line
       in
         docHeader
@@ -3284,7 +3292,7 @@ formatTasks conf now isTruncated tasks =
           <> if isTruncated
             then
               annotate
-                (color Yellow)
+                (colr conf Yellow)
                 ( "This list is truncated. "
                     <> "List all by piping into `cat` or `less`."
                 )
@@ -3294,22 +3302,21 @@ formatTasks conf now isTruncated tasks =
 formatTasksColor ::
   Config -> DateTime -> Bool -> [FullTask] -> IO (Doc AnsiStyle)
 formatTasksColor conf now isTruncated tasks = do
-  confNorm <- applyColorMode conf
-  pure $ formatTasks confNorm now isTruncated tasks
+  pure $ formatTasks conf now isTruncated tasks
 
 
-getProgressBar :: Integer -> Double -> Doc AnsiStyle
-getProgressBar maxWidthInChars progress =
+getProgressBar :: Config -> Integer -> Double -> Doc AnsiStyle
+getProgressBar conf maxWidthInChars progress =
   let
     barWidth = floor (progress * fromInteger maxWidthInChars)
     remainingWidth = fromIntegral $ maxWidthInChars - barWidth
   in
     annotate
-      (bgColorDull Green <> colorDull Green)
+      (bgColrDull conf Green <> colrDull conf Green)
       (pretty $ P.take (fromIntegral barWidth) $ P.repeat '#')
       <>
-      -- (annotate (bgColorDull Green) $ fill (fromIntegral barWidth) "" <>
-      annotate (bgColorDull Black) (fill remainingWidth "")
+      -- (annotate (bgColrDull conf Green) $ fill (fromIntegral barWidth) "" <>
+      annotate (bgColrDull conf Black) (fill remainingWidth "")
 
 
 formatTagLine ::
@@ -3332,7 +3339,7 @@ formatTagLine conf maxTagLength (tag, open_count, closed_count, progress) =
       <++> pretty (T.justifyRight (T.length "open") ' ' $ show open_count)
       <++> pretty (T.justifyRight (T.length "closed") ' ' $ show closed_count)
       <++> progressPercentage
-      <+> getProgressBar barWidth progress
+      <+> getProgressBar conf barWidth progress
 
 
 formatTags :: Config -> [(Text, Integer, Integer, Double)] -> Doc AnsiStyle
@@ -3349,7 +3356,7 @@ formatTags conf tagTuples = do
   if P.null tagTuples
     then
       annotate
-        (color Yellow)
+        (colr conf Yellow)
         "⚠️ No tags available"
     else
       annotate (bold <> underlined) (fill maxTagLength "Tag")
@@ -3383,7 +3390,7 @@ listProjects conf connection = do
   pure $
     if P.null tags
       then
-        annotate (color Yellow) $
+        annotate (colr conf Yellow) $
           "⚠️ No projects available yet. "
             <> "Tag some tasks to populate this list."
       else formatTags conf tags
@@ -3405,24 +3412,24 @@ listNotes conf connection = do
     noteWidth = getIdLength $ fromIntegral $ P.length notes
     docHeader =
       annotate
-        (idStyle conf <> bold <> underlined)
+        (conf.idStyle <> bold <> underlined)
         (fill taskIdWidth "Task ID")
         <++> annotate
-          (idStyle conf <> bold <> underlined)
+          (conf.idStyle <> bold <> underlined)
           (fill noteWidth "ID")
-        <++> annotate (dateStyle conf <> bold <> underlined) "Created UTC"
+        <++> annotate (conf.dateStyle <> bold <> underlined) "Created UTC"
         <++> annotate (bold <> underlined) "Note"
         <++> line
 
     showNote note =
       annotate
-        (idStyle conf)
+        conf.idStyle
         (fill 7 $ pretty $ T.takeEnd taskIdWidth note.task_ulid)
         <++> annotate
-          (idStyle conf)
+          conf.idStyle
           (fill noteWidth $ pretty $ T.takeEnd noteWidth note.ulid)
         <++> annotate
-          (dateStyle conf)
+          conf.dateStyle
           ( note.ulid
               & ulidTextToDateTime
               <&> timePrint ISO8601_Date

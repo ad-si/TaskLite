@@ -103,7 +103,7 @@ spec = do
           Left error ->
             P.die $ "Error decoding JSON: " <> show error
           Right importTaskRecord -> do
-            _ <- insertImportTask memConn importTaskRecord
+            _ <- insertImportTask conf memConn importTaskRecord
             tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
             case tasks of
               [insertedTask] -> do
@@ -135,7 +135,7 @@ spec = do
           Left error ->
             P.die $ "Error decoding JSON: " <> show error
           Right importTaskRecord -> do
-            result <- insertImportTask memConn importTaskRecord
+            result <- insertImportTask conf memConn importTaskRecord
 
             unpack (show result)
               `shouldStartWith` "📥 Imported task \"Just a test\" with ulid "
@@ -193,7 +193,7 @@ spec = do
           Left error ->
             P.die $ "Error decoding JSON: " <> show error
           Right importTaskRecord -> do
-            _ <- insertImportTask memConn importTaskRecord
+            _ <- insertImportTask conf memConn importTaskRecord
             tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
             case tasks of
               [insertedTask] ->
@@ -225,7 +225,7 @@ spec = do
           Left error ->
             P.die $ "Error decoding JSON: " <> show error
           Right importTaskRecord -> do
-            _ <- insertImportTask memConn importTaskRecord
+            _ <- insertImportTask conf memConn importTaskRecord
             taskToNoteList :: [TaskToNote] <-
               query_ memConn "SELECT * FROM task_to_note"
             case taskToNoteList of
@@ -255,7 +255,7 @@ spec = do
         case eitherDecode gitHubIssue of
           Left error -> P.die $ "Error decoding JSON: " <> show error
           Right importTaskRecord -> do
-            _ <- insertImportTask memConn importTaskRecord
+            _ <- insertImportTask conf memConn importTaskRecord
             taskList :: [Task] <- query_ memConn "SELECT * FROM tasks"
             case taskList of
               [task] -> do
@@ -309,7 +309,7 @@ spec = do
           \}]"
 
       res <- withMemoryDb conf $ \memConn -> do
-        _ <- insertImportTask memConn importTask
+        _ <- insertImportTask conf memConn importTask
         getNdjsonLines memConn
 
       (show res :: P.Text) `shouldBe` taskJson

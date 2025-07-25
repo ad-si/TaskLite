@@ -16,19 +16,19 @@ import Protolude (
  )
 import Protolude qualified as P
 
+import Control.Arrow ((>>>))
 import Data.Aeson qualified as Aeson
 import Data.Text (Text)
 import Data.Text qualified as T
-import System.Process (readProcess)
-
-import Config (Hook (body, filePath, interpreter))
-import Control.Arrow ((>>>))
-import ImportTask (ImportTask)
 import Options.Applicative.Arrows (left)
 import Prettyprinter (Doc, annotate, pretty)
-import Prettyprinter.Render.Terminal (AnsiStyle, Color (Red, Yellow), color)
+import Prettyprinter.Render.Terminal (AnsiStyle, Color (Red, Yellow))
 import System.FilePath (takeExtension)
-import Utils ((<!!>))
+import System.Process (readProcess)
+
+import Config (Config, Hook (body, filePath, interpreter))
+import ImportTask (ImportTask)
+import Utils (colr, (<!!>))
 
 
 data HookTiming = PreEvent | PostEvent
@@ -148,10 +148,10 @@ executeHooks stdinText hooks = do
   pure parsedHookResults
 
 
-formatHookResult :: HookResult -> Doc AnsiStyle
-formatHookResult hookResult =
+formatHookResult :: Config -> HookResult -> Doc AnsiStyle
+formatHookResult conf hookResult =
   ""
     <!!> pretty hookResult.message
-    <!!> annotate (color Yellow) (pretty hookResult.warning)
-    <!!> annotate (color Red) (pretty hookResult.error)
+    <!!> annotate (colr conf Yellow) (pretty hookResult.warning)
+    <!!> annotate (colr conf Red) (pretty hookResult.error)
     <!!> ""

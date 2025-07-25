@@ -5,6 +5,7 @@ module Config where
 
 import Protolude (
   Applicative (pure),
+  Bool (False),
   Char,
   Eq ((==)),
   FilePath,
@@ -42,12 +43,7 @@ import Data.Text (dropEnd, pack, split, stripPrefix)
 import Data.Text qualified as T
 import Data.Yaml (encode)
 import Prettyprinter.Internal (Pretty (pretty))
-import Prettyprinter.Render.Terminal (
-  AnsiStyle,
-  Color (..),
-  color,
-  colorDull,
- )
+import Prettyprinter.Render.Terminal (AnsiStyle, Color (..), color, colorDull)
 import Prettyprinter.Render.Terminal.Internal (ansiForeground)
 import System.FilePath (takeBaseName)
 
@@ -253,6 +249,7 @@ data Config = Config
   , maxWidth :: Maybe Int -- Automatically uses terminal width if not set
   , progressBarWidth :: Int
   , hooks :: HooksConfig
+  , noColor :: Bool
   }
   deriving (Generic, Show)
 
@@ -283,6 +280,7 @@ instance FromJSON Config where
     progressBarWidth <- o .:? "progressBarWidth"
                                 .!= defaultConfig.progressBarWidth
     hooks           <- o .:? "hooks" .!= defaultConfig.hooks
+    noColor         <- o .:? "noColor" .!= defaultConfig.noColor
 
     let maxWidth = maxWidthMb >>=
           \w -> if w <= 0 then defaultConfig.maxWidth else Just w
@@ -385,4 +383,5 @@ defaultConfig =
           , modify = emptyHookSet
           , exit = emptyHookSet
           }
+    , noColor = False
     }

@@ -433,7 +433,7 @@ spec = do
       count2 <- countTasks defaultConfig memConn P.mempty
       show count2 `shouldBe` ("2" :: Text)
 
-      warnings <- insertTags memConn Nothing task2 ["test"]
+      warnings <- insertTags conf memConn Nothing task2 ["test"]
       P.show warnings `shouldBe` T.empty
       countWithTag <- countTasks defaultConfig memConn (Just ["+test"])
       show countWithTag `shouldBe` ("1" :: Text)
@@ -462,7 +462,7 @@ spec = do
     withMemoryDb defaultConfig $ \memConn -> do
       let newTag = "test"
       insertRecord "tasks" memConn task1
-      warnings <- insertTags memConn Nothing task1 [newTag]
+      warnings <- insertTags conf memConn Nothing task1 [newTag]
       P.show warnings `shouldBe` T.empty
 
       cliOutput <- addTag defaultConfig memConn newTag [task1.ulid]
@@ -492,7 +492,7 @@ spec = do
       withMemoryDb defaultConfig $ \memConn -> do
         let existTag = "existing-tag"
         insertRecord "tasks" memConn task1
-        warnings <- insertTags memConn Nothing task1 [existTag]
+        warnings <- insertTags conf memConn Nothing task1 [existTag]
         P.show warnings `shouldBe` T.empty
         cliOutput <-
           editTaskByTask

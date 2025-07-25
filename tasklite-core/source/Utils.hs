@@ -32,6 +32,7 @@ import Protolude (
   fromIntegral,
   fromMaybe,
   fst,
+  mempty,
   otherwise,
   readMaybe,
   realToFrac,
@@ -45,6 +46,8 @@ import Protolude (
  )
 import Protolude qualified as P
 
+import Base32 (decode)
+import Control.Arrow ((>>>))
 import Control.Monad.Catch (catchAll)
 import Data.Colour.RGBSpace (RGB (..))
 import Data.Hourglass (
@@ -71,17 +74,18 @@ import Data.ULID (ULID (ULID, random, timeStamp))
 import Data.ULID.Random (ULIDRandom, mkULIDRandom)
 import Data.ULID.TimeStamp (ULIDTimeStamp, mkULIDTimeStamp)
 import Prettyprinter (Doc, hardline, softline)
+import Prettyprinter.Internal.Type (Doc (Empty))
 import Prettyprinter.Render.Terminal (
+  AnsiStyle,
   Color (Black),
+  bgColorDull,
+  color,
   colorDull,
  )
 import System.Console.ANSI (ConsoleLayer (..), hGetLayerColor)
-
-import Base32 (decode)
-import Config (Config (bodyStyle, utcFormat))
-import Control.Arrow ((>>>))
-import Prettyprinter.Internal.Type (Doc (Empty))
 import System.Random (mkStdGen)
+
+import Config (Config (..))
 
 
 type IdText = Text
@@ -308,32 +312,68 @@ numDigits base num =
     1 + fst (ilog base num)
 
 
+colr :: Config -> Color -> AnsiStyle
+colr conf newColor =
+  if conf.noColor
+    then mempty
+    else color newColor
+
+
+colrDull :: Config -> Color -> AnsiStyle
+colrDull conf newColor =
+  if conf.noColor
+    then mempty
+    else colorDull newColor
+
+
+bgColrDull :: Config -> Color -> AnsiStyle
+bgColrDull conf newColor =
+  if conf.noColor
+    then mempty
+    else bgColorDull newColor
+
+
 applyColorMode :: Config -> IO Config
 applyColorMode conf = do
-  layerColorBgMb <-
-    catchAll
-      (hGetLayerColor stderr Background)
-      (\_ -> pure Nothing)
+  if conf.noColor
+    then
+      pure
+        conf
+          { idStyle = mempty
+          , priorityStyle = mempty
+          , dateStyle = mempty
+          , bodyStyle = mempty
+          , bodyClosedStyle = mempty
+          , closedStyle = mempty
+          , dueStyle = mempty
+          , overdueStyle = mempty
+          , tagStyle = mempty
+          }
+    else do
+      layerColorBgMb <-
+        catchAll
+          (hGetLayerColor stderr Background)
+          (\_ -> pure Nothing)
 
-  let
-    calcLuminance :: RGB Word16 -> Double
-    calcLuminance (RGB{..}) =
-      ( 0.3 * fromIntegral channelRed
-          + 0.6 * fromIntegral channelGreen
-          + 0.1 * fromIntegral channelBlue
-      )
-        / 65536
+      let
+        calcLuminance :: RGB Word16 -> Double
+        calcLuminance (RGB{..}) =
+          ( 0.3 * fromIntegral channelRed
+              + 0.6 * fromIntegral channelGreen
+              + 0.1 * fromIntegral channelBlue
+          )
+            / 65536
 
-    isLightMode =
-      layerColorBgMb
-        <&> calcLuminance
-        & fromMaybe 0 -- Default to dark mode
-        & (> 0.5)
+        isLightMode =
+          layerColorBgMb
+            <&> calcLuminance
+            & fromMaybe 0 -- Default to dark mode
+            & (> 0.5)
 
-  pure $
-    if isLightMode
-      then conf{bodyStyle = colorDull Black}
-      else conf
+      pure $
+        if isLightMode
+          then conf{bodyStyle = colrDull conf Black}
+          else conf
 
 
 countCharTL :: Char -> TL.Text -> P.Int64

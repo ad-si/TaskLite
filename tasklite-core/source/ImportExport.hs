@@ -111,7 +111,6 @@ import Prettyprinter.Internal.Type (Doc (Empty))
 import Prettyprinter.Render.Terminal (
   AnsiStyle,
   Color (Red),
-  color,
   hPutDoc,
   putDoc,
  )
@@ -128,6 +127,7 @@ import Text.PortableLines.ByteString.Lazy (lines8)
 import Time.System (dateCurrent, timeCurrent)
 import Utils (
   IdText,
+  colr,
   countCharTL,
   emptyUlid,
   formatElapsedP,
@@ -140,8 +140,8 @@ import Utils (
  )
 
 
-insertImportTask :: Connection -> ImportTask -> IO (Doc AnsiStyle)
-insertImportTask connection importTask = do
+insertImportTask :: Config -> Connection -> ImportTask -> IO (Doc AnsiStyle)
+insertImportTask conf connection importTask = do
   effectiveUserName <- getEffectiveUserName
   let taskNorm =
         importTask.task
@@ -153,12 +153,14 @@ insertImportTask connection importTask = do
   insertRecord "tasks" connection taskNorm
   tagWarnings <-
     insertTags
+      conf
       connection
       (ulidTextToDateTime taskNorm.ulid)
       taskNorm
       importTask.tags
   noteWarnings <-
     insertNotes
+      conf
       connection
       (ulidTextToDateTime taskNorm.ulid)
       taskNorm
@@ -174,30 +176,31 @@ insertImportTask connection importTask = do
 
 
 importJson :: Config -> Connection -> IO (Doc AnsiStyle)
-importJson _ connection = do
+importJson conf connection = do
   content <- BSL.getContents
 
   case Aeson.eitherDecode content of
     Left error -> die $ T.pack error <> " in task \n" <> show content
     Right importTaskRec -> do
       importTaskNorm <- importTaskRec & setMissingFields
-      insertImportTask connection importTaskNorm
+      insertImportTask conf connection importTaskNorm
 
 
-decodeAndInsertYaml :: Connection -> BSL.LazyByteString -> IO (Doc AnsiStyle)
-decodeAndInsertYaml conn content = do
+decodeAndInsertYaml ::
+  Config -> Connection -> BSL.LazyByteString -> IO (Doc AnsiStyle)
+decodeAndInsertYaml conf conn content = do
   case content & BSL.toStrict & Yaml.decodeEither' of
     Left error ->
       die $ T.pack $ Yaml.prettyPrintParseException error
     Right importTaskRec -> do
       importTaskNorm <- importTaskRec & setMissingFields
-      insertImportTask conn importTaskNorm
+      insertImportTask conf conn importTaskNorm
 
 
 importYaml :: Config -> Connection -> IO (Doc AnsiStyle)
-importYaml _ conn = do
+importYaml conf conn = do
   content <- BSL.getContents
-  decodeAndInsertYaml conn content
+  decodeAndInsertYaml conf conn content
 
 
 parseMarkdownWithFrontMatter ::
@@ -238,20 +241,20 @@ parseMarkdownWithFrontMatter content = do
 
 
 importMarkdown :: Config -> Connection -> IO (Doc AnsiStyle)
-importMarkdown _ conn = do
+importMarkdown conf conn = do
   content <- BSL.getContents
   case parseMarkdownWithFrontMatter content of
     Left error -> die error
-    Right (yamlContent, _) -> decodeAndInsertYaml conn yamlContent
+    Right (yamlContent, _) -> decodeAndInsertYaml conf conn yamlContent
 
 
 importEml :: Config -> Connection -> IO (Doc AnsiStyle)
-importEml _ connection = do
+importEml conf connection = do
   content <- BSL.getContents
 
   case Parsec.parse Email.message "<stdin>" content of
     Left error -> die $ show error
-    Right email -> insertImportTask connection $ emailToImportTask email
+    Right email -> insertImportTask conf connection $ emailToImportTask email
 
 
 emailToImportTask :: Email.GenericMessage BSL.ByteString -> ImportTask
@@ -340,12 +343,12 @@ emailToImportTask email@(Email.Message headerFields msgBody) =
     foldl addHeaderToTask (addBody emptyImportTask) headerFields
 
 
-isDirError :: FilePath -> P.SomeException -> IO (Doc AnsiStyle)
-isDirError filePath exception = do
+isDirError :: Config -> FilePath -> P.SomeException -> IO (Doc AnsiStyle)
+isDirError conf filePath exception = do
   if "is a directory" `T.isInfixOf` show exception
     then do
       hPutDoc stderr $
-        annotate (color Red) $
+        annotate (colr conf Red) $
           ("ERROR: \"" <> pretty filePath <> "\" is a directory. ")
             <> "Use `importdir` instead."
       die ""
@@ -353,11 +356,11 @@ isDirError filePath exception = do
 
 
 importFile :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
-importFile _ conn filePath = do
+importFile conf conn filePath = do
   let decodeAndInsertMd content =
         case parseMarkdownWithFrontMatter content of
           Left error -> die error
-          Right (yamlContent, _) -> decodeAndInsertYaml conn yamlContent
+          Right (yamlContent, _) -> decodeAndInsertYaml conf conn yamlContent
 
   catchAll
     ( do
@@ -371,19 +374,19 @@ importFile _ conn filePath = do
                 die $ T.pack error <> " in task \n" <> show content
               Right importTaskRec -> do
                 importTaskNorm <- importTaskRec & setMissingFields
-                insertImportTask conn importTaskNorm
-          ".yaml" -> decodeAndInsertYaml conn content
-          ".yml" -> decodeAndInsertYaml conn content
+                insertImportTask conf conn importTaskNorm
+          ".yaml" -> decodeAndInsertYaml conf conn content
+          ".yml" -> decodeAndInsertYaml conf conn content
           ".md" -> decodeAndInsertMd content
           ".markdown" -> decodeAndInsertMd content
           ".eml" ->
             case Parsec.parse Email.message filePath content of
               Left error -> die $ show error
-              Right email -> insertImportTask conn $ emailToImportTask email
+              Right email -> insertImportTask conf conn $ emailToImportTask email
           _ ->
             die $ T.pack $ "File type " <> fileExt <> " is not supported"
     )
-    (isDirError filePath)
+    (isDirError conf filePath)
 
 
 filterImportable :: FilePath -> Bool
@@ -418,7 +421,7 @@ ingestFile conf connection filePath = do
         Right importTaskRec -> do
           importTaskNorm <- importTaskRec & setMissingFields
           sequence
-            [ insertImportTask connection importTaskNorm
+            [ insertImportTask conf connection importTaskNorm
             , editTaskByTask
                 conf
                 OpenEditor
@@ -442,7 +445,7 @@ ingestFile conf connection filePath = do
               Right importTaskRec -> do
                 importTaskNorm <- importTaskRec & setMissingFields
                 sequence
-                  [ insertImportTask connection importTaskNorm
+                  [ insertImportTask conf connection importTaskNorm
                   , editTaskByTask
                       conf
                       OpenEditor
@@ -459,7 +462,7 @@ ingestFile conf connection filePath = do
               Right email -> do
                 let taskRecord@ImportTask{task} = emailToImportTask email
                 sequence
-                  [ insertImportTask connection taskRecord
+                  [ insertImportTask conf connection taskRecord
                   , editTaskByTask conf OpenEditor connection task
                   ]
           fileExt ->
@@ -471,7 +474,7 @@ ingestFile conf connection filePath = do
           P.fold resultDocs
             <> ("❌ Deleted file" <+> dquotes (pretty filePath))
     )
-    (isDirError filePath)
+    (isDirError conf filePath)
 
 
 ingestDir :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
@@ -710,8 +713,8 @@ insertTaskFromEdit conf conn importTaskRec newContent modified_utc = do
   P.when (P.isJust taskFixed.closed_utc) $ do
     updateTask conn taskFixedUtc
 
-  tagWarnings <- insertTags conn Nothing taskFixedUtc importTaskRec.tags
-  noteWarnings <- insertNotes conn Nothing taskFixedUtc notesCorrectUtc
+  tagWarnings <- insertTags conf conn Nothing taskFixedUtc importTaskRec.tags
+  noteWarnings <- insertNotes conf conn Nothing taskFixedUtc notesCorrectUtc
 
   args <- P.getArgs
   postModifyResults <-
@@ -817,17 +820,17 @@ editTask conf conn idSubstr = do
                   { ImportTask.task =
                       importTask.task{Task.ulid = taskToEdit.ulid}
                   }
-            pure (fullImportTask, formatHookResult hookResult)
+            pure (fullImportTask, formatHookResult conf hookResult)
       _ -> do
         pure
           ( importTaskDraft
-          , annotate (color Red) $
+          , annotate (colr conf Red) $
               "ERROR: Multiple pre-add hooks are not supported yet. "
                 <> "None of the hooks were executed."
           )
 
     updateTask conn importTask.task
-    warnings <- insertTags conn Nothing importTask.task importTask.tags
+    warnings <- insertTags conf conn Nothing importTask.task importTask.tags
 
     putDoc $
       preModifyHookMsg

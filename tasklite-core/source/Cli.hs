@@ -89,6 +89,7 @@ import Options.Applicative (
   idm,
   info,
   internal,
+  long,
   maybeReader,
   metavar,
   noIntersperse,
@@ -97,6 +98,7 @@ import Options.Applicative (
   progDescDoc,
   renderFailure,
   strArgument,
+  switch,
  )
 import Options.Applicative.Help.Chunk (Chunk (Chunk), (<<+>>))
 import Options.Applicative.Help.Core (parserHelp)
@@ -122,7 +124,6 @@ import Prettyprinter.Render.Terminal (
   Color (Black, Blue, Cyan, Red, Yellow),
   bold,
   color,
-  colorDull,
   hPutDoc,
   renderIO,
  )
@@ -147,6 +148,7 @@ import Config (
   HookSet (..),
   HooksConfig (..),
   addHookFilesToConfig,
+  defaultConfig,
  )
 import Control.Arrow ((>>>))
 import Hooks (executeHooks, formatHookResult)
@@ -233,11 +235,14 @@ import Lib (
  )
 import Migrations (runMigrations)
 import Server (startServer)
-import System.Environment (getProgName)
+import System.Environment (getProgName, lookupEnv)
 import Utils (
   IdText,
   ListModifiedFlag (AllItems, ModifiedItemsOnly),
   TagText,
+  applyColorMode,
+  colr,
+  colrDull,
   parseUtc,
   ulidText2utc,
   (<!!>),
@@ -369,6 +374,13 @@ data Command
   deriving (Show, Eq)
 
 
+data CliOptions = CliOptions
+  { noColorFlag :: Bool
+  , cliCommand :: Command
+  }
+  deriving (Show, Eq)
+
+
 nameToAliasList :: [(Text, Text)]
 nameToAliasList =
   [ ("annotate", "note")
@@ -464,6 +476,16 @@ parseDurationString text =
   text
     & fromString
     & Iso.parseDuration
+
+
+cliOptionsParser :: Config -> Parser CliOptions
+cliOptionsParser conf =
+  CliOptions
+    <$> switch
+      ( long "no-color"
+          <> help "Disable color output. Can be set via NO_COLOR env var."
+      )
+    <*> commandParser conf
 
 {- FOURMOLU_DISABLE -}
 commandParser :: Config -> Parser Command
@@ -1014,7 +1036,7 @@ commandParser conf =
 {- FOURMOLU_ENABLE -}
 
 
-commandParserInfo :: Config -> ParserInfo Command
+commandParserInfo :: Config -> ParserInfo CliOptions
 commandParserInfo conf =
   let
     versionDesc =
@@ -1024,7 +1046,7 @@ commandParserInfo conf =
         <> "\n"
 
     prettyVersion =
-      annotate (color Black) (pretty $ showVersion version)
+      annotate (colr conf Black) (pretty $ showVersion version)
 
     header =
       annotate (bold <> color Blue) "TaskLite"
@@ -1032,13 +1054,13 @@ commandParserInfo conf =
           <> hardline
           <> hardline
           <> annotate
-            (color Blue)
+            (colr conf Blue)
             "Task-list manager powered by Haskell and SQLite"
 
     examples = do
       let
         mkBold = annotate bold . pretty . T.justifyRight 26 ' '
-        hiLite = enclose "`" "`" . annotate (color Cyan)
+        hiLite = enclose "`" "`" . annotate (colr conf Cyan)
 
       ""
         <> hardline
@@ -1063,7 +1085,7 @@ commandParserInfo conf =
           )
   in
     info
-      (helper <*> commandParser conf)
+      (helper <*> cliOptionsParser conf)
       ( noIntersperse
           <> briefDesc
           <> headerDoc (Just header)
@@ -1103,8 +1125,8 @@ spliceDocsIntoText replacements renderedDoc = do
   foldr replaceDocs docElems replacements
 
 
-helpReplacements :: [(Text, Doc AnsiStyle)]
-helpReplacements =
+helpReplacements :: Config -> [(Text, Doc AnsiStyle)]
+helpReplacements conf =
   [ basic_sec
   , shortcut_sec
   , list_sec
@@ -1115,7 +1137,7 @@ helpReplacements =
   , utils_sec
   , unset_sec
   ]
-    <&> (\(a, b) -> (a, annotate (colorDull Yellow) (pretty b <> ":")))
+    <&> (\(a, b) -> (a, annotate (colrDull conf Yellow) (pretty b <> ":")))
 
 
 getHelpText :: String -> Config -> Doc AnsiStyle
@@ -1128,7 +1150,7 @@ getHelpText progName conf =
     & P.flip renderFailure progName
     & P.fst
     & T.pack
-    & spliceDocsIntoText helpReplacements
+    & spliceDocsIntoText (helpReplacements conf)
     & hcat
 
 
@@ -1150,7 +1172,7 @@ handleExternalCommand conf cmd argsMb = do
     extendHelp theHelp =
       theHelp
         & show
-        & spliceDocsIntoText helpReplacements
+        & spliceDocsIntoText (helpReplacements conf)
         & hcat
 
     handleException exception = do
@@ -1159,11 +1181,11 @@ handleExternalCommand conf cmd argsMb = do
           then pretty (show exception :: Text)
           else do
             let
-              theHelp = parserHelp defaultPrefs (helper <*> commandParser conf)
+              theHelp = parserHelp defaultPrefs (helper <*> cliOptionsParser conf)
               newHeader =
                 Chunk
                   ( Just $
-                      annotate (color Red) $
+                      annotate (colr conf Red) $
                         "ERROR: Command \""
                           <> pretty cmd
                           <> "\" does not exist"
@@ -1187,8 +1209,12 @@ executeCLiCommand ::
   [String] ->
   Maybe P.Int ->
   IO (Doc AnsiStyle)
-executeCLiCommand conf now connection progName args availableLinesMb = do
-  let cliCommandRes = execParserPure defaultPrefs (commandParserInfo conf) args
+executeCLiCommand config now connection progName args availableLinesMb = do
+  let cliCommandRes =
+        execParserPure
+          defaultPrefs
+          (commandParserInfo config)
+          args
 
   case cliCommandRes of
     CompletionInvoked _ ->
@@ -1199,15 +1225,18 @@ executeCLiCommand conf now connection progName args availableLinesMb = do
         & P.flip renderFailure progName
         & P.fst
         & T.pack
-        & spliceDocsIntoText helpReplacements
+        & spliceDocsIntoText (helpReplacements defaultConfig)
         & hcat
         & hPutDoc P.stderr
       P.exitFailure
     --
-    Success cliCommand -> do
+    Success cliOptions -> do
+      conf <-
+        applyColorMode
+          config{noColor = config.noColor || cliOptions.noColorFlag}
       let addTaskC = addTask conf connection
 
-      case cliCommand of
+      case cliOptions.cliCommand of
         ListAll -> listAll conf now connection availableLinesMb
         ListHead -> headTasks conf now connection availableLinesMb
         ListNewFiltered taskFilter -> newTasks conf now connection taskFilter availableLinesMb
@@ -1281,7 +1310,7 @@ executeCLiCommand conf now connection progName args availableLinesMb = do
         InfoTask idSubstr -> infoTask conf connection idSubstr
         NextTask -> nextTask conf connection
         RandomTask taskFilter -> randomTask conf connection taskFilter
-        FindTask aPattern -> findTask connection aPattern
+        FindTask aPattern -> findTask conf connection aPattern
         AddTag tagText ids -> addTag conf connection tagText ids
         DeleteTag tagText ids -> deleteTag conf connection tagText ids
         AddNote noteText ids -> addNote conf connection noteText ids
@@ -1313,16 +1342,19 @@ executeCLiCommand conf now connection progName args availableLinesMb = do
 
 printOutput :: String -> Maybe [String] -> Config -> IO ()
 printOutput appName argsMb config = do
+  noColorEnv <- lookupEnv "NO_COLOR"
+  let conf = config{noColor = config.noColor || P.isJust noColorEnv}
+
   configNormDataDir <-
-    if null config.dataDir
+    if null conf.dataDir
       then do
         xdgDataDir <- getXdgDirectory XdgData appName
-        pure $ config{dataDir = xdgDataDir}
-      else case T.stripPrefix "~/" $ T.pack config.dataDir of
-        Nothing -> pure config
+        pure $ conf{dataDir = xdgDataDir}
+      else case T.stripPrefix "~/" $ T.pack conf.dataDir of
+        Nothing -> pure conf
         Just rest -> do
           homeDir <- getHomeDirectory
-          pure $ config{dataDir = homeDir </> T.unpack rest}
+          pure $ conf{dataDir = homeDir </> T.unpack rest}
 
   let hooksPath = configNormDataDir.hooks.directory
 
@@ -1382,7 +1414,7 @@ printOutput appName argsMb config = do
       <> errors
       & P.traverse_
         ( pretty
-            >>> annotate (color Yellow)
+            >>> annotate (colr conf Yellow)
             >>> hPutDoc P.stderr
         )
 
@@ -1392,7 +1424,7 @@ printOutput appName argsMb config = do
         preLaunchResults
           <&> \case
             Left error -> pretty error
-            Right hookResult -> formatHookResult hookResult
+            Right hookResult -> formatHookResult conf hookResult
           & P.fold
 
   connection <- setupConnection configNorm
@@ -1420,7 +1452,7 @@ printOutput appName argsMb config = do
         postLaunchResults
           <&> \case
             Left error -> pretty error
-            Right hookResult -> formatHookResult hookResult
+            Right hookResult -> formatHookResult conf hookResult
           & P.fold
 
   termSizeMb <- size
@@ -1459,7 +1491,7 @@ printOutput appName argsMb config = do
       preExitResults
         <&> \case
           Left error -> pretty error
-          Right hookResult -> formatHookResult hookResult
+          Right hookResult -> formatHookResult conf hookResult
         & P.fold
     putDocCustom document =
       renderIO
