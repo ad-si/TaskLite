@@ -179,6 +179,22 @@ importJson _ connection = do
       insertImportTask connection importTaskNorm
 
 
+decodeAndInsertYaml :: Connection -> BSL.LazyByteString -> IO (Doc AnsiStyle)
+decodeAndInsertYaml conn content = do
+  case content & BSL.toStrict & Yaml.decodeEither' of
+    Left error ->
+      die $ T.pack $ Yaml.prettyPrintParseException error
+    Right importTaskRec -> do
+      importTaskNorm <- importTaskRec & setMissingFields
+      insertImportTask conn importTaskNorm
+
+
+importYaml :: Config -> Connection -> IO (Doc AnsiStyle)
+importYaml _ conn = do
+  content <- BSL.getContents
+  decodeAndInsertYaml conn content
+
+
 importEml :: Config -> Connection -> IO (Doc AnsiStyle)
 importEml _ connection = do
   content <- BSL.getContents
@@ -301,6 +317,8 @@ importFile _ conn filePath = do
               Right importTaskRec -> do
                 importTaskNorm <- importTaskRec & setMissingFields
                 insertImportTask conn importTaskNorm
+          ".yaml" -> decodeAndInsertYaml conn content
+          ".yml" -> decodeAndInsertYaml conn content
           ".eml" ->
             case Parsec.parse Email.message filePath content of
               Left error -> die $ show error
@@ -314,6 +332,8 @@ importFile _ conn filePath = do
 filterImportable :: FilePath -> Bool
 filterImportable filePath =
   (".json" `isExtensionOf` filePath)
+    || (".yaml" `isExtensionOf` filePath)
+    || (".yml" `isExtensionOf` filePath)
     || (".eml" `isExtensionOf` filePath)
 
 
@@ -330,6 +350,22 @@ importDir conf connection dirPath = do
 
 ingestFile :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
 ingestFile conf connection filePath = do
+  let ingestYaml content = do
+        let decodeResult = Yaml.decodeEither' (BSL.toStrict content)
+        case decodeResult of
+          Left error ->
+            die $ T.pack $ Yaml.prettyPrintParseException error
+          Right importTaskRec -> do
+            importTaskNorm <- importTaskRec & setMissingFields
+            sequence
+              [ insertImportTask connection importTaskNorm
+              , editTaskByTask
+                  conf
+                  OpenEditor
+                  connection
+                  importTaskNorm.task
+              ]
+
   catchAll
     ( do
         content <- BSL.readFile filePath
@@ -349,6 +385,8 @@ ingestFile conf connection filePath = do
                       connection
                       importTaskNorm.task
                   ]
+          ".yaml" -> ingestYaml content
+          ".yml" -> ingestYaml content
           ".eml" ->
             case Parsec.parse Email.message filePath content of
               Left error -> die $ show error
