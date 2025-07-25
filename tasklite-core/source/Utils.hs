@@ -41,6 +41,7 @@ import Protolude (
   (&),
   (.),
   (<&>),
+  (==),
  )
 import Protolude qualified as P
 
@@ -71,6 +72,7 @@ import Data.Text as T (
   toLower,
   unpack,
  )
+import Data.Text.Lazy qualified as TL
 import Data.Time (UTCTime, ZonedTime, addUTCTime, zonedTimeToUTC)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Data.ULID (ULID (ULID, random, timeStamp))
@@ -340,3 +342,8 @@ applyColorMode conf = do
     if isLightMode
       then conf{bodyStyle = colorDull Black}
       else conf
+
+
+countChar :: Char -> TL.Text -> P.Int64
+countChar char =
+  TL.filter (== char) >>> TL.length

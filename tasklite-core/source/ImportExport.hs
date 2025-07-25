@@ -64,6 +64,7 @@ import Data.Hourglass (
   TimeFormat (toFormat),
   timePrint,
  )
+import Data.Monoid.Extra (mwhen)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TL
@@ -117,7 +118,7 @@ import System.Directory (createDirectoryIfMissing, listDirectory, removeFile)
 import System.FilePath (isExtensionOf, takeExtension, (</>))
 import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
-import Task (Task (..), setMetadataField, taskToEditableYaml)
+import Task (Task (..), setMetadataField, taskToEditableMarkdown)
 import Text.Editor (runUserEditorDWIM, yamlTemplate)
 import Text.Parsec.Rfc2822 qualified as Email
 import Text.ParserCombinators.Parsec as Parsec (parse)
@@ -125,6 +126,7 @@ import Text.PortableLines.ByteString.Lazy (lines8)
 import Time.System (dateCurrent, timeCurrent)
 import Utils (
   IdText,
+  countChar,
   emptyUlid,
   setDateTime,
   ulidTextToDateTime,
@@ -211,15 +213,16 @@ parseMarkdownWithFrontMatter content = do
         (closingDelim : actualBody) | isClosingDelimiter closingDelim -> do
           let
             frontMatterYaml = TL.intercalate "\n" frontMatterLines
-            bodyText =
-              actualBody
-                & TL.intercalate "\n"
-                & TL.stripStart
-                & TL.toStrict
+            bodyTextLazy = actualBody & TL.intercalate "\n" & TL.strip
+            -- Only keep trailing newlines for multiline bodies
+            noTrailingNewline = countChar '\n' bodyTextLazy == 0
+            bodyText = bodyTextLazy & TL.toStrict
             frontMatterWithBody =
               frontMatterYaml
-                <> "\nbody: |\n"
-                <> TL.fromStrict (T.unlines $ T.lines bodyText <&> ("  " <>))
+                <> "\nbody: |"
+                <> mwhen noTrailingNewline "-"
+                <> "\n"
+                <> TL.fromStrict (bodyText & T.lines <&> ("  " <>) & T.unlines)
           Right (TL.encodeUtf8 frontMatterWithBody, bodyText)
         _ -> Left "Missing closing front-matter delimiter '---' or '...'"
     _ -> do
@@ -582,53 +585,58 @@ data EditMode
   | OpenEditorRequireEdit
 
 
-{-| Edit the task until it is valid YAML and can be decoded.
-| Return the the tuple `(task, valid YAML content)`
+{-| Edit task until it's valid Markdown with frontmatter and can be decoded.
+| Return the the tuple `(task, valid YAML content from frontmatter)`
 -}
-editUntilValidYaml ::
+editUntilValidMarkdown ::
   EditMode ->
   Connection ->
   P.ByteString ->
   P.ByteString ->
   IO (Either ParseException (ImportTask, P.ByteString))
-editUntilValidYaml editMode conn initialYaml wipYaml = do
-  yamlAfterEdit <- case editMode of
-    ApplyPreEdit editFunc -> pure $ editFunc wipYaml
-    OpenEditor -> runUserEditorDWIM yamlTemplate wipYaml
-    OpenEditorRequireEdit -> runUserEditorDWIM yamlTemplate wipYaml
+editUntilValidMarkdown editMode conn initialMarkdown wipMarkdown = do
+  markdownAfterEdit <- case editMode of
+    ApplyPreEdit editFunc -> pure $ editFunc wipMarkdown
+    OpenEditor -> runUserEditorDWIM yamlTemplate wipMarkdown
+    OpenEditorRequireEdit -> runUserEditorDWIM yamlTemplate wipMarkdown
 
-  if yamlAfterEdit == initialYaml
+  if markdownAfterEdit == initialMarkdown
     then pure $ Left $ InvalidYaml $ Just $ YamlException $ case editMode of
       -- Content doesn't have to be changed -> log nothing
       OpenEditor -> ""
       _ -> "⚠️ Nothing changed"
     else do
-      case yamlAfterEdit & Yaml.decodeEither' of
+      case markdownAfterEdit & BSL.fromStrict & parseMarkdownWithFrontMatter of
         Left error -> do
-          case error of
-            -- Adjust the line and column numbers to be 1-based
-            InvalidYaml
-              (Just (YamlParseException prblm ctxt (YamlMark idx line col))) ->
-                let yamlMark = YamlMark (idx + 1) (line + 1) (col + 1)
-                in  putErrLn $
-                      Yaml.prettyPrintParseException
-                        ( InvalidYaml
-                            (Just (YamlParseException prblm ctxt yamlMark))
-                        )
-                        <> "\n"
-            _ ->
-              putErrLn $ Yaml.prettyPrintParseException error <> "\n"
-          editUntilValidYaml editMode conn initialYaml yamlAfterEdit
-        ---
-        Right newTask -> do
-          pure $ Right (newTask, yamlAfterEdit)
+          putErrLn $ error <> "\n"
+          editUntilValidMarkdown editMode conn initialMarkdown markdownAfterEdit
+        Right (yamlContent, _) -> do
+          case BSL.toStrict yamlContent & Yaml.decodeEither' of
+            Left error -> do
+              case error of
+                -- Adjust the line and column numbers to be 1-based
+                InvalidYaml
+                  (Just (YamlParseException prblm ctxt (YamlMark idx line col))) ->
+                    let yamlMark = YamlMark (idx + 1) (line + 1) (col + 1)
+                    in  putErrLn $
+                          Yaml.prettyPrintParseException
+                            ( InvalidYaml
+                                (Just (YamlParseException prblm ctxt yamlMark))
+                            )
+                            <> "\n"
+                _ ->
+                  putErrLn $ Yaml.prettyPrintParseException error <> "\n"
+              editUntilValidMarkdown editMode conn initialMarkdown markdownAfterEdit
+            Right newTask -> do
+              pure $ Right (newTask, BSL.toStrict yamlContent)
 
 
 editTaskByTask :: Config -> EditMode -> Connection -> Task -> IO (Doc AnsiStyle)
 editTaskByTask conf editMode conn taskToEdit = do
-  taskYaml <- taskToEditableYaml conn taskToEdit
-  taskYamlTupleRes <- editUntilValidYaml editMode conn taskYaml taskYaml
-  case taskYamlTupleRes of
+  taskMarkdown <- taskToEditableMarkdown conn taskToEdit
+  taskMarkdownTupleRes <-
+    editUntilValidMarkdown editMode conn taskMarkdown taskMarkdown
+  case taskMarkdownTupleRes of
     Left error -> case error of
       InvalidYaml (Just (YamlException "")) -> pure P.mempty
       _ -> pure $ pretty $ Yaml.prettyPrintParseException error

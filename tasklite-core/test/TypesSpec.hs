@@ -14,7 +14,7 @@ import FullTask (FullTask (body, notes, tags, ulid), emptyFullTask)
 import Lib (insertNotes, insertRecord, insertTags)
 import NeatInterpolation (trimming)
 import Note (Note (Note, body, ulid))
-import Task (Task (body, ulid), emptyTask, taskToEditableYaml)
+import Task (Task (body, ulid), emptyTask, taskToEditableMarkdown)
 import TestUtils (withMemoryDb)
 
 
@@ -84,13 +84,13 @@ spec = do
         noteWarnings <- Lib.insertNotes memConn Nothing sampleTask sampleNotes
         P.show noteWarnings `shouldBe` T.empty
 
-        taskYaml <- taskToEditableYaml memConn sampleTask
+        taskYaml <- taskToEditableMarkdown memConn sampleTask
         let
           expected :: P.ByteString
           expected =
             [trimming|
+                ---
                 awake_utc: null
-                body: Sample task
                 closed_utc: null
                 due_utc: null
                 group_ulid: null
@@ -118,8 +118,10 @@ spec = do
                 #     surprising
                 #     line breaks.
                 notes: []
+                ...
+
+                Sample task
               |]
-              <> "\n"
               & P.encodeUtf8
 
         taskYaml `shouldBe` expected

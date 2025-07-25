@@ -407,12 +407,12 @@ setMetadataField fieldNameText value task =
     }
 
 
-{-| Convert a task to a YAML string that can be edited
+{-| Convert a task to a Markdown string with YAML frontmatter that can be edited
 | and then converted back to a task.
 | Tags and notes are commented out, so they are not accidentally added again.
 -}
-taskToEditableYaml :: Connection -> Task -> P.IO P.ByteString
-taskToEditableYaml conn task = do
+taskToEditableMarkdown :: Connection -> Task -> P.IO P.ByteString
+taskToEditableMarkdown conn task = do
   (tags :: [[P.Text]]) <-
     query
       conn
@@ -433,28 +433,34 @@ taskToEditableYaml conn task = do
       |]
       (Only $ ulid task)
 
-  let indentNoteContent noteContent =
-        noteContent
-          & T.strip
-          & T.lines
-          <&> T.stripEnd
-          & T.intercalate "\n#     "
+  let
+    indentNoteContent noteContent =
+      noteContent
+        & T.strip
+        & T.lines
+        <&> T.stripEnd
+        & T.intercalate "\n#     "
+
+    taskWithEmptyBody = task{body = ""}
+    frontmatterYaml =
+      ( taskWithEmptyBody
+          & Yaml.encode
+          & P.decodeUtf8
+          & T.replace "\nbody: ''\n" "\n"
+      )
+        <> "\n# | Existing tags and notes can't be edited here, \
+           \but new ones can be added\n\n"
+        <> (("# tags: " :: Text) <> P.show (P.concat tags) <> "\n")
+        <> "tags: []\n"
+        <> ( ("\n# notes:\n" :: Text)
+              <> ( notes
+                    & P.concat
+                    <&> (\note -> "# - " <> indentNoteContent note)
+                    & T.unlines
+                 )
+           )
+        <> "notes: []\n"
 
   pure $
-    ( task
-        & Yaml.encode
-        & P.decodeUtf8
-    )
-      <> "\n# | Existing tags and notes can't be edited here, \
-         \but new ones can be added\n\n"
-      <> (("# tags: " :: Text) <> P.show (P.concat tags) <> "\n")
-      <> "tags: []\n"
-      <> ( ("\n# notes:\n" :: Text)
-            <> ( notes
-                  & P.concat
-                  <&> (\note -> "# - " <> indentNoteContent note)
-                  & T.unlines
-               )
-         )
-      <> "notes: []\n"
+    ("---\n" <> frontmatterYaml <> "...\n\n" <> body task)
       & P.encodeUtf8

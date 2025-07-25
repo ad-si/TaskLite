@@ -494,11 +494,14 @@ spec = do
         insertRecord "tasks" memConn task1
         warnings <- insertTags memConn Nothing task1 [existTag]
         P.show warnings `shouldBe` T.empty
-
         cliOutput <-
           editTaskByTask
             conf
-            (ApplyPreEdit (<> ("\ntags: " <> P.show [existTag, "new-tag"])))
+            ( ApplyPreEdit $
+                replaceBs
+                  "\n...\n"
+                  ("\ntags: " <> P.show [existTag, "new-tag"] <> "\n...\n")
+            )
             memConn
             task1
         let errMsg = "Tag \"" <> T.unpack existTag <> "\" is already assigned"
@@ -538,7 +541,11 @@ spec = do
         cliOutput <-
           editTaskByTask
             conf
-            (ApplyPreEdit (<> ("\nnotes: " <> P.show ["A short note" :: Text])))
+            ( ApplyPreEdit $
+                replaceBs
+                  "\n...\n"
+                  ("\nnotes: " <> P.show ["A short note" :: Text] <> "\n...\n")
+            )
             memConn
             task1
         show cliOutput `shouldStartWith` "✏️  Edited task \"New task 1\""
@@ -595,7 +602,7 @@ spec = do
         cliOutput <-
           editTaskByTask
             conf
-            (ApplyPreEdit (<> "\nmetadata: null"))
+            (ApplyPreEdit $ replaceBs "\n...\n" "\nmetadata: null\n...\n")
             memConn
             task1
         show cliOutput `shouldStartWith` "✏️  Edited task \"New task 1\""
