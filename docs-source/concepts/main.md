@@ -98,3 +98,18 @@ notes:
   - note: The vegan one from Super Buy
     ulid: 01dpgjf35pq74gchsgtcd6fgsa
 ```
+
+
+## Time and Date
+
+- Everything in TaskLite is stored in UTC.
+- A due date without a time is at midnight on this date.
+    E.g. `2025-06-01` is the same as `2025-06-01T00:00:00Z`.
+    So, maybe surprisingly, `due:2025-06-01`
+    does not show tasks due on the first of June.
+    If you want to include the whole day of June 1st,
+    you should use the next day like `due:2025-06-02`.
+- To simplify handling times, it is recommended to install
+    the CLI tool [`tu`](https://github.com/ad-si/tu).
+    It can be used to convert fuzzy times like `in 2 weeks` to exact timestamps.
+    E.g. `tl add Buy milk due:$(tu in 2 weeks)`
