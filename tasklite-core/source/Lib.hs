@@ -2384,28 +2384,98 @@ formatTag conf =
     . pretty
 
 
-formatTaskLine :: Config -> DateTime -> Int -> FullTask -> Doc AnsiStyle
-formatTaskLine conf now taskWidth task =
+invalidUlidMsg :: FullTask -> Doc AnsiStyle
+invalidUlidMsg task =
+  "Id"
+    <+> dquotes (pretty task.ulid)
+    <+> "is an invalid ulid and could not be converted to a datetime"
+
+
+formatTaskPriority :: Config -> FullTask -> Doc AnsiStyle
+formatTaskPriority conf task =
+  let
+    prio = fromMaybe 0 task.priority
+    txt = T.justifyRight 4 ' ' $ showAtPrecision 1 $ realToFrac prio
+  in
+    annotate (priorityStyle conf) (pretty txt)
+
+
+formatTaskDue :: Config -> FullTask -> Doc AnsiStyle
+formatTaskDue conf task =
+  let
+    dueUtcMaybe = task.due_utc >>= parseUtc <&> format
+    format = T.replace " 00:00:00" "" . T.pack . timePrint conf.utcFormat
+  in
+    annotate (dueStyle conf) (pretty dueUtcMaybe)
+
+
+formatTaskClose :: Config -> FullTask -> Doc AnsiStyle
+formatTaskClose conf task =
+  let
+    closedUtcMaybe = task.closed_utc >>= parseUtc <&> timePrint conf.utcFormat
+  in
+    annotate (closedStyle conf) (pretty closedUtcMaybe)
+
+
+formatTaskTags :: Config -> FullTask -> Doc AnsiStyle
+formatTaskTags conf task =
+  let
+    tags = fromMaybe [] task.tags
+  in
+    hsep (tags <&> formatTag conf)
+
+
+formatTaskNotes :: FullTask -> Doc AnsiStyle
+formatTaskNotes task = if not $ P.null task.notes then "📝" else ""
+
+
+formatTaskId :: Config -> Int -> FullTask -> Doc AnsiStyle
+formatTaskId conf taskWidth task =
   let
     id = pretty $ T.takeEnd taskWidth task.ulid
-    createdUtc =
-      fmap
-        (T.pack . timePrint ISO8601_Date)
-        (ulidTextToDateTime task.ulid)
-    tags = fromMaybe [] task.tags
-    closedUtcMaybe =
-      task.closed_utc
-        >>= parseUtc
-        <&> timePrint conf.utcFormat
-    dueUtcMaybe =
-      task.due_utc
-        >>= parseUtc
-        <&> T.replace " 00:00:00" ""
-          . T.pack
-          . timePrint conf.utcFormat
+  in
+    annotate conf.idStyle id
+
+
+formatTaskBody :: Config -> DateTime -> FullTask -> Doc AnsiStyle
+formatTaskBody conf now task = pretty reviewIcon <> dueSoon <> body
+  where
     dueIn offset =
       let dateMaybe = task.due_utc >>= parseUtc
       in  isJust dateMaybe && dateMaybe < Just (now `timeAdd` offset)
+    grayOutIfDone doc =
+      if isOpen
+        then annotate (bodyStyle conf) doc
+        else annotate (bodyClosedStyle conf) doc
+
+    isOpen = isNothing task.closed_utc
+    reviewIcon = case task.review_utc >>= parseUtc of
+      Nothing -> "" :: Text
+      Just date_ -> if date_ < now then "🔎 " else ""
+    dueSoon = if dueIn mempty{durationHours = 24} && isOpen then "⚠️️ " else ""
+    taskBody =
+      reflow $
+        if countChar '\n' task.body > 0
+          then (task.body & T.takeWhile (/= '\n')) <> " ▼"
+          else task.body
+    body =
+      if dueIn mempty && isOpen
+        then annotate (color Red) taskBody
+        else grayOutIfDone taskBody
+
+
+formatTaskCreated :: Config -> FullTask -> Doc AnsiStyle
+formatTaskCreated conf task =
+  let
+    createdUtc = maybe "bad Ulid" (T.pack . timePrint ISO8601_Date) date
+    date = ulidTextToDateTime task.ulid
+  in
+    annotate (dateStyle conf) (pretty createdUtc)
+
+
+formatTaskLine :: Config -> DateTime -> Int -> FullTask -> Doc AnsiStyle
+formatTaskLine conf now taskWidth task =
+  let
     multilineIndent = 2
     hangWidth =
       taskWidth
@@ -2417,62 +2487,21 @@ formatTaskLine conf now taskWidth task =
         + multilineIndent
     hhsep = concatWith (<++>)
     isEmptyDoc doc = show doc /= ("" :: Text)
-    isOpen = isNothing task.closed_utc
-    grayOutIfDone doc =
-      if isOpen
-        then annotate (bodyStyle conf) doc
-        else annotate (bodyClosedStyle conf) doc
     -- redOut onTime doc = if onTime
     --   then annotate (bodyStyle conf) doc
     --   else annotate (color Red) doc
-    taskBody =
-      reflow $
-        if countChar '\n' task.body > 0
-          then (task.body & T.takeWhile (/= '\n')) <> " ▼"
-          else task.body
-    taskLine =
-      createdUtc <&> \taskDate ->
-        hang hangWidth $
-          hhsep $
-            P.filter
-              isEmptyDoc
-              [ annotate conf.idStyle id
-              , annotate
-                  (priorityStyle conf)
-                  ( pretty $
-                      T.justifyRight 4 ' ' $
-                        showAtPrecision 1 $
-                          realToFrac $
-                            fromMaybe 0 task.priority
-                  )
-              , annotate (dateStyle conf) (pretty taskDate)
-              , pretty
-                  ( case task.review_utc >>= parseUtc of
-                      Nothing -> "" :: Text
-                      Just date_ -> if date_ < now then "🔎 " else ""
-                  )
-                  <> ( if dueIn mempty{durationHours = 24} && isOpen
-                        then "⚠️️ "
-                        else ""
-                     )
-                  <> ( if dueIn mempty && isOpen
-                        then annotate (color Red) taskBody
-                        else grayOutIfDone taskBody
-                     )
-              , annotate (dueStyle conf) (pretty dueUtcMaybe)
-              , annotate (closedStyle conf) (pretty closedUtcMaybe)
-              , hsep (tags <&> formatTag conf)
-              , if not $ P.null task.notes
-                  then "📝"
-                  else ""
-              ]
+    fields =
+      [ formatTaskId conf taskWidth task
+      , formatTaskPriority conf task
+      , formatTaskCreated conf task
+      , formatTaskBody conf now task
+      , formatTaskDue conf task
+      , formatTaskClose conf task
+      , formatTaskTags conf task
+      , formatTaskNotes task
+      ]
   in
-    fromMaybe
-      ( "Id"
-          <+> dquotes (pretty task.ulid)
-          <+> "is an invalid ulid and could not be converted to a datetime"
-      )
-      taskLine
+    hang hangWidth $ hhsep $ P.filter isEmptyDoc fields
 
 
 getIdLength :: Float -> Int
