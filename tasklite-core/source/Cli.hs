@@ -1463,8 +1463,8 @@ printOutput appName argsMb config = do
         -- TODO: Use the correct number of terminal prompt lines
         --       and overflowing lines here.
         --       We're currently simply assuming
-        --       that 25% of the lines will overflow.
-        P.round $ (P.fromIntegral height - 5) * (0.75 :: P.Double)
+        --       that 20% of the lines will overflow.
+        P.max 1 $ P.round $ (P.fromIntegral height - 5) * (0.8 :: P.Double)
 
     termWidthMb =
       termSizeMb <&> \(Window{width}) -> width
