@@ -240,6 +240,7 @@ data Config = Config
   , tagStyle :: AnsiStyle
   , utcFormat :: TimeFormatString
   , utcFormatShort :: TimeFormatString
+  , useDuration :: P.Bool
   , dataDir :: FilePath
   , dbName :: FilePath
   , dateWidth :: Int
@@ -271,6 +272,7 @@ instance FromJSON Config where
     utcFormat       <- o .:? "utcFormat" .!= defaultConfig.utcFormat
     utcFormatShort  <- o .:? "utcFormatShort" .!= defaultConfig.utcFormatShort
     dataDir         <- o .:? "dataDir" .!= defaultConfig.dataDir
+    useDuration     <- o .:? "useDuration" .!= defaultConfig.useDuration
     dbName          <- o .:? "dbName" .!= defaultConfig.dbName
     dateWidth       <- o .:? "dateWidth" .!= defaultConfig.dateWidth
     bodyWidth       <- o .:? "bodyWidth" .!= defaultConfig.bodyWidth
@@ -367,6 +369,7 @@ defaultConfig =
     , tagStyle = color Blue
     , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
     , utcFormatShort = toFormat ("YYYY-MM-DD H:MI" :: [Char])
+    , useDuration = P.False
     , dataDir = ""
     , dbName = "main.db"
     , dateWidth = 10

@@ -89,9 +89,11 @@ import Data.Hourglass (
   Duration (durationHours, durationMinutes),
   ISO8601_Date (ISO8601_Date),
   Minutes (Minutes),
+  Seconds (Seconds),
   Time (timeFromElapsedP),
   TimeOfDay (todNSec),
   timeAdd,
+  timeDiff,
   timePrint,
  )
 import Data.List (nub)
@@ -190,6 +192,7 @@ import Config (
     progressBarWidth,
     tableName,
     tagStyle,
+    useDuration,
     utcFormat,
     utcFormatShort
   ),
@@ -2399,6 +2402,20 @@ invalidUlidMsg task =
     <+> "is an invalid ulid and could not be converted to a datetime"
 
 
+-- Convert seconds to minutes, hours or days
+-- TODO use Iso.formatDuration ?
+formatDuration :: Seconds -> T.Text
+formatDuration (Seconds totalSeconds) =
+  let
+    days = totalSeconds `P.div` (24 * 3600)
+    remainingAfterDays = totalSeconds `P.mod` (24 * 3600)
+    hours = remainingAfterDays `P.div` 3600
+  in
+    if days > 0
+      then T.pack $ show days <> "d"
+      else T.pack $ show hours <> "h"
+
+
 formatTaskPriority :: Config -> FullTask -> Doc AnsiStyle
 formatTaskPriority conf task =
   let
@@ -2472,13 +2489,24 @@ formatTaskBody conf now task = pretty reviewIcon <> dueSoon <> body
         else grayOutIfDone taskBody
 
 
-formatTaskCreated :: Config -> FullTask -> Doc AnsiStyle
-formatTaskCreated conf task =
+formatTaskDate :: DateTime -> Text
+formatTaskDate = T.pack . timePrint ISO8601_Date
+
+
+formatTaskDuration :: Config -> DateTime -> DateTime -> Text
+formatTaskDuration conf now = T.center (dateWidth conf) ' ' . formatDuration . timeDiff now
+
+
+formatTaskCreated :: Config -> DateTime -> FullTask -> Doc AnsiStyle
+formatTaskCreated conf now task =
   let
-    createdUtc = maybe "bad Ulid" (T.pack . timePrint ISO8601_Date) date
-    date = ulidTextToDateTime task.ulid
+    dateMaybe = ulidTextToDateTime task.ulid
+    format =
+      if conf.useDuration
+        then formatTaskDuration conf now
+        else formatTaskDate
   in
-    annotate conf.dateStyle (pretty createdUtc)
+    annotate (dateStyle conf) (pretty $ maybe "bad Ulid" format dateMaybe)
 
 
 formatTaskLine :: Config -> DateTime -> Int -> FullTask -> Doc AnsiStyle
@@ -2501,7 +2529,7 @@ formatTaskLine conf now taskWidth task =
     fields =
       [ formatTaskId conf taskWidth task
       , formatTaskPriority conf task
-      , formatTaskCreated conf task
+      , formatTaskCreated conf now task
       , formatTaskBody conf now task
       , formatTaskDue conf task
       , formatTaskClose conf task
@@ -3279,8 +3307,8 @@ formatTasks conf now isTruncated tasks =
               (conf.priorityStyle <> strong)
               (fill conf.prioWidth "Prio")
             <++> annotate
-              (conf.dateStyle <> strong)
-              (fill conf.dateWidth "Opened UTC")
+               (dateStyle conf <> strong)
+               (fill (dateWidth conf) "Opened")
             <++> annotate
               (conf.bodyStyle <> strong)
               (fill conf.bodyWidth "Body")

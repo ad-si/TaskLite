@@ -8,6 +8,8 @@ bodyClosedStyle: black
 closedStyle: dull black
 dueStyle: yellow
 overdueStyle: red
+# Default dates are in UTC. Set to true if you prefer to see a numbet of days/hours.
+useDuration: false
 tagStyle: blue
 utcFormat: YYYY-MM-DD H:MI:S
 #| FIXME: Blocked by https://github.com/vincenthz/hs-hourglass/issue
