@@ -195,6 +195,50 @@ importYaml _ conn = do
   decodeAndInsertYaml conn content
 
 
+parseMarkdownWithFrontMatter ::
+  BSL.LazyByteString -> Either Text (BSL.LazyByteString, Text)
+parseMarkdownWithFrontMatter content = do
+  let
+    contentText = TL.decodeUtf8 content
+    contentLines = TL.lines contentText
+
+    isClosingDelimiter line = line == "---" || line == "..."
+
+  case contentLines of
+    ("---" : rest) -> do
+      let (frontMatterLines, bodyLines) = P.break isClosingDelimiter rest
+      case bodyLines of
+        (closingDelim : actualBody) | isClosingDelimiter closingDelim -> do
+          let
+            frontMatterYaml = TL.intercalate "\n" frontMatterLines
+            bodyText =
+              actualBody
+                & TL.intercalate "\n"
+                & TL.stripStart
+                & TL.toStrict
+            frontMatterWithBody =
+              frontMatterYaml
+                <> "\nbody: |\n"
+                <> TL.fromStrict (T.unlines $ T.lines bodyText <&> ("  " <>))
+          Right (TL.encodeUtf8 frontMatterWithBody, bodyText)
+        _ -> Left "Missing closing front-matter delimiter '---' or '...'"
+    _ -> do
+      let
+        bodyText = TL.toStrict contentText
+        yamlWithBody =
+          "body: |\n"
+            <> TL.fromStrict (T.unlines $ T.lines bodyText <&> ("  " <>))
+      Right (TL.encodeUtf8 yamlWithBody, bodyText)
+
+
+importMarkdown :: Config -> Connection -> IO (Doc AnsiStyle)
+importMarkdown _ conn = do
+  content <- BSL.getContents
+  case parseMarkdownWithFrontMatter content of
+    Left error -> die error
+    Right (yamlContent, _) -> decodeAndInsertYaml conn yamlContent
+
+
 importEml :: Config -> Connection -> IO (Doc AnsiStyle)
 importEml _ connection = do
   content <- BSL.getContents
@@ -304,6 +348,11 @@ isDirError filePath exception = do
 
 importFile :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
 importFile _ conn filePath = do
+  let decodeAndInsertMd content =
+        case parseMarkdownWithFrontMatter content of
+          Left error -> die error
+          Right (yamlContent, _) -> decodeAndInsertYaml conn yamlContent
+
   catchAll
     ( do
         content <- BSL.readFile filePath
@@ -319,6 +368,8 @@ importFile _ conn filePath = do
                 insertImportTask conn importTaskNorm
           ".yaml" -> decodeAndInsertYaml conn content
           ".yml" -> decodeAndInsertYaml conn content
+          ".md" -> decodeAndInsertMd content
+          ".markdown" -> decodeAndInsertMd content
           ".eml" ->
             case Parsec.parse Email.message filePath content of
               Left error -> die $ show error
@@ -334,6 +385,8 @@ filterImportable filePath =
   (".json" `isExtensionOf` filePath)
     || (".yaml" `isExtensionOf` filePath)
     || (".yml" `isExtensionOf` filePath)
+    || (".md" `isExtensionOf` filePath)
+    || (".markdown" `isExtensionOf` filePath)
     || (".eml" `isExtensionOf` filePath)
 
 
@@ -350,21 +403,26 @@ importDir conf connection dirPath = do
 
 ingestFile :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
 ingestFile conf connection filePath = do
-  let ingestYaml content = do
-        let decodeResult = Yaml.decodeEither' (BSL.toStrict content)
-        case decodeResult of
-          Left error ->
-            die $ T.pack $ Yaml.prettyPrintParseException error
-          Right importTaskRec -> do
-            importTaskNorm <- importTaskRec & setMissingFields
-            sequence
-              [ insertImportTask connection importTaskNorm
-              , editTaskByTask
-                  conf
-                  OpenEditor
-                  connection
-                  importTaskNorm.task
-              ]
+  let
+    ingestYaml content = do
+      let decodeResult = Yaml.decodeEither' (BSL.toStrict content)
+      case decodeResult of
+        Left error ->
+          die $ T.pack $ Yaml.prettyPrintParseException error
+        Right importTaskRec -> do
+          importTaskNorm <- importTaskRec & setMissingFields
+          sequence
+            [ insertImportTask connection importTaskNorm
+            , editTaskByTask
+                conf
+                OpenEditor
+                connection
+                importTaskNorm.task
+            ]
+    ingestMd content = do
+      case parseMarkdownWithFrontMatter content of
+        Left error -> die error
+        Right (yamlContent, _) -> ingestYaml yamlContent
 
   catchAll
     ( do
@@ -387,6 +445,8 @@ ingestFile conf connection filePath = do
                   ]
           ".yaml" -> ingestYaml content
           ".yml" -> ingestYaml content
+          ".md" -> ingestMd content
+          ".markdown" -> ingestMd content
           ".eml" ->
             case Parsec.parse Email.message filePath content of
               Left error -> die $ show error

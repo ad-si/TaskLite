@@ -161,6 +161,7 @@ import ImportExport (
   importEml,
   importFile,
   importJson,
+  importMarkdown,
   importYaml,
   ingestDir,
   ingestFile,
@@ -299,6 +300,7 @@ data Command
   | ImportDir FilePath
   | ImportJson
   | ImportYaml
+  | ImportMarkdown
   | ImportEml
   | IngestFile FilePath
   | IngestDir FilePath
@@ -842,11 +844,11 @@ commandParser conf =
 
     <> command "import" (toParserInfo (ImportFile <$> strArgument
         (metavar "FILEPATH" <> help "Path to import file"))
-        "Import a .json, .yaml, or .eml file containing one task")
+        "Import a .json, .yaml, .md, or .eml file containing one task")
 
     <> command "importdir" (toParserInfo (ImportDir <$> strArgument
         (metavar "DIRECTORY_PATH" <> help "Path to directory"))
-        "Import all .json, .yaml, and .eml files in a directory")
+        "Import all .json, .yaml, .md, and .eml files in a directory")
 
     <> command "importjson" (toParserInfo (pure ImportJson)
         "Import one JSON object from stdin")
@@ -854,17 +856,20 @@ commandParser conf =
     <> command "importyaml" (toParserInfo (pure ImportYaml)
         "Import one YAML object from stdin")
 
+    <> command "importmd" (toParserInfo (pure ImportMarkdown)
+        "Import one Markdown file (with optional YAML front-matter) from stdin")
+
     <> command "importeml" (toParserInfo (pure ImportEml)
         "Import one email from stdin")
 
     <> command "ingest" (toParserInfo (IngestFile <$> strArgument
         (metavar "FILEPATH" <> help "Path to file"))
-        ("Ingest a .json, .yaml, or .eml file containing one task "
+        ("Ingest a .json, .yaml, .md, or .eml file containing one task "
           <> "(import, open in editor, delete the original file)"))
 
     <> command "ingestdir" (toParserInfo (IngestDir <$> strArgument
         (metavar "DIRECTORY_PATH" <> help "Path to directory"))
-        "Ingest all .json, .yaml, and .eml files in a directory")
+        "Ingest all .json, .yaml, .md, and .eml files in a directory")
 
     <> command "csv" (toParserInfo (pure Csv)
         "Show tasks in CSV format")
@@ -1226,6 +1231,7 @@ executeCLiCommand conf now connection progName args availableLinesMb = do
         ImportDir filePath -> importDir conf connection filePath
         ImportJson -> importJson conf connection
         ImportYaml -> importYaml conf connection
+        ImportMarkdown -> importMarkdown conf connection
         ImportEml -> importEml conf connection
         IngestFile filePath -> ingestFile conf connection filePath
         IngestDir filePath -> ingestDir conf connection filePath
