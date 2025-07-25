@@ -126,7 +126,7 @@ import Text.PortableLines.ByteString.Lazy (lines8)
 import Time.System (dateCurrent, timeCurrent)
 import Utils (
   IdText,
-  countChar,
+  countCharTL,
   emptyUlid,
   setDateTime,
   ulidTextToDateTime,
@@ -215,7 +215,7 @@ parseMarkdownWithFrontMatter content = do
             frontMatterYaml = TL.intercalate "\n" frontMatterLines
             bodyTextLazy = actualBody & TL.intercalate "\n" & TL.strip
             -- Only keep trailing newlines for multiline bodies
-            noTrailingNewline = countChar '\n' bodyTextLazy == 0
+            noTrailingNewline = countCharTL '\n' bodyTextLazy == 0
             bodyText = bodyTextLazy & TL.toStrict
             frontMatterWithBody =
               frontMatterYaml

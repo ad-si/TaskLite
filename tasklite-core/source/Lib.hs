@@ -248,6 +248,7 @@ import Utils (
   IdText,
   ListModifiedFlag (..),
   applyColorMode,
+  countChar,
   dateTimeToUtcTime,
   formatElapsedP,
   numDigits,
@@ -2406,6 +2407,11 @@ formatTaskLine conf now taskWidth task =
     -- redOut onTime doc = if onTime
     --   then annotate (bodyStyle conf) doc
     --   else annotate (color Red) doc
+    taskBody =
+      reflow $
+        if countChar '\n' task.body > 0
+          then (task.body & T.takeWhile (/= '\n')) <> " ▼"
+          else task.body
     taskLine =
       createdUtc <&> \taskDate ->
         hang hangWidth $
@@ -2432,8 +2438,8 @@ formatTaskLine conf now taskWidth task =
                         else ""
                      )
                   <> ( if dueIn mempty && isOpen
-                        then annotate (color Red) (reflow task.body)
-                        else grayOutIfDone (reflow task.body)
+                        then annotate (color Red) taskBody
+                        else grayOutIfDone taskBody
                      )
               , annotate (dueStyle conf) (pretty dueUtcMaybe)
               , annotate (closedStyle conf) (pretty closedUtcMaybe)

@@ -612,6 +612,14 @@ spec = do
             metadata `shouldBe` SQLNull
           _ -> P.die "Found more than one task"
 
+  it "only shows first line of multi-line tasks in task listing" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord "tasks" memConn taskMultiLine
+
+      tasks <- headTasks conf now memConn Nothing
+      show tasks `shouldContain` "New task ▼"
+      show tasks `shouldNotContain` "with several lines"
+
   it "keeps line breaks of multi-line tasks in info view" $ do
     withMemoryDb defaultConfig $ \memConn -> do
       insertRecord "tasks" memConn taskMultiLine

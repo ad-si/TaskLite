@@ -62,16 +62,8 @@ import Data.Hourglass (
   timeParse,
   timePrint,
  )
-import Data.Text as T (
-  Text,
-  chunksOf,
-  drop,
-  intercalate,
-  pack,
-  take,
-  toLower,
-  unpack,
- )
+import Data.Text (Text, unpack)
+import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
 import Data.Time (UTCTime, ZonedTime, addUTCTime, zonedTimeToUTC)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
@@ -344,6 +336,11 @@ applyColorMode conf = do
       else conf
 
 
-countChar :: Char -> TL.Text -> P.Int64
-countChar char =
+countCharTL :: Char -> TL.Text -> P.Int64
+countCharTL char =
   TL.filter (== char) >>> TL.length
+
+
+countChar :: Char -> Text -> P.Int
+countChar char =
+  T.filter (== char) >>> T.length
