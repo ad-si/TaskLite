@@ -1,4 +1,9 @@
 tableName: tasks
+
+# Select columns and their order for the table view.
+# `body` should be the last column, as its width varies for each task.
+columns: [id, prio, openedUtc, age, body]
+
 idWidth: 4
 idStyle: green
 priorityStyle: magenta

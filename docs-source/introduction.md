@@ -25,7 +25,7 @@ $ tl add Go running
 🆕 Added task "Go running" with id "01dd62yjtrtmaph23knff6mbsj"
 
 $ tl
-Id  Prio  Opened      Body
+Id  Prio  Opened UTC  Body
 pb   2    2019-06-12  Buy milk  +groceries
 sj   0    2019-06-12  Go running
 

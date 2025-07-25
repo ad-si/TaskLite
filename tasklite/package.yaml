@@ -17,8 +17,6 @@ description: |
   for a full comparison.
 extra-source-files:
   - README.md
-data-files:
-  - example-config.yaml
 
 language: GHC2021
 
