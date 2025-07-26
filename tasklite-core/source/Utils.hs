@@ -333,8 +333,8 @@ bgColrDull conf newColor =
     else bgColorDull newColor
 
 
-applyColorMode :: Config -> IO Config
-applyColorMode conf = do
+removeColorsIfNecessary :: Config -> IO Config
+removeColorsIfNecessary conf = do
   if conf.noColor
     then
       pure
@@ -349,31 +349,36 @@ applyColorMode conf = do
           , overdueStyle = mempty
           , tagStyle = mempty
           }
-    else do
-      layerColorBgMb <-
-        catchAll
-          (hGetLayerColor stderr Background)
-          (\_ -> pure Nothing)
+    else
+      pure conf
 
-      let
-        calcLuminance :: RGB Word16 -> Double
-        calcLuminance (RGB{..}) =
-          ( 0.3 * fromIntegral channelRed
-              + 0.6 * fromIntegral channelGreen
-              + 0.1 * fromIntegral channelBlue
-          )
-            / 65536
 
-        isLightMode =
-          layerColorBgMb
-            <&> calcLuminance
-            & fromMaybe 0 -- Default to dark mode
-            & (> 0.5)
+applyColorMode :: Config -> IO Config
+applyColorMode conf = do
+  layerColorBgMb <-
+    catchAll
+      (hGetLayerColor stderr Background)
+      (\_ -> pure Nothing)
 
-      pure $
-        if isLightMode
-          then conf{bodyStyle = colrDull conf Black}
-          else conf
+  let
+    calcLuminance :: RGB Word16 -> Double
+    calcLuminance (RGB{..}) =
+      ( 0.3 * fromIntegral channelRed
+          + 0.6 * fromIntegral channelGreen
+          + 0.1 * fromIntegral channelBlue
+      )
+        / 65536
+
+    isLightMode =
+      layerColorBgMb
+        <&> calcLuminance
+        & fromMaybe 0 -- Default to dark mode
+        & (> 0.5)
+
+  pure $
+    if isLightMode
+      then conf{bodyStyle = colrDull conf Black}
+      else conf
 
 
 countCharTL :: Char -> TL.Text -> P.Int64

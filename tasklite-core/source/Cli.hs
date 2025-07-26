@@ -240,10 +240,10 @@ import Utils (
   IdText,
   ListModifiedFlag (AllItems, ModifiedItemsOnly),
   TagText,
-  applyColorMode,
   colr,
   colrDull,
   parseUtc,
+  removeColorsIfNecessary,
   ulidText2utc,
   (<!!>),
  )
@@ -1232,7 +1232,7 @@ executeCLiCommand config now connection progName args availableLinesMb = do
     --
     Success cliOptions -> do
       conf <-
-        applyColorMode
+        removeColorsIfNecessary
           config{noColor = config.noColor || cliOptions.noColorFlag}
       let addTaskC = addTask conf connection
 

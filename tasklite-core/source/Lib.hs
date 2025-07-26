@@ -250,6 +250,7 @@ import TaskToTag (TaskToTag (..))
 import Utils (
   IdText,
   ListModifiedFlag (..),
+  applyColorMode,
   bgColrDull,
   colr,
   colrDull,
@@ -3374,7 +3375,8 @@ formatTasks conf now isTruncated tasks =
 formatTasksColor ::
   Config -> DateTime -> Bool -> [FullTask] -> IO (Doc AnsiStyle)
 formatTasksColor conf now isTruncated tasks = do
-  pure $ formatTasks conf now isTruncated tasks
+  confNorm <- applyColorMode conf
+  pure $ formatTasks confNorm now isTruncated tasks
 
 
 getProgressBar :: Config -> Integer -> Double -> Doc AnsiStyle
