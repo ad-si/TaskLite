@@ -34,7 +34,7 @@ FROM haskell:9.8.4-slim-bullseye
 RUN apt-get update && \
     apt-get install -y libgmp10
 COPY --from=builder \
-    /tasklite-core/example-config.yaml \
+    /tasklite/tasklite-core/example-config.yaml \
     /root/.config/tasklite/config.yaml
 COPY --from=builder /root/.local/bin/tasklite /usr/local/bin/tasklite
 
