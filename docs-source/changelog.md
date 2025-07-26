@@ -11,7 +11,7 @@ This document lists all notable changes to the functionality of TaskLite.
 [0.5]: https://github.com/ad-si/TaskLite/releases/tag/v0.5.0.0
 
 
-### 💻 General
+#### 💻 General
 
 - Add new subcommand `enter` to open the default editor with an empty task ([09df546](https://github.com/ad-si/TaskLite/commit/09df5464991e7541d3b6b7b6cfd6f6d3213563ba))
 - Add support for importing YAML files ([e5287d2](https://github.com/ad-si/TaskLite/commit/e5287d2a8d6ba6dd3ef7401f122c95f663f855fa))
@@ -33,7 +33,7 @@ This document lists all notable changes to the functionality of TaskLite.
     and for Linux ([b6a814f](https://github.com/ad-si/TaskLite/commit/b6a814fd2a1826bd46fc5eea885ef2d19ba4157f))
 
 
-### 🩹 Fixes
+#### 🩹 Fixes
 
 - Correctly apply the `maxWidth` setting from the config ([ce8dddd](https://github.com/ad-si/TaskLite/commit/ce8dddd2644159f71f19c28e8c5b3eebd1d78ba3))
 - Fix execution of pre-modify hook ([340d3a2](https://github.com/ad-si/TaskLite/commit/340d3a28bfc58e136fc3146337c3b8423ae60bb6))
@@ -44,12 +44,12 @@ This document lists all notable changes to the functionality of TaskLite.
 - Update `ready` state to match documentation. ([2935a99](https://github.com/ad-si/TaskLite/commit/2935a99c5c4c0e6e82d33741b361ac2c1d1817a7))
 
 
-### 🌐 Webapp
+#### 🌐 Webapp
 
 - Set correct state when closing a task ([2f3febc](https://github.com/ad-si/TaskLite/commit/2f3febcdf290038419893c235f78f3bfc6c24770))
 
 
-### 📚 Documentation
+#### 📚 Documentation
 
 - Add documentation on how to list and filter tasks ([506d29e](https://github.com/ad-si/TaskLite/commit/506d29e8ed4290862eec4706c06cf56587c2dfaf))
 - Explain handling of time and date ([283471a](https://github.com/ad-si/TaskLite/commit/283471a8d86d2bca97dce382b2528f477a55a1de))
@@ -65,7 +65,7 @@ This document lists all notable changes to the functionality of TaskLite.
 [0.4]: https://github.com/ad-si/TaskLite/releases/tag/v0.4.0.0
 
 
-#### General
+#### 💻 General
 
 - Add simple webapp powered by [elm.land](https://elm.land)
 - Add support for hooks to execute code during a task's lifecycle ([ba2054b])
@@ -83,7 +83,7 @@ This document lists all notable changes to the functionality of TaskLite.
     (needed for importing GitHub issues) ([af51aaa])
 
 
-#### New Subcommands
+#### ✨ New Subcommands
 
 - `stats` - List share of Done, Obsolete, Deletable tasks ([c2a2d70])
 - `server` - Starts an API + GraphQL server powered by [AirGQL] ([4669498])
@@ -111,7 +111,7 @@ This document lists all notable changes to the functionality of TaskLite.
 [AirGQL]: https://github.com/Airsequel/AirGQL
 
 
-#### Import
+#### 📥 Import
 
 - Add support for importing `.json` and `.eml` files ([8a821de])
 - Support list of strings as `notes` in JSON import ([d07a328])

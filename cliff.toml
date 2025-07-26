@@ -13,7 +13,7 @@ body = """
   {% endif %}\
   {% for group, commits in commits | group_by(attribute="group") %}
     {% if group != "_discard_" %}\
-      ### {{ group | striptags | upper_first }}
+      #### {{ group | striptags | upper_first }}
       {% for commit in commits %}
           - {{ commit.message | split(pat="\n") | first | upper_first | trim }} \
               ([{{ commit.id | truncate(length=7, end="") }}](<REPO>/commit/{{ commit.id }}))\
