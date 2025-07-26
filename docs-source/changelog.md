@@ -6,6 +6,59 @@ This document lists all notable changes to the functionality of TaskLite.
 <!-- toc -->
 ---
 
+## 2025-07-26 - [0.5]
+
+[0.5]: https://github.com/ad-si/TaskLite/releases/tag/v0.5.0.0
+
+
+### 💻 General
+
+- Add new subcommand `enter` to open the default editor with an empty task ([09df546](https://github.com/ad-si/TaskLite/commit/09df5464991e7541d3b6b7b6cfd6f6d3213563ba))
+- Add support for importing YAML files ([e5287d2](https://github.com/ad-si/TaskLite/commit/e5287d2a8d6ba6dd3ef7401f122c95f663f855fa))
+    and Markdown files ([87d5ae5](https://github.com/ad-si/TaskLite/commit/87d5ae55362cb1a57d91331251fc2ac4db6b7666))
+- Use Markdown with frontmatter instead of YAML for editing tasks ([a22079d](https://github.com/ad-si/TaskLite/commit/a22079dd476e265d09513d3e835546fde290ef67))
+- Add config field to select visible table columns and their order ([9cbdaf5](https://github.com/ad-si/TaskLite/commit/9cbdaf5eeabee039b974364493a6da1127164fd4))
+- Add support for new `Age` column that shows the age of a task in a human readable fuzzy way ([9cbdaf5](https://github.com/ad-si/TaskLite/commit/9cbdaf5eeabee039b974364493a6da1127164fd4))
+- Extend `random` subcommand to accept an optional filter expression ([3d89593](https://github.com/ad-si/TaskLite/commit/3d895934c43404a15cd8532e32d774776d44bdfb))
+- Support filters with `open` command, `get` returns any state again ([3be80d2](https://github.com/ad-si/TaskLite/commit/3be80d273edf39ecd927b930cd275deaec023f3f))
+- Improve results of fuzzy search ([b9fcbe1](https://github.com/ad-si/TaskLite/commit/b9fcbe106a4448e73b7770df7f9d008d5df96146))
+    - Score continuous matches higher
+    - Weight body score higher
+    - Increase necessary minimum score
+    - Always include the body in result output
+- Adapt the printed tasks count to the available terminal lines count ([c3c740d](https://github.com/ad-si/TaskLite/commit/c3c740d216c95b7d001a4981c9cab11ab4ad08ee))
+- Only show first line of multi-line tasks in task listings ([2b9249a](https://github.com/ad-si/TaskLite/commit/2b9249ac7ae1658ed83b44f891dc65132345aa9f))
+- Add support for `--no-color` flag and `NO_COLOR` env variable ([6d91299](https://github.com/ad-si/TaskLite/commit/6d91299656a44e9018c90f71496e01f531ee71d0))
+- Add ARM builds to GitHub Action artifacts for macOS ([2c88eb7](https://github.com/ad-si/TaskLite/commit/2c88eb7cb399d7a247718dd6549ecd8b12ae4072))
+    and for Linux ([b6a814f](https://github.com/ad-si/TaskLite/commit/b6a814fd2a1826bd46fc5eea885ef2d19ba4157f))
+
+
+### 🩹 Fixes
+
+- Correctly apply the `maxWidth` setting from the config ([ce8dddd](https://github.com/ad-si/TaskLite/commit/ce8dddd2644159f71f19c28e8c5b3eebd1d78ba3))
+- Fix execution of pre-modify hook ([340d3a2](https://github.com/ad-si/TaskLite/commit/340d3a28bfc58e136fc3146337c3b8423ae60bb6))
+- Show warning if there are no tags or projects defined yet ([02448be](https://github.com/ad-si/TaskLite/commit/02448be403caae619a688d9192048b96ad9459a6))
+- Include notes when exporting tasks as ndjson ([2bd11a1](https://github.com/ad-si/TaskLite/commit/2bd11a1e490083103fe0cf225e73ca0968c2de57))
+- Correctly handle recurring tasks without a due date ([7ddddf5](https://github.com/ad-si/TaskLite/commit/7ddddf57cf7cfc87c920fd9921651456f10eacaa))
+- Make state matching in filter expressions case insensitive ([9f4cf31](https://github.com/ad-si/TaskLite/commit/9f4cf3164eb09affdf81fd7916fb6f7d476351a5))
+- Update `ready` state to match documentation. ([2935a99](https://github.com/ad-si/TaskLite/commit/2935a99c5c4c0e6e82d33741b361ac2c1d1817a7))
+
+
+### 🌐 Webapp
+
+- Set correct state when closing a task ([2f3febc](https://github.com/ad-si/TaskLite/commit/2f3febcdf290038419893c235f78f3bfc6c24770))
+
+
+### 📚 Documentation
+
+- Add documentation on how to list and filter tasks ([506d29e](https://github.com/ad-si/TaskLite/commit/506d29e8ed4290862eec4706c06cf56587c2dfaf))
+- Explain handling of time and date ([283471a](https://github.com/ad-si/TaskLite/commit/283471a8d86d2bca97dce382b2528f477a55a1de))
+- Fix documentation for `query` command ([081d3a7](https://github.com/ad-si/TaskLite/commit/081d3a7097732a86357d6c02dd9010aa66da3d46))
+- Fix installation instructions ([d7ceb39](https://github.com/ad-si/TaskLite/commit/d7ceb399193a8a520e9383fec21f426ae71be0dd))
+- Add note taking apps to related page ([5d0eace](https://github.com/ad-si/TaskLite/commit/5d0eaceab006079c3454c31fb9c6d501cfabe712))
+- Add taskfinder ([cea4447](https://github.com/ad-si/TaskLite/commit/cea44470a5489df78e1c676845e726a58efc49ca))
+    and Topydo to related.md ([3de5f8e](https://github.com/ad-si/TaskLite/commit/3de5f8ed831548e850a79477ab7d3b816b68955d))
+
 
 ## 2024-09-23 - [0.4]
 
