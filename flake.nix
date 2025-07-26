@@ -18,12 +18,13 @@
       {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            gawk  # Needed by packages `network` and `old-time`
             bash
             cargo  # To install term-transcript
             coreutils
             fd
             flyctl
+            gawk  # Needed by packages `network` and `old-time`
+            git-cliff
             gnumake
             haskell.compiler.ghc98
             haskellPackages.cabal-fmt

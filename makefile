@@ -46,6 +46,7 @@ install:
 
 # Build the documentation
 docs: book.toml docs-source
+	stack haddock --haddock-for-hackage
 	mdbook build
 
 
@@ -117,6 +118,25 @@ tasklite/screenshots/help-short.svg:
 
 .PHONY: screenshots
 screenshots: tasklite/screenshots/help.svg tasklite/screenshots/help-short.svg
+
+
+.PHONY: release
+release:
+	@echo '1. Bump the version in `tasklite-core/package.yaml` and `tasklite/package.yaml`.'
+	@echo '2. Run `make test` to upgrade the cabal files.'
+	@echo '3. `git cliff` to generate changelog entries for the new version.'
+	@echo '4. Merge `_todo_changelog.md` into `docs-source/changelog.md`'
+	@echo '5. `git add --interactive && git commit -m "Bump version"`'
+	@echo '6. `make push-to-hackage`'
+
+
+.PHONY: push-to-hackage
+push-to-hackage: docs
+	stack upload tasklite-core
+	stack upload --documentation tasklite-core
+
+	stack upload tasklite
+	stack upload --documentation tasklite
 
 
 .PHONY: clean
