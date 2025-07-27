@@ -1455,6 +1455,8 @@ printOutput appName argsMb config = do
             Right hookResult -> formatHookResult conf hookResult
           & P.fold
 
+  -- isTTY <- queryTerminal stdOutput
+  -- if isTTY then size else 80
   termSizeMb <- size
   let
     linesNumMb =
@@ -1474,7 +1476,7 @@ printOutput appName argsMb config = do
         (Just termWidth, Just maxWidth) -> P.min termWidth maxWidth
         (Just termWidth, Nothing) -> termWidth
         (Nothing, Just maxWidth) -> maxWidth
-        (Nothing, Nothing) -> P.maxBound @P.Int
+        (Nothing, Nothing) -> 80
 
   nowElapsed <- timeCurrentP
   let now = timeFromElapsedP nowElapsed :: DateTime
