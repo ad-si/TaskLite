@@ -267,7 +267,7 @@
 [
   0.024214,
   "o",
-  "  importjson               Import one JSON object from stdin\r\n"
+  "  importjson               Import many JSON object from stdin\r\n"
 ]
 [
   0.024237,

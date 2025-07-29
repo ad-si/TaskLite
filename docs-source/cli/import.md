@@ -46,10 +46,7 @@ TaskLite supports all fields of Taskwarrior's [export format].
 Therefore, a migration is really simple:
 
 ```bash
-task export rc.json.array=off \
-| while read -r task; \
-  do echo $task | tasklite importjson; \
-  done
+task export | tasklite importjson
 ```
 
 [export format]: https://taskwarrior.org/docs/design/task.html
