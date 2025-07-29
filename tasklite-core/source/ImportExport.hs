@@ -175,15 +175,21 @@ insertImportTask conf connection importTask = do
       <+> hardline
 
 
+insertImported :: Config -> Connection -> ImportTask -> IO ()
+insertImported conf connection task = do
+  importTaskNorm <- task & setMissingFields
+  result <- insertImportTask conf connection importTaskNorm
+  putDoc result
+
+
 importJson :: Config -> Connection -> IO (Doc AnsiStyle)
 importJson conf connection = do
   content <- BSL.getContents
-
   case Aeson.eitherDecode content of
     Left error -> die $ T.pack error <> " in task \n" <> show content
-    Right importTaskRec -> do
-      importTaskNorm <- importTaskRec & setMissingFields
-      insertImportTask conf connection importTaskNorm
+    Right (importTaskRecs :: [ImportTask]) -> do
+      P.mapM_ (insertImported conf connection) importTaskRecs
+      pure "Done"
 
 
 decodeAndInsertYaml ::

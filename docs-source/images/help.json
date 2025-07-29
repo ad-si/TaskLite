@@ -38,7 +38,7 @@
 [0.044247, "o", "\u001b[0;33mVisualizations:\u001b[0m\r\n"]
 [0.044377, "o", "  tags                     List all used tags and their progress summary\r\n\r\n"]
 [0.044424, "o", "\u001b[0;33mI/O Commands:\u001b[0m\r\n"]
-[0.044692, "o", "  import                   Import one JSON task from stdin\r\n"]
+[0.044692, "o", "  import                   Import one JSON or EML task from stdin\r\n"]
 [0.044887, "o", "  csv                      Show tasks in CSV format\r\n"]
 [0.045184, "o", "  runsql                   Run any SQL query and show result as CSV\r\n"]
 [0.045341, "o", "  ndjson                   Show tasks in NDJSON format\r\n"]
