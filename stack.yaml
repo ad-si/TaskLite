@@ -1,5 +1,5 @@
 # ATTENTION: Also use the corresponding GHC version in the Dockerfile
-resolver: lts-23.18
+snapshot: lts-23.27 # GHC 9.8.4
 system-ghc: true  # Installed via Nix
 
 packages:
@@ -12,6 +12,7 @@ extra-deps:
   - double-x-encoding-1.2.1
   - fuzzily-0.2.1.0
   - graphql-spice-1.0.2.0
+  - time-hourglass-0.3.0
 
   - github: Airsequel/simple-sql-parser
     commit: 680f2b77c53fcc086dc7d5f498f764ad2235b828

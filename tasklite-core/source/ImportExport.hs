@@ -116,7 +116,7 @@ import Prettyprinter.Render.Terminal (
  )
 import System.Directory (createDirectoryIfMissing, listDirectory, removeFile)
 import System.FilePath (isExtensionOf, takeExtension, (</>))
-import System.Hourglass (timeCurrentP)
+import Time.System (timeCurrentP)
 import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
 import Task (Task (..), emptyTask, setMetadataField, taskToEditableMarkdown)
