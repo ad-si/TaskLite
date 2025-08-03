@@ -71,7 +71,7 @@ import Lib (
   updateTask,
  )
 import Note (Note)
-import System.Hourglass (dateCurrent)
+import Time.System (dateCurrent)
 import Task (
   Task (
     body,

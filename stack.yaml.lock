@@ -40,6 +40,13 @@ packages:
   original:
     hackage: graphql-spice-1.0.2.0
 - completed:
+    hackage: time-hourglass-0.3.0@sha256:ee02356fe24919ec43ae17fc0007398c2fd0bbe822833b2d7a9c849537b90580,3114
+    pantry-tree:
+      sha256: 7d6acc1a643fe8692d1858c96cc04a417b8da53e53b6bdba6fe0ce6aa6aba774
+      size: 1594
+  original:
+    hackage: time-hourglass-0.3.0
+- completed:
     name: simple-sql-parser
     pantry-tree:
       sha256: a7f399e93b6cb3056e43702b57ecda1a6a86dfdbeca4361ae3d2d27518ba4fe7
@@ -63,7 +70,7 @@ packages:
     url: https://github.com/meteogrid/iso8601-duration/archive/9524d1f02775be1d6c73165c4b4d62a19c8b7698.tar.gz
 snapshots:
 - completed:
-    sha256: d133abe75e408a407cce3f032c96ac1bbadf474a93b5156ebf4135b53382d56b
-    size: 683827
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/23/18.yaml
-  original: lts-23.18
+    sha256: 069c8189232279d04bd107557d3a62132c04ae5ce3c710649e6b40f67f10b9d5
+    size: 684285
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/23/27.yaml
+  original: lts-23.27
