@@ -140,7 +140,7 @@ import System.Directory (
  )
 import System.FilePath (hasExtension, (</>))
 import System.IO (stdout)
-import System.Process (readProcess)
+import System.Process (readProcess, spawnProcess)
 import Time.System (timeCurrentP)
 
 import Config (
@@ -236,6 +236,7 @@ import Lib (
 import Migrations (runMigrations)
 import Server (startServer)
 import System.Environment (getProgName, lookupEnv)
+import System.Info (os)
 import Utils (
   IdText,
   ListModifiedFlag (AllItems, ModifiedItemsOnly),
@@ -369,6 +370,7 @@ data Command
   | Help
   | PrintConfig
   | StartServer
+  | Gui
   | UlidToUtc Text
   | ExternalCommand Text (Maybe [Text])
   deriving (Show, Eq)
@@ -938,6 +940,9 @@ commandParser conf =
         \for data access and management \
         \(including a GraphQL endpoint powered by AirGQL)")
 
+    <> command "gui" (toParserInfo (pure Gui)
+        "Open the TaskLite SQLite database with your default GUI program")
+
     -- <> command "verify" (toParserInfo (pure Verify)
     --     "Verify the integrity of the database")
 
@@ -1154,6 +1159,27 @@ getHelpText progName conf =
     & hcat
 
 
+openGui :: Config -> IO (Doc AnsiStyle)
+openGui conf = do
+  let dbPath = conf.dataDir </> conf.dbName
+      (openCommand, args) = case os of
+        "darwin"  -> ("open", [dbPath])
+        "linux"   -> ("xdg-open", [dbPath])
+        "mingw32" -> ("start", ["", dbPath])  -- Windows
+        _         -> ("xdg-open", [dbPath])   -- Default to xdg-open
+  catchAll
+    ( do
+        _ <- spawnProcess openCommand args
+        pure $ pretty $ "Opening " <> T.pack dbPath <> " with default SQLite application"
+    )
+    ( \_ -> do
+        pure $
+          pretty $ "Failed to open " <> T.pack dbPath <> ". " <>
+          "Make sure you have a default application configured for SQLite files (.db), " <>
+          "or install a SQLite browser like 'DB Browser for SQLite'."
+    )
+
+
 handleExternalCommand :: Config -> Text -> Maybe [Text] -> IO (Doc AnsiStyle)
 handleExternalCommand conf cmd argsMb = do
   let
@@ -1335,6 +1361,7 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         Help -> pure $ getHelpText progName conf
         PrintConfig -> pure $ pretty conf
         StartServer -> startServer AirGQL.defaultConfig conf
+        Gui -> openGui conf
         Alias alias _ -> pure $ aliasWarning alias
         UlidToUtc ulid -> pure $ pretty $ ulidText2utc ulid
         ExternalCommand cmd argsMb -> handleExternalCommand conf cmd argsMb
