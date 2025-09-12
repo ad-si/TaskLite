@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
   };
 
@@ -26,11 +26,13 @@
             gawk  # Needed by packages `network` and `old-time`
             git-cliff
             gnumake
-            haskell.compiler.ghc98
+            haskell.compiler.ghc910
             haskellPackages.cabal-fmt
             haskellPackages.cabal-install
             haskellPackages.fourmolu
-            haskellPackages.haskell-language-server
+            (pkgs.haskell-language-server.override {
+              supportedGhcVersions = [ "9102" ];
+            })
             haskellPackages.hlint
             haskellPackages.stack
             mdbook

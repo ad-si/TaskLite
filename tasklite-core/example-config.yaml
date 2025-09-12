@@ -2,7 +2,8 @@ tableName: tasks
 
 # Select columns and their order for the table view.
 # `body` should be the last column, as its width varies for each task.
-columns: [id, prio, openedUtc, age, body]
+# tags column may need some manual adjustment, see `tagsWidth`
+columns: [id, prio, openedUtc, age, due, tags, body]
 
 idWidth: 4
 idStyle: green
@@ -31,6 +32,7 @@ dbName: main.db
 dateWidth: 10
 bodyWidth: 10
 prioWidth: 4
+tagsWidth: 20
 headCount: 20
 maxWidth: 120
 progressBarWidth: 24
