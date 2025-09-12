@@ -227,7 +227,15 @@ addHookFilesToConfig config = do
     (config, [])
 
 
-data Column = IdCol | PrioCol | OpenedUTCCol | AgeCol | BodyCol | TagsCol | EmptyCol
+data Column
+  = IdCol
+  | PrioCol
+  | OpenedUTCCol
+  | AgeCol
+  | DueCol
+  | BodyCol
+  | TagsCol
+  | EmptyCol
   deriving (Eq, Show, Generic)
 
 
@@ -236,6 +244,7 @@ instance ToJSON Column where
   toJSON PrioCol = String "prio"
   toJSON OpenedUTCCol = String "openedUtc"
   toJSON AgeCol = String "age"
+  toJSON DueCol = String "due"
   toJSON BodyCol = String "body"
   toJSON TagsCol = String "tags"
   toJSON EmptyCol = String ""
@@ -246,6 +255,7 @@ instance FromJSON Column where
       "prio" -> pure PrioCol
       "openedUtc" -> pure OpenedUTCCol
       "age" -> pure AgeCol
+      "due" -> pure DueCol
       "body" -> pure BodyCol
       "tags" -> pure TagsCol
       _ -> pure EmptyCol

@@ -2426,9 +2426,9 @@ formatDuration (Seconds seconds) = do
 
   case () of
     _
-      | years > 1 -> format years "y"
-      | months > 1 -> format months "mo"
-      | days > 1 -> format days "d"
+      | abs years > 1 -> format years "y"
+      | abs months > 1 -> format months "mo"
+      | abs days > 1 -> format days "d"
       | otherwise -> format hours "h"
 
 
@@ -2440,12 +2440,19 @@ formatTaskPriority conf task = do
   annotate conf.priorityStyle (pretty txt)
 
 
-formatTaskDue :: Config -> FullTask -> Doc AnsiStyle
-formatTaskDue conf task = do
+formatTaskDue :: Config -> DateTime -> FullTask -> Doc AnsiStyle
+formatTaskDue conf now task = do
   let
-    dueUtcMaybe = task.due_utc >>= parseUtc <&> format
-    format = T.replace " 00:00:00" "" . T.pack . timePrint conf.utcFormat
-  annotate conf.dueStyle (pretty dueUtcMaybe)
+    dueUtcMaybe = task.due_utc >>= parseUtc
+    formatTaskDuration due =
+      timeDiff due now
+        & formatDuration
+        & T.center (colToWidth conf 0 AgeCol) ' '
+        & T.replace ".0" "  "
+
+  annotate
+    (dateStyle conf)
+    (pretty $ maybe (T.replicate 6 " ") formatTaskDuration dueUtcMaybe)
 
 
 formatTaskClose :: Config -> FullTask -> Doc AnsiStyle
@@ -2532,6 +2539,7 @@ colToWidth conf idColWidth = \case
   PrioCol -> conf.prioWidth
   OpenedUTCCol -> conf.dateWidth
   AgeCol -> 6
+  DueCol -> 6
   BodyCol -> conf.bodyWidth
   TagsCol -> conf.tagsWidth
   EmptyCol -> 0
@@ -2559,10 +2567,10 @@ formatTaskLine conf now idColWidth task = do
               PrioCol -> [formatTaskPriority conf task]
               OpenedUTCCol -> [formatTaskOpenedUTC conf now task]
               AgeCol -> [formatTaskAge conf now task]
+              DueCol -> [formatTaskDue conf now task]
               TagsCol -> [fill (colToWidth conf idColWidth TagsCol) (formatTaskTags conf task)]
               BodyCol ->
                 [ formatTaskBody conf now task
-                , formatTaskDue conf task
                 , formatTaskClose conf task
                 ]
                   <> [formatTaskTags conf task | not hasTagsCol]
@@ -3344,6 +3352,10 @@ columnToDoc conf idColWidth = do
       annotate
         (conf.dateStyle <> strong)
         (fill (colToWidth conf idColWidth AgeCol) "Age")
+    DueCol ->
+      annotate
+        (conf.dateStyle <> strong)
+        (fill (colToWidth conf idColWidth DueCol) "Due")
     BodyCol ->
       annotate
         (conf.bodyStyle <> strong)
