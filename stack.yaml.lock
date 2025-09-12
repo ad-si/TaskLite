@@ -40,6 +40,13 @@ packages:
   original:
     hackage: graphql-spice-1.0.2.0
 - completed:
+    hackage: time-hourglass-0.3.0@sha256:ee02356fe24919ec43ae17fc0007398c2fd0bbe822833b2d7a9c849537b90580,3114
+    pantry-tree:
+      sha256: 7d6acc1a643fe8692d1858c96cc04a417b8da53e53b6bdba6fe0ce6aa6aba774
+      size: 1594
+  original:
+    hackage: time-hourglass-0.3.0
+- completed:
     name: simple-sql-parser
     pantry-tree:
       sha256: a7f399e93b6cb3056e43702b57ecda1a6a86dfdbeca4361ae3d2d27518ba4fe7

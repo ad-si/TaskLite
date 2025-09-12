@@ -59,7 +59,7 @@ import Data.Time.ISO8601.Duration qualified as Iso
 import Data.ULID (ULID, ulidFromInteger)
 import FullTask qualified
 import Note (Note (..))
-import System.Hourglass (dateCurrent)
+import Time.System (dateCurrent)
 import Task (
   Task (
     Task,
