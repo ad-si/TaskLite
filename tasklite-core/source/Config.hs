@@ -227,7 +227,15 @@ addHookFilesToConfig config = do
     (config, [])
 
 
-data Column = IdCol | PrioCol | OpenedUTCCol | AgeCol | DueCol | BodyCol | EmptyCol
+data Column
+  = IdCol
+  | PrioCol
+  | OpenedUTCCol
+  | AgeCol
+  | DueCol
+  | BodyCol
+  | TagsCol
+  | EmptyCol
   deriving (Eq, Show, Generic)
 
 
@@ -238,6 +246,7 @@ instance ToJSON Column where
   toJSON AgeCol = String "age"
   toJSON DueCol = String "due"
   toJSON BodyCol = String "body"
+  toJSON TagsCol = String "tags"
   toJSON EmptyCol = String ""
 instance FromJSON Column where
   parseJSON = withText "Column" $ \value -> do
@@ -248,6 +257,7 @@ instance FromJSON Column where
       "age" -> pure AgeCol
       "due" -> pure DueCol
       "body" -> pure BodyCol
+      "tags" -> pure TagsCol
       _ -> pure EmptyCol
 
 
@@ -270,6 +280,7 @@ data Config = Config
   , dateWidth :: Int
   , bodyWidth :: Int
   , prioWidth :: Int
+  , tagsWidth :: Int
   , headCount :: Int
   , maxWidth :: Maybe Int -- Automatically uses terminal width if not set
   , progressBarWidth :: Int
@@ -301,6 +312,7 @@ instance FromJSON Config where
     dateWidth       <- o .:? "dateWidth" .!= defaultConfig.dateWidth
     bodyWidth       <- o .:? "bodyWidth" .!= defaultConfig.bodyWidth
     prioWidth       <- o .:? "prioWidth" .!= defaultConfig.prioWidth
+    tagsWidth       <- o .:? "tagsWidth" .!= defaultConfig.tagsWidth
     headCount       <- o .:? "headCount" .!= defaultConfig.headCount
     maxWidthMb     <- o .:? "maxWidth"
     progressBarWidth <- o .:? "progressBarWidth"
@@ -393,12 +405,13 @@ defaultConfig =
     , tagStyle = color Blue
     , utcFormat = toFormat ("YYYY-MM-DD H:MI:S" :: [Char])
     , utcFormatShort = toFormat ("YYYY-MM-DD H:MI" :: [Char])
-    , columns = [IdCol, PrioCol, OpenedUTCCol, BodyCol]
+    , columns = [IdCol, PrioCol, OpenedUTCCol, BodyCol, TagsCol]
     , dataDir = ""
     , dbName = "main.db"
     , dateWidth = 10
     , bodyWidth = 10
     , prioWidth = 4
+    , tagsWidth = 20
     , headCount = 20
     , maxWidth = Nothing
     , progressBarWidth = 24

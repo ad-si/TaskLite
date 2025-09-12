@@ -141,6 +141,7 @@ import Prettyprinter as Pp (
   indent,
   line,
   punctuate,
+  surround,
   vcat,
   vsep,
   (<+>),
@@ -195,6 +196,7 @@ import Config (
     progressBarWidth,
     tableName,
     tagStyle,
+    tagsWidth,
     utcFormat,
     utcFormatShort
   ),
@@ -2394,7 +2396,6 @@ showAtPrecision numOfDigits number =
 formatTag :: (Pretty a) => Config -> a -> Doc AnsiStyle
 formatTag conf =
   annotate conf.tagStyle
-    . (annotate (colr conf Black) "+" <>)
     . pretty
 
 
@@ -2463,7 +2464,11 @@ formatTaskClose conf task = do
 formatTaskTags :: Config -> FullTask -> Doc AnsiStyle
 formatTaskTags conf task = do
   let tags = fromMaybe [] task.tags
-  hsep (tags <&> formatTag conf)
+  case tags of
+    [] -> mempty
+    _ ->
+      let tagsText = concatWith (surround ",") (tags <&> formatTag conf)
+      in  tagsText
 
 
 formatTaskNotes :: FullTask -> Doc AnsiStyle
@@ -2536,6 +2541,7 @@ colToWidth conf idColWidth = \case
   AgeCol -> 6
   DueCol -> 6
   BodyCol -> conf.bodyWidth
+  TagsCol -> conf.tagsWidth
   EmptyCol -> 0
 
 
@@ -2543,6 +2549,7 @@ formatTaskLine :: Config -> DateTime -> Int -> FullTask -> Doc AnsiStyle
 formatTaskLine conf now idColWidth task = do
   let
     columns = conf.columns & P.filter (/= EmptyCol)
+    hasTagsCol = TagsCol `P.elem` columns
     multilineIndent = 2
     hangWidth =
       ( (columns & P.filter (/= BodyCol) <&> colToWidth conf idColWidth)
@@ -2561,12 +2568,13 @@ formatTaskLine conf now idColWidth task = do
               OpenedUTCCol -> [formatTaskOpenedUTC conf now task]
               AgeCol -> [formatTaskAge conf now task]
               DueCol -> [formatTaskDue conf now task]
+              TagsCol -> [fill (colToWidth conf idColWidth TagsCol) (formatTaskTags conf task)]
               BodyCol ->
                 [ formatTaskBody conf now task
                 , formatTaskClose conf task
-                , formatTaskTags conf task
-                , formatTaskNotes task
                 ]
+                  <> [formatTaskTags conf task | not hasTagsCol]
+                  <> [formatTaskNotes task]
               EmptyCol -> []
           )
   hang hangWidth $ hhsep $ P.filter isEmptyDoc fields
@@ -3352,6 +3360,10 @@ columnToDoc conf idColWidth = do
       annotate
         (conf.bodyStyle <> strong)
         (fill (colToWidth conf idColWidth BodyCol) "Body")
+    TagsCol ->
+      annotate
+        (conf.tagStyle <> strong)
+        (fill (colToWidth conf idColWidth TagsCol) "Tags")
     EmptyCol ->
       mempty
 

@@ -120,7 +120,7 @@ import System.Hourglass (timeCurrentP)
 import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
 import Task (Task (..), emptyTask, setMetadataField, taskToEditableMarkdown)
-import Text.Editor (runUserEditorDWIM, yamlTemplate)
+import Text.Editor (markdownTemplate, runUserEditorDWIM)
 import Text.Parsec.Rfc2822 qualified as Email
 import Text.ParserCombinators.Parsec as Parsec (parse)
 import Text.PortableLines.ByteString.Lazy (lines8)
@@ -603,8 +603,8 @@ editUntilValidMarkdown ::
 editUntilValidMarkdown editMode conn initialMarkdown wipMarkdown = do
   markdownAfterEdit <- case editMode of
     ApplyPreEdit editFunc -> pure $ editFunc wipMarkdown
-    OpenEditor -> runUserEditorDWIM yamlTemplate wipMarkdown
-    OpenEditorRequireEdit -> runUserEditorDWIM yamlTemplate wipMarkdown
+    OpenEditor -> runUserEditorDWIM markdownTemplate wipMarkdown
+    OpenEditorRequireEdit -> runUserEditorDWIM markdownTemplate wipMarkdown
 
   if markdownAfterEdit == initialMarkdown
     then pure $ Left $ InvalidYaml $ Just $ YamlException $ case editMode of
