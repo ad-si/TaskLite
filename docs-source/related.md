@@ -35,6 +35,7 @@ Name          | Description
 [Unfog]       | A simple CLI task and time manager
 [Vikunja]     | Self-hostable to-do app
 [Vim-OrgMode] | Text outlining and task management based on Emacs' Org-Mode
+[HamsterBase Tasks] | Local-first and privacy first task manager
 
 
 #### Stats
@@ -67,6 +68,7 @@ Nr|Name          |Stars|Commits|Contrib.| Code             | 1. Commit
 18|[td-cli]      |  184|    310|      2 |[Python][td-cli]  |2018‑06‑03
 19|[Etm]         |   40|   3879|      4 |[Python][Etm]     |2017‑09‑02
 20|[taskfinder]  |   20|    203|      3 |[Rust][taskfinder]|2023-12-22
+20|[HamsterBase Tasks]|90|  189|      1 |[TypeScript][HBT]|2023-12-22
 
 Numbers with a `~` are not necessarily comparable,
 as they are either estimated or from another platform than GitHub.
@@ -161,6 +163,9 @@ Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 
 [git-pending]: https://github.com/kamranahmedse/git-pending
 [gpGH]: https://github.com/kamranahmedse/git-pending
+
+[HamsterBase Tasks]: https://tasks.hamsterbase.com
+[HBT]: https://github.com/hamsterbase/tasks
 
 [nb]: https://github.com/xwmx/nb
 
