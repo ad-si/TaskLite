@@ -233,6 +233,7 @@ import Lib (
   waitFor,
   waitTasks,
  )
+import McpServer (startMcpServer)
 import Migrations (runMigrations)
 import Server (startServer)
 import System.Environment (getProgName, lookupEnv)
@@ -370,6 +371,7 @@ data Command
   | Help
   | PrintConfig
   | StartServer
+  | StartMcpServer
   | Gui
   | UlidToUtc Text
   | ExternalCommand Text (Maybe [Text])
@@ -940,6 +942,9 @@ commandParser conf =
         \for data access and management \
         \(including a GraphQL endpoint powered by AirGQL)")
 
+    <> command "mcp" (toParserInfo (pure StartMcpServer)
+        "Start an MCP (Model Context Protocol) server for AI assistant integration")
+
     <> command "gui" (toParserInfo (pure Gui)
         "Open the TaskLite SQLite database with your default GUI program")
 
@@ -1163,20 +1168,25 @@ openGui :: Config -> IO (Doc AnsiStyle)
 openGui conf = do
   let dbPath = conf.dataDir </> conf.dbName
       (openCommand, args) = case os of
-        "darwin"  -> ("open", [dbPath])
-        "linux"   -> ("xdg-open", [dbPath])
-        "mingw32" -> ("start", ["", dbPath])  -- Windows
-        _         -> ("xdg-open", [dbPath])   -- Default to xdg-open
+        "darwin" -> ("open", [dbPath])
+        "linux" -> ("xdg-open", [dbPath])
+        "mingw32" -> ("start", ["", dbPath]) -- Windows
+        _ -> ("xdg-open", [dbPath]) -- Default to xdg-open
   catchAll
     ( do
         _ <- spawnProcess openCommand args
-        pure $ pretty $ "Opening " <> T.pack dbPath <> " with default SQLite application"
+        pure $
+          pretty $
+            "Opening " <> T.pack dbPath <> " with default SQLite application"
     )
     ( \_ -> do
         pure $
-          pretty $ "Failed to open " <> T.pack dbPath <> ". " <>
-          "Make sure you have a default application configured for SQLite files (.db), " <>
-          "or install a SQLite browser like 'DB Browser for SQLite'."
+          pretty $
+            "Failed to open "
+              <> T.pack dbPath
+              <> ". "
+              <> "Make sure you have a default application configured for SQLite files (.db), "
+              <> "or install a SQLite browser like 'DB Browser for SQLite'."
     )
 
 
@@ -1361,6 +1371,9 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         Help -> pure $ getHelpText progName conf
         PrintConfig -> pure $ pretty conf
         StartServer -> startServer AirGQL.defaultConfig conf
+        StartMcpServer -> do
+          startMcpServer conf
+          pure $ pretty ("MCP Server stopped" :: Text)
         Gui -> openGui conf
         Alias alias _ -> pure $ aliasWarning alias
         UlidToUtc ulid -> pure $ pretty $ ulidText2utc ulid

@@ -47,6 +47,13 @@ packages:
   original:
     hackage: time-hourglass-0.3.0
 - completed:
+    hackage: mcp-server-0.1.0.15@sha256:2a833b31a5175a949db490d798fd67d88267dd2fbf0a8b493c568da62cb6cd9e,6591
+    pantry-tree:
+      sha256: 5ec8382b8611447d5c4731ab323b2c24c86053b60a01b7610401ac02809538cb
+      size: 1714
+  original:
+    hackage: mcp-server-0.1.0.15
+- completed:
     name: simple-sql-parser
     pantry-tree:
       sha256: a7f399e93b6cb3056e43702b57ecda1a6a86dfdbeca4361ae3d2d27518ba4fe7

@@ -41,6 +41,7 @@ library
       ImportExport
       ImportTask
       Lib
+      McpServer
       Migrations
       Note
       Server
@@ -67,7 +68,7 @@ library
       UndecidableInstances
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
   build-depends:
-      QuickCheck ==2.14.*
+      QuickCheck ==2.15.*
     , aeson >=2.2.1 && <2.3
     , airgql >=0.7.1.2 && <0.8
     , ansi-terminal >=0.11 && <1.2
@@ -86,6 +87,7 @@ library
     , githash >=0.1.6 && <0.2
     , hsemail >=2.0 && <2.3
     , iso8601-duration >=0.1.1 && <0.2
+    , mcp-server ==0.1.*
     , optparse-applicative >=0.16 && <0.19
     , parsec ==3.1.*
     , portable-lines ==0.1.*
