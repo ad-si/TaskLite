@@ -175,15 +175,28 @@ insertImportTask conf connection importTask = do
       <+> hardline
 
 
+insertImported :: Config -> Connection -> ImportTask -> IO ()
+insertImported conf connection task = do
+  importTaskNorm <- task & setMissingFields
+  result <- insertImportTask conf connection importTaskNorm
+  putDoc result
+
+
 importJson :: Config -> Connection -> IO (Doc AnsiStyle)
 importJson conf connection = do
   content <- BSL.getContents
-
+  -- Try to decode as an array first
   case Aeson.eitherDecode content of
-    Left error -> die $ T.pack error <> " in task \n" <> show content
-    Right importTaskRec -> do
-      importTaskNorm <- importTaskRec & setMissingFields
-      insertImportTask conf connection importTaskNorm
+    Right (importTaskRecs :: [ImportTask]) -> do
+      P.mapM_ (insertImported conf connection) importTaskRecs
+      pure "Done"
+    Left _ -> do
+      -- If array decoding fails, try to decode as a single object
+      case Aeson.eitherDecode content of
+        Left error -> die $ T.pack error <> " in task \n" <> show content
+        Right (importTaskRec :: ImportTask) -> do
+          insertImported conf connection importTaskRec
+          pure "Done"
 
 
 decodeAndInsertYaml ::
@@ -368,13 +381,19 @@ importFile conf conn filePath = do
         let fileExt = filePath & takeExtension
         case fileExt of
           ".json" -> do
-            let decodeResult = Aeson.eitherDecode content
-            case decodeResult of
-              Left error ->
-                die $ T.pack error <> " in task \n" <> show content
-              Right importTaskRec -> do
-                importTaskNorm <- importTaskRec & setMissingFields
-                insertImportTask conf conn importTaskNorm
+            -- Try to decode as an array first
+            case Aeson.eitherDecode content of
+              Right (importTaskRecs :: [ImportTask]) -> do
+                P.mapM_ (insertImported conf conn) importTaskRecs
+                pure "Done"
+              Left _ -> do
+                -- If array decoding fails, try to decode as a single object
+                case Aeson.eitherDecode content of
+                  Left error ->
+                    die $ T.pack error <> " in task \n" <> show content
+                  Right (importTaskRec :: ImportTask) -> do
+                    importTaskNorm <- importTaskRec & setMissingFields
+                    insertImportTask conf conn importTaskNorm
           ".yaml" -> decodeAndInsertYaml conf conn content
           ".yml" -> decodeAndInsertYaml conf conn content
           ".md" -> decodeAndInsertMd content

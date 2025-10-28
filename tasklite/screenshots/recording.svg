@@ -161,7 +161,7 @@ Available options:
 
 <span class="fg3">I/O Commands:</span>
   import                   Import a .json or .eml file containing one task
-  importjson               Import one JSON object from stdin
+  importjson               Import many JSON object from stdin
   importeml                Import one email from stdin
   ingest                   Ingest a .json or .eml file containing one task
                            (import, open in editor, delete the original file)

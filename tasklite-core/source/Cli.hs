@@ -882,7 +882,7 @@ commandParser conf =
         "Import all .json, .yaml, .md, and .eml files in a directory")
 
     <> command "importjson" (toParserInfo (pure ImportJson)
-        "Import one JSON object from stdin")
+        "Import JSON object(s) from stdin (single object or array)")
 
     <> command "importyaml" (toParserInfo (pure ImportYaml)
         "Import one YAML object from stdin")
