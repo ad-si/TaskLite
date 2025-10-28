@@ -32,6 +32,14 @@ and to install [jq] first.
 ```bash
 cat tasks.yaml \
 | yaml2json \
+| tasklite importjson
+```
+
+Alternatively, if you need to process tasks one by one:
+
+```bash
+cat tasks.yaml \
+| yaml2json \
 | jq -c '.[]' \
 | while read -r task
   do
@@ -203,6 +211,11 @@ Seen at [discussions.apple.com/thread/8570915](
 1. Copy and paste the output into a `tasks.json` file
 1. Format it as proper JSON and manually add notes, and tags fields
 1. Import JSON file:
+    ```bash
+    cat tasks.json | tasklite importjson
+    ```
+
+    Alternatively, if you need to process tasks one by one:
     ```bash
     cat tasks.json \
       | jq -c '.[]' \

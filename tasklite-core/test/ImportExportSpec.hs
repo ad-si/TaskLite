@@ -265,6 +265,97 @@ spec = do
                 task.modified_utc `shouldBe` expectedImpTask.task.modified_utc
               _ -> P.die "Found more than one note"
 
+    it "imports a single JSON task from array format" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          jsonTasks =
+            "[{\"body\":\"Task 1\",\"tags\":[\"test\"]},\
+            \{\"body\":\"Task 2\",\"tags\":[\"test\",\"demo\"]}]"
+
+        case eitherDecodeStrictText jsonTasks of
+          Left error ->
+            P.die $ "Error decoding JSON: " <> show error
+          Right (importTaskRecords :: [ImportTask]) -> do
+            P.mapM_ (insertImportTask conf memConn) importTaskRecords
+            tasks :: [FullTask] <-
+              query_ memConn "SELECT * FROM tasks_view ORDER BY body ASC"
+            case tasks of
+              [task1, task2] -> do
+                task1.body `shouldBe` "Task 1"
+                task1.tags `shouldBe` Just ["test"]
+                task2.body `shouldBe` "Task 2"
+                task2.tags `shouldBe` Just ["demo", "test"]
+              _ -> P.die "Expected exactly 2 tasks"
+
+    it "imports multiple JSON tasks from array format" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          jsonTasks =
+            "[{\"body\":\"First task\"},\
+            \{\"body\":\"Second task\"},\
+            \{\"body\":\"Third task\"}]"
+
+        case eitherDecodeStrictText jsonTasks of
+          Left error ->
+            P.die $ "Error decoding JSON: " <> show error
+          Right (importTaskRecords :: [ImportTask]) -> do
+            P.mapM_ (insertImportTask conf memConn) importTaskRecords
+            tasks :: [FullTask] <-
+              query_ memConn "SELECT * FROM tasks_view ORDER BY body ASC"
+            P.length tasks `shouldBe` 3
+            case tasks of
+              [task1, task2, task3] -> do
+                task1.body `shouldBe` "First task"
+                task2.body `shouldBe` "Second task"
+                task3.body `shouldBe` "Third task"
+              _ -> P.die "Expected exactly 3 tasks"
+
+    it "imports a single JSON object (not in array)" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          jsonTask = "{\"body\":\"Single task\",\"tags\":[\"solo\"]}"
+
+        case eitherDecodeStrictText jsonTask of
+          Left error ->
+            P.die $ "Error decoding JSON: " <> show error
+          Right (importTaskRecord :: ImportTask) -> do
+            _ <- insertImportTask conf memConn importTaskRecord
+            tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+            case tasks of
+              [task] -> do
+                task.body `shouldBe` "Single task"
+                task.tags `shouldBe` Just ["solo"]
+              _ -> P.die "Expected exactly 1 task"
+
+    it "imports array with tasks containing notes and tags" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          jsonTasks =
+            "[{\"body\":\"Task with notes\",\
+            \\"notes\":[\"Note 1\",\"Note 2\"],\
+            \\"tags\":[\"important\"]},\
+            \{\"body\":\"Another task\",\
+            \\"tags\":[\"work\",\"urgent\"]}]"
+
+        case eitherDecodeStrictText jsonTasks of
+          Left error ->
+            P.die $ "Error decoding JSON: " <> show error
+          Right (importTaskRecords :: [ImportTask]) -> do
+            P.mapM_ (insertImportTask conf memConn) importTaskRecords
+            tasks :: [FullTask] <-
+              query_ memConn "SELECT * FROM tasks_view ORDER BY body ASC"
+            case tasks of
+              [task1, task2] -> do
+                task1.body `shouldBe` "Another task"
+                task1.tags `shouldBe` Just ["urgent", "work"]
+                task2.body `shouldBe` "Task with notes"
+                task2.tags `shouldBe` Just ["important"]
+              _ -> P.die "Expected exactly 2 tasks"
+
+            taskToNotes :: [TaskToNote] <-
+              query_ memConn "SELECT * FROM task_to_note"
+            P.length taskToNotes `shouldBe` 2
+
   describe "Export" $ do
     it "exports several tasks as NDJSON including notes" $ do
       let
