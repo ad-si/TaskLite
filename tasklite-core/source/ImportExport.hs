@@ -202,12 +202,20 @@ importJson conf connection = do
 decodeAndInsertYaml ::
   Config -> Connection -> BSL.LazyByteString -> IO (Doc AnsiStyle)
 decodeAndInsertYaml conf conn content = do
-  case content & BSL.toStrict & Yaml.decodeEither' of
-    Left error ->
-      die $ T.pack $ Yaml.prettyPrintParseException error
-    Right importTaskRec -> do
-      importTaskNorm <- importTaskRec & setMissingFields
-      insertImportTask conf conn importTaskNorm
+  let strictContent = BSL.toStrict content
+  -- Try to decode as an array first
+  case Yaml.decodeEither' strictContent of
+    Right (importTaskRecs :: [ImportTask]) -> do
+      P.mapM_ (insertImported conf conn) importTaskRecs
+      pure "Done"
+    Left _ -> do
+      -- If array decoding fails, try to decode as a single object
+      case Yaml.decodeEither' strictContent of
+        Left error ->
+          die $ T.pack $ Yaml.prettyPrintParseException error
+        Right (importTaskRec :: ImportTask) -> do
+          importTaskNorm <- importTaskRec & setMissingFields
+          insertImportTask conf conn importTaskNorm
 
 
 importYaml :: Config -> Connection -> IO (Doc AnsiStyle)

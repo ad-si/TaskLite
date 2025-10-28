@@ -22,20 +22,16 @@ If you have all you tasks in one YAML file like this:
   tags: [sport]
 ```
 
-Run following command to import it.
-Be sure to make [yaml2json] available in your path
-and to install [jq] first.
+You can import them directly:
+
+```bash
+cat tasks.yaml | tasklite importyaml
+```
+
+If you need to process tasks one by one, you can use [yaml2json] and [jq]:
 
 [yaml2json]: https://github.com/ad-si/dotfiles/blob/master/bin/yaml2json-ruby
 [jq]: https://stedolan.github.io/jq/
-
-```bash
-cat tasks.yaml \
-| yaml2json \
-| tasklite importjson
-```
-
-Alternatively, if you need to process tasks one by one:
 
 ```bash
 cat tasks.yaml \

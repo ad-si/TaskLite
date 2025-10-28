@@ -19,7 +19,9 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.Hourglass (timePrint, toFormat)
 import Data.Text (unpack)
 import Data.Text qualified as T
+import Data.Text.Encoding qualified as T
 import Data.ULID (ULID)
+import Data.Yaml qualified as Yaml
 import Database.SQLite.Simple (query_)
 import Test.Hspec (
   Spec,
@@ -355,6 +357,113 @@ spec = do
             taskToNotes :: [TaskToNote] <-
               query_ memConn "SELECT * FROM task_to_note"
             P.length taskToNotes `shouldBe` 2
+
+    it "imports a single YAML object (not in array)" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          yamlTask =
+            "body: Single YAML task\n\
+            \tags:\n\
+            \  - yaml\n\
+            \  - test"
+
+        case Yaml.decodeEither' (yamlTask & T.encodeUtf8) of
+          Left error ->
+            P.die $ "Error decoding YAML: " <> show error
+          Right (importTaskRecord :: ImportTask) -> do
+            _ <- insertImportTask conf memConn importTaskRecord
+            tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+            case tasks of
+              [task] -> do
+                task.body `shouldBe` "Single YAML task"
+                task.tags `shouldBe` Just ["test", "yaml"]
+              _ -> P.die "Expected exactly 1 task"
+
+    it "imports multiple YAML tasks from array format" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          yamlTasks =
+            "- body: First YAML task\n\
+            \  tags: [one]\n\
+            \- body: Second YAML task\n\
+            \  tags: [two]\n\
+            \- body: Third YAML task\n\
+            \  tags: [three]"
+
+        case Yaml.decodeEither' (yamlTasks & T.encodeUtf8) of
+          Left error ->
+            P.die $ "Error decoding YAML: " <> show error
+          Right (importTaskRecords :: [ImportTask]) -> do
+            P.mapM_ (insertImportTask conf memConn) importTaskRecords
+            tasks :: [FullTask] <-
+              query_ memConn "SELECT * FROM tasks_view ORDER BY body ASC"
+            P.length tasks `shouldBe` 3
+            case tasks of
+              [task1, task2, task3] -> do
+                task1.body `shouldBe` "First YAML task"
+                task1.tags `shouldBe` Just ["one"]
+                task2.body `shouldBe` "Second YAML task"
+                task2.tags `shouldBe` Just ["two"]
+                task3.body `shouldBe` "Third YAML task"
+                task3.tags `shouldBe` Just ["three"]
+              _ -> P.die "Expected exactly 3 tasks"
+
+    it "imports YAML array with tasks containing notes and tags" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          yamlTasks =
+            "- body: YAML task with notes\n\
+            \  notes:\n\
+            \    - First note\n\
+            \    - Second note\n\
+            \  tags: [important, yaml]\n\
+            \- body: Another YAML task\n\
+            \  tags: [work]"
+
+        case Yaml.decodeEither' (yamlTasks & T.encodeUtf8) of
+          Left error ->
+            P.die $ "Error decoding YAML: " <> show error
+          Right (importTaskRecords :: [ImportTask]) -> do
+            P.mapM_ (insertImportTask conf memConn) importTaskRecords
+            tasks :: [FullTask] <-
+              query_ memConn "SELECT * FROM tasks_view ORDER BY body ASC"
+            case tasks of
+              [task1, task2] -> do
+                task1.body `shouldBe` "Another YAML task"
+                task1.tags `shouldBe` Just ["work"]
+                task2.body `shouldBe` "YAML task with notes"
+                task2.tags `shouldBe` Just ["important", "yaml"]
+              _ -> P.die "Expected exactly 2 tasks"
+
+            taskToNotes :: [TaskToNote] <-
+              query_ memConn "SELECT * FROM task_to_note"
+            P.length taskToNotes `shouldBe` 2
+
+    it "imports YAML with mixed single and multiple tags format" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          yamlTasks =
+            "- body: Inline tags\n\
+            \  tags: [tag1, tag2]\n\
+            \- body: Block tags\n\
+            \  tags:\n\
+            \    - tag3\n\
+            \    - tag4"
+
+        case Yaml.decodeEither' (yamlTasks & T.encodeUtf8) of
+          Left error ->
+            P.die $ "Error decoding YAML: " <> show error
+          Right (importTaskRecords :: [ImportTask]) -> do
+            P.mapM_ (insertImportTask conf memConn) importTaskRecords
+            tasks :: [FullTask] <-
+              query_ memConn "SELECT * FROM tasks_view ORDER BY body ASC"
+            case tasks of
+              [task1, task2] -> do
+                task1.body `shouldBe` "Block tags"
+                task1.tags `shouldBe` Just ["tag3", "tag4"]
+                task2.body `shouldBe` "Inline tags"
+                task2.tags `shouldBe` Just ["tag1", "tag2"]
+              _ -> P.die "Expected exactly 2 tasks"
 
   describe "Export" $ do
     it "exports several tasks as NDJSON including notes" $ do

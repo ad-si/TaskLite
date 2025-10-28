@@ -875,7 +875,7 @@ commandParser conf =
 
     <> command "import" (toParserInfo (ImportFile <$> strArgument
         (metavar "FILEPATH" <> help "Path to import file"))
-        "Import a .json, .yaml, .md, or .eml file containing one task")
+        "Import a .json, .yaml, .md, or .eml file containing one or more tasks")
 
     <> command "importdir" (toParserInfo (ImportDir <$> strArgument
         (metavar "DIRECTORY_PATH" <> help "Path to directory"))
@@ -885,7 +885,7 @@ commandParser conf =
         "Import JSON object(s) from stdin (single object or array)")
 
     <> command "importyaml" (toParserInfo (pure ImportYaml)
-        "Import one YAML object from stdin")
+        "Import YAML object(s) from stdin (single object or array)")
 
     <> command "importmd" (toParserInfo (pure ImportMarkdown)
         "Import one Markdown file (with optional YAML front-matter) from stdin")
