@@ -139,7 +139,7 @@ import System.Directory (
   listDirectory,
  )
 import System.FilePath (hasExtension, (</>))
-import System.IO (stdout)
+import System.IO (stdout, hSetBuffering, BufferMode (BlockBuffering), hFlush)
 import System.Process (readProcess, spawnProcess)
 import Time.System (timeCurrentP)
 
@@ -1533,7 +1533,14 @@ printOutput appName argsMb config = do
           Left error -> pretty error
           Right hookResult -> formatHookResult conf hookResult
         & P.fold
-    putDocCustom document =
+    
+    isFindCommand =
+      case args of
+        ("find":_) -> True
+        _ -> False
+    
+    putDocCustom document = do
+      P.when isFindCommand $ hSetBuffering stdout (BlockBuffering Nothing)
       renderIO
         stdout
         $ layoutPretty
@@ -1542,6 +1549,7 @@ printOutput appName argsMb config = do
               }
           )
           document
+      P.when isFindCommand $ hFlush stdout
 
   -- TODO: Remove color when piping into other command
   putDocCustom $
