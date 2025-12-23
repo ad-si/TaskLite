@@ -1707,15 +1707,26 @@ randomTask conf connection filterExpression = do
           pure $ errorsDoc & fromMaybe taskFormatted
 
 
+-- | Fuzzy search for tasks matching a pattern in body, ulid, notes, or metadata
 findTask :: Config -> Connection -> Text -> IO (Doc AnsiStyle)
 findTask conf connection aPattern = do
-  tasks :: [(Text, Text, Maybe [Text], Maybe [Text], Maybe Text)] <-
-    query_
+  let sqlFuzzyPattern = aPattern & T.chunksOf 1 & T.intercalate (T.pack "%")
+  tasksFuzzy :: [(Text, Text, Maybe [Text], Maybe Text)] <-
+    query
       connection
       [sql|
-        SELECT ulid, body, tags, notes, metadata
+        SELECT ulid, body, notes, metadata
         FROM tasks_view
+        WHERE body LIKE '%' || ? || '%'
+           OR ulid LIKE '%' || ? || '%'
+           OR notes LIKE '%' || ? || '%'
+           OR metadata LIKE '%' || ? || '%'
       |]
+      ( sqlFuzzyPattern
+      , aPattern -- Only match on ULID substring
+      , sqlFuzzyPattern
+      , sqlFuzzyPattern
+      )
 
   let
     ulidWidth = 5
@@ -1741,7 +1752,7 @@ findTask conf connection aPattern = do
 
     -- Calculate fuzzy score for each part individually
     -- and pick the highest one
-    scoreFunc (ulid, theBody, _, mbNotes, mbMetadata) =
+    scoreFunc (ulid, theBody, mbNotes, mbMetadata) =
       let
         scoreParts =
           [ ( matchFunc theBody
@@ -1776,7 +1787,7 @@ findTask conf connection aPattern = do
 
     fstOf3 (x, _, _) = x
     tasksScored =
-      tasks
+      tasksFuzzy
         <&> scoreFunc
         & P.filter ((> minimumScore) . fstOf3)
         & sortOn (Down . fstOf3)
