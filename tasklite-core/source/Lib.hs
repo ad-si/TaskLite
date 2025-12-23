@@ -3560,10 +3560,46 @@ getStats _ connection = do
     query_ connection $
       Query "SELECT count(1) FROM tasks WHERE state IS 'Deletable'"
 
+  -- Fetch all task ULIDs with their states to calculate average age per state
+  taskData :: [(Text, Maybe Text)] <-
+    query_ connection $
+      Query "SELECT ulid, state FROM tasks"
+
+  nowElapsed <- timeCurrentP
+  let now = timeFromElapsedP nowElapsed :: DateTime
+
+  -- Helper function to calculate average age for a subset of tasks
   let
-    widthKey = 12
+    calculateAvgAge :: [(Text, Maybe Text)] -> Text
+    calculateAvgAge tasks =
+      if P.null tasks
+        then "-"
+        else
+          let
+            ages = tasks & P.mapMaybe (\(ulid, _) -> do
+              createdDateTime <- ulidTextToDateTime ulid
+              let diff = timeDiff now createdDateTime
+              pure diff
+              )
+            totalSeconds = P.sum $ fmap (\(Seconds s) -> s) ages
+            count = P.length ages
+          in
+            if count > 0
+              then formatDuration $ Seconds $ totalSeconds `P.div` fromIntegral count
+              else "-"
+
+    -- Calculate average age for each state
+    avgAgeAll = calculateAvgAge taskData
+    avgAgeOpen = calculateAvgAge $ P.filter (\(_, state) -> isNothing state) taskData
+    avgAgeClosed = calculateAvgAge $ P.filter (\(_, state) -> isJust state) taskData
+    avgAgeDone = calculateAvgAge $ P.filter (\(_, state) -> state == Just "Done") taskData
+    avgAgeObsolete = calculateAvgAge $ P.filter (\(_, state) -> state == Just "Obsolete") taskData
+    avgAgeDeletable = calculateAvgAge $ P.filter (\(_, state) -> state == Just "Deletable") taskData
+
+    widthKey = 14
     widthValue = max 5 $ fromIntegral $ numDigits 10 numOfTasksTotal
-    formatLine (name :: Text) (numTasks :: Integer) =
+    widthAge = 6
+    formatLine (name :: Text) (numTasks :: Integer) (avgAge :: Text) =
       let
         numTotalInt :: Double = fromIntegral numOfTasksTotal
         numTasksInt :: Double = fromIntegral numTasks
@@ -3573,18 +3609,20 @@ getStats _ connection = do
           <++> fill
             widthValue
             (pretty $ T.justifyRight widthValue ' ' $ show numTasks)
-          <++> pretty share
+          <++> fill 7 (pretty share)
+          <++> pretty (T.justifyRight widthAge ' ' avgAge)
 
   pure $
     annotate (bold <> underlined) (fill widthKey "State")
       <++> annotate (bold <> underlined) (fill widthValue "Value")
-      <++> annotate (bold <> underlined) "Share"
+      <++> annotate (bold <> underlined) (fill 7 "Share")
+      <++> annotate (bold <> underlined) (fill widthAge "Avg Age")
       <> line
       <> vsep
-        [ formatLine "Any" numOfTasksTotal
-        , formatLine "Open" numOfTasksOpen
-        , formatLine "Closed" numOfTasksClosed
-        , formatLine "└─ Done" numOfTasksDone
-        , formatLine "└─ Obsolete" numOfTasksObsolete
-        , formatLine "└─ Deletable" numOfTasksDeletable
+        [ formatLine "Any" numOfTasksTotal avgAgeAll
+        , formatLine "Open" numOfTasksOpen avgAgeOpen
+        , formatLine "Closed" numOfTasksClosed avgAgeClosed
+        , formatLine "└─ Done" numOfTasksDone avgAgeDone
+        , formatLine "└─ Obsolete" numOfTasksObsolete avgAgeObsolete
+        , formatLine "└─ Deletable" numOfTasksDeletable avgAgeDeletable
         ]
