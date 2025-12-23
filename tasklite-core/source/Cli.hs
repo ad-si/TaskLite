@@ -11,7 +11,7 @@ module Cli where
 import Protolude (
   Alternative (some, (<|>)),
   Applicative (pure, (<*>)),
-  Bool (True),
+  Bool (..),
   Char,
   Either (..),
   Eq ((==)),
@@ -139,7 +139,7 @@ import System.Directory (
   listDirectory,
  )
 import System.FilePath (hasExtension, (</>))
-import System.IO (stdout, hSetBuffering, BufferMode (BlockBuffering), hFlush)
+import System.IO (BufferMode (BlockBuffering), hFlush, hSetBuffering, stdout)
 import System.Process (readProcess, spawnProcess)
 import Time.System (timeCurrentP)
 
@@ -1533,12 +1533,12 @@ printOutput appName argsMb config = do
           Left error -> pretty error
           Right hookResult -> formatHookResult conf hookResult
         & P.fold
-    
+
     isFindCommand =
       case args of
-        ("find":_) -> True
+        ("find" : _) -> True
         _ -> False
-    
+
     putDocCustom document = do
       P.when isFindCommand $ hSetBuffering stdout (BlockBuffering Nothing)
       renderIO

@@ -116,7 +116,6 @@ import Prettyprinter.Render.Terminal (
  )
 import System.Directory (createDirectoryIfMissing, listDirectory, removeFile)
 import System.FilePath (isExtensionOf, takeExtension, (</>))
-import Time.System (timeCurrentP)
 import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
 import Task (Task (..), emptyTask, setMetadataField, taskToEditableMarkdown)
@@ -124,7 +123,7 @@ import Text.Editor (markdownTemplate, runUserEditorDWIM)
 import Text.Parsec.Rfc2822 qualified as Email
 import Text.ParserCombinators.Parsec as Parsec (parse)
 import Text.PortableLines.ByteString.Lazy (lines8)
-import Time.System (dateCurrent, timeCurrent)
+import Time.System (dateCurrent, timeCurrent, timeCurrentP)
 import Utils (
   IdText,
   colr,

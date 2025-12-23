@@ -59,7 +59,6 @@ import Data.Time.ISO8601.Duration qualified as Iso
 import Data.ULID (ULID, ulidFromInteger)
 import FullTask qualified
 import Note (Note (..))
-import Time.System (dateCurrent)
 import Task (
   Task (
     Task,
@@ -83,6 +82,7 @@ import Task (
   emptyTask,
   textToTaskState,
  )
+import Time.System (dateCurrent)
 import Utils (
   emptyUlid,
   parseUlidText,

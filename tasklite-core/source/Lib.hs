@@ -3576,11 +3576,14 @@ getStats _ connection = do
         then "-"
         else
           let
-            ages = tasks & P.mapMaybe (\(ulid, _) -> do
-              createdDateTime <- ulidTextToDateTime ulid
-              let diff = timeDiff now createdDateTime
-              pure diff
-              )
+            ages =
+              tasks
+                & P.mapMaybe
+                  ( \(ulid, _) -> do
+                      createdDateTime <- ulidTextToDateTime ulid
+                      let diff = timeDiff now createdDateTime
+                      pure diff
+                  )
             totalSeconds = P.sum $ fmap (\(Seconds s) -> s) ages
             count = P.length ages
           in
@@ -3594,7 +3597,8 @@ getStats _ connection = do
     avgAgeClosed = calculateAvgAge $ P.filter (\(_, state) -> isJust state) taskData
     avgAgeDone = calculateAvgAge $ P.filter (\(_, state) -> state == Just "Done") taskData
     avgAgeObsolete = calculateAvgAge $ P.filter (\(_, state) -> state == Just "Obsolete") taskData
-    avgAgeDeletable = calculateAvgAge $ P.filter (\(_, state) -> state == Just "Deletable") taskData
+    avgAgeDeletable =
+      calculateAvgAge $ P.filter (\(_, state) -> state == Just "Deletable") taskData
 
     widthKey = 14
     widthValue = max 5 $ fromIntegral $ numDigits 10 numOfTasksTotal

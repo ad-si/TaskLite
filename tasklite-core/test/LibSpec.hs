@@ -71,7 +71,6 @@ import Lib (
   updateTask,
  )
 import Note (Note)
-import Time.System (dateCurrent)
 import Task (
   Task (
     body,
@@ -94,6 +93,7 @@ import TaskToNote qualified
 import TaskToTag (TaskToTag)
 import TaskToTag qualified
 import TestUtils (withMemoryDb)
+import Time.System (dateCurrent)
 import Utils (parseUtc, zeroTime, zeroUlidTxt)
 
 
