@@ -506,12 +506,21 @@ ingestFile conf connection filePath = do
 ingestDir :: Config -> Connection -> FilePath -> IO (Doc AnsiStyle)
 ingestDir conf connection dirPath = do
   files <- listDirectory dirPath
-  resultDocs <-
-    files
-      & P.filter filterImportable
-      <&> (dirPath </>)
-      & P.mapM (ingestFile conf connection)
-  pure $ P.fold resultDocs
+  let filePaths =
+        files
+          & P.filter filterImportable
+          <&> (dirPath </>)
+  filePaths
+    & P.mapM_
+      ( \filePath -> do
+          resultDoc <- ingestFile conf connection filePath
+          putDoc $ resultDoc <> hardline <> hardline
+      )
+  pure $
+    "📥 Ingested"
+      <+> pretty (P.length filePaths)
+      <+> "file(s) from"
+      <+> dquotes (pretty dirPath)
 
 
 -- TODO: Use Task instead of FullTask to fix broken notes export
