@@ -1048,7 +1048,7 @@ doTasks conf connection noteWordsMaybe ids = do
         prettyBody = dquotes $ pretty task.body
         prettyId = dquotes $ pretty task.ulid
 
-      if isJust task.closed_utc
+      if task.state == Just Done
         then
           pure $
             "⚠️  Task"
@@ -1093,7 +1093,7 @@ endTasks conf connection noteWordsMaybe ids = do
         prettyBody = dquotes $ pretty task.body
         prettyId = dquotes $ pretty task.ulid
 
-      if isJust task.closed_utc
+      if task.state == Just Obsolete
         then
           pure $
             "⚠️  Task"
