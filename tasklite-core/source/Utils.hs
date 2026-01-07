@@ -79,8 +79,10 @@ import Prettyprinter.Render.Terminal (
   AnsiStyle,
   Color (Black),
   bgColorDull,
+  bold,
   color,
   colorDull,
+  underlined,
  )
 import System.Console.ANSI (ConsoleLayer (..), hGetLayerColor)
 import System.Random (mkStdGen)
@@ -331,6 +333,22 @@ bgColrDull conf newColor =
   if conf.noColor
     then mempty
     else bgColorDull newColor
+
+
+-- | Apply bold style only if colors are enabled
+maybeBold :: Config -> AnsiStyle
+maybeBold conf =
+  if conf.noColor
+    then mempty
+    else bold
+
+
+-- | Apply underlined style only if colors are enabled
+maybeUnderlined :: Config -> AnsiStyle
+maybeUnderlined conf =
+  if conf.noColor
+    then mempty
+    else underlined
 
 
 removeColorsIfNecessary :: Config -> IO Config

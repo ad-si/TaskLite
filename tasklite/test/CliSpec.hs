@@ -2,9 +2,10 @@
 
 module CliSpec where
 
-import Protolude (Maybe (Just, Nothing), ($), (&), (<>))
+import Protolude (Bool (False, True), Maybe (Just, Nothing), ($), (&), (<>))
 import Protolude qualified as P
 
+import Data.Text qualified as T
 import Options.Applicative (
   ParseError (ShowHelpText),
   ParserFailure,
@@ -13,11 +14,29 @@ import Options.Applicative (
   parserFailure,
   renderFailure,
  )
-import Test.Hspec (Spec, describe, it, shouldBe, shouldContain)
+import Prettyprinter (Doc, annotate, defaultLayoutOptions, layoutPretty, pretty)
+import Prettyprinter.Render.Terminal (AnsiStyle, Color (Red), bold, color)
+import Prettyprinter.Render.Text qualified as TextRender
+import System.IO (hClose, hGetContents, hPutStr)
+import System.IO.Temp (withSystemTempFile)
+import Test.Hspec (
+  Spec,
+  describe,
+  it,
+  shouldBe,
+  shouldContain,
+  shouldNotContain,
+ )
 
-import Cli (commandParserInfo, printOutput)
+import Cli (
+  commandParserInfo,
+  hPutDocWithConfig,
+  printOutput,
+  renderIOWithConfig,
+ )
 import Config (Config, Hook (Hook), HookSet (HookSet), defaultConfig)
 import Config qualified
+import Prettyprinter.Render.Terminal qualified as TermRender
 import System.Directory (
   Permissions (executable, readable),
   emptyPermissions,
@@ -167,3 +186,63 @@ spec tmpDirPath = do
       _ <- printOutput "test-app" (Just ["head"]) testConf
 
       () `shouldBe` ()
+
+    it "hPutDocWithConfig outputs plain text when noColor is True" $ do
+      withSystemTempFile "test-output.txt" $ \filePath handle -> do
+        let
+          testDoc = annotate (color Red <> bold) (pretty ("Styled text" :: P.Text))
+          conf = defaultConfig{Config.noColor = True}
+
+        hPutDocWithConfig conf handle testDoc
+        hClose handle
+
+        -- Read the file content
+        content <- P.readFile filePath
+        -- Should contain plain text without ANSI escape codes
+        T.unpack content `shouldNotContain` "\ESC["
+        T.unpack content `shouldContain` "Styled text"
+
+    it "hPutDocWithConfig outputs ANSI codes when noColor is False" $ do
+      withSystemTempFile "test-output.txt" $ \filePath handle -> do
+        let
+          testDoc = annotate (color Red) (pretty ("Styled text" :: P.Text))
+          conf = defaultConfig{Config.noColor = False}
+
+        hPutDocWithConfig conf handle testDoc
+        hClose handle
+
+        -- Read the file content
+        content <- P.readFile filePath
+        -- Should contain ANSI escape codes
+        T.unpack content `shouldContain` "\ESC["
+
+    it "renderIOWithConfig outputs plain text when noColor is True" $ do
+      withSystemTempFile "test-output.txt" $ \filePath handle -> do
+        let
+          testDoc = annotate bold (pretty ("Rendered text" :: P.Text))
+          conf = defaultConfig{Config.noColor = True}
+          layoutOpts = defaultLayoutOptions
+
+        renderIOWithConfig conf handle layoutOpts testDoc
+        hClose handle
+
+        -- Read the file content
+        content <- P.readFile filePath
+        -- Should contain plain text without ANSI escape codes
+        T.unpack content `shouldNotContain` "\ESC["
+        T.unpack content `shouldContain` "Rendered text"
+
+    it "renderIOWithConfig outputs ANSI codes when noColor is False" $ do
+      withSystemTempFile "test-output.txt" $ \filePath handle -> do
+        let
+          testDoc = annotate bold (pretty ("Rendered text" :: P.Text))
+          conf = defaultConfig{Config.noColor = False}
+          layoutOpts = defaultLayoutOptions
+
+        renderIOWithConfig conf handle layoutOpts testDoc
+        hClose handle
+
+        -- Read the file content
+        content <- P.readFile filePath
+        -- Should contain ANSI escape codes
+        T.unpack content `shouldContain` "\ESC["

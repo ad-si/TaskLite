@@ -149,10 +149,7 @@ import Prettyprinter as Pp (
 import Prettyprinter.Render.Terminal (
   AnsiStyle,
   Color (Black, Green, Red, Yellow),
-  bold,
-  color,
   hPutDoc,
-  underlined,
  )
 import Prettyprinter.Util (reflow)
 import System.Directory (createDirectoryIfMissing)
@@ -259,6 +256,8 @@ import Utils (
   countChar,
   dateTimeToUtcTime,
   formatElapsedP,
+  maybeBold,
+  maybeUnderlined,
   numDigits,
   parseUlidText,
   parseUtc,
@@ -1448,7 +1447,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         )
   in
     hardline
-      <> annotate bold (pretty taskV.body)
+      <> annotate (maybeBold conf) (pretty taskV.body)
       <> hardline
       <> hardline
       <> ( if P.null tags
@@ -1550,7 +1549,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
       <> ( if P.null tags
             then mempty
             else
-              annotate underlined "Tags Detailed:"
+              annotate (maybeUnderlined conf) "Tags Detailed:"
                 <> hardline
                 <> hardline
                 <> vsep tagsPretty
@@ -1560,7 +1559,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
       <> ( if P.null notes
             then mempty
             else
-              annotate underlined "Notes Detailed:"
+              annotate (maybeUnderlined conf) "Notes Detailed:"
                 <> hardline
                 <> hardline
                 <> vsep notesPretty
@@ -1793,8 +1792,8 @@ findTask conf connection aPattern = do
         & sortOn (Down . fstOf3)
     moreResults = P.length tasksScored - numOfResults
     header =
-      annotate (underlined <> color ulidColor) (fill ulidWidth "ULID")
-        <++> annotate underlined (fill 20 "Task")
+      annotate (maybeUnderlined conf <> colr conf ulidColor) (fill ulidWidth "ULID")
+        <++> annotate (maybeUnderlined conf) (fill 20 "Task")
         <> hardline
     body =
       tasksScored
@@ -3344,7 +3343,7 @@ getFilterQuery filterExps orderByMb availableLinesMb = do
 
 columnToDoc :: Config -> Int -> Column -> Doc AnsiStyle
 columnToDoc conf idColWidth = do
-  let strong = bold <> underlined
+  let strong = maybeBold conf <> maybeUnderlined conf
 
   \case
     IdCol ->
@@ -3468,10 +3467,10 @@ formatTags conf tagTuples = do
         (colr conf Yellow)
         "⚠️ No tags available"
     else
-      annotate (bold <> underlined) (fill maxTagLength "Tag")
-        <++> annotate (bold <> underlined) "Open"
-        <++> annotate (bold <> underlined) "Closed"
-        <++> annotate (bold <> underlined) (fill progressWith "Progress")
+      annotate (maybeBold conf <> maybeUnderlined conf) (fill maxTagLength "Tag")
+        <++> annotate (maybeBold conf <> maybeUnderlined conf) "Open"
+        <++> annotate (maybeBold conf <> maybeUnderlined conf) "Closed"
+        <++> annotate (maybeBold conf <> maybeUnderlined conf) (fill progressWith "Progress")
         <> line
         <> vsep (fmap (formatTagLine conf maxTagLength) tagTuples)
 
@@ -3521,13 +3520,15 @@ listNotes conf connection = do
     noteWidth = getIdLength $ fromIntegral $ P.length notes
     docHeader =
       annotate
-        (conf.idStyle <> bold <> underlined)
+        (conf.idStyle <> maybeBold conf <> maybeUnderlined conf)
         (fill taskIdWidth "Task ID")
         <++> annotate
-          (conf.idStyle <> bold <> underlined)
+          (conf.idStyle <> maybeBold conf <> maybeUnderlined conf)
           (fill noteWidth "ID")
-        <++> annotate (conf.dateStyle <> bold <> underlined) "Created UTC"
-        <++> annotate (bold <> underlined) "Note"
+        <++> annotate
+          (conf.dateStyle <> maybeBold conf <> maybeUnderlined conf)
+          "Created UTC"
+        <++> annotate (maybeBold conf <> maybeUnderlined conf) "Note"
         <++> line
 
     showNote note =
@@ -3551,7 +3552,7 @@ listNotes conf connection = do
 
 
 getStats :: Config -> Connection -> IO (Doc AnsiStyle)
-getStats _ connection = do
+getStats conf connection = do
   [NumRows numOfTasksTotal] <-
     query_ connection $
       Query "SELECT count(1) FROM tasks"
@@ -3628,10 +3629,10 @@ getStats _ connection = do
           <++> pretty (T.justifyRight widthAge ' ' avgAge)
 
   pure $
-    annotate (bold <> underlined) (fill widthKey "State")
-      <++> annotate (bold <> underlined) (fill widthValue "Value")
-      <++> annotate (bold <> underlined) (fill 7 "Share")
-      <++> annotate (bold <> underlined) (fill widthAge "Avg Age")
+    annotate (maybeBold conf <> maybeUnderlined conf) (fill widthKey "State")
+      <++> annotate (maybeBold conf <> maybeUnderlined conf) (fill widthValue "Value")
+      <++> annotate (maybeBold conf <> maybeUnderlined conf) (fill 7 "Share")
+      <++> annotate (maybeBold conf <> maybeUnderlined conf) (fill widthAge "Avg Age")
       <> line
       <> vsep
         [ formatLine "Any" numOfTasksTotal avgAgeAll

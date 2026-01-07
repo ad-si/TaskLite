@@ -127,6 +127,7 @@ import Prettyprinter.Render.Terminal (
   hPutDoc,
   renderIO,
  )
+import Prettyprinter.Render.Text qualified as TextRender
 import System.Console.Terminal.Size (Window (Window, height, width), size)
 import System.Directory (
   Permissions,
@@ -148,7 +149,6 @@ import Config (
   HookSet (..),
   HooksConfig (..),
   addHookFilesToConfig,
-  defaultConfig,
  )
 import Control.Arrow ((>>>))
 import Hooks (executeHooks, formatHookResult)
@@ -1212,7 +1212,7 @@ handleExternalCommand conf cmd argsMb = do
         & hcat
 
     handleException exception = do
-      hPutDoc P.stderr $
+      hPutDocWithConfig conf P.stderr $
         if not $ exception & show & T.isInfixOf "does not exist"
           then pretty (show exception :: Text)
           else do
@@ -1261,9 +1261,9 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         & P.flip renderFailure progName
         & P.fst
         & T.pack
-        & spliceDocsIntoText (helpReplacements defaultConfig)
+        & spliceDocsIntoText (helpReplacements config)
         & hcat
-        & hPutDoc P.stderr
+        & hPutDocWithConfig config P.stderr
       P.exitFailure
     --
     Success cliOptions -> do
@@ -1380,10 +1380,47 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         ExternalCommand cmd argsMb -> handleExternalCommand conf cmd argsMb
 
 
+-- | Render a Doc to a Handle, conditionally using plain text based on Config.noColor
+hPutDocWithConfig :: Config -> P.Handle -> Doc AnsiStyle -> IO ()
+hPutDocWithConfig conf handle doc =
+  if conf.noColor
+    then
+      P.hPutStr handle $
+        TextRender.renderStrict $
+          layoutPretty defaultLayoutOptions doc
+    else hPutDoc handle doc
+
+
+-- | Render a Doc to a Handle with custom layout options, conditionally using plain text based on Config.noColor
+renderIOWithConfig ::
+  Config -> P.Handle -> LayoutOptions -> Doc AnsiStyle -> IO ()
+renderIOWithConfig conf handle layoutOpts doc =
+  if conf.noColor
+    then P.hPutStr handle $ TextRender.renderStrict $ layoutPretty layoutOpts doc
+    else renderIO handle $ layoutPretty layoutOpts doc
+
+
 printOutput :: String -> Maybe [String] -> Config -> IO ()
 printOutput appName argsMb config = do
+  -- Get args early for parsing noColorFlag
+  args <- case argsMb of
+    Just a -> pure a
+    Nothing -> getArgs
+
+  -- Early parse to extract noColorFlag
+  let earlyParseResult =
+        execParserPure
+          defaultPrefs
+          (commandParserInfo config)
+          args
+
+  -- Extract noColorFlag from parsed options if successful
+  let noColorFromFlag = case earlyParseResult of
+        Success cliOpts -> cliOpts.noColorFlag
+        _ -> False
+
   noColorEnv <- lookupEnv "NO_COLOR"
-  let conf = config{noColor = config.noColor || P.isJust noColorEnv}
+  let conf = config{noColor = config.noColor || P.isJust noColorEnv || noColorFromFlag}
 
   configNormDataDir <-
     if null conf.dataDir
@@ -1455,7 +1492,7 @@ printOutput appName argsMb config = do
       & P.traverse_
         ( pretty
             >>> annotate (colr conf Yellow)
-            >>> hPutDoc P.stderr
+            >>> hPutDocWithConfig conf P.stderr
         )
 
   -- Run pre-launch hooks
@@ -1476,9 +1513,6 @@ printOutput appName argsMb config = do
 
   -- Run post-launch hooks
   progName <- getProgName
-  args <- case argsMb of
-    Just args -> pure args
-    Nothing -> getArgs
   postLaunchResults <-
     executeHooks
       ( TL.toStrict $
@@ -1541,14 +1575,14 @@ printOutput appName argsMb config = do
 
     putDocCustom document = do
       P.when isFindCommand $ hSetBuffering stdout (BlockBuffering Nothing)
-      renderIO
+      renderIOWithConfig
+        configNorm
         stdout
-        $ layoutPretty
-          ( defaultLayoutOptions
-              { layoutPageWidth = AvailablePerLine outputWidth 1.0
-              }
-          )
-          document
+        ( defaultLayoutOptions
+            { layoutPageWidth = AvailablePerLine outputWidth 1.0
+            }
+        )
+        document
       P.when isFindCommand $ hFlush stdout
 
   -- TODO: Remove color when piping into other command

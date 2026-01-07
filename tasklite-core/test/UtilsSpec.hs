@@ -1,6 +1,7 @@
 module UtilsSpec where
 
 import Protolude (
+  Bool (False, True),
   Functor (fmap),
   Maybe (..),
   Text,
@@ -15,13 +16,17 @@ import Data.Hourglass (
   ElapsedP (ElapsedP),
   timeGetDateTimeOfDay,
  )
-import Test.Hspec (Spec, it, shouldBe)
+import Prettyprinter (Doc, pretty)
+import Prettyprinter.Render.Terminal (AnsiStyle, bold, underlined)
+import Test.Hspec (Spec, it, shouldBe, shouldNotBe)
 
+import Config (defaultConfig)
+import Config qualified
 import Task (
   Task (body, due_utc, metadata, modified_utc, state, ulid, user),
   emptyTask,
  )
-import Utils (parseUlidText, parseUlidUtcSection)
+import Utils (maybeBold, maybeUnderlined, parseUlidText, parseUlidUtcSection)
 
 
 exampleTask :: Task
@@ -53,3 +58,19 @@ spec = do
     let ulidText = "0000000014T4R3JR7HMQNREEW8" :: Text
 
     fmap show (parseUlidText ulidText) `shouldBe` Just ulidText
+
+  it "applies bold style when colors are enabled" $ do
+    let conf = defaultConfig{Config.noColor = False}
+    maybeBold conf `shouldBe` bold
+
+  it "returns empty style when colors are disabled (maybeBold)" $ do
+    let conf = defaultConfig{Config.noColor = True}
+    maybeBold conf `shouldNotBe` bold
+
+  it "applies underlined style when colors are enabled" $ do
+    let conf = defaultConfig{Config.noColor = False}
+    maybeUnderlined conf `shouldBe` underlined
+
+  it "returns empty style when colors are disabled (maybeUnderlined)" $ do
+    let conf = defaultConfig{Config.noColor = True}
+    maybeUnderlined conf `shouldNotBe` underlined
