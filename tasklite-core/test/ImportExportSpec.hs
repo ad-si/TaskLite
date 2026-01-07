@@ -36,7 +36,7 @@ import Config (defaultConfig)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
 import ImportExport (getNdjsonLines, insertImportTask)
-import ImportTask (ImportTask (ImportTask, notes, tags, task))
+import ImportTask (ImportTask (ImportTask, notes, tags, task), setMissingFields)
 import Note (Note (Note))
 import Task (Task (body, modified_utc, ulid, user), emptyTask)
 import TaskToNote (TaskToNote (TaskToNote))
@@ -236,6 +236,31 @@ spec = do
                 (taskToNote.ulid & T.take 10)
                   `shouldBe` (expectedTaskToNote.ulid & T.take 10)
               _ -> P.die "Found more than one note"
+
+    it "imports a JSON task with an updated_at field" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          updatedAt = "2024-03-16T14:20:30.500Z"
+          -- modified_utc format:
+          expectedModifiedUtc = "2024-03-16 14:20:30.500"
+          jsonTask =
+            "{\"body\":\"Task with updated_at\",\"updated_at\":\"{{utc}}\"}"
+              & T.replace "{{utc}}" updatedAt
+
+        case eitherDecodeStrictText jsonTask of
+          Left error ->
+            P.die $ "Error decoding JSON: " <> show error
+          Right importTaskRecord -> do
+            -- Test that setMissingFields preserves the modified_utc correctly
+            importTaskNorm <- setMissingFields importTaskRecord
+            importTaskNorm.task.modified_utc `shouldBe` expectedModifiedUtc
+            -- Also verify it works when inserted into DB
+            _ <- insertImportTask conf memConn importTaskNorm
+            tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+            case tasks of
+              [insertedTask] ->
+                insertedTask.modified_utc `shouldBe` expectedModifiedUtc
+              _ -> P.die "Expected exactly one task"
 
     it "imports a GitHub issue" $ do
       gitHubIssue <- BSL.readFile "test/fixtures/github-issue.json"

@@ -473,7 +473,7 @@ setMissingFields importTaskRec = do
                     now
                       & timePrint (toFormat importUtcFormat)
                       & T.pack
-                  else show importTaskRec.task.modified_utc
+                  else importTaskRec.task.modified_utc
             }
       }
 
