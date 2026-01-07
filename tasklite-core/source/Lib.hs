@@ -82,6 +82,7 @@ import Protolude qualified as P
 import Control.Applicative ((<|>))
 import Control.Arrow ((>>>))
 import Data.Aeson as Aeson (KeyValue ((.=)), encode, object)
+import Data.Char (isDigit)
 import Data.Coerce (coerce)
 import Data.Generics (Data, constrFields, toConstr)
 import Data.Hourglass (
@@ -3149,13 +3150,29 @@ listWithTag conf now connection tags availableLinesMb = do
   formatTasksColor conf now (isJust availableLinesMb) tasks
 
 
-queryTasks :: Config -> DateTime -> Connection -> Text -> IO (Doc AnsiStyle)
-queryTasks conf now connection sqlQuery = do
+queryTasks ::
+  Config -> DateTime -> Connection -> Text -> Maybe Int -> IO (Doc AnsiStyle)
+queryTasks conf now connection sqlQuery availableLinesMb = do
+  let
+    -- Check if query ends with LIMIT clause by finding last "limit" and
+    -- checking if only digits/spaces follow
+    queryLower = T.toLower $ T.strip sqlQuery
+    endsWithLimit = case T.breakOnEnd "limit" queryLower of
+      ("", _) -> False -- No "limit" found
+      (_, after) ->
+        T.all (\c -> isSpace c || isDigit c) after
+          && T.any isDigit after
+    limitClause = case availableLinesMb of
+      Nothing -> ""
+      Just availableLines ->
+        if endsWithLimit then "" else " LIMIT " <> show availableLines
   tasks <-
     query_ connection $
       Query $
-        "SELECT * FROM tasks_view WHERE " <> sqlQuery
-  formatTasksColor conf now False tasks
+        "SELECT * FROM tasks_view WHERE "
+          <> sqlQuery
+          <> T.pack limitClause
+  formatTasksColor conf now (isJust availableLinesMb && not endsWithLimit) tasks
 
 
 runSql :: Config -> Text -> IO (Doc AnsiStyle)
@@ -3289,7 +3306,7 @@ runFilter conf now connection exps availableLinesMb = do
         else
           if P.length tasks <= 0
             then pure "No tasks available for the given filter."
-            else formatTasksColor conf now False tasks
+            else formatTasksColor conf now (isJust availableLinesMb) tasks
     _ -> dieWithError filterHelp
 
 

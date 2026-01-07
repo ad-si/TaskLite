@@ -1290,7 +1290,7 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         ListDeletable -> deletableTasks conf now connection availableLinesMb
         ListNoTag -> listNoTag conf now connection availableLinesMb
         ListWithTag tags -> listWithTag conf now connection tags availableLinesMb
-        QueryTasks query -> queryTasks conf now connection query
+        QueryTasks query -> queryTasks conf now connection query availableLinesMb
         RunSql query -> runSql conf query
         RunFilter expressions -> runFilter conf now connection expressions availableLinesMb
         Tags -> listTags conf connection
