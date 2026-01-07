@@ -148,6 +148,7 @@ test-suite tasklite-test
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
   build-depends:
       MissingH >=1.4 && <1.7
+    , QuickCheck
     , aeson
     , base >=4.18 && <5
     , bytestring

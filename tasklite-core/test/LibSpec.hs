@@ -38,6 +38,8 @@ import Test.Hspec (
   shouldStartWith,
   shouldThrow,
  )
+import Test.Hspec.QuickCheck (prop)
+import Test.QuickCheck (NonNegative (..))
 
 import Config (defaultConfig)
 import Data.Hourglass (TimeFormat (..), timePrint)
@@ -69,6 +71,7 @@ import Lib (
   setReadyUtc,
   unrepeatTasks,
   updateTask,
+  wasListTruncated,
  )
 import Note (Note)
 import Task (
@@ -682,3 +685,22 @@ spec = do
       (show cliOutput :: Text)
         `shouldBe` "\128165 Deleted note \"01hwcqk9nnwjypzw9kr646nqce\" \
                    \of task \"01hs68z7mdg4ktpxbv0yfafznq\""
+
+  context "wasListTruncated" $ do
+    prop "returns False when limit is Nothing" $
+      \(list :: [P.Int]) ->
+        wasListTruncated Nothing list `shouldBe` P.False
+
+    prop "returns False when list is shorter than limit" $
+      \(NonNegative len) (NonNegative extra) ->
+        let limit = len P.+ extra P.+ 1
+            list = P.replicate len ()
+        in  wasListTruncated (Just limit) list `shouldBe` P.False
+
+    prop "returns True when list length >= limit" $
+      \(NonNegative limit) (NonNegative extra) ->
+        let list = P.replicate (limit P.+ extra) ()
+        in  wasListTruncated (Just limit) list `shouldBe` True
+
+    it "returns True for zero limit with empty list" $
+      wasListTruncated (Just 0) ([] :: [()]) `shouldBe` True
