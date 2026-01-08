@@ -692,43 +692,46 @@ execWithTask ::
   (Task -> IO (Doc AnsiStyle)) ->
   IO (Doc AnsiStyle)
 execWithTask conf connection idSubstr callback = do
-  tasks <-
-    query
-      connection
-      ( Query $
-          "SELECT *\n"
-            <> ("FROM \"" <> conf.tableName <> "\"\n")
-            <> "WHERE ulid LIKE ?\n"
-      )
-      ["%" <> idSubstr :: Text] ::
-      IO [Task]
+  if T.null idSubstr
+    then pure "⚠️  An ID must be specified"
+    else do
+      tasks <-
+        query
+          connection
+          ( Query $
+              "SELECT *\n"
+                <> ("FROM \"" <> conf.tableName <> "\"\n")
+                <> "WHERE ulid LIKE ?\n"
+          )
+          ["%" <> idSubstr :: Text] ::
+          IO [Task]
 
-  let
-    numOfTasks = P.length tasks
-    ulidLength = 26
-    prefix = if T.length idSubstr == ulidLength then "" else "…"
-    quote = dquotes . pretty
+      let
+        numOfTasks = P.length tasks
+        ulidLength = 26
+        prefix = if T.length idSubstr == ulidLength then "" else "…"
+        quote = dquotes . pretty
 
-  if
-    | numOfTasks == 0 ->
-        pure $
-          "⚠️  Task" <+> quote (prefix <> idSubstr) <+> "does not exist"
-    | numOfTasks == 1 ->
-        callback $ fromMaybe emptyTask $ P.head tasks
-    | numOfTasks > 1 ->
-        pure $
-          "⚠️  Id slice"
-            <+> quote idSubstr
-            <+> "is not unique."
-            <+> "It could refer to one of the following tasks:"
-              <++> P.foldMap
-                ( \task ->
-                    annotate conf.idStyle (pretty task.ulid)
-                      <++> pretty task.body
-                      <> hardline
-                )
-                tasks
-    | otherwise -> pure "This case should not be possible"
+      if
+        | numOfTasks == 0 ->
+            pure $
+              "⚠️  Task" <+> quote (prefix <> idSubstr) <+> "does not exist"
+        | numOfTasks == 1 ->
+            callback $ fromMaybe emptyTask $ P.head tasks
+        | numOfTasks > 1 ->
+            pure $
+              "⚠️  Id slice"
+                <+> quote idSubstr
+                <+> "is not unique."
+                <+> "It could refer to one of the following tasks:"
+                  <++> P.foldMap
+                    ( \task ->
+                        annotate conf.idStyle (pretty task.ulid)
+                          <++> pretty task.body
+                          <> hardline
+                    )
+                    tasks
+        | otherwise -> pure "This case should not be possible"
 
 
 -- | Set state and automatically sets `closed_utc` via an SQL trigger
