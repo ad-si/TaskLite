@@ -643,14 +643,14 @@ spec = do
             , TaskToNote.task_ulid = task1.ulid
             , TaskToNote.note = "The first note"
             }
-        note1Id = taskToNote1.ulid & T.takeEnd 3 & T.unpack
+        note1Id = taskToNote1.ulid & T.takeEnd 2 & T.unpack
         taskToNote2 =
           TaskToNote
             { TaskToNote.ulid = "01hx4f3f764sma7n8bahvwjeed"
             , TaskToNote.task_ulid = task1.ulid
             , TaskToNote.note = "The second note"
             }
-        note2Id = taskToNote2.ulid & T.takeEnd 3 & T.unpack
+        note2Id = taskToNote2.ulid & T.takeEnd 2 & T.unpack
 
       insertRecord "task_to_note" memConn taskToNote1
       insertRecord "task_to_note" memConn taskToNote2

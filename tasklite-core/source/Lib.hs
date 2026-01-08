@@ -118,6 +118,7 @@ import Database.SQLite.Simple (
   changes,
   execute,
   executeNamed,
+  execute_,
   field,
   open,
   query,
@@ -284,6 +285,33 @@ newtype NumRows = NumRows Integer
 
 instance FromRow NumRows where
   fromRow = NumRows <$> field
+
+
+newtype SqliteStat = SqliteStat Text
+  deriving (Eq, Show)
+
+
+instance FromRow SqliteStat where
+  fromRow = SqliteStat <$> field
+
+
+{-| Get the total number of tasks from sqlite_stat1 statistics table
+with a fallback value if the table doesn't exist or can't be parsed.
+-}
+getTotalTaskCount :: Connection -> IO Integer
+getTotalTaskCount connection = do
+  let
+    fallbackNumTasks = 500
+    queryStats =
+      query_
+        connection
+        "SELECT stat FROM sqlite_stat1 WHERE tbl = 'tasks' LIMIT 1"
+
+  result <- catchAll queryStats (\_ -> pure [])
+  pure $ fromMaybe fallbackNumTasks $ do
+    SqliteStat stat <- listToMaybe result
+    countText <- listToMaybe $ T.words stat
+    P.readMaybe $ T.unpack countText
 
 
 getDbPath :: Config -> IO FilePath
@@ -2593,12 +2621,14 @@ formatTaskLine conf now idColWidth task = do
 
 getIdLength :: Float -> Int
 getIdLength numOfItems =
-  -- TODO: Calculate idLength by total number of tasks, not just of the viewed
   let
     targetCollisionChance = 0.01 -- Targeted likelihood of id collisions
     sizeOfAlphabet = 32 -- Crockford's base 32 alphabet
+    -- Required ID space size using birthday problem approximation
+    requiredSpace =
+      (numOfItems P.** 2) / (2 * P.log (1 / (1 - targetCollisionChance)))
   in
-    ceiling (logBase sizeOfAlphabet (numOfItems / targetCollisionChance)) + 1
+    max 1 (ceiling (logBase sizeOfAlphabet requiredSpace))
 
 
 countTasks :: Config -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
@@ -2663,7 +2693,12 @@ headTasks conf now connection availableLinesMb = do
       |]
       [":taskCount" := taskCount]
 
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 newTasks ::
@@ -2696,7 +2731,12 @@ newTasks conf now connection filterExp availableLinesMb = do
               Just availableLines -> availableLines
           ]
 
-      formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+      formatTasksColor
+        conf
+        connection
+        now
+        (wasListTruncated availableLinesMb tasks)
+        tasks
     --
     Just (filterExps, _) -> do
       let
@@ -2718,7 +2758,12 @@ newTasks conf now connection filterExp availableLinesMb = do
             query_
               connection
               (getFilterQuery filterExps (Just "ulid DESC") availableLinesMb)
-          formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+          formatTasksColor
+            conf
+            connection
+            now
+            (wasListTruncated availableLinesMb tasks)
+            tasks
 
 
 listOldTasks ::
@@ -2739,7 +2784,12 @@ listOldTasks conf now connection availableLinesMb = do
           Just availableLines -> availableLines
       ]
 
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 openTasks ::
@@ -2773,7 +2823,12 @@ openTasks conf now connection filterExpression availableLinesMb = do
               Just availableLines -> availableLines
           ]
 
-      formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+      formatTasksColor
+        conf
+        connection
+        now
+        (wasListTruncated availableLinesMb tasks)
+        tasks
     --
     Just (filterExps, _) -> do
       let
@@ -2804,7 +2859,12 @@ openTasks conf now connection filterExpression availableLinesMb = do
                 availableLinesMb
 
           tasks <- query_ connection sqlQuery
-          formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+          formatTasksColor
+            conf
+            connection
+            now
+            (wasListTruncated availableLinesMb tasks)
+            tasks
 
 
 modifiedTasks ::
@@ -2852,6 +2912,7 @@ modifiedTasks conf now connection listModifiedFlag availableLinesMb = do
 
   formatTasksColor
     conf
+    connection
     now
     (wasListTruncated availableLinesMb filteredTasks)
     filteredTasks
@@ -2880,7 +2941,12 @@ overdueTasks conf now connection availableLinesMb = do
           Just availableLines -> availableLines
       ]
 
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 doneTasks :: Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
@@ -2902,7 +2968,12 @@ doneTasks conf now connection availableLinesMb = do
           Just availableLines -> availableLines
       ]
 
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 obsoleteTasks ::
@@ -2925,7 +2996,12 @@ obsoleteTasks conf now connection availableLinesMb = do
           Just availableLines -> availableLines
       ]
 
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 deletableTasks ::
@@ -2947,7 +3023,12 @@ deletableTasks conf now connection availableLinesMb = do
           Nothing -> -1 -- No limit
           Just availableLines -> availableLines
       ]
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 listRepeating ::
@@ -2968,7 +3049,12 @@ listRepeating conf now connection availableLinesMb = do
           Just availableLines -> availableLines
       ]
 
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 listRecurring ::
@@ -2989,7 +3075,12 @@ listRecurring conf now connection availableLinesMb = do
           Just availableLines -> availableLines
       ]
 
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 listReady ::
@@ -3019,7 +3110,12 @@ listReady conf now connection availableLinesMb = do
           Just availableLines -> availableLines
       ]
 
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 listWaiting ::
@@ -3042,7 +3138,12 @@ listWaiting conf now connection availableLinesMb = do
           Just availableLines -> availableLines
       ]
 
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 listAll :: Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
@@ -3061,7 +3162,12 @@ listAll conf now connection availableLinesMb = do
           Just availableLines -> availableLines
       ]
 
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 listNoTag :: Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
@@ -3086,7 +3192,12 @@ listNoTag conf now connection availableLinesMb = do
           Just availableLines -> availableLines
       ]
 
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 getWithTag ::
@@ -3151,7 +3262,12 @@ listWithTag ::
   Config -> DateTime -> Connection -> [Text] -> Maybe Int -> IO (Doc AnsiStyle)
 listWithTag conf now connection tags availableLinesMb = do
   tasks <- getWithTag connection Nothing availableLinesMb tags
-  formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+  formatTasksColor
+    conf
+    connection
+    now
+    (wasListTruncated availableLinesMb tasks)
+    tasks
 
 
 queryTasks ::
@@ -3178,6 +3294,7 @@ queryTasks conf now connection sqlQuery availableLinesMb = do
           <> T.pack limitClause
   formatTasksColor
     conf
+    connection
     now
     (wasListTruncated availableLinesMb tasks && not endsWithLimit)
     tasks
@@ -3314,7 +3431,13 @@ runFilter conf now connection exps availableLinesMb = do
         else
           if P.length tasks <= 0
             then pure "No tasks available for the given filter."
-            else formatTasksColor conf now (wasListTruncated availableLinesMb tasks) tasks
+            else
+              formatTasksColor
+                conf
+                connection
+                now
+                (wasListTruncated availableLinesMb tasks)
+                tasks
     _ -> dieWithError filterHelp
 
 
@@ -3409,13 +3532,12 @@ wasListTruncated availableLinesMb list = case availableLinesMb of
   Just availableLines -> P.length list P.>= availableLines
 
 
-formatTasks :: Config -> DateTime -> Bool -> [FullTask] -> Doc AnsiStyle
-formatTasks conf now isTruncated tasks =
+formatTasks :: Config -> DateTime -> Int -> Bool -> [FullTask] -> Doc AnsiStyle
+formatTasks conf now idColWidth isTruncated tasks =
   if P.length tasks == 0
     then pretty noTasksWarning
     else do
       let
-        idColWidth = getIdLength $ fromIntegral $ P.length tasks
         docHeader =
           concatWith (<++>) $
             ( conf.columns
@@ -3438,10 +3560,16 @@ formatTasks conf now isTruncated tasks =
 
 
 formatTasksColor ::
-  Config -> DateTime -> Bool -> [FullTask] -> IO (Doc AnsiStyle)
-formatTasksColor conf now isTruncated tasks = do
+  Config -> Connection -> DateTime -> Bool -> [FullTask] -> IO (Doc AnsiStyle)
+formatTasksColor conf connection now isTruncated tasks = do
   confNorm <- applyColorMode conf
-  pure $ formatTasks confNorm now isTruncated tasks
+  totalTaskCount <- getTotalTaskCount connection
+  let
+    -- Use at least the number of tasks in the list for ID length calculation.
+    -- Establishes a minimum amount of tasks in the database.
+    minCount = max (fromIntegral totalTaskCount) (fromIntegral $ P.length tasks)
+    idColWidth = getIdLength minCount
+  pure $ formatTasks confNorm now idColWidth isTruncated tasks
 
 
 getProgressBar :: Config -> Integer -> Double -> Doc AnsiStyle
@@ -3584,6 +3712,9 @@ listNotes conf connection = do
 
 getStats :: Config -> Connection -> IO (Doc AnsiStyle)
 getStats conf connection = do
+  -- Update SQLite's internal statistics for better query optimization
+  execute_ connection "ANALYZE"
+
   [NumRows numOfTasksTotal] <-
     query_ connection $
       Query "SELECT count(1) FROM tasks"
