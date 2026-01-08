@@ -539,34 +539,35 @@ spec = do
           _ -> P.die "Found more than one task"
 
     it
-      "sets closed_utc to now when setting state to Done without explicit closed_utc" $ do
-      withMemoryDb defaultConfig $ \memConn -> do
-        insertRecord "tasks" memConn task1
+      "sets closed_utc to now when setting state to Done without explicit closed_utc"
+      $ do
+        withMemoryDb defaultConfig $ \memConn -> do
+          insertRecord "tasks" memConn task1
 
-        now_ <- dateCurrent
-        let today = now_ & timePrint (toFormat ("YYYY-MM-DD" :: [P.Char]))
+          now_ <- dateCurrent
+          let today = now_ & timePrint (toFormat ("YYYY-MM-DD" :: [P.Char]))
 
-        cliOutput <-
-          editTaskByTask
-            conf
-            ( ApplyPreEdit $
-                replaceBs
-                  "state: null"
-                  "state: Done"
-                  -- Note: NOT changing closed_utc - it should be set by the SQL trigger
-            )
-            memConn
-            task1
-        show cliOutput `shouldContain` "Edited task"
-        tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
-        case tasks of
-          [task] -> do
-            task.state `shouldBe` Just Done
-            -- closed_utc should be set to today (by the SQL trigger), not an old date
-            case task.closed_utc of
-              Nothing -> P.die "closed_utc should be set"
-              Just closedUtc -> T.unpack closedUtc `shouldStartWith` today
-          _ -> P.die "Found more than one task"
+          cliOutput <-
+            editTaskByTask
+              conf
+              ( ApplyPreEdit $
+                  replaceBs
+                    "state: null"
+                    "state: Done"
+                    -- Note: NOT changing closed_utc - it should be set by the SQL trigger
+              )
+              memConn
+              task1
+          show cliOutput `shouldContain` "Edited task"
+          tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+          case tasks of
+            [task] -> do
+              task.state `shouldBe` Just Done
+              -- closed_utc should be set to today (by the SQL trigger), not an old date
+              case task.closed_utc of
+                Nothing -> P.die "closed_utc should be set"
+                Just closedUtc -> T.unpack closedUtc `shouldStartWith` today
+            _ -> P.die "Found more than one task"
 
     it "preserves closed_utc when editing an already-closed task" $ do
       withMemoryDb defaultConfig $ \memConn -> do
