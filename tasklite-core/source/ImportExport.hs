@@ -280,7 +280,7 @@ importEml conf connection = do
 emailToImportTask :: Email.GenericMessage BSL.ByteString -> ImportTask
 emailToImportTask email@(Email.Message headerFields msgBody) =
   let
-    addBody (ImportTask task notes tags) =
+    addBody (ImportTask task notes tags wasExplicit) =
       ImportTask
         task
           { Task.body =
@@ -294,6 +294,7 @@ emailToImportTask email@(Email.Message headerFields msgBody) =
           }
         notes
         tags
+        wasExplicit
 
     namesToJson names =
       Array $
@@ -308,7 +309,7 @@ emailToImportTask email@(Email.Message headerFields msgBody) =
                 )
 
     addHeaderToTask :: ImportTask -> Email.Field -> ImportTask
-    addHeaderToTask impTask@(ImportTask task notes tags) headerValue =
+    addHeaderToTask impTask@(ImportTask task notes tags wasExplicit) headerValue =
       case headerValue of
         Email.Date emailDate ->
           let
@@ -328,36 +329,43 @@ emailToImportTask email@(Email.Message headerFields msgBody) =
                 }
               notes
               tags
+              wasExplicit
         Email.From names ->
           ImportTask
             (setMetadataField "from" (namesToJson names) task)
             notes
             tags
+            wasExplicit
         Email.To names ->
           ImportTask
             (setMetadataField "to" (namesToJson names) task)
             notes
             tags
+            wasExplicit
         Email.MessageID msgId ->
           ImportTask
             (setMetadataField "messageId" (Aeson.String $ T.pack msgId) task)
             notes
             tags
+            wasExplicit
         Email.Subject subj ->
           ImportTask
             task{Task.body = task.body <> T.pack subj}
             notes
             tags
+            wasExplicit
         Email.Keywords kwords ->
           ImportTask
             task
             notes
             (tags <> fmap (T.unwords . fmap T.pack) kwords)
+            wasExplicit
         Email.Comments cmnts ->
           ImportTask
             (setMetadataField "comments" (Aeson.String $ T.pack cmnts) task)
             notes
             tags
+            wasExplicit
         _ -> impTask
   in
     foldl addHeaderToTask (addBody emptyImportTask) headerFields
@@ -678,8 +686,9 @@ insertTaskFromEdit ::
   ImportTask ->
   P.ByteString ->
   P.Text ->
+  Maybe P.Text ->
   IO (Doc AnsiStyle)
-insertTaskFromEdit conf conn importTaskRec newContent modified_utc = do
+insertTaskFromEdit conf conn importTaskRec newContent modified_utc origClosedUtc = do
   -- Insert empty task if the edited task was newly created
   ulid <-
     if T.null importTaskRec.task.ulid
@@ -731,21 +740,29 @@ insertTaskFromEdit conf conn importTaskRec newContent modified_utc = do
 
   nowDateTime <- dateCurrent
 
-  let taskFixedUtc =
-        if P.isNothing taskFixed.closed_utc
-          then taskFixed
-          else
-            taskFixed
-              { Task.modified_utc =
-                  nowDateTime
-                    & timePrint (toFormat importUtcFormat)
-                    & T.pack
-              }
+  let
+    -- Should preserve closed_utc if:
+    -- 1. Original task already had a closed_utc (was already closed), OR
+    -- 2. User explicitly provided a closed_utc value in the edit
+    shouldPreserveClosedUtc =
+      P.isJust origClosedUtc || importTaskRec.closedUtcWasExplicit
+    taskFixedUtc =
+      if P.not shouldPreserveClosedUtc
+        then taskFixed
+        else
+          taskFixed
+            { Task.modified_utc =
+                nowDateTime
+                  & timePrint (toFormat importUtcFormat)
+                  & T.pack
+            }
 
-  -- TODO: Remove after it was added to `createSetClosedUtcTrigger`
   -- Update again with the same `state` field to avoid firing
   -- SQL trigger which would overwrite the `closed_utc` field.
-  P.when (P.isJust taskFixed.closed_utc) $ do
+  -- Only do this if closed_utc should be preserved.
+  -- When closing a task for the first time without explicit closed_utc,
+  -- let the trigger set closed_utc to the current time.
+  P.when shouldPreserveClosedUtc $ do
     updateTask conn taskFixedUtc
 
   tagWarnings <- insertTags conf conn Nothing taskFixedUtc importTaskRec.tags
@@ -795,7 +812,7 @@ enterTask conf conn = do
       _ -> pure $ pretty $ Yaml.prettyPrintParseException error
     Right (importTaskRec, newContent) -> do
       modified_utc <- formatElapsedP conf timeCurrentP
-      insertTaskFromEdit conf conn importTaskRec newContent modified_utc
+      insertTaskFromEdit conf conn importTaskRec newContent modified_utc Nothing
 
 
 editTaskByTask :: Config -> EditMode -> Connection -> Task -> IO (Doc AnsiStyle)
@@ -814,6 +831,7 @@ editTaskByTask conf editMode conn taskToEdit = do
         importTaskRec
         newContent
         taskToEdit.modified_utc
+        taskToEdit.closed_utc
 
 
 -- TODO: Eliminate code duplications with `addTask`

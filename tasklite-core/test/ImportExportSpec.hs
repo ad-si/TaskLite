@@ -36,7 +36,10 @@ import Config (defaultConfig)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
 import ImportExport (getNdjsonLines, insertImportTask)
-import ImportTask (ImportTask (ImportTask, notes, tags, task), setMissingFields)
+import ImportTask (
+  ImportTask (ImportTask, closedUtcWasExplicit, notes, tags, task),
+  setMissingFields,
+ )
 import Note (Note (Note))
 import Task (Task (body, modified_utc, ulid, user), emptyTask)
 import TaskToNote (TaskToNote (TaskToNote))
@@ -277,6 +280,7 @@ spec = do
                     }
               , notes = []
               , tags = []
+              , closedUtcWasExplicit = P.False
               }
 
         case eitherDecode gitHubIssue of
@@ -506,6 +510,7 @@ spec = do
             { task = task
             , notes = [Note "01jczszra25ec48pagzcw5qw6j" "Test note"]
             , tags = []
+            , closedUtcWasExplicit = P.False
             }
 
         taskJson =

@@ -149,6 +149,8 @@ data ImportTask = ImportTask
   { task :: Task
   , notes :: [Note]
   , tags :: [Text]
+  , closedUtcWasExplicit :: P.Bool
+  -- ^ True if closed_utc was explicitly provided, False if implicitly derived
   }
   deriving (Show)
 
@@ -159,6 +161,7 @@ emptyImportTask =
     { task = emptyTask
     , notes = []
     , tags = []
+    , closedUtcWasExplicit = P.False
     }
 
 
@@ -322,7 +325,7 @@ instance FromJSON ImportTask where
     o_end_utc <- o .:? "end_utc"
     end_on <- o .:? "end_on"
     let
-      maybeClosed =
+      maybeExplicitClosed =
         closed
           <|> o_closed_utc
           <|> closed_at
@@ -330,7 +333,8 @@ instance FromJSON ImportTask where
           <|> end
           <|> o_end_utc
           <|> end_on
-          <|> implicitCloseUtcMaybe
+      closedUtcWasExplicit = isJust maybeExplicitClosed
+      maybeClosed = maybeExplicitClosed <|> implicitCloseUtcMaybe
       closed_utc =
         fmap
           (T.pack . timePrint importUtcFormat)
@@ -447,7 +451,7 @@ instance FromJSON ImportTask where
 
     let finalTask = tempTask{Task.ulid = ulid}
 
-    pure $ ImportTask finalTask notes tags
+    pure $ ImportTask finalTask notes tags closedUtcWasExplicit
 
 
 setMissingFields :: ImportTask -> P.IO ImportTask

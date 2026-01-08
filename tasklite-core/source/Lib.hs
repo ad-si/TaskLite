@@ -229,7 +229,7 @@ import FullTask (
  )
 import Hooks (HookResult (message, task), executeHooks, formatHookResult)
 import ImportTask (
-  ImportTask (ImportTask, notes, tags, task),
+  ImportTask (ImportTask, closedUtcWasExplicit, notes, tags, task),
   importTaskToFullTask,
   setMissingFields,
  )
@@ -569,6 +569,7 @@ addTask conf connection bodyWords = do
               }
         , tags = tags
         , notes = [] -- TODO: Add notes to task
+        , closedUtcWasExplicit = False
         }
 
   args <- getArgs
