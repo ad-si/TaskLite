@@ -169,11 +169,22 @@ _1_ =
                 \ADD COLUMN user TEXT"
               ]
           }
-      -- TODO: Fix the invalid create table statement
       MigrateDown ->
         base
           { Migrations.querySet =
-              [ "CREATE TABLE tasks_temp"
+              [ [sql|
+                  CREATE TABLE tasks_temp (
+                    ulid TEXT NOT NULL PRIMARY KEY,
+                    body TEXT NOT NULL,
+                    state TEXT check(state IN ('Done','Obsolete','Deletable'))
+                      NOT NULL DEFAULT 'Done',
+                    due_utc TEXT,
+                    closed_utc TEXT,
+                    modified_utc TEXT NOT NULL,
+                    priority_adjustment REAL,
+                    metadata TEXT
+                  )
+                |]
               , [sql|
                   INSERT INTO tasks_temp
                   SELECT
@@ -188,8 +199,9 @@ _1_ =
                   FROM tasks
                 |]
               , "DROP TABLE tasks"
-              , "ALTER TABLE tasks_temp\n\
-                \RENAME TO tasks"
+              , "ALTER TABLE tasks_temp RENAME TO tasks"
+              , createSetModifiedUtcTrigger
+              , createSetClosedUtcTrigger
               ]
           }
 
@@ -219,8 +231,21 @@ _2_ =
         )
       |]
 
-    -- TODO: Finish query
-    createTempTableQueryDown = Query "CREATE TABLE tasks_temp"
+    createTempTableQueryDown =
+      [sql|
+        CREATE TABLE tasks_temp (
+          ulid TEXT NOT NULL PRIMARY KEY,
+          body TEXT NOT NULL,
+          state TEXT check(state IN ('Done', 'Obsolete', 'Deletable'))
+            NOT NULL DEFAULT 'Done',
+          due_utc TEXT,
+          closed_utc TEXT,
+          modified_utc TEXT NOT NULL,
+          priority_adjustment REAL,
+          metadata TEXT,
+          user TEXT
+        )
+      |]
   in
     \case
       MigrateUp ->
@@ -256,7 +281,11 @@ _2_ =
                   SELECT
                     ulid,
                     body,
-                    state,
+                    CASE
+                      WHEN state = 'Deleted' THEN 'Deletable'
+                      WHEN state IS NULL THEN 'Done'
+                      ELSE state
+                    END AS state,
                     due_utc,
                     closed_utc,
                     modified_utc,
@@ -267,6 +296,8 @@ _2_ =
                 |]
               , "DROP TABLE tasks"
               , "ALTER TABLE tasks_temp RENAME TO tasks"
+              , createSetModifiedUtcTrigger
+              , createSetClosedUtcTrigger
               ]
           }
 
@@ -304,8 +335,21 @@ _3_ =
         )
       |]
 
-    -- TODO: Finish query
-    createTempTableQueryDown = Query "CREATE TABLE tasks_temp"
+    createTempTableQueryDown =
+      [sql|
+        CREATE TABLE tasks_temp (
+          ulid TEXT NOT NULL PRIMARY KEY,
+          body TEXT NOT NULL,
+          state TEXT check(state IN (NULL, 'Done', 'Obsolete', 'Deleted')),
+          due_utc TEXT,
+          sleep_utc TEXT,
+          closed_utc TEXT,
+          modified_utc TEXT NOT NULL,
+          priority_adjustment REAL,
+          metadata TEXT,
+          user TEXT
+        )
+      |]
   in
     \case
       MigrateUp ->
@@ -348,8 +392,12 @@ _3_ =
                   SELECT
                     ulid,
                     body,
-                    state,
+                    CASE
+                      WHEN state = 'Deletable' THEN 'Deleted'
+                      ELSE state
+                    END AS state,
                     due_utc,
+                    awake_utc AS sleep_utc,
                     closed_utc,
                     modified_utc,
                     priority_adjustment,
@@ -359,6 +407,8 @@ _3_ =
                 |]
               , "DROP TABLE tasks"
               , "ALTER TABLE tasks_temp RENAME TO tasks"
+              , createSetModifiedUtcTrigger
+              , createSetClosedUtcTrigger
               ]
           }
 
@@ -473,7 +523,13 @@ _4_ =
                 |]
               ]
           }
-      MigrateDown -> base{Migrations.querySet = []}
+      MigrateDown ->
+        base
+          { Migrations.querySet =
+              [ "DROP VIEW IF EXISTS tags"
+              , "DROP VIEW IF EXISTS tasks_view"
+              ]
+          }
 
 
 hasDuplicates :: (Eq a) => [a] -> Bool
