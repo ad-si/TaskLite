@@ -2,11 +2,11 @@
   "name": "tasklite-webapp",
   "version": "0.4.0.0",
   "dependencies": {
-    "elm": "^0.19.1-5",
-    "elm-format": "^0.8.7"
+    "elm": "^0.19.1-6",
+    "elm-format": "^0.8.8"
   },
   "devDependencies": {
-    "@dillonkearns/elm-graphql": "^4.3.1",
+    "@dillonkearns/elm-graphql": "^4.3.2",
     "create-elm-app": "^5.22.0"
   }
 }

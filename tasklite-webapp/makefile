@@ -13,6 +13,17 @@ start: node_modules
 	npx elm-app start --no-debug --no-browser
 
 
+.PHONY: build
+build: node_modules
+	NODE_OPTIONS=--openssl-legacy-provider \
+	npx elm-app build --no-debug --no-browser
+
+
+.PHONY: generate-api
+generate-api: node_modules
+	npx elm-graphql --skip-elm-format http://localhost:7458/graphql
+
+
 .PHONY: clean
 clean:
 	-rm -rf elm-stuff
