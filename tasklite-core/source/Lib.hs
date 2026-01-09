@@ -2679,37 +2679,35 @@ countTasks conf connection filterExpression = do
       pure $ errorsDoc & fromMaybe (pretty $ P.length (tasks :: [FullTask]))
 
 
+-- | Query a view with an optional limit and format the results
+listFromView ::
+  Config ->
+  DateTime ->
+  Connection ->
+  Text ->
+  Maybe Int ->
+  IO (Doc AnsiStyle)
+listFromView conf now connection viewName limitMb = do
+  let
+    sqlQuery =
+      Query $
+        "SELECT * FROM " <> viewName <> " LIMIT :taskCount"
+    taskCount = case limitMb of
+      Nothing -> -1 -- No limit
+      Just n -> n
+  tasks <- queryNamed connection sqlQuery [":taskCount" := taskCount]
+  formatTasksColor conf connection now (wasListTruncated limitMb tasks) tasks
+
+
 -- TODO: Print number of remaining tasks and how to display them at the bottom
 headTasks :: Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
 headTasks conf now connection availableLinesMb = do
-  let taskCount = do
+  let taskCount =
         let availableLines = availableLinesMb & fromMaybe 0
-        if P.isJust availableLinesMb && availableLines < conf.headCount
-          then availableLines
-          else conf.headCount
-
-  tasks <-
-    queryNamed
-      connection
-      -- TODO: Add `wait_utc` < datetime('now')"
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE closed_utc IS NULL
-        ORDER BY
-          priority DESC,
-          due_utc ASC,
-          ulid DESC
-        LIMIT :taskCount
-      |]
-      [":taskCount" := taskCount]
-
-  formatTasksColor
-    conf
-    connection
-    now
-    (wasListTruncated availableLinesMb tasks)
-    tasks
+         in if P.isJust availableLinesMb && availableLines < conf.headCount
+              then availableLines
+              else conf.headCount
+  listFromView conf now connection "tasks_head" (Just taskCount)
 
 
 newTasks ::
@@ -2727,28 +2725,8 @@ newTasks conf now connection filterExp availableLinesMb = do
     filterMay = listToMaybe parserResults
 
   case filterMay of
-    Nothing -> do
-      tasks <-
-        queryNamed
-          connection
-          [sql|
-            SELECT *
-            FROM tasks_view
-            ORDER BY ulid DESC
-            LIMIT :taskCount
-          |]
-          [ ":taskCount" := case availableLinesMb of
-              Nothing -> -1 -- No limit
-              Just availableLines -> availableLines
-          ]
-
-      formatTasksColor
-        conf
-        connection
-        now
-        (wasListTruncated availableLinesMb tasks)
-        tasks
-    --
+    Nothing ->
+      listFromView conf now connection "tasks_new" availableLinesMb
     Just (filterExps, _) -> do
       let
         ppInvalidFilter = \case
@@ -2779,28 +2757,8 @@ newTasks conf now connection filterExp availableLinesMb = do
 
 listOldTasks ::
   Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
-listOldTasks conf now connection availableLinesMb = do
-  tasks <-
-    queryNamed
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE closed_utc IS NULL
-        ORDER BY ulid ASC
-        LIMIT :taskCount
-      |]
-      [ ":taskCount" := case availableLinesMb of
-          Nothing -> -1 -- No limit
-          Just availableLines -> availableLines
-      ]
-
-  formatTasksColor
-    conf
-    connection
-    now
-    (wasListTruncated availableLinesMb tasks)
-    tasks
+listOldTasks conf now connection =
+  listFromView conf now connection "tasks_old"
 
 
 openTasks ::
@@ -2818,29 +2776,8 @@ openTasks conf now connection filterExpression availableLinesMb = do
     filterMay = listToMaybe parserResults
 
   case filterMay of
-    Nothing -> do
-      (tasks :: [FullTask]) <-
-        queryNamed
-          connection
-          [sql|
-            SELECT *
-            FROM tasks_view
-            WHERE closed_utc IS NULL
-            ORDER BY priority DESC, due_utc ASC, ulid DESC
-            LIMIT :taskCount
-          |]
-          [ ":taskCount" := case availableLinesMb of
-              Nothing -> -1 -- No limit
-              Just availableLines -> availableLines
-          ]
-
-      formatTasksColor
-        conf
-        connection
-        now
-        (wasListTruncated availableLinesMb tasks)
-        tasks
-    --
+    Nothing ->
+      listFromView conf now connection "tasks_open" availableLinesMb
     Just (filterExps, _) -> do
       let
         ppInvalidFilter = \case
@@ -2886,19 +2823,12 @@ modifiedTasks ::
   Maybe Int ->
   IO (Doc AnsiStyle)
 modifiedTasks conf now connection listModifiedFlag availableLinesMb = do
-  tasks <-
-    queryNamed
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        ORDER BY modified_utc Desc
-        LIMIT :taskCount
-      |]
-      [ ":taskCount" := case availableLinesMb of
-          Nothing -> -1 -- No limit
-          Just availableLines -> availableLines
-      ]
+  let
+    sqlQuery = "SELECT * FROM tasks_modified LIMIT :taskCount"
+    taskCount = case availableLinesMb of
+      Nothing -> -1 -- No limit
+      Just n -> n
+  tasks <- queryNamed connection sqlQuery [":taskCount" := taskCount]
 
   let
     filterModified =
@@ -2931,284 +2861,59 @@ modifiedTasks conf now connection listModifiedFlag availableLinesMb = do
 
 overdueTasks ::
   Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
-overdueTasks conf now connection availableLinesMb = do
-  tasks <-
-    queryNamed
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE
-          closed_utc IS NULL AND
-          due_utc < datetime('now')
-        ORDER BY
-          priority DESC,
-          due_utc ASC,
-          ulid Desc
-        LIMIT :taskCount
-      |]
-      [ ":taskCount" := case availableLinesMb of
-          Nothing -> -1 -- No limit
-          Just availableLines -> availableLines
-      ]
-
-  formatTasksColor
-    conf
-    connection
-    now
-    (wasListTruncated availableLinesMb tasks)
-    tasks
+overdueTasks conf now connection =
+  listFromView conf now connection "tasks_overdue"
 
 
 doneTasks :: Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
-doneTasks conf now connection availableLinesMb = do
-  tasks <-
-    queryNamed
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE
-          closed_utc IS NOT NULL AND
-          state == 'Done'
-        ORDER BY closed_utc DESC
-        LIMIT :taskCount
-      |]
-      [ ":taskCount" := case availableLinesMb of
-          Nothing -> -1 -- No limit
-          Just availableLines -> availableLines
-      ]
-
-  formatTasksColor
-    conf
-    connection
-    now
-    (wasListTruncated availableLinesMb tasks)
-    tasks
+doneTasks conf now connection =
+  listFromView conf now connection "tasks_done"
 
 
 obsoleteTasks ::
   Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
-obsoleteTasks conf now connection availableLinesMb = do
-  tasks <-
-    queryNamed
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE
-          closed_utc IS NOT NULL AND
-          state == 'Obsolete'
-        ORDER BY ulid DESC
-        LIMIT :taskCount
-      |]
-      [ ":taskCount" := case availableLinesMb of
-          Nothing -> -1 -- No limit
-          Just availableLines -> availableLines
-      ]
-
-  formatTasksColor
-    conf
-    connection
-    now
-    (wasListTruncated availableLinesMb tasks)
-    tasks
+obsoleteTasks conf now connection =
+  listFromView conf now connection "tasks_obsolete"
 
 
 deletableTasks ::
   Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
-deletableTasks conf now connection availableLinesMb = do
-  tasks <-
-    queryNamed
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE
-          closed_utc IS NOT NULL
-          AND state == 'Deletable'
-        ORDER BY ulid DESC
-        LIMIT :taskCount
-      |]
-      [ ":taskCount" := case availableLinesMb of
-          Nothing -> -1 -- No limit
-          Just availableLines -> availableLines
-      ]
-  formatTasksColor
-    conf
-    connection
-    now
-    (wasListTruncated availableLinesMb tasks)
-    tasks
+deletableTasks conf now connection =
+  listFromView conf now connection "tasks_deletable"
 
 
 listRepeating ::
   Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
-listRepeating conf now connection availableLinesMb = do
-  tasks <-
-    queryNamed
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE repetition_duration IS NOT NULL
-        ORDER BY repetition_duration Desc
-        LIMIT :taskCount
-      |]
-      [ ":taskCount" := case availableLinesMb of
-          Nothing -> -1 -- No limit
-          Just availableLines -> availableLines
-      ]
-
-  formatTasksColor
-    conf
-    connection
-    now
-    (wasListTruncated availableLinesMb tasks)
-    tasks
+listRepeating conf now connection =
+  listFromView conf now connection "tasks_repeating"
 
 
 listRecurring ::
   Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
-listRecurring conf now connection availableLinesMb = do
-  tasks <-
-    queryNamed
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE recurrence_duration IS NOT NULL
-        ORDER BY recurrence_duration DESC
-        LIMIT :taskCount
-      |]
-      [ ":taskCount" := case availableLinesMb of
-          Nothing -> -1 -- No limit
-          Just availableLines -> availableLines
-      ]
-
-  formatTasksColor
-    conf
-    connection
-    now
-    (wasListTruncated availableLinesMb tasks)
-    tasks
+listRecurring conf now connection =
+  listFromView conf now connection "tasks_recurring"
 
 
 listReady ::
   Config -> DateTime -> Connection -> Maybe P.Int -> IO (Doc AnsiStyle)
-listReady conf now connection availableLinesMb = do
-  tasks <-
-    queryNamed
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE
-          (ready_utc IS NULL OR
-            (ready_utc IS NOT NULL AND ready_utc < datetime('now'))
-          ) AND
-          waiting_utc IS NULL AND
-          ready_utc IS NULL AND
-          closed_utc IS NULL
-        ORDER BY
-          priority DESC,
-          due_utc ASC,
-          ulid DESC
-        LIMIT :taskCount
-      |]
-      [ ":taskCount" := case availableLinesMb of
-          Nothing -> -1 -- No limit
-          Just availableLines -> availableLines
-      ]
-
-  formatTasksColor
-    conf
-    connection
-    now
-    (wasListTruncated availableLinesMb tasks)
-    tasks
+listReady conf now connection =
+  listFromView conf now connection "tasks_ready"
 
 
 listWaiting ::
   Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
-listWaiting conf now connection availableLinesMb = do
-  tasks <-
-    queryNamed
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE closed_utc IS NULL
-          AND waiting_utc IS NOT NULL
-          AND (review_utc > datetime('now') OR review_utc IS NULL)
-        ORDER BY waiting_utc DESC
-        LIMIT :taskCount
-      |]
-      [ ":taskCount" := case availableLinesMb of
-          Nothing -> -1 -- No limit
-          Just availableLines -> availableLines
-      ]
-
-  formatTasksColor
-    conf
-    connection
-    now
-    (wasListTruncated availableLinesMb tasks)
-    tasks
+listWaiting conf now connection =
+  listFromView conf now connection "tasks_waiting"
 
 
 listAll :: Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
-listAll conf now connection availableLinesMb = do
-  tasks <-
-    queryNamed
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        ORDER BY ulid ASC
-        LIMIT :taskCount
-      |]
-      [ ":taskCount" := case availableLinesMb of
-          Nothing -> -1 -- No limit
-          Just availableLines -> availableLines
-      ]
-
-  formatTasksColor
-    conf
-    connection
-    now
-    (wasListTruncated availableLinesMb tasks)
-    tasks
+listAll conf now connection =
+  listFromView conf now connection "tasks_all"
 
 
 listNoTag :: Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
-listNoTag conf now connection availableLinesMb = do
-  tasks <-
-    queryNamed
-      connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE
-          closed_utc IS NULL AND
-          tags IS NULL
-        ORDER BY
-          priority DESC,
-          due_utc ASC,
-          ulid DESC
-        LIMIT :taskCount
-      |]
-      [ ":taskCount" := case availableLinesMb of
-          Nothing -> -1 -- No limit
-          Just availableLines -> availableLines
-      ]
-
-  formatTasksColor
-    conf
-    connection
-    now
-    (wasListTruncated availableLinesMb tasks)
-    tasks
+listNoTag conf now connection =
+  listFromView conf now connection "tasks_notag"
 
 
 getWithTag ::

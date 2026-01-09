@@ -653,6 +653,195 @@ _5_ =
           }
 
 
+-- | Migration 6: Add SQL views for list commands
+_6_ :: MigrateDirection -> Migration
+_6_ =
+  let
+    base =
+      Migration
+        { id = UserVersion 6
+        , querySet = []
+        }
+  in
+    \case
+      MigrateUp ->
+        base
+          { Migrations.querySet =
+              [ -- tasks_head: Most important open tasks by priority
+                [sql|
+                  CREATE VIEW tasks_head AS
+                  SELECT *
+                  FROM tasks_view
+                  WHERE closed_utc IS NULL
+                  ORDER BY
+                    priority DESC,
+                    due_utc ASC,
+                    ulid DESC
+                |]
+              , -- tasks_open: All open tasks by priority
+                [sql|
+                  CREATE VIEW tasks_open AS
+                  SELECT *
+                  FROM tasks_view
+                  WHERE closed_utc IS NULL
+                  ORDER BY
+                    priority DESC,
+                    due_utc ASC,
+                    ulid DESC
+                |]
+              , -- tasks_overdue: Open tasks past their due date
+                [sql|
+                  CREATE VIEW tasks_overdue AS
+                  SELECT *
+                  FROM tasks_view
+                  WHERE
+                    closed_utc IS NULL
+                    AND due_utc < datetime('now')
+                  ORDER BY
+                    priority DESC,
+                    due_utc ASC,
+                    ulid DESC
+                |]
+              , -- tasks_done: Completed tasks
+                [sql|
+                  CREATE VIEW tasks_done AS
+                  SELECT *
+                  FROM tasks_view
+                  WHERE
+                    closed_utc IS NOT NULL
+                    AND state == 'Done'
+                  ORDER BY closed_utc DESC
+                |]
+              , -- tasks_obsolete: Obsolete tasks
+                [sql|
+                  CREATE VIEW tasks_obsolete AS
+                  SELECT *
+                  FROM tasks_view
+                  WHERE
+                    closed_utc IS NOT NULL
+                    AND state == 'Obsolete'
+                  ORDER BY ulid DESC
+                |]
+              , -- tasks_deletable: Tasks marked for deletion
+                [sql|
+                  CREATE VIEW tasks_deletable AS
+                  SELECT *
+                  FROM tasks_view
+                  WHERE
+                    closed_utc IS NOT NULL
+                    AND state == 'Deletable'
+                  ORDER BY ulid DESC
+                |]
+              , -- tasks_waiting: Tasks waiting for external input
+                [sql|
+                  CREATE VIEW tasks_waiting AS
+                  SELECT *
+                  FROM tasks_view
+                  WHERE
+                    closed_utc IS NULL
+                    AND waiting_utc IS NOT NULL
+                    AND (review_utc > datetime('now') OR review_utc IS NULL)
+                  ORDER BY waiting_utc DESC
+                |]
+              , -- tasks_ready: Tasks ready to be worked on (not waiting, not scheduled)
+                [sql|
+                  CREATE VIEW tasks_ready AS
+                  SELECT *
+                  FROM tasks_view
+                  WHERE
+                    (ready_utc IS NULL
+                      OR (ready_utc IS NOT NULL AND ready_utc < datetime('now'))
+                    )
+                    AND waiting_utc IS NULL
+                    AND ready_utc IS NULL
+                    AND closed_utc IS NULL
+                  ORDER BY
+                    priority DESC,
+                    due_utc ASC,
+                    ulid DESC
+                |]
+              , -- tasks_repeating: Tasks with repetition duration set
+                [sql|
+                  CREATE VIEW tasks_repeating AS
+                  SELECT *
+                  FROM tasks_view
+                  WHERE repetition_duration IS NOT NULL
+                  ORDER BY repetition_duration DESC
+                |]
+              , -- tasks_recurring: Tasks with recurrence duration set
+                [sql|
+                  CREATE VIEW tasks_recurring AS
+                  SELECT *
+                  FROM tasks_view
+                  WHERE recurrence_duration IS NOT NULL
+                  ORDER BY recurrence_duration DESC
+                |]
+              , -- tasks_new: All tasks by newest first (ULID descending)
+                [sql|
+                  CREATE VIEW tasks_new AS
+                  SELECT *
+                  FROM tasks_view
+                  ORDER BY ulid DESC
+                |]
+              , -- tasks_old: Oldest open tasks first
+                [sql|
+                  CREATE VIEW tasks_old AS
+                  SELECT *
+                  FROM tasks_view
+                  WHERE closed_utc IS NULL
+                  ORDER BY ulid ASC
+                |]
+              , -- tasks_all: All tasks by creation order
+                [sql|
+                  CREATE VIEW tasks_all AS
+                  SELECT *
+                  FROM tasks_view
+                  ORDER BY ulid ASC
+                |]
+              , -- tasks_notag: Open tasks without any tags
+                [sql|
+                  CREATE VIEW tasks_notag AS
+                  SELECT *
+                  FROM tasks_view
+                  WHERE
+                    closed_utc IS NULL
+                    AND tags IS NULL
+                  ORDER BY
+                    priority DESC,
+                    due_utc ASC,
+                    ulid DESC
+                |]
+              , -- tasks_modified: All tasks by modification time
+                [sql|
+                  CREATE VIEW tasks_modified AS
+                  SELECT *
+                  FROM tasks_view
+                  ORDER BY modified_utc DESC
+                |]
+              ]
+          }
+      MigrateDown ->
+        base
+          { Migrations.querySet =
+              [ "DROP VIEW IF EXISTS tasks_head"
+              , "DROP VIEW IF EXISTS tasks_open"
+              , "DROP VIEW IF EXISTS tasks_overdue"
+              , "DROP VIEW IF EXISTS tasks_done"
+              , "DROP VIEW IF EXISTS tasks_obsolete"
+              , "DROP VIEW IF EXISTS tasks_deletable"
+              , "DROP VIEW IF EXISTS tasks_waiting"
+              , "DROP VIEW IF EXISTS tasks_ready"
+              , "DROP VIEW IF EXISTS tasks_repeating"
+              , "DROP VIEW IF EXISTS tasks_recurring"
+              , "DROP VIEW IF EXISTS tasks_new"
+              , "DROP VIEW IF EXISTS tasks_old"
+              , "DROP VIEW IF EXISTS tasks_all"
+              , "DROP VIEW IF EXISTS tasks_notag"
+              , "DROP VIEW IF EXISTS tasks_modified"
+              ]
+          }
+
+
 hasDuplicates :: (Eq a) => [a] -> Bool
 hasDuplicates [] = False
 hasDuplicates (x : xs) =
@@ -716,7 +905,7 @@ runMigrations _ connection = do
       IO [UserVersion]
 
   let
-    migrations = [_0_, _1_, _2_, _3_, _4_, _5_]
+    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_]
 
     migrationsUp = fmap ($ MigrateUp) migrations
     (UserVersion userVersionMax) =
