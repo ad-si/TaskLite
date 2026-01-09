@@ -1743,7 +1743,7 @@ randomTask conf connection filterExpression = do
 findTask :: Config -> Connection -> Text -> IO (Doc AnsiStyle)
 findTask conf connection aPattern = do
   let sqlFuzzyPattern = aPattern & T.chunksOf 1 & T.intercalate (T.pack "%")
-  tasksFuzzy :: [(Text, Text, Maybe [Text], Maybe Text)] <-
+  tasksFuzzy :: [(Text, Text, Maybe Text, Maybe Text)] <-
     query
       connection
       [sql|
@@ -1801,7 +1801,7 @@ findTask conf connection aPattern = do
                         , score = 0
                         }
                   )
-          , matchFunc (maybe "" unwords mbNotes)
+          , matchFunc (fromMaybe "" mbNotes)
           , -- TODO: Find good way to include tags
             -- , matchFunc (maybe "" unwords mbTags)
             matchFunc (metaNorm mbMetadata)

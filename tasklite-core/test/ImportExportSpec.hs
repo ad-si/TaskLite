@@ -40,7 +40,7 @@ import ImportTask (
   ImportTask (ImportTask, closedUtcWasExplicit, notes, tags, task),
   setMissingFields,
  )
-import Note (Note (Note))
+import Note (Note (Note, body, ulid))
 import Task (Task (body, modified_utc, ulid, user), emptyTask)
 import TaskToNote (TaskToNote (TaskToNote))
 import TaskToNote qualified
@@ -161,6 +161,9 @@ spec = do
                 updatedTask.ulid `shouldNotBe` ""
                 updatedTask.modified_utc `shouldNotBe` ""
                 updatedTask.user `shouldNotBe` ""
+                let updatedTaskNoteUlid = case updatedTask.notes of
+                      Just [note] -> note.ulid
+                      _ -> ""
                 updatedTask
                   { FullTask.ulid = ""
                   , FullTask.modified_utc = ""
@@ -168,8 +171,8 @@ spec = do
                   }
                   `shouldBe` emptyFullTask
                     { FullTask.body = "Just a test"
-                    , -- TODO: Fix after notes are returned as a JSON array
-                      FullTask.notes = Just []
+                    , FullTask.notes =
+                        Just [Note{ulid = updatedTaskNoteUlid, body = "A note"}]
                     , FullTask.priority = Just 1.0
                     , FullTask.metadata = case decode jsonTask of
                         Just (Object keyMap) ->
@@ -493,6 +496,138 @@ spec = do
                 task2.body `shouldBe` "Inline tags"
                 task2.tags `shouldBe` Just ["tag1", "tag2"]
               _ -> P.die "Expected exactly 2 tasks"
+
+    it "correctly parses multiple notes as JSON array with ulid and body" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          jsonTask =
+            "{\"body\":\"Task with multiple notes\", \
+            \\"notes\":[\"First note\", \"Second note\", \"Third note\"]}"
+
+        case eitherDecodeStrictText jsonTask of
+          Left error ->
+            P.die $ "Error decoding JSON: " <> show error
+          Right importTaskRecord -> do
+            _ <- insertImportTask conf memConn importTaskRecord
+            tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+
+            case tasks of
+              [insertedTask] -> do
+                insertedTask.body `shouldBe` "Task with multiple notes"
+                -- Verify notes is a Just with 3 notes
+                case insertedTask.notes of
+                  Just notesList -> do
+                    P.length notesList `shouldBe` 3
+                    -- Each note should have a ulid and body
+                    P.forM_ (P.zip notesList ["First note", "Second note", "Third note"]) $
+                      \(note, expectedBody) -> do
+                        note.ulid `shouldNotBe` ""
+                        note.body `shouldBe` expectedBody
+                  Nothing -> P.die "Expected notes to be Just"
+              _ -> P.die "Expected exactly one task"
+
+    it "correctly parses notes containing special characters" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          -- Notes with commas, quotes, and other special characters
+          jsonTask =
+            "{\"body\":\"Task with special notes\", \
+            \\"notes\":[\"Note with, comma\", \"Note with \\\"quotes\\\"\", \"Note: with colon\"]}"
+
+        case eitherDecodeStrictText jsonTask of
+          Left error ->
+            P.die $ "Error decoding JSON: " <> show error
+          Right importTaskRecord -> do
+            _ <- insertImportTask conf memConn importTaskRecord
+            tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+
+            case tasks of
+              [insertedTask] -> do
+                case insertedTask.notes of
+                  Just [note1, note2, note3] -> do
+                    note1.body `shouldBe` "Note with, comma"
+                    note2.body `shouldBe` "Note with \"quotes\""
+                    note3.body `shouldBe` "Note: with colon"
+                  Just _ -> P.die "Expected exactly 3 notes"
+                  Nothing -> P.die "Expected notes to be Just"
+              _ -> P.die "Expected exactly one task"
+
+    it "correctly parses multiple tags as JSON array" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          jsonTask =
+            "{\"body\":\"Task with multiple tags\", \
+            \\"tags\":[\"urgent\", \"work\", \"project-alpha\", \"2024\"]}"
+
+        case eitherDecodeStrictText jsonTask of
+          Left error ->
+            P.die $ "Error decoding JSON: " <> show error
+          Right importTaskRecord -> do
+            _ <- insertImportTask conf memConn importTaskRecord
+            tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+
+            case tasks of
+              [insertedTask] -> do
+                insertedTask.body `shouldBe` "Task with multiple tags"
+                -- Tags are sorted alphabetically in the database
+                case insertedTask.tags of
+                  Just tagsList -> do
+                    P.length tagsList `shouldBe` 4
+                    -- Verify all tags are present (order may vary due to JSON array)
+                    P.sort tagsList `shouldBe` ["2024", "project-alpha", "urgent", "work"]
+                  Nothing -> P.die "Expected tags to be Just"
+              _ -> P.die "Expected exactly one task"
+
+    it "handles task with both notes and tags as JSON arrays" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          jsonTask =
+            "{\"body\":\"Full task\", \
+            \\"tags\":[\"important\", \"review\"], \
+            \\"notes\":[\"Remember to check\", \"Follow up needed\"]}"
+
+        case eitherDecodeStrictText jsonTask of
+          Left error ->
+            P.die $ "Error decoding JSON: " <> show error
+          Right importTaskRecord -> do
+            _ <- insertImportTask conf memConn importTaskRecord
+            tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+
+            case tasks of
+              [insertedTask] -> do
+                insertedTask.body `shouldBe` "Full task"
+                -- Verify tags
+                case insertedTask.tags of
+                  Just tagsList -> do
+                    P.length tagsList `shouldBe` 2
+                    P.sort tagsList `shouldBe` ["important", "review"]
+                  Nothing -> P.die "Expected tags to be Just"
+                -- Verify notes
+                case insertedTask.notes of
+                  Just [note1, note2] -> do
+                    note1.body `shouldBe` "Remember to check"
+                    note2.body `shouldBe` "Follow up needed"
+                  Just _ -> P.die "Expected exactly 2 notes"
+                  Nothing -> P.die "Expected notes to be Just"
+              _ -> P.die "Expected exactly one task"
+
+    it "returns Nothing for tasks with no notes or tags" $ do
+      withMemoryDb conf $ \memConn -> do
+        let jsonTask = "{\"body\":\"Simple task\"}"
+
+        case eitherDecodeStrictText jsonTask of
+          Left error ->
+            P.die $ "Error decoding JSON: " <> show error
+          Right importTaskRecord -> do
+            _ <- insertImportTask conf memConn importTaskRecord
+            tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+
+            case tasks of
+              [insertedTask] -> do
+                insertedTask.body `shouldBe` "Simple task"
+                insertedTask.tags `shouldBe` Nothing
+                insertedTask.notes `shouldBe` Nothing
+              _ -> P.die "Expected exactly one task"
 
   describe "Export" $ do
     it "exports several tasks as NDJSON including notes" $ do

@@ -14,7 +14,13 @@ import Options.Applicative (
   parserFailure,
   renderFailure,
  )
-import Prettyprinter (Doc, annotate, defaultLayoutOptions, layoutPretty, pretty)
+import Prettyprinter (
+  Doc,
+  annotate,
+  defaultLayoutOptions,
+  layoutPretty,
+  pretty,
+ )
 import Prettyprinter.Render.Terminal (AnsiStyle, Color (Red), bold, color)
 import Prettyprinter.Render.Text qualified as TextRender
 import System.IO (hClose, hGetContents, hPutStr)

@@ -413,6 +413,80 @@ _3_ =
           }
 
 
+-- | View definition for tasks_view in migration 4 (using group_concat)
+tasksViewQuery_v4 :: Query
+tasksViewQuery_v4 =
+  [sql|
+    CREATE VIEW tasks_view AS
+    SELECT
+      tasks.ulid AS ulid,
+      tasks.body AS body,
+      tasks.modified_utc AS modified_utc,
+      tasks.awake_utc AS awake_utc,
+      tasks.ready_utc AS ready_utc,
+      tasks.waiting_utc AS waiting_utc,
+      tasks.review_utc AS review_utc,
+      tasks.due_utc AS due_utc,
+      tasks.closed_utc AS closed_utc,
+      tasks.state AS state,
+      tasks.group_ulid AS group_ulid,
+      tasks.repetition_duration AS repetition_duration,
+      tasks.recurrence_duration AS recurrence_duration,
+      group_concat(DISTINCT task_to_tag.tag) AS tags,
+      group_concat(DISTINCT task_to_note.note) AS notes,
+      ifnull(tasks.priority_adjustment, 0.0)
+        + CASE
+            WHEN awake_utc IS NULL THEN 0.0
+            WHEN awake_utc >= datetime('now') THEN -5.0
+            WHEN awake_utc >= datetime('now', '-1 days') THEN 1.0
+            WHEN awake_utc >= datetime('now', '-2 days') THEN 2.0
+            WHEN awake_utc >= datetime('now', '-5 days') THEN 5.0
+            WHEN awake_utc < datetime('now', '-5 days') THEN 9.0
+          END
+        + CASE
+            WHEN waiting_utc IS NULL THEN 0.0
+            WHEN waiting_utc >= datetime('now') THEN 0.0
+            WHEN waiting_utc < datetime('now') THEN -10.0
+          END
+        + CASE
+            WHEN review_utc IS NULL THEN 0.0
+            WHEN review_utc >= datetime('now') THEN 0.0
+            WHEN review_utc < datetime('now') THEN 20.0
+          END
+        + CASE
+            WHEN due_utc IS NULL THEN 0.0
+            WHEN due_utc >= datetime('now', '+24 days') THEN 0.0
+            WHEN due_utc >= datetime('now', '+6 days') THEN 3.0
+            WHEN due_utc >= datetime('now') THEN 6.0
+            WHEN due_utc >= datetime('now', '-6 days') THEN 9.0
+            WHEN due_utc >= datetime('now', '-24 days') THEN 12.0
+            WHEN due_utc < datetime('now', '-24 days') THEN 15.0
+          END
+        + CASE
+            WHEN state IS NULL THEN 0.0
+            WHEN state == 'Done' THEN 0.0
+            WHEN state == 'Obsolete' THEN -1.0
+            WHEN state == 'Deletable' THEN -10.0
+          END
+        + CASE count(task_to_note.note)
+            WHEN 0 THEN 0.0
+            ELSE 1.0
+          END
+        + CASE count(task_to_tag.tag)
+            WHEN 0 THEN 0.0
+            ELSE 2.0
+          END
+        AS priority,
+      tasks.user AS user,
+      tasks.metadata AS metadata
+    FROM
+      tasks
+      LEFT JOIN task_to_tag ON tasks.ulid == task_to_tag.task_ulid
+      LEFT JOIN task_to_note ON tasks.ulid == task_to_note.task_ulid
+    GROUP BY tasks.ulid
+  |]
+
+
 _4_ :: MigrateDirection -> Migration
 _4_ =
   let
@@ -426,7 +500,59 @@ _4_ =
       MigrateUp ->
         base
           { Migrations.querySet =
-              [ [sql|
+              [ tasksViewQuery_v4
+              , [sql|
+                  CREATE VIEW tags AS
+                  SELECT
+                    task_to_tag_1.tag,
+                    (count(task_to_tag_1.tag) - ifnull(closed_count, 0))
+                      AS "open",
+                    ifnull(closed_count, 0) AS closed,
+                    round(
+                      cast(ifnull(closed_count, 0) AS REAL) /
+                        count(task_to_tag_1.tag),
+                      6
+                    ) AS progress
+                  FROM
+                    task_to_tag AS task_to_tag_1
+                    LEFT JOIN (
+                      SELECT tag, count(tasks.ulid) AS closed_count
+                      FROM tasks
+                      LEFT JOIN task_to_tag
+                      ON tasks.ulid IS task_to_tag.task_ulid
+                      WHERE closed_utc IS NOT NULL
+                      GROUP BY tag
+                    ) AS task_to_tag_2
+                    ON task_to_tag_1.tag IS task_to_tag_2.tag
+                  GROUP BY task_to_tag_1.tag
+                  ORDER BY task_to_tag_1.tag ASC
+                |]
+              ]
+          }
+      MigrateDown ->
+        base
+          { Migrations.querySet =
+              [ "DROP VIEW IF EXISTS tags"
+              , "DROP VIEW IF EXISTS tasks_view"
+              ]
+          }
+
+
+_5_ :: MigrateDirection -> Migration
+_5_ =
+  let
+    base =
+      Migration
+        { id = UserVersion 5
+        , querySet = []
+        }
+  in
+    \case
+      MigrateUp ->
+        base
+          { Migrations.querySet =
+              [ "DROP VIEW IF EXISTS tasks_view"
+              , [sql|
                   CREATE VIEW tasks_view AS
                   SELECT
                     tasks.ulid AS ulid,
@@ -442,8 +568,24 @@ _4_ =
                     tasks.group_ulid AS group_ulid,
                     tasks.repetition_duration AS repetition_duration,
                     tasks.recurrence_duration AS recurrence_duration,
-                    group_concat(DISTINCT task_to_tag.tag) AS tags,
-                    group_concat(DISTINCT task_to_note.note) AS notes,
+                    nullif(
+                      (
+                        SELECT json_group_array(task_to_tag.tag)
+                        FROM task_to_tag
+                        WHERE task_to_tag.task_ulid == tasks.ulid
+                      ),
+                      '[]'
+                    ) AS tags,
+                    nullif(
+                      (
+                        SELECT json_group_array(
+                          json_object('ulid', task_to_note.ulid, 'body', task_to_note.note)
+                        )
+                        FROM task_to_note
+                        WHERE task_to_note.task_ulid == tasks.ulid
+                      ),
+                      '[]'
+                    ) AS notes,
                     ifnull(tasks.priority_adjustment, 0.0)
                       + CASE
                           WHEN awake_utc IS NULL THEN 0.0
@@ -478,12 +620,20 @@ _4_ =
                           WHEN state == 'Obsolete' THEN -1.0
                           WHEN state == 'Deletable' THEN -10.0
                         END
-                      + CASE count(task_to_note.note)
-                          WHEN 0 THEN 0.0
+                      + CASE
+                          WHEN (
+                            SELECT count(task_to_note.note)
+                            FROM task_to_note
+                            WHERE task_to_note.task_ulid == tasks.ulid
+                          ) == 0 THEN 0.0
                           ELSE 1.0
                         END
-                      + CASE count(task_to_tag.tag)
-                          WHEN 0 THEN 0.0
+                      + CASE
+                          WHEN (
+                            SELECT count(task_to_tag.tag)
+                            FROM task_to_tag
+                            WHERE task_to_tag.task_ulid == tasks.ulid
+                          ) == 0 THEN 0.0
                           ELSE 2.0
                         END
                       AS priority,
@@ -491,43 +641,14 @@ _4_ =
                     tasks.metadata AS metadata
                   FROM
                     tasks
-                    LEFT JOIN task_to_tag ON tasks.ulid == task_to_tag.task_ulid
-                    LEFT JOIN task_to_note ON tasks.ulid == task_to_note.task_ulid
-                  GROUP BY tasks.ulid
-                |]
-              , [sql|
-                  CREATE VIEW tags AS
-                  SELECT
-                    task_to_tag_1.tag,
-                    (count(task_to_tag_1.tag) - ifnull(closed_count, 0))
-                      AS "open",
-                    ifnull(closed_count, 0) AS closed,
-                    round(
-                      cast(ifnull(closed_count, 0) AS REAL) /
-                        count(task_to_tag_1.tag),
-                      6
-                    ) AS progress
-                  FROM
-                    task_to_tag AS task_to_tag_1
-                    LEFT JOIN (
-                      SELECT tag, count(tasks.ulid) AS closed_count
-                      FROM tasks
-                      LEFT JOIN task_to_tag
-                      ON tasks.ulid IS task_to_tag.task_ulid
-                      WHERE closed_utc IS NOT NULL
-                      GROUP BY tag
-                    ) AS task_to_tag_2
-                    ON task_to_tag_1.tag IS task_to_tag_2.tag
-                  GROUP BY task_to_tag_1.tag
-                  ORDER BY task_to_tag_1.tag ASC
                 |]
               ]
           }
       MigrateDown ->
         base
           { Migrations.querySet =
-              [ "DROP VIEW IF EXISTS tags"
-              , "DROP VIEW IF EXISTS tasks_view"
+              [ "DROP VIEW IF EXISTS tasks_view"
+              , tasksViewQuery_v4
               ]
           }
 
@@ -595,7 +716,7 @@ runMigrations _ connection = do
       IO [UserVersion]
 
   let
-    migrations = [_0_, _1_, _2_, _3_, _4_]
+    migrations = [_0_, _1_, _2_, _3_, _4_, _5_]
 
     migrationsUp = fmap ($ MigrateUp) migrations
     (UserVersion userVersionMax) =

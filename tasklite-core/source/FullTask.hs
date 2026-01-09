@@ -7,7 +7,8 @@ module FullTask where
 
 import Protolude (
   Applicative ((<*>)),
-  Eq ((==)),
+  Either (Left, Right),
+  Eq,
   Float,
   Generic,
   Hashable,
@@ -24,7 +25,12 @@ import Protolude (
   (<>),
  )
 
-import Data.Aeson as Aeson (ToJSON, Value (Object))
+import Data.Aeson as Aeson (
+  FromJSON,
+  ToJSON,
+  Value (Object),
+  eitherDecodeStrictText,
+ )
 import Data.Aeson.Text as Aeson (encodeToLazyText)
 import Data.Csv as Csv (
   DefaultOrdered,
@@ -32,18 +38,16 @@ import Data.Csv as Csv (
   ToNamedRecord,
   ToRecord,
  )
-import Data.Text as T (Text, dropEnd, intercalate, split, splitOn)
+import Data.Text as T (Text, dropEnd, intercalate, unpack)
 import Data.Yaml as Yaml (encode)
 import Database.SQLite.Simple (
   FromRow (..),
   Query,
-  ResultError (ConversionFailed),
   SQLData (SQLNull, SQLText),
   field,
  )
-import Database.SQLite.Simple.FromField (FromField (..), fieldData, returnError)
+import Database.SQLite.Simple.FromField (FieldParser, fieldData)
 import Database.SQLite.Simple.FromRow (fieldWith)
-import Database.SQLite.Simple.Internal (Field (Field))
 import Database.SQLite.Simple.Ok (Ok (Errors, Ok))
 import Database.SQLite.Simple.QQ (sql)
 import GHC.Exception (errorCallException)
@@ -91,6 +95,25 @@ data FullTask = FullTask
   deriving (Generic, Show, Eq)
 
 
+-- | Parse a JSON array field from SQLite, returning Nothing for NULL values
+parseJsonArrayField :: (FromJSON a) => Text -> FieldParser (Maybe [a])
+parseJsonArrayField fieldName value = case fieldData value of
+  SQLText txt ->
+    case Aeson.eitherDecodeStrictText txt of
+      Right parsed -> Ok (Just parsed)
+      Left err ->
+        Errors
+          [ errorCallException $
+              "Failed to parse " <> T.unpack fieldName <> " JSON array: " <> err
+          ]
+  SQLNull -> Ok Nothing
+  val ->
+    Errors
+      [ errorCallException $
+          "Expected a string for " <> T.unpack fieldName <> ", but got: " <> show val
+      ]
+
+
 -- For conversion from SQLite with SQLite.Simple
 instance FromRow FullTask where
   fromRow =
@@ -108,52 +131,14 @@ instance FromRow FullTask where
       <*> field
       <*> field
       <*> field
-      -- Tags
-      <*> fieldWith
-        ( \value -> case fieldData value of
-            SQLText txt ->
-              -- Parse tags as a comma-separated list
-              -- TODO: Parse tags as a JSON array
-              Ok (Just (T.splitOn "," txt))
-            SQLNull -> Ok Nothing
-            val ->
-              Errors
-                [ errorCallException $
-                    "Expected a string, but got: " <> show val
-                ]
-        )
-      -- Notes
-      <*> fieldWith
-        ( \value -> case fieldData value of
-            SQLText _txt ->
-              -- TODO: Parse notes as a JSON array
-              -- Must return a `Just` to signal that notes exist
-              Ok (Just [])
-            SQLNull -> Ok Nothing
-            val ->
-              Errors
-                [ errorCallException $
-                    "Expected a string, but got: " <> show val
-                ]
-        )
+      <*> fieldWith (parseJsonArrayField "tags")
+      <*> fieldWith (parseJsonArrayField "notes")
       <*> field
       <*> field
       <*> ( field <&> \case
               Just (Object obj) -> Just $ Object obj
               _ -> Nothing
           )
-
-
-instance FromField [Text] where
-  fromField (Field (SQLText txt) _) = Ok $ split (== ',') txt
-  fromField f = returnError ConversionFailed f "expecting SQLText column type"
-
-
-instance FromField [Note] where
-  fromField (Field (SQLText txt) _) =
-    let notes = split (== ',') txt
-    in  Ok $ notes <&> Note ""
-  fromField f = returnError ConversionFailed f "expecting SQLText column type"
 
 
 instance Csv.ToField [Text] where
