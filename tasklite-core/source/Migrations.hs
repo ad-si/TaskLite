@@ -45,7 +45,6 @@ import Database.SQLite.Simple (
  )
 import Database.SQLite.Simple.QQ (sql)
 import Prettyprinter (Doc, Pretty (pretty), hardline)
-import FullTask (FullTask(awake_utc, review_utc))
 
 
 newtype UserVersion = UserVersion Int
@@ -668,18 +667,7 @@ _6_ =
       MigrateUp ->
         base
           { Migrations.querySet =
-              [ -- tasks_head: Most important open tasks by priority
-                [sql|
-                  CREATE VIEW tasks_head AS
-                  SELECT *
-                  FROM tasks_view
-                  WHERE closed_utc IS NULL
-                  ORDER BY
-                    priority DESC,
-                    due_utc ASC,
-                    ulid DESC
-                |]
-              , -- tasks_open: All open tasks by priority
+              [ -- tasks_open: All open tasks by priority
                 [sql|
                   CREATE VIEW tasks_open AS
                   SELECT *
@@ -829,8 +817,7 @@ _6_ =
       MigrateDown ->
         base
           { Migrations.querySet =
-              [ "DROP VIEW IF EXISTS tasks_head"
-              , "DROP VIEW IF EXISTS tasks_open"
+              [ "DROP VIEW IF EXISTS tasks_open"
               , "DROP VIEW IF EXISTS tasks_overdue"
               , "DROP VIEW IF EXISTS tasks_done"
               , "DROP VIEW IF EXISTS tasks_obsolete"

@@ -2707,7 +2707,7 @@ headTasks conf now connection availableLinesMb = do
         in  if P.isJust availableLinesMb && availableLines < conf.headCount
               then availableLines
               else conf.headCount
-  listFromView conf now connection "tasks_head" (Just taskCount)
+  listFromView conf now connection "tasks_open" (Just taskCount)
 
 
 newTasks ::
