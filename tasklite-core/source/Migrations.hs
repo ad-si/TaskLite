@@ -45,6 +45,7 @@ import Database.SQLite.Simple (
  )
 import Database.SQLite.Simple.QQ (sql)
 import Prettyprinter (Doc, Pretty (pretty), hardline)
+import FullTask (FullTask(awake_utc, review_utc))
 
 
 newtype UserVersion = UserVersion Int
@@ -743,18 +744,23 @@ _6_ =
                     AND (review_utc > datetime('now') OR review_utc IS NULL)
                   ORDER BY waiting_utc DESC
                 |]
-              , -- tasks_ready: Tasks ready to be worked on (not waiting, not scheduled)
+              , -- tasks_ready: Tasks ready to be worked on
                 [sql|
                   CREATE VIEW tasks_ready AS
                   SELECT *
                   FROM tasks_view
                   WHERE
-                    (ready_utc IS NULL
-                      OR (ready_utc IS NOT NULL AND ready_utc < datetime('now'))
+                    closed_utc IS NULL
+                    AND (
+                      review_utc <= datetime('now')
+                      OR ready_utc <= datetime('now')
+                      OR (
+                        ready_utc IS NULL
+                        AND (awake_utc IS NULL OR awake_utc <= datetime('now'))
+                        AND (waiting_utc IS NULL OR waiting_utc > datetime('now'))
+                        AND (review_utc IS NULL OR review_utc > datetime('now'))
+                      )
                     )
-                    AND waiting_utc IS NULL
-                    AND ready_utc IS NULL
-                    AND closed_utc IS NULL
                   ORDER BY
                     priority DESC,
                     due_utc ASC,

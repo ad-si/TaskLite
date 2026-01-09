@@ -10,18 +10,27 @@ There are primary, secondary, and tertiary states.
 - `Open` - Waits to be done
 - `Closed` - Nothing left to be done
 
-**9 exclusive secondary states:**
+**8 secondary states:**
 
-- `Asleep` - Is hidden because it's not relevant yet
-- `Awake` - Has become relevant or will become soon
-- `Ready` - Is ready to be done (similar to Open)
-- `Waiting` - It's still unclear if the task needs to be done or really has been
-    done. Regular checks are necessary until situation clears up.
+They are not fully exclusive, as a task that should be reviewed is also ready.
+The info command, however, only shows the most relevant one.
+
+- `Asleep` - Is hidden because it's not relevant yet. \
+    E.g. the parcel can only be sent after `awake_utc`.
+- `Awake` - Has become relevant or will become soon. \
+    E.g. the parcel could be sent now.
+- `Ready` - Is now ready to be done and should be started as soon as possible. \
+    E.g. the parcel should be sent now.
+- `Waiting` -
+    It is unclear if the task really has been done.
+    Regular checks are necessary until situation clears up. \
+    E.g. the parcel was sent and waiting for confirmation of receipt.
 - `Review` - It's necessary to check if the task can finally be started or
-    if it has finally been completed.
-- `Done` - Has been done
-- `Obsolete` - Has become obsolete or impossible to finish
-- `Deletable` - Not needed anymore and can be deleted (item in the trash)
+    if it has finally been completed. \
+    E.g. investigate if the parcel has been sent or received.
+- `Done` - Has been done.
+- `Obsolete` - Has become obsolete or impossible to finish.
+- `Deletable` - Not needed anymore and can be deleted (item in the trash).
 
 <!--
 TODO: Add Blocked
@@ -37,16 +46,16 @@ Table row:
 
 State\Field|`awake_utc`|`ready_utc`|`waiting_utc`|`review_utc`|`closed_utc`|`state`
 -----------|:---------:|:---------:|:----------:|:---------:|:--------:|:------:
-**`Open`**   |   ❔      |    ❔     |   ❔    |    ❔     |  ❌  |    ❌
-`└─Asleep`   | > now     |> now or ❌|   ❌    |    ❌     |  ❌  |    ❌
-`└─Awake`    | < now     |> now or ❌|   ❌    |    ❌     |  ❌  |    ❌
-`└─Ready`    |< now or ❌| < now     |   ❌    |    ❌     |  ❌  |    ❌
-`└─Waiting`  |   ❔      |    ❔    |   < now  |> now or ❌|  ❌  |    ❌
-`└─Review`   |   ❔      |    ❔    |    ❔    | < now     |  ❌  |    ❌
-**`Closed`** |   ❔      |    ❔    |    ❔    |    ❔     |  ✅  |    ❔
-`└─Done`     |   ❔      |    ❔    |    ❔    |    ❔     |  ✅  |`Done`
-`└─Obsolete` |   ❔      |    ❔    |    ❔    |    ❔     |  ✅  |`Obsolete`
-`└─Deletable`|   ❔      |    ❔    |    ❔    |    ❔     |  ✅  |`Deletable`
+**`Open`**   |   ❔       |    ❔      |   ❔    |    ❔     |  ❌   |    ❌
+`└─Asleep`   | > now      | > now or ❌|   ❌    |    ❌     |  ❌   |    ❌
+`└─Awake`    | < now      | > now or ❌|   ❌    |    ❌     |  ❌   |    ❌
+`└─Ready`    | < now or ❌| < now      |   ❌    | < now or ❌|  ❌  |    ❌
+`└─Waiting`  |   ❔       |    ❔      |   < now | > now or ❌|  ❌  |    ❌
+`└─Review`   |   ❔       |    ❔      |    ❔    | < now     |  ❌  |    ❌
+**`Closed`** |   ❔       |    ❔      |    ❔    |    ❔     |  ✅  |    ❔
+`└─Done`     |   ❔       |    ❔      |    ❔    |    ❔     |  ✅  |`Done`
+`└─Obsolete` |   ❔       |    ❔      |    ❔    |    ❔     |  ✅  |`Obsolete`
+`└─Deletable`|   ❔       |    ❔      |    ❔    |    ❔     |  ✅  |`Deletable`
 
 </small>
 
@@ -58,7 +67,7 @@ Legend:
 
 **3 exclusive tertiary states:**
 
-- `Repeating` - If this task get completed, a duplicate will be created
+- `Repeating` - If this task gets completed, a duplicate will be created
     with the specified time offset.
     I.e. subsequent tasks get delayed
     (e.g. mowing the lawn)
