@@ -80,6 +80,7 @@ import Options.Applicative (
   eitherReader,
   execParserPure,
   footerDoc,
+  forwardOptions,
   fullDesc,
   headerDoc,
   help,
@@ -441,6 +442,12 @@ getCommand (alias, commandName) =
 toParserInfo :: Parser a -> Text -> ParserInfo a
 toParserInfo parser description =
   info parser (fullDesc <> progDesc (T.unpack description))
+
+
+-- | Like toParserInfo but forwards all arguments (including those starting with -)
+toParserInfoForwardOptions :: Parser a -> Text -> ParserInfo a
+toParserInfoForwardOptions parser description =
+  info parser (fullDesc <> progDesc (T.unpack description) <> forwardOptions)
 
 
 idVar :: Mod ArgumentFields a
@@ -814,7 +821,7 @@ commandParser conf =
           "List tasks which have all of the specified tags")
 
     <> command "get"
-        (toParserInfo
+        (toParserInfoForwardOptions
           (RunFilter <$> some
             (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions"))
           "Get all tasks filtered by the specified expression \
