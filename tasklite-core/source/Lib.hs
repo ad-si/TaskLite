@@ -2504,14 +2504,21 @@ formatTaskClose conf task = do
   annotate conf.closedStyle (pretty closedUtcMaybe)
 
 
+-- | Format tags for display in a dedicated column (comma-separated)
+formatTaskTagsComma :: Config -> FullTask -> Doc AnsiStyle
+formatTaskTagsComma conf task =
+  case task.tags of
+    Nothing -> mempty
+    Just tags -> concatWith (surround ",") (tags <&> formatTag conf)
+
+
+-- | Format tags for display appended to the body (+tag style)
 formatTaskTags :: Config -> FullTask -> Doc AnsiStyle
 formatTaskTags conf task = do
   let tags = fromMaybe [] task.tags
   case tags of
     [] -> mempty
-    _ ->
-      let tagsText = concatWith (surround ",") (tags <&> formatTag conf)
-      in  tagsText
+    _ -> hsep (tags <&> (\t -> annotate conf.tagStyle ("+" <> pretty t)))
 
 
 formatTaskNotes :: FullTask -> Doc AnsiStyle
@@ -2611,7 +2618,7 @@ formatTaskLine conf now idColWidth task = do
               OpenedUTCCol -> [formatTaskOpenedUTC conf now task]
               AgeCol -> [formatTaskAge conf now task]
               DueCol -> [formatTaskDue conf now task]
-              TagsCol -> [fill (colToWidth conf idColWidth TagsCol) (formatTaskTags conf task)]
+              TagsCol -> [fill (colToWidth conf idColWidth TagsCol) (formatTaskTagsComma conf task)]
               BodyCol ->
                 [ formatTaskBody conf now task
                 , formatTaskClose conf task

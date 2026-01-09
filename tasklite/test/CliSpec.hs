@@ -14,16 +14,9 @@ import Options.Applicative (
   parserFailure,
   renderFailure,
  )
-import Prettyprinter (
-  Doc,
-  annotate,
-  defaultLayoutOptions,
-  layoutPretty,
-  pretty,
- )
-import Prettyprinter.Render.Terminal (AnsiStyle, Color (Red), bold, color)
-import Prettyprinter.Render.Text qualified as TextRender
-import System.IO (hClose, hGetContents, hPutStr)
+import Prettyprinter (annotate, defaultLayoutOptions, pretty)
+import Prettyprinter.Render.Terminal (Color (Red), bold, color)
+import System.IO (hClose)
 import System.IO.Temp (withSystemTempFile)
 import Test.Hspec (
   Spec,
@@ -42,7 +35,6 @@ import Cli (
  )
 import Config (Config, Hook (Hook), HookSet (HookSet), defaultConfig)
 import Config qualified
-import Prettyprinter.Render.Terminal qualified as TermRender
 import System.Directory (
   Permissions (executable, readable),
   emptyPermissions,
