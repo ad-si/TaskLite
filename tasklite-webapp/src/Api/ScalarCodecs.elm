@@ -10,13 +10,17 @@ type alias Id
     = Api.Scalar.Id
 
 
+type alias Tasks_state_String
+    = Api.Scalar.Tasks_state_String
+
+
 type alias Upload
     = Api.Scalar.Upload
 
 
-codecs : Api.Scalar.Codecs Id Upload
+codecs : Api.Scalar.Codecs Id Tasks_state_String Upload
 codecs =
     Api.Scalar.defineCodecs
         {
-        codecId = defaultCodecs.codecId    , codecUpload = defaultCodecs.codecUpload
+        codecId = defaultCodecs.codecId    , codecTasks_state_String = defaultCodecs.codecTasks_state_String    , codecUpload = defaultCodecs.codecUpload
         }

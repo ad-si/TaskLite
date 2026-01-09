@@ -63,7 +63,7 @@ docker-docs: book.toml docs-source
 # Continuously rebuild and serve at localhost:3000
 .PHONY: serve-docs
 serve-docs:
-	mdbook serve
+	mdbook serve --port 4882
 
 
 # Continuously rebuild and serve at localhost:3000 with Docker

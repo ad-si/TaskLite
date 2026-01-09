@@ -4,7 +4,27 @@
 
 module Api.InputObject exposing (..)
 
+import Api.Enum.Closed_tasks_histogram_column exposing (Closed_tasks_histogram_column)
 import Api.Enum.OrderingTerm exposing (..)
+import Api.Enum.Tags_column exposing (Tags_column)
+import Api.Enum.Task_to_note_column exposing (Task_to_note_column)
+import Api.Enum.Task_to_tag_column exposing (Task_to_tag_column)
+import Api.Enum.Tasks_all_column exposing (Tasks_all_column)
+import Api.Enum.Tasks_column exposing (Tasks_column)
+import Api.Enum.Tasks_deletable_column exposing (Tasks_deletable_column)
+import Api.Enum.Tasks_done_column exposing (Tasks_done_column)
+import Api.Enum.Tasks_modified_column exposing (Tasks_modified_column)
+import Api.Enum.Tasks_new_column exposing (Tasks_new_column)
+import Api.Enum.Tasks_notag_column exposing (Tasks_notag_column)
+import Api.Enum.Tasks_obsolete_column exposing (Tasks_obsolete_column)
+import Api.Enum.Tasks_old_column exposing (Tasks_old_column)
+import Api.Enum.Tasks_open_column exposing (Tasks_open_column)
+import Api.Enum.Tasks_overdue_column exposing (Tasks_overdue_column)
+import Api.Enum.Tasks_ready_column exposing (Tasks_ready_column)
+import Api.Enum.Tasks_recurring_column exposing (Tasks_recurring_column)
+import Api.Enum.Tasks_repeating_column exposing (Tasks_repeating_column)
+import Api.Enum.Tasks_view_column exposing (Tasks_view_column)
+import Api.Enum.Tasks_waiting_column exposing (Tasks_waiting_column)
 import Api.Interface
 import Api.Object
 import Api.Scalar
@@ -16,6 +36,73 @@ import Graphql.Internal.Encode as Encode exposing (Value)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
+
+
+-- Encoder function for OrderingTerm enum
+encodeOrderingTerm : OrderingTerm -> Value
+encodeOrderingTerm = toString >> Encode.string
+
+
+-- Encoder functions for column types
+encodeClosed_tasks_histogram_column : Closed_tasks_histogram_column -> Value
+encodeClosed_tasks_histogram_column = Api.Enum.Closed_tasks_histogram_column.toString >> Encode.string
+
+encodeTags_column : Tags_column -> Value
+encodeTags_column = Api.Enum.Tags_column.toString >> Encode.string
+
+encodeTask_to_note_column : Task_to_note_column -> Value
+encodeTask_to_note_column = Api.Enum.Task_to_note_column.toString >> Encode.string
+
+encodeTask_to_tag_column : Task_to_tag_column -> Value
+encodeTask_to_tag_column = Api.Enum.Task_to_tag_column.toString >> Encode.string
+
+encodeTasks_column : Tasks_column -> Value
+encodeTasks_column = Api.Enum.Tasks_column.toString >> Encode.string
+
+encodeTasks_all_column : Tasks_all_column -> Value
+encodeTasks_all_column = Api.Enum.Tasks_all_column.toString >> Encode.string
+
+encodeTasks_deletable_column : Tasks_deletable_column -> Value
+encodeTasks_deletable_column = Api.Enum.Tasks_deletable_column.toString >> Encode.string
+
+encodeTasks_done_column : Tasks_done_column -> Value
+encodeTasks_done_column = Api.Enum.Tasks_done_column.toString >> Encode.string
+
+encodeTasks_modified_column : Tasks_modified_column -> Value
+encodeTasks_modified_column = Api.Enum.Tasks_modified_column.toString >> Encode.string
+
+encodeTasks_new_column : Tasks_new_column -> Value
+encodeTasks_new_column = Api.Enum.Tasks_new_column.toString >> Encode.string
+
+encodeTasks_notag_column : Tasks_notag_column -> Value
+encodeTasks_notag_column = Api.Enum.Tasks_notag_column.toString >> Encode.string
+
+encodeTasks_obsolete_column : Tasks_obsolete_column -> Value
+encodeTasks_obsolete_column = Api.Enum.Tasks_obsolete_column.toString >> Encode.string
+
+encodeTasks_old_column : Tasks_old_column -> Value
+encodeTasks_old_column = Api.Enum.Tasks_old_column.toString >> Encode.string
+
+encodeTasks_open_column : Tasks_open_column -> Value
+encodeTasks_open_column = Api.Enum.Tasks_open_column.toString >> Encode.string
+
+encodeTasks_overdue_column : Tasks_overdue_column -> Value
+encodeTasks_overdue_column = Api.Enum.Tasks_overdue_column.toString >> Encode.string
+
+encodeTasks_ready_column : Tasks_ready_column -> Value
+encodeTasks_ready_column = Api.Enum.Tasks_ready_column.toString >> Encode.string
+
+encodeTasks_recurring_column : Tasks_recurring_column -> Value
+encodeTasks_recurring_column = Api.Enum.Tasks_recurring_column.toString >> Encode.string
+
+encodeTasks_repeating_column : Tasks_repeating_column -> Value
+encodeTasks_repeating_column = Api.Enum.Tasks_repeating_column.toString >> Encode.string
+
+encodeTasks_view_column : Tasks_view_column -> Value
+encodeTasks_view_column = Api.Enum.Tasks_view_column.toString >> Encode.string
+
+encodeTasks_waiting_column : Tasks_waiting_column -> Value
+encodeTasks_waiting_column = Api.Enum.Tasks_waiting_column.toString >> Encode.string
 
 
 buildBooleanComparison :
@@ -1589,3 +1676,4525 @@ encodeTasks_view_set_input : Tasks_view_set_input -> Value
 encodeTasks_view_set_input input____ =
     Encode.maybeObject
         [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+-- Generated types for task views
+
+
+buildTasks_all_filter :
+    (Tasks_all_filterOptionalFields -> Tasks_all_filterOptionalFields)
+    -> Tasks_all_filter
+buildTasks_all_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_all_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_all\_filter input object.
+-}
+type alias Tasks_all_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_all\_filter into a value that can be used as an argument.
+-}
+encodeTasks_all_filter : Tasks_all_filter -> Value
+encodeTasks_all_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_all_order_by :
+    (Tasks_all_order_byOptionalFields -> Tasks_all_order_byOptionalFields)
+    -> Tasks_all_order_by
+buildTasks_all_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_all_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_all\_order\_by input object.
+-}
+type alias Tasks_all_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_all\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_all_order_by : Tasks_all_order_by -> Value
+encodeTasks_all_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_all_set_input :
+    (Tasks_all_set_inputOptionalFields -> Tasks_all_set_inputOptionalFields)
+    -> Tasks_all_set_input
+buildTasks_all_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_all_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_all\_set\_input input object.
+-}
+type alias Tasks_all_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_all\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_all_set_input : Tasks_all_set_input -> Value
+encodeTasks_all_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_all_insert_input :
+    (Tasks_all_insert_inputOptionalFields -> Tasks_all_insert_inputOptionalFields)
+    -> Tasks_all_insert_input
+buildTasks_all_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_all_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_all\_insert\_input input object.
+-}
+type alias Tasks_all_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_all\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_all_insert_input : Tasks_all_insert_input -> Value
+encodeTasks_all_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_deletable_filter :
+    (Tasks_deletable_filterOptionalFields -> Tasks_deletable_filterOptionalFields)
+    -> Tasks_deletable_filter
+buildTasks_deletable_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_deletable_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_deletable\_filter input object.
+-}
+type alias Tasks_deletable_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_deletable\_filter into a value that can be used as an argument.
+-}
+encodeTasks_deletable_filter : Tasks_deletable_filter -> Value
+encodeTasks_deletable_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_deletable_order_by :
+    (Tasks_deletable_order_byOptionalFields -> Tasks_deletable_order_byOptionalFields)
+    -> Tasks_deletable_order_by
+buildTasks_deletable_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_deletable_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_deletable\_order\_by input object.
+-}
+type alias Tasks_deletable_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_deletable\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_deletable_order_by : Tasks_deletable_order_by -> Value
+encodeTasks_deletable_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_deletable_set_input :
+    (Tasks_deletable_set_inputOptionalFields -> Tasks_deletable_set_inputOptionalFields)
+    -> Tasks_deletable_set_input
+buildTasks_deletable_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_deletable_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_deletable\_set\_input input object.
+-}
+type alias Tasks_deletable_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_deletable\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_deletable_set_input : Tasks_deletable_set_input -> Value
+encodeTasks_deletable_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_deletable_insert_input :
+    (Tasks_deletable_insert_inputOptionalFields -> Tasks_deletable_insert_inputOptionalFields)
+    -> Tasks_deletable_insert_input
+buildTasks_deletable_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_deletable_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_deletable\_insert\_input input object.
+-}
+type alias Tasks_deletable_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_deletable\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_deletable_insert_input : Tasks_deletable_insert_input -> Value
+encodeTasks_deletable_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_done_filter :
+    (Tasks_done_filterOptionalFields -> Tasks_done_filterOptionalFields)
+    -> Tasks_done_filter
+buildTasks_done_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_done_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_done\_filter input object.
+-}
+type alias Tasks_done_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_done\_filter into a value that can be used as an argument.
+-}
+encodeTasks_done_filter : Tasks_done_filter -> Value
+encodeTasks_done_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_done_order_by :
+    (Tasks_done_order_byOptionalFields -> Tasks_done_order_byOptionalFields)
+    -> Tasks_done_order_by
+buildTasks_done_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_done_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_done\_order\_by input object.
+-}
+type alias Tasks_done_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_done\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_done_order_by : Tasks_done_order_by -> Value
+encodeTasks_done_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_done_set_input :
+    (Tasks_done_set_inputOptionalFields -> Tasks_done_set_inputOptionalFields)
+    -> Tasks_done_set_input
+buildTasks_done_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_done_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_done\_set\_input input object.
+-}
+type alias Tasks_done_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_done\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_done_set_input : Tasks_done_set_input -> Value
+encodeTasks_done_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_done_insert_input :
+    (Tasks_done_insert_inputOptionalFields -> Tasks_done_insert_inputOptionalFields)
+    -> Tasks_done_insert_input
+buildTasks_done_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_done_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_done\_insert\_input input object.
+-}
+type alias Tasks_done_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_done\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_done_insert_input : Tasks_done_insert_input -> Value
+encodeTasks_done_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_modified_filter :
+    (Tasks_modified_filterOptionalFields -> Tasks_modified_filterOptionalFields)
+    -> Tasks_modified_filter
+buildTasks_modified_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_modified_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_modified\_filter input object.
+-}
+type alias Tasks_modified_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_modified\_filter into a value that can be used as an argument.
+-}
+encodeTasks_modified_filter : Tasks_modified_filter -> Value
+encodeTasks_modified_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_modified_order_by :
+    (Tasks_modified_order_byOptionalFields -> Tasks_modified_order_byOptionalFields)
+    -> Tasks_modified_order_by
+buildTasks_modified_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_modified_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_modified\_order\_by input object.
+-}
+type alias Tasks_modified_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_modified\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_modified_order_by : Tasks_modified_order_by -> Value
+encodeTasks_modified_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_modified_set_input :
+    (Tasks_modified_set_inputOptionalFields -> Tasks_modified_set_inputOptionalFields)
+    -> Tasks_modified_set_input
+buildTasks_modified_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_modified_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_modified\_set\_input input object.
+-}
+type alias Tasks_modified_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_modified\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_modified_set_input : Tasks_modified_set_input -> Value
+encodeTasks_modified_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_modified_insert_input :
+    (Tasks_modified_insert_inputOptionalFields -> Tasks_modified_insert_inputOptionalFields)
+    -> Tasks_modified_insert_input
+buildTasks_modified_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_modified_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_modified\_insert\_input input object.
+-}
+type alias Tasks_modified_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_modified\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_modified_insert_input : Tasks_modified_insert_input -> Value
+encodeTasks_modified_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_new_filter :
+    (Tasks_new_filterOptionalFields -> Tasks_new_filterOptionalFields)
+    -> Tasks_new_filter
+buildTasks_new_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_new_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_new\_filter input object.
+-}
+type alias Tasks_new_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_new\_filter into a value that can be used as an argument.
+-}
+encodeTasks_new_filter : Tasks_new_filter -> Value
+encodeTasks_new_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_new_order_by :
+    (Tasks_new_order_byOptionalFields -> Tasks_new_order_byOptionalFields)
+    -> Tasks_new_order_by
+buildTasks_new_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_new_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_new\_order\_by input object.
+-}
+type alias Tasks_new_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_new\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_new_order_by : Tasks_new_order_by -> Value
+encodeTasks_new_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_new_set_input :
+    (Tasks_new_set_inputOptionalFields -> Tasks_new_set_inputOptionalFields)
+    -> Tasks_new_set_input
+buildTasks_new_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_new_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_new\_set\_input input object.
+-}
+type alias Tasks_new_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_new\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_new_set_input : Tasks_new_set_input -> Value
+encodeTasks_new_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_new_insert_input :
+    (Tasks_new_insert_inputOptionalFields -> Tasks_new_insert_inputOptionalFields)
+    -> Tasks_new_insert_input
+buildTasks_new_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_new_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_new\_insert\_input input object.
+-}
+type alias Tasks_new_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_new\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_new_insert_input : Tasks_new_insert_input -> Value
+encodeTasks_new_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_notag_filter :
+    (Tasks_notag_filterOptionalFields -> Tasks_notag_filterOptionalFields)
+    -> Tasks_notag_filter
+buildTasks_notag_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_notag_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_notag\_filter input object.
+-}
+type alias Tasks_notag_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_notag\_filter into a value that can be used as an argument.
+-}
+encodeTasks_notag_filter : Tasks_notag_filter -> Value
+encodeTasks_notag_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_notag_order_by :
+    (Tasks_notag_order_byOptionalFields -> Tasks_notag_order_byOptionalFields)
+    -> Tasks_notag_order_by
+buildTasks_notag_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_notag_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_notag\_order\_by input object.
+-}
+type alias Tasks_notag_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_notag\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_notag_order_by : Tasks_notag_order_by -> Value
+encodeTasks_notag_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_notag_set_input :
+    (Tasks_notag_set_inputOptionalFields -> Tasks_notag_set_inputOptionalFields)
+    -> Tasks_notag_set_input
+buildTasks_notag_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_notag_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_notag\_set\_input input object.
+-}
+type alias Tasks_notag_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_notag\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_notag_set_input : Tasks_notag_set_input -> Value
+encodeTasks_notag_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_notag_insert_input :
+    (Tasks_notag_insert_inputOptionalFields -> Tasks_notag_insert_inputOptionalFields)
+    -> Tasks_notag_insert_input
+buildTasks_notag_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_notag_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_notag\_insert\_input input object.
+-}
+type alias Tasks_notag_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_notag\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_notag_insert_input : Tasks_notag_insert_input -> Value
+encodeTasks_notag_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_obsolete_filter :
+    (Tasks_obsolete_filterOptionalFields -> Tasks_obsolete_filterOptionalFields)
+    -> Tasks_obsolete_filter
+buildTasks_obsolete_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_obsolete_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_obsolete\_filter input object.
+-}
+type alias Tasks_obsolete_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_obsolete\_filter into a value that can be used as an argument.
+-}
+encodeTasks_obsolete_filter : Tasks_obsolete_filter -> Value
+encodeTasks_obsolete_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_obsolete_order_by :
+    (Tasks_obsolete_order_byOptionalFields -> Tasks_obsolete_order_byOptionalFields)
+    -> Tasks_obsolete_order_by
+buildTasks_obsolete_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_obsolete_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_obsolete\_order\_by input object.
+-}
+type alias Tasks_obsolete_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_obsolete\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_obsolete_order_by : Tasks_obsolete_order_by -> Value
+encodeTasks_obsolete_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_obsolete_set_input :
+    (Tasks_obsolete_set_inputOptionalFields -> Tasks_obsolete_set_inputOptionalFields)
+    -> Tasks_obsolete_set_input
+buildTasks_obsolete_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_obsolete_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_obsolete\_set\_input input object.
+-}
+type alias Tasks_obsolete_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_obsolete\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_obsolete_set_input : Tasks_obsolete_set_input -> Value
+encodeTasks_obsolete_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_obsolete_insert_input :
+    (Tasks_obsolete_insert_inputOptionalFields -> Tasks_obsolete_insert_inputOptionalFields)
+    -> Tasks_obsolete_insert_input
+buildTasks_obsolete_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_obsolete_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_obsolete\_insert\_input input object.
+-}
+type alias Tasks_obsolete_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_obsolete\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_obsolete_insert_input : Tasks_obsolete_insert_input -> Value
+encodeTasks_obsolete_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_old_filter :
+    (Tasks_old_filterOptionalFields -> Tasks_old_filterOptionalFields)
+    -> Tasks_old_filter
+buildTasks_old_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_old_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_old\_filter input object.
+-}
+type alias Tasks_old_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_old\_filter into a value that can be used as an argument.
+-}
+encodeTasks_old_filter : Tasks_old_filter -> Value
+encodeTasks_old_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_old_order_by :
+    (Tasks_old_order_byOptionalFields -> Tasks_old_order_byOptionalFields)
+    -> Tasks_old_order_by
+buildTasks_old_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_old_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_old\_order\_by input object.
+-}
+type alias Tasks_old_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_old\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_old_order_by : Tasks_old_order_by -> Value
+encodeTasks_old_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_old_set_input :
+    (Tasks_old_set_inputOptionalFields -> Tasks_old_set_inputOptionalFields)
+    -> Tasks_old_set_input
+buildTasks_old_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_old_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_old\_set\_input input object.
+-}
+type alias Tasks_old_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_old\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_old_set_input : Tasks_old_set_input -> Value
+encodeTasks_old_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_old_insert_input :
+    (Tasks_old_insert_inputOptionalFields -> Tasks_old_insert_inputOptionalFields)
+    -> Tasks_old_insert_input
+buildTasks_old_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_old_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_old\_insert\_input input object.
+-}
+type alias Tasks_old_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_old\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_old_insert_input : Tasks_old_insert_input -> Value
+encodeTasks_old_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_open_filter :
+    (Tasks_open_filterOptionalFields -> Tasks_open_filterOptionalFields)
+    -> Tasks_open_filter
+buildTasks_open_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_open_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_open\_filter input object.
+-}
+type alias Tasks_open_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_open\_filter into a value that can be used as an argument.
+-}
+encodeTasks_open_filter : Tasks_open_filter -> Value
+encodeTasks_open_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_open_order_by :
+    (Tasks_open_order_byOptionalFields -> Tasks_open_order_byOptionalFields)
+    -> Tasks_open_order_by
+buildTasks_open_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_open_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_open\_order\_by input object.
+-}
+type alias Tasks_open_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_open\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_open_order_by : Tasks_open_order_by -> Value
+encodeTasks_open_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_open_set_input :
+    (Tasks_open_set_inputOptionalFields -> Tasks_open_set_inputOptionalFields)
+    -> Tasks_open_set_input
+buildTasks_open_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_open_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_open\_set\_input input object.
+-}
+type alias Tasks_open_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_open\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_open_set_input : Tasks_open_set_input -> Value
+encodeTasks_open_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_open_insert_input :
+    (Tasks_open_insert_inputOptionalFields -> Tasks_open_insert_inputOptionalFields)
+    -> Tasks_open_insert_input
+buildTasks_open_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_open_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_open\_insert\_input input object.
+-}
+type alias Tasks_open_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_open\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_open_insert_input : Tasks_open_insert_input -> Value
+encodeTasks_open_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_overdue_filter :
+    (Tasks_overdue_filterOptionalFields -> Tasks_overdue_filterOptionalFields)
+    -> Tasks_overdue_filter
+buildTasks_overdue_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_overdue_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_overdue\_filter input object.
+-}
+type alias Tasks_overdue_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_overdue\_filter into a value that can be used as an argument.
+-}
+encodeTasks_overdue_filter : Tasks_overdue_filter -> Value
+encodeTasks_overdue_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_overdue_order_by :
+    (Tasks_overdue_order_byOptionalFields -> Tasks_overdue_order_byOptionalFields)
+    -> Tasks_overdue_order_by
+buildTasks_overdue_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_overdue_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_overdue\_order\_by input object.
+-}
+type alias Tasks_overdue_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_overdue\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_overdue_order_by : Tasks_overdue_order_by -> Value
+encodeTasks_overdue_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_overdue_set_input :
+    (Tasks_overdue_set_inputOptionalFields -> Tasks_overdue_set_inputOptionalFields)
+    -> Tasks_overdue_set_input
+buildTasks_overdue_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_overdue_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_overdue\_set\_input input object.
+-}
+type alias Tasks_overdue_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_overdue\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_overdue_set_input : Tasks_overdue_set_input -> Value
+encodeTasks_overdue_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_overdue_insert_input :
+    (Tasks_overdue_insert_inputOptionalFields -> Tasks_overdue_insert_inputOptionalFields)
+    -> Tasks_overdue_insert_input
+buildTasks_overdue_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_overdue_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_overdue\_insert\_input input object.
+-}
+type alias Tasks_overdue_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_overdue\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_overdue_insert_input : Tasks_overdue_insert_input -> Value
+encodeTasks_overdue_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_ready_filter :
+    (Tasks_ready_filterOptionalFields -> Tasks_ready_filterOptionalFields)
+    -> Tasks_ready_filter
+buildTasks_ready_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_ready_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_ready\_filter input object.
+-}
+type alias Tasks_ready_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_ready\_filter into a value that can be used as an argument.
+-}
+encodeTasks_ready_filter : Tasks_ready_filter -> Value
+encodeTasks_ready_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_ready_order_by :
+    (Tasks_ready_order_byOptionalFields -> Tasks_ready_order_byOptionalFields)
+    -> Tasks_ready_order_by
+buildTasks_ready_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_ready_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_ready\_order\_by input object.
+-}
+type alias Tasks_ready_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_ready\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_ready_order_by : Tasks_ready_order_by -> Value
+encodeTasks_ready_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_ready_set_input :
+    (Tasks_ready_set_inputOptionalFields -> Tasks_ready_set_inputOptionalFields)
+    -> Tasks_ready_set_input
+buildTasks_ready_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_ready_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_ready\_set\_input input object.
+-}
+type alias Tasks_ready_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_ready\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_ready_set_input : Tasks_ready_set_input -> Value
+encodeTasks_ready_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_ready_insert_input :
+    (Tasks_ready_insert_inputOptionalFields -> Tasks_ready_insert_inputOptionalFields)
+    -> Tasks_ready_insert_input
+buildTasks_ready_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_ready_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_ready\_insert\_input input object.
+-}
+type alias Tasks_ready_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_ready\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_ready_insert_input : Tasks_ready_insert_input -> Value
+encodeTasks_ready_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_recurring_filter :
+    (Tasks_recurring_filterOptionalFields -> Tasks_recurring_filterOptionalFields)
+    -> Tasks_recurring_filter
+buildTasks_recurring_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_recurring_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_recurring\_filter input object.
+-}
+type alias Tasks_recurring_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_recurring\_filter into a value that can be used as an argument.
+-}
+encodeTasks_recurring_filter : Tasks_recurring_filter -> Value
+encodeTasks_recurring_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_recurring_order_by :
+    (Tasks_recurring_order_byOptionalFields -> Tasks_recurring_order_byOptionalFields)
+    -> Tasks_recurring_order_by
+buildTasks_recurring_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_recurring_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_recurring\_order\_by input object.
+-}
+type alias Tasks_recurring_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_recurring\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_recurring_order_by : Tasks_recurring_order_by -> Value
+encodeTasks_recurring_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_recurring_set_input :
+    (Tasks_recurring_set_inputOptionalFields -> Tasks_recurring_set_inputOptionalFields)
+    -> Tasks_recurring_set_input
+buildTasks_recurring_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_recurring_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_recurring\_set\_input input object.
+-}
+type alias Tasks_recurring_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_recurring\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_recurring_set_input : Tasks_recurring_set_input -> Value
+encodeTasks_recurring_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_recurring_insert_input :
+    (Tasks_recurring_insert_inputOptionalFields -> Tasks_recurring_insert_inputOptionalFields)
+    -> Tasks_recurring_insert_input
+buildTasks_recurring_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_recurring_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_recurring\_insert\_input input object.
+-}
+type alias Tasks_recurring_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_recurring\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_recurring_insert_input : Tasks_recurring_insert_input -> Value
+encodeTasks_recurring_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_repeating_filter :
+    (Tasks_repeating_filterOptionalFields -> Tasks_repeating_filterOptionalFields)
+    -> Tasks_repeating_filter
+buildTasks_repeating_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_repeating_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_repeating\_filter input object.
+-}
+type alias Tasks_repeating_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_repeating\_filter into a value that can be used as an argument.
+-}
+encodeTasks_repeating_filter : Tasks_repeating_filter -> Value
+encodeTasks_repeating_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_repeating_order_by :
+    (Tasks_repeating_order_byOptionalFields -> Tasks_repeating_order_byOptionalFields)
+    -> Tasks_repeating_order_by
+buildTasks_repeating_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_repeating_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_repeating\_order\_by input object.
+-}
+type alias Tasks_repeating_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_repeating\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_repeating_order_by : Tasks_repeating_order_by -> Value
+encodeTasks_repeating_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_repeating_set_input :
+    (Tasks_repeating_set_inputOptionalFields -> Tasks_repeating_set_inputOptionalFields)
+    -> Tasks_repeating_set_input
+buildTasks_repeating_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_repeating_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_repeating\_set\_input input object.
+-}
+type alias Tasks_repeating_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_repeating\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_repeating_set_input : Tasks_repeating_set_input -> Value
+encodeTasks_repeating_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_repeating_insert_input :
+    (Tasks_repeating_insert_inputOptionalFields -> Tasks_repeating_insert_inputOptionalFields)
+    -> Tasks_repeating_insert_input
+buildTasks_repeating_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_repeating_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_repeating\_insert\_input input object.
+-}
+type alias Tasks_repeating_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_repeating\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_repeating_insert_input : Tasks_repeating_insert_input -> Value
+encodeTasks_repeating_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_waiting_filter :
+    (Tasks_waiting_filterOptionalFields -> Tasks_waiting_filterOptionalFields)
+    -> Tasks_waiting_filter
+buildTasks_waiting_filter fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_waiting_filterOptionalFields =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Type for the Tasks\_waiting\_filter input object.
+-}
+type alias Tasks_waiting_filter =
+    { ulid : OptionalArgument StringComparison
+    , body : OptionalArgument StringComparison
+    , modified_utc : OptionalArgument StringComparison
+    , awake_utc : OptionalArgument StringComparison
+    , ready_utc : OptionalArgument StringComparison
+    , waiting_utc : OptionalArgument StringComparison
+    , review_utc : OptionalArgument StringComparison
+    , due_utc : OptionalArgument StringComparison
+    , closed_utc : OptionalArgument StringComparison
+    , state : OptionalArgument StringComparison
+    , group_ulid : OptionalArgument StringComparison
+    , repetition_duration : OptionalArgument StringComparison
+    , recurrence_duration : OptionalArgument StringComparison
+    , tags : OptionalArgument StringComparison
+    , notes : OptionalArgument StringComparison
+    , priority : OptionalArgument StringComparison
+    , user : OptionalArgument StringComparison
+    , metadata : OptionalArgument StringComparison
+    }
+
+
+{-| Encode a Tasks\_waiting\_filter into a value that can be used as an argument.
+-}
+encodeTasks_waiting_filter : Tasks_waiting_filter -> Value
+encodeTasks_waiting_filter input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeStringComparison |> Encode.optional input____.ulid ), ( "body", encodeStringComparison |> Encode.optional input____.body ), ( "modified_utc", encodeStringComparison |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeStringComparison |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeStringComparison |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeStringComparison |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeStringComparison |> Encode.optional input____.review_utc ), ( "due_utc", encodeStringComparison |> Encode.optional input____.due_utc ), ( "closed_utc", encodeStringComparison |> Encode.optional input____.closed_utc ), ( "state", encodeStringComparison |> Encode.optional input____.state ), ( "group_ulid", encodeStringComparison |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeStringComparison |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeStringComparison |> Encode.optional input____.recurrence_duration ), ( "tags", encodeStringComparison |> Encode.optional input____.tags ), ( "notes", encodeStringComparison |> Encode.optional input____.notes ), ( "priority", encodeStringComparison |> Encode.optional input____.priority ), ( "user", encodeStringComparison |> Encode.optional input____.user ), ( "metadata", encodeStringComparison |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_waiting_order_by :
+    (Tasks_waiting_order_byOptionalFields -> Tasks_waiting_order_byOptionalFields)
+    -> Tasks_waiting_order_by
+buildTasks_waiting_order_by fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_waiting_order_byOptionalFields =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Type for the Tasks\_waiting\_order\_by input object.
+-}
+type alias Tasks_waiting_order_by =
+    { ulid : OptionalArgument OrderingTerm
+    , body : OptionalArgument OrderingTerm
+    , modified_utc : OptionalArgument OrderingTerm
+    , awake_utc : OptionalArgument OrderingTerm
+    , ready_utc : OptionalArgument OrderingTerm
+    , waiting_utc : OptionalArgument OrderingTerm
+    , review_utc : OptionalArgument OrderingTerm
+    , due_utc : OptionalArgument OrderingTerm
+    , closed_utc : OptionalArgument OrderingTerm
+    , state : OptionalArgument OrderingTerm
+    , group_ulid : OptionalArgument OrderingTerm
+    , repetition_duration : OptionalArgument OrderingTerm
+    , recurrence_duration : OptionalArgument OrderingTerm
+    , tags : OptionalArgument OrderingTerm
+    , notes : OptionalArgument OrderingTerm
+    , priority : OptionalArgument OrderingTerm
+    , user : OptionalArgument OrderingTerm
+    , metadata : OptionalArgument OrderingTerm
+    }
+
+
+{-| Encode a Tasks\_waiting\_order\_by into a value that can be used as an argument.
+-}
+encodeTasks_waiting_order_by : Tasks_waiting_order_by -> Value
+encodeTasks_waiting_order_by input____ =
+    Encode.maybeObject
+        [ ( "ulid", encodeOrderingTerm |> Encode.optional input____.ulid ), ( "body", encodeOrderingTerm |> Encode.optional input____.body ), ( "modified_utc", encodeOrderingTerm |> Encode.optional input____.modified_utc ), ( "awake_utc", encodeOrderingTerm |> Encode.optional input____.awake_utc ), ( "ready_utc", encodeOrderingTerm |> Encode.optional input____.ready_utc ), ( "waiting_utc", encodeOrderingTerm |> Encode.optional input____.waiting_utc ), ( "review_utc", encodeOrderingTerm |> Encode.optional input____.review_utc ), ( "due_utc", encodeOrderingTerm |> Encode.optional input____.due_utc ), ( "closed_utc", encodeOrderingTerm |> Encode.optional input____.closed_utc ), ( "state", encodeOrderingTerm |> Encode.optional input____.state ), ( "group_ulid", encodeOrderingTerm |> Encode.optional input____.group_ulid ), ( "repetition_duration", encodeOrderingTerm |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", encodeOrderingTerm |> Encode.optional input____.recurrence_duration ), ( "tags", encodeOrderingTerm |> Encode.optional input____.tags ), ( "notes", encodeOrderingTerm |> Encode.optional input____.notes ), ( "priority", encodeOrderingTerm |> Encode.optional input____.priority ), ( "user", encodeOrderingTerm |> Encode.optional input____.user ), ( "metadata", encodeOrderingTerm |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_waiting_set_input :
+    (Tasks_waiting_set_inputOptionalFields -> Tasks_waiting_set_inputOptionalFields)
+    -> Tasks_waiting_set_input
+buildTasks_waiting_set_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_waiting_set_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_waiting\_set\_input input object.
+-}
+type alias Tasks_waiting_set_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_waiting\_set\_input into a value that can be used as an argument.
+-}
+encodeTasks_waiting_set_input : Tasks_waiting_set_input -> Value
+encodeTasks_waiting_set_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+buildTasks_waiting_insert_input :
+    (Tasks_waiting_insert_inputOptionalFields -> Tasks_waiting_insert_inputOptionalFields)
+    -> Tasks_waiting_insert_input
+buildTasks_waiting_insert_input fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { ulid = Absent, body = Absent, modified_utc = Absent, awake_utc = Absent, ready_utc = Absent, waiting_utc = Absent, review_utc = Absent, due_utc = Absent, closed_utc = Absent, state = Absent, group_ulid = Absent, repetition_duration = Absent, recurrence_duration = Absent, tags = Absent, notes = Absent, priority = Absent, user = Absent, metadata = Absent }
+    in
+    { ulid = optionals____.ulid, body = optionals____.body, modified_utc = optionals____.modified_utc, awake_utc = optionals____.awake_utc, ready_utc = optionals____.ready_utc, waiting_utc = optionals____.waiting_utc, review_utc = optionals____.review_utc, due_utc = optionals____.due_utc, closed_utc = optionals____.closed_utc, state = optionals____.state, group_ulid = optionals____.group_ulid, repetition_duration = optionals____.repetition_duration, recurrence_duration = optionals____.recurrence_duration, tags = optionals____.tags, notes = optionals____.notes, priority = optionals____.priority, user = optionals____.user, metadata = optionals____.metadata }
+
+
+type alias Tasks_waiting_insert_inputOptionalFields =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Type for the Tasks\_waiting\_insert\_input input object.
+-}
+type alias Tasks_waiting_insert_input =
+    { ulid : OptionalArgument String
+    , body : OptionalArgument String
+    , modified_utc : OptionalArgument String
+    , awake_utc : OptionalArgument String
+    , ready_utc : OptionalArgument String
+    , waiting_utc : OptionalArgument String
+    , review_utc : OptionalArgument String
+    , due_utc : OptionalArgument String
+    , closed_utc : OptionalArgument String
+    , state : OptionalArgument String
+    , group_ulid : OptionalArgument String
+    , repetition_duration : OptionalArgument String
+    , recurrence_duration : OptionalArgument String
+    , tags : OptionalArgument String
+    , notes : OptionalArgument String
+    , priority : OptionalArgument String
+    , user : OptionalArgument String
+    , metadata : OptionalArgument String
+    }
+
+
+{-| Encode a Tasks\_waiting\_insert\_input into a value that can be used as an argument.
+-}
+encodeTasks_waiting_insert_input : Tasks_waiting_insert_input -> Value
+encodeTasks_waiting_insert_input input____ =
+    Encode.maybeObject
+        [ ( "ulid", Encode.string |> Encode.optional input____.ulid ), ( "body", Encode.string |> Encode.optional input____.body ), ( "modified_utc", Encode.string |> Encode.optional input____.modified_utc ), ( "awake_utc", Encode.string |> Encode.optional input____.awake_utc ), ( "ready_utc", Encode.string |> Encode.optional input____.ready_utc ), ( "waiting_utc", Encode.string |> Encode.optional input____.waiting_utc ), ( "review_utc", Encode.string |> Encode.optional input____.review_utc ), ( "due_utc", Encode.string |> Encode.optional input____.due_utc ), ( "closed_utc", Encode.string |> Encode.optional input____.closed_utc ), ( "state", Encode.string |> Encode.optional input____.state ), ( "group_ulid", Encode.string |> Encode.optional input____.group_ulid ), ( "repetition_duration", Encode.string |> Encode.optional input____.repetition_duration ), ( "recurrence_duration", Encode.string |> Encode.optional input____.recurrence_duration ), ( "tags", Encode.string |> Encode.optional input____.tags ), ( "notes", Encode.string |> Encode.optional input____.notes ), ( "priority", Encode.string |> Encode.optional input____.priority ), ( "user", Encode.string |> Encode.optional input____.user ), ( "metadata", Encode.string |> Encode.optional input____.metadata ) ]
+
+
+-- Generated upsert_on_conflict types for task views
+
+
+buildTasks_all_upsert_on_conflict :
+    Tasks_all_upsert_on_conflictRequiredFields
+    -> (Tasks_all_upsert_on_conflictOptionalFields -> Tasks_all_upsert_on_conflictOptionalFields)
+    -> Tasks_all_upsert_on_conflict
+buildTasks_all_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_all_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_all_column
+    , update_columns : List Tasks_all_column
+    }
+
+
+type alias Tasks_all_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_all_filter
+    }
+
+
+{-| Type for the Tasks\_all\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_all_upsert_on_conflict =
+    { constraint : List Tasks_all_column
+    , update_columns : List Tasks_all_column
+    , where_ : OptionalArgument Tasks_all_filter
+    }
+
+
+{-| Encode a Tasks\_all\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_all_upsert_on_conflict : Tasks_all_upsert_on_conflict -> Value
+encodeTasks_all_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_all_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_all_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_all_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_deletable_upsert_on_conflict :
+    Tasks_deletable_upsert_on_conflictRequiredFields
+    -> (Tasks_deletable_upsert_on_conflictOptionalFields -> Tasks_deletable_upsert_on_conflictOptionalFields)
+    -> Tasks_deletable_upsert_on_conflict
+buildTasks_deletable_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_deletable_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_deletable_column
+    , update_columns : List Tasks_deletable_column
+    }
+
+
+type alias Tasks_deletable_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_deletable_filter
+    }
+
+
+{-| Type for the Tasks\_deletable\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_deletable_upsert_on_conflict =
+    { constraint : List Tasks_deletable_column
+    , update_columns : List Tasks_deletable_column
+    , where_ : OptionalArgument Tasks_deletable_filter
+    }
+
+
+{-| Encode a Tasks\_deletable\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_deletable_upsert_on_conflict : Tasks_deletable_upsert_on_conflict -> Value
+encodeTasks_deletable_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_deletable_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_deletable_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_deletable_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_done_upsert_on_conflict :
+    Tasks_done_upsert_on_conflictRequiredFields
+    -> (Tasks_done_upsert_on_conflictOptionalFields -> Tasks_done_upsert_on_conflictOptionalFields)
+    -> Tasks_done_upsert_on_conflict
+buildTasks_done_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_done_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_done_column
+    , update_columns : List Tasks_done_column
+    }
+
+
+type alias Tasks_done_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_done_filter
+    }
+
+
+{-| Type for the Tasks\_done\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_done_upsert_on_conflict =
+    { constraint : List Tasks_done_column
+    , update_columns : List Tasks_done_column
+    , where_ : OptionalArgument Tasks_done_filter
+    }
+
+
+{-| Encode a Tasks\_done\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_done_upsert_on_conflict : Tasks_done_upsert_on_conflict -> Value
+encodeTasks_done_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_done_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_done_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_done_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_modified_upsert_on_conflict :
+    Tasks_modified_upsert_on_conflictRequiredFields
+    -> (Tasks_modified_upsert_on_conflictOptionalFields -> Tasks_modified_upsert_on_conflictOptionalFields)
+    -> Tasks_modified_upsert_on_conflict
+buildTasks_modified_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_modified_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_modified_column
+    , update_columns : List Tasks_modified_column
+    }
+
+
+type alias Tasks_modified_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_modified_filter
+    }
+
+
+{-| Type for the Tasks\_modified\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_modified_upsert_on_conflict =
+    { constraint : List Tasks_modified_column
+    , update_columns : List Tasks_modified_column
+    , where_ : OptionalArgument Tasks_modified_filter
+    }
+
+
+{-| Encode a Tasks\_modified\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_modified_upsert_on_conflict : Tasks_modified_upsert_on_conflict -> Value
+encodeTasks_modified_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_modified_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_modified_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_modified_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_new_upsert_on_conflict :
+    Tasks_new_upsert_on_conflictRequiredFields
+    -> (Tasks_new_upsert_on_conflictOptionalFields -> Tasks_new_upsert_on_conflictOptionalFields)
+    -> Tasks_new_upsert_on_conflict
+buildTasks_new_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_new_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_new_column
+    , update_columns : List Tasks_new_column
+    }
+
+
+type alias Tasks_new_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_new_filter
+    }
+
+
+{-| Type for the Tasks\_new\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_new_upsert_on_conflict =
+    { constraint : List Tasks_new_column
+    , update_columns : List Tasks_new_column
+    , where_ : OptionalArgument Tasks_new_filter
+    }
+
+
+{-| Encode a Tasks\_new\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_new_upsert_on_conflict : Tasks_new_upsert_on_conflict -> Value
+encodeTasks_new_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_new_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_new_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_new_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_notag_upsert_on_conflict :
+    Tasks_notag_upsert_on_conflictRequiredFields
+    -> (Tasks_notag_upsert_on_conflictOptionalFields -> Tasks_notag_upsert_on_conflictOptionalFields)
+    -> Tasks_notag_upsert_on_conflict
+buildTasks_notag_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_notag_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_notag_column
+    , update_columns : List Tasks_notag_column
+    }
+
+
+type alias Tasks_notag_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_notag_filter
+    }
+
+
+{-| Type for the Tasks\_notag\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_notag_upsert_on_conflict =
+    { constraint : List Tasks_notag_column
+    , update_columns : List Tasks_notag_column
+    , where_ : OptionalArgument Tasks_notag_filter
+    }
+
+
+{-| Encode a Tasks\_notag\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_notag_upsert_on_conflict : Tasks_notag_upsert_on_conflict -> Value
+encodeTasks_notag_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_notag_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_notag_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_notag_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_obsolete_upsert_on_conflict :
+    Tasks_obsolete_upsert_on_conflictRequiredFields
+    -> (Tasks_obsolete_upsert_on_conflictOptionalFields -> Tasks_obsolete_upsert_on_conflictOptionalFields)
+    -> Tasks_obsolete_upsert_on_conflict
+buildTasks_obsolete_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_obsolete_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_obsolete_column
+    , update_columns : List Tasks_obsolete_column
+    }
+
+
+type alias Tasks_obsolete_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_obsolete_filter
+    }
+
+
+{-| Type for the Tasks\_obsolete\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_obsolete_upsert_on_conflict =
+    { constraint : List Tasks_obsolete_column
+    , update_columns : List Tasks_obsolete_column
+    , where_ : OptionalArgument Tasks_obsolete_filter
+    }
+
+
+{-| Encode a Tasks\_obsolete\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_obsolete_upsert_on_conflict : Tasks_obsolete_upsert_on_conflict -> Value
+encodeTasks_obsolete_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_obsolete_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_obsolete_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_obsolete_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_old_upsert_on_conflict :
+    Tasks_old_upsert_on_conflictRequiredFields
+    -> (Tasks_old_upsert_on_conflictOptionalFields -> Tasks_old_upsert_on_conflictOptionalFields)
+    -> Tasks_old_upsert_on_conflict
+buildTasks_old_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_old_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_old_column
+    , update_columns : List Tasks_old_column
+    }
+
+
+type alias Tasks_old_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_old_filter
+    }
+
+
+{-| Type for the Tasks\_old\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_old_upsert_on_conflict =
+    { constraint : List Tasks_old_column
+    , update_columns : List Tasks_old_column
+    , where_ : OptionalArgument Tasks_old_filter
+    }
+
+
+{-| Encode a Tasks\_old\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_old_upsert_on_conflict : Tasks_old_upsert_on_conflict -> Value
+encodeTasks_old_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_old_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_old_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_old_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_open_upsert_on_conflict :
+    Tasks_open_upsert_on_conflictRequiredFields
+    -> (Tasks_open_upsert_on_conflictOptionalFields -> Tasks_open_upsert_on_conflictOptionalFields)
+    -> Tasks_open_upsert_on_conflict
+buildTasks_open_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_open_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_open_column
+    , update_columns : List Tasks_open_column
+    }
+
+
+type alias Tasks_open_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_open_filter
+    }
+
+
+{-| Type for the Tasks\_open\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_open_upsert_on_conflict =
+    { constraint : List Tasks_open_column
+    , update_columns : List Tasks_open_column
+    , where_ : OptionalArgument Tasks_open_filter
+    }
+
+
+{-| Encode a Tasks\_open\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_open_upsert_on_conflict : Tasks_open_upsert_on_conflict -> Value
+encodeTasks_open_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_open_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_open_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_open_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_overdue_upsert_on_conflict :
+    Tasks_overdue_upsert_on_conflictRequiredFields
+    -> (Tasks_overdue_upsert_on_conflictOptionalFields -> Tasks_overdue_upsert_on_conflictOptionalFields)
+    -> Tasks_overdue_upsert_on_conflict
+buildTasks_overdue_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_overdue_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_overdue_column
+    , update_columns : List Tasks_overdue_column
+    }
+
+
+type alias Tasks_overdue_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_overdue_filter
+    }
+
+
+{-| Type for the Tasks\_overdue\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_overdue_upsert_on_conflict =
+    { constraint : List Tasks_overdue_column
+    , update_columns : List Tasks_overdue_column
+    , where_ : OptionalArgument Tasks_overdue_filter
+    }
+
+
+{-| Encode a Tasks\_overdue\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_overdue_upsert_on_conflict : Tasks_overdue_upsert_on_conflict -> Value
+encodeTasks_overdue_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_overdue_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_overdue_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_overdue_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_ready_upsert_on_conflict :
+    Tasks_ready_upsert_on_conflictRequiredFields
+    -> (Tasks_ready_upsert_on_conflictOptionalFields -> Tasks_ready_upsert_on_conflictOptionalFields)
+    -> Tasks_ready_upsert_on_conflict
+buildTasks_ready_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_ready_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_ready_column
+    , update_columns : List Tasks_ready_column
+    }
+
+
+type alias Tasks_ready_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_ready_filter
+    }
+
+
+{-| Type for the Tasks\_ready\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_ready_upsert_on_conflict =
+    { constraint : List Tasks_ready_column
+    , update_columns : List Tasks_ready_column
+    , where_ : OptionalArgument Tasks_ready_filter
+    }
+
+
+{-| Encode a Tasks\_ready\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_ready_upsert_on_conflict : Tasks_ready_upsert_on_conflict -> Value
+encodeTasks_ready_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_ready_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_ready_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_ready_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_recurring_upsert_on_conflict :
+    Tasks_recurring_upsert_on_conflictRequiredFields
+    -> (Tasks_recurring_upsert_on_conflictOptionalFields -> Tasks_recurring_upsert_on_conflictOptionalFields)
+    -> Tasks_recurring_upsert_on_conflict
+buildTasks_recurring_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_recurring_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_recurring_column
+    , update_columns : List Tasks_recurring_column
+    }
+
+
+type alias Tasks_recurring_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_recurring_filter
+    }
+
+
+{-| Type for the Tasks\_recurring\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_recurring_upsert_on_conflict =
+    { constraint : List Tasks_recurring_column
+    , update_columns : List Tasks_recurring_column
+    , where_ : OptionalArgument Tasks_recurring_filter
+    }
+
+
+{-| Encode a Tasks\_recurring\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_recurring_upsert_on_conflict : Tasks_recurring_upsert_on_conflict -> Value
+encodeTasks_recurring_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_recurring_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_recurring_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_recurring_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_repeating_upsert_on_conflict :
+    Tasks_repeating_upsert_on_conflictRequiredFields
+    -> (Tasks_repeating_upsert_on_conflictOptionalFields -> Tasks_repeating_upsert_on_conflictOptionalFields)
+    -> Tasks_repeating_upsert_on_conflict
+buildTasks_repeating_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_repeating_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_repeating_column
+    , update_columns : List Tasks_repeating_column
+    }
+
+
+type alias Tasks_repeating_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_repeating_filter
+    }
+
+
+{-| Type for the Tasks\_repeating\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_repeating_upsert_on_conflict =
+    { constraint : List Tasks_repeating_column
+    , update_columns : List Tasks_repeating_column
+    , where_ : OptionalArgument Tasks_repeating_filter
+    }
+
+
+{-| Encode a Tasks\_repeating\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_repeating_upsert_on_conflict : Tasks_repeating_upsert_on_conflict -> Value
+encodeTasks_repeating_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_repeating_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_repeating_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_repeating_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_waiting_upsert_on_conflict :
+    Tasks_waiting_upsert_on_conflictRequiredFields
+    -> (Tasks_waiting_upsert_on_conflictOptionalFields -> Tasks_waiting_upsert_on_conflictOptionalFields)
+    -> Tasks_waiting_upsert_on_conflict
+buildTasks_waiting_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_waiting_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_waiting_column
+    , update_columns : List Tasks_waiting_column
+    }
+
+
+type alias Tasks_waiting_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_waiting_filter
+    }
+
+
+{-| Type for the Tasks\_waiting\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_waiting_upsert_on_conflict =
+    { constraint : List Tasks_waiting_column
+    , update_columns : List Tasks_waiting_column
+    , where_ : OptionalArgument Tasks_waiting_filter
+    }
+
+
+{-| Encode a Tasks\_waiting\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_waiting_upsert_on_conflict : Tasks_waiting_upsert_on_conflict -> Value
+encodeTasks_waiting_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_waiting_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_waiting_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_waiting_filter) |> Encode.optional input____.where_ ) ]
+
+
+
+buildTasks_view_upsert_on_conflict :
+    Tasks_view_upsert_on_conflictRequiredFields
+    -> (Tasks_view_upsert_on_conflictOptionalFields -> Tasks_view_upsert_on_conflictOptionalFields)
+    -> Tasks_view_upsert_on_conflict
+buildTasks_view_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_view_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_view_column
+    , update_columns : List Tasks_view_column
+    }
+
+
+type alias Tasks_view_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_view_filter
+    }
+
+
+{-| Type for the Tasks\_view\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_view_upsert_on_conflict =
+    { constraint : List Tasks_view_column
+    , update_columns : List Tasks_view_column
+    , where_ : OptionalArgument Tasks_view_filter
+    }
+
+
+{-| Encode a Tasks\_view\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_view_upsert_on_conflict : Tasks_view_upsert_on_conflict -> Value
+encodeTasks_view_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_view_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_view_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_view_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTasks_upsert_on_conflict :
+    Tasks_upsert_on_conflictRequiredFields
+    -> (Tasks_upsert_on_conflictOptionalFields -> Tasks_upsert_on_conflictOptionalFields)
+    -> Tasks_upsert_on_conflict
+buildTasks_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tasks_upsert_on_conflictRequiredFields =
+    { constraint : List Tasks_column
+    , update_columns : List Tasks_column
+    }
+
+
+type alias Tasks_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tasks_filter
+    }
+
+
+{-| Type for the Tasks\_upsert\_on\_conflict input object.
+-}
+type alias Tasks_upsert_on_conflict =
+    { constraint : List Tasks_column
+    , update_columns : List Tasks_column
+    , where_ : OptionalArgument Tasks_filter
+    }
+
+
+{-| Encode a Tasks\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTasks_upsert_on_conflict : Tasks_upsert_on_conflict -> Value
+encodeTasks_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTasks_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTasks_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTasks_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildClosed_tasks_histogram_upsert_on_conflict :
+    Closed_tasks_histogram_upsert_on_conflictRequiredFields
+    -> (Closed_tasks_histogram_upsert_on_conflictOptionalFields -> Closed_tasks_histogram_upsert_on_conflictOptionalFields)
+    -> Closed_tasks_histogram_upsert_on_conflict
+buildClosed_tasks_histogram_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Closed_tasks_histogram_upsert_on_conflictRequiredFields =
+    { constraint : List Closed_tasks_histogram_column
+    , update_columns : List Closed_tasks_histogram_column
+    }
+
+
+type alias Closed_tasks_histogram_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Closed_tasks_histogram_filter
+    }
+
+
+{-| Type for the Closed\_tasks\_histogram\_upsert\_on\_conflict input object.
+-}
+type alias Closed_tasks_histogram_upsert_on_conflict =
+    { constraint : List Closed_tasks_histogram_column
+    , update_columns : List Closed_tasks_histogram_column
+    , where_ : OptionalArgument Closed_tasks_histogram_filter
+    }
+
+
+{-| Encode a Closed\_tasks\_histogram\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeClosed_tasks_histogram_upsert_on_conflict : Closed_tasks_histogram_upsert_on_conflict -> Value
+encodeClosed_tasks_histogram_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeClosed_tasks_histogram_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeClosed_tasks_histogram_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeClosed_tasks_histogram_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTags_upsert_on_conflict :
+    Tags_upsert_on_conflictRequiredFields
+    -> (Tags_upsert_on_conflictOptionalFields -> Tags_upsert_on_conflictOptionalFields)
+    -> Tags_upsert_on_conflict
+buildTags_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Tags_upsert_on_conflictRequiredFields =
+    { constraint : List Tags_column
+    , update_columns : List Tags_column
+    }
+
+
+type alias Tags_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Tags_filter
+    }
+
+
+{-| Type for the Tags\_upsert\_on\_conflict input object.
+-}
+type alias Tags_upsert_on_conflict =
+    { constraint : List Tags_column
+    , update_columns : List Tags_column
+    , where_ : OptionalArgument Tags_filter
+    }
+
+
+{-| Encode a Tags\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTags_upsert_on_conflict : Tags_upsert_on_conflict -> Value
+encodeTags_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTags_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTags_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTags_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTask_to_note_upsert_on_conflict :
+    Task_to_note_upsert_on_conflictRequiredFields
+    -> (Task_to_note_upsert_on_conflictOptionalFields -> Task_to_note_upsert_on_conflictOptionalFields)
+    -> Task_to_note_upsert_on_conflict
+buildTask_to_note_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Task_to_note_upsert_on_conflictRequiredFields =
+    { constraint : List Task_to_note_column
+    , update_columns : List Task_to_note_column
+    }
+
+
+type alias Task_to_note_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Task_to_note_filter
+    }
+
+
+{-| Type for the Task\_to\_note\_upsert\_on\_conflict input object.
+-}
+type alias Task_to_note_upsert_on_conflict =
+    { constraint : List Task_to_note_column
+    , update_columns : List Task_to_note_column
+    , where_ : OptionalArgument Task_to_note_filter
+    }
+
+
+{-| Encode a Task\_to\_note\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTask_to_note_upsert_on_conflict : Task_to_note_upsert_on_conflict -> Value
+encodeTask_to_note_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTask_to_note_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTask_to_note_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTask_to_note_filter) |> Encode.optional input____.where_ ) ]
+
+
+buildTask_to_tag_upsert_on_conflict :
+    Task_to_tag_upsert_on_conflictRequiredFields
+    -> (Task_to_tag_upsert_on_conflictOptionalFields -> Task_to_tag_upsert_on_conflictOptionalFields)
+    -> Task_to_tag_upsert_on_conflict
+buildTask_to_tag_upsert_on_conflict required____ fillOptionals____ =
+    let
+        optionals____ =
+            fillOptionals____
+                { where_ = Absent }
+    in
+    { constraint = required____.constraint, update_columns = required____.update_columns, where_ = optionals____.where_ }
+
+
+type alias Task_to_tag_upsert_on_conflictRequiredFields =
+    { constraint : List Task_to_tag_column
+    , update_columns : List Task_to_tag_column
+    }
+
+
+type alias Task_to_tag_upsert_on_conflictOptionalFields =
+    { where_ : OptionalArgument Task_to_tag_filter
+    }
+
+
+{-| Type for the Task\_to\_tag\_upsert\_on\_conflict input object.
+-}
+type alias Task_to_tag_upsert_on_conflict =
+    { constraint : List Task_to_tag_column
+    , update_columns : List Task_to_tag_column
+    , where_ : OptionalArgument Task_to_tag_filter
+    }
+
+
+{-| Encode a Task\_to\_tag\_upsert\_on\_conflict into a value that can be used as an argument.
+-}
+encodeTask_to_tag_upsert_on_conflict : Task_to_tag_upsert_on_conflict -> Value
+encodeTask_to_tag_upsert_on_conflict input____ =
+    Encode.maybeObject
+        [ ( "constraint", (encodeTask_to_tag_column |> Encode.list) input____.constraint |> Just ), ( "update_columns", (encodeTask_to_tag_column |> Encode.list) input____.update_columns |> Just ), ( "where", (encodeTask_to_tag_filter) |> Encode.optional input____.where_ ) ]

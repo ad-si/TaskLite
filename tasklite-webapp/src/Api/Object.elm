@@ -35,16 +35,112 @@ type Task_to_tag_row
     = Task_to_tag_row
 
 
-type Tasks_head_mutation_response
-    = Tasks_head_mutation_response
+type Tasks_all_mutation_response
+    = Tasks_all_mutation_response
 
 
-type Tasks_head_row
-    = Tasks_head_row
+type Tasks_all_row
+    = Tasks_all_row
+
+
+type Tasks_deletable_mutation_response
+    = Tasks_deletable_mutation_response
+
+
+type Tasks_deletable_row
+    = Tasks_deletable_row
+
+
+type Tasks_done_mutation_response
+    = Tasks_done_mutation_response
+
+
+type Tasks_done_row
+    = Tasks_done_row
+
+
+type Tasks_modified_mutation_response
+    = Tasks_modified_mutation_response
+
+
+type Tasks_modified_row
+    = Tasks_modified_row
 
 
 type Tasks_mutation_response
     = Tasks_mutation_response
+
+
+type Tasks_new_mutation_response
+    = Tasks_new_mutation_response
+
+
+type Tasks_new_row
+    = Tasks_new_row
+
+
+type Tasks_notag_mutation_response
+    = Tasks_notag_mutation_response
+
+
+type Tasks_notag_row
+    = Tasks_notag_row
+
+
+type Tasks_obsolete_mutation_response
+    = Tasks_obsolete_mutation_response
+
+
+type Tasks_obsolete_row
+    = Tasks_obsolete_row
+
+
+type Tasks_old_mutation_response
+    = Tasks_old_mutation_response
+
+
+type Tasks_old_row
+    = Tasks_old_row
+
+
+type Tasks_open_mutation_response
+    = Tasks_open_mutation_response
+
+
+type Tasks_open_row
+    = Tasks_open_row
+
+
+type Tasks_overdue_mutation_response
+    = Tasks_overdue_mutation_response
+
+
+type Tasks_overdue_row
+    = Tasks_overdue_row
+
+
+type Tasks_ready_mutation_response
+    = Tasks_ready_mutation_response
+
+
+type Tasks_ready_row
+    = Tasks_ready_row
+
+
+type Tasks_recurring_mutation_response
+    = Tasks_recurring_mutation_response
+
+
+type Tasks_recurring_row
+    = Tasks_recurring_row
+
+
+type Tasks_repeating_mutation_response
+    = Tasks_repeating_mutation_response
+
+
+type Tasks_repeating_row
+    = Tasks_repeating_row
 
 
 type Tasks_row
@@ -57,3 +153,11 @@ type Tasks_view_mutation_response
 
 type Tasks_view_row
     = Tasks_view_row
+
+
+type Tasks_waiting_mutation_response
+    = Tasks_waiting_mutation_response
+
+
+type Tasks_waiting_row
+    = Tasks_waiting_row

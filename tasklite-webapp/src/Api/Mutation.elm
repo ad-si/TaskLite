@@ -22,18 +22,30 @@ import Graphql.Operation exposing (RootMutation, RootQuery, RootSubscription)
 import Json.Decode as Decode exposing (Decoder)
 import Graphql.Internal.Encode as Encode exposing (Value)
 
+type alias InsertTaskToTagOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Task_to_tag_upsert_on_conflict) }
+
 type alias InsertTaskToTagRequiredArguments = { objects : (List Api.InputObject.Task_to_tag_insert_input) }
 
 {-| Insert new rows in table "task_to_tag"
 
   - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
 
 -}
-insert_task_to_tag : InsertTaskToTagRequiredArguments
+insert_task_to_tag : (InsertTaskToTagOptionalArguments -> InsertTaskToTagOptionalArguments)
+ -> InsertTaskToTagRequiredArguments
  -> SelectionSet decodesTo Api.Object.Task_to_tag_mutation_response
  -> SelectionSet decodesTo RootMutation
-insert_task_to_tag requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_task_to_tag" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTask_to_tag_insert_input |> Encode.list) ] (object____) (Basics.identity)
+insert_task_to_tag fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTask_to_tag_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_task_to_tag" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTask_to_tag_insert_input |> Encode.list) ]) (object____) (Basics.identity)
 
 
 type alias UpdateTaskToTagRequiredArguments = { filter : Api.InputObject.Task_to_tag_filter
@@ -66,18 +78,30 @@ delete_task_to_tag requiredArgs____ object____ =
       Object.selectionForCompositeField "delete_task_to_tag" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTask_to_tag_filter) ] (object____) (Basics.identity)
 
 
+type alias InsertTaskToNoteOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Task_to_note_upsert_on_conflict) }
+
 type alias InsertTaskToNoteRequiredArguments = { objects : (List Api.InputObject.Task_to_note_insert_input) }
 
 {-| Insert new rows in table "task_to_note"
 
   - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
 
 -}
-insert_task_to_note : InsertTaskToNoteRequiredArguments
+insert_task_to_note : (InsertTaskToNoteOptionalArguments -> InsertTaskToNoteOptionalArguments)
+ -> InsertTaskToNoteRequiredArguments
  -> SelectionSet decodesTo Api.Object.Task_to_note_mutation_response
  -> SelectionSet decodesTo RootMutation
-insert_task_to_note requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_task_to_note" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTask_to_note_insert_input |> Encode.list) ] (object____) (Basics.identity)
+insert_task_to_note fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTask_to_note_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_task_to_note" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTask_to_note_insert_input |> Encode.list) ]) (object____) (Basics.identity)
 
 
 type alias UpdateTaskToNoteRequiredArguments = { filter : Api.InputObject.Task_to_note_filter
@@ -110,18 +134,30 @@ delete_task_to_note requiredArgs____ object____ =
       Object.selectionForCompositeField "delete_task_to_note" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTask_to_note_filter) ] (object____) (Basics.identity)
 
 
+type alias InsertTasksOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_upsert_on_conflict) }
+
 type alias InsertTasksRequiredArguments = { objects : (List Api.InputObject.Tasks_insert_input) }
 
 {-| Insert new rows in table "tasks"
 
   - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
 
 -}
-insert_tasks : InsertTasksRequiredArguments
+insert_tasks : (InsertTasksOptionalArguments -> InsertTasksOptionalArguments)
+ -> InsertTasksRequiredArguments
  -> SelectionSet decodesTo Api.Object.Tasks_mutation_response
  -> SelectionSet decodesTo RootMutation
-insert_tasks requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_tasks" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_insert_input |> Encode.list) ] (object____) (Basics.identity)
+insert_tasks fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_insert_input |> Encode.list) ]) (object____) (Basics.identity)
 
 
 type alias UpdateTasksRequiredArguments = { filter : Api.InputObject.Tasks_filter
@@ -154,62 +190,30 @@ delete_tasks requiredArgs____ object____ =
       Object.selectionForCompositeField "delete_tasks" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_filter) ] (object____) (Basics.identity)
 
 
-type alias InsertTasksViewRequiredArguments = { objects : (List Api.InputObject.Tasks_view_insert_input) }
-
-{-| Insert new rows in table "tasks_view"
-
-  - objects - Rows to be inserted
-
--}
-insert_tasks_view : InsertTasksViewRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_view_mutation_response
- -> SelectionSet decodesTo RootMutation
-insert_tasks_view requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_tasks_view" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_view_insert_input |> Encode.list) ] (object____) (Basics.identity)
-
-
-type alias UpdateTasksViewRequiredArguments = { filter : Api.InputObject.Tasks_view_filter
- , set : Api.InputObject.Tasks_view_set_input }
-
-{-| Update rows in table "tasks_view"
-
-  - filter - Filter to select rows to be updated
-  - set - Fields to be updated
-
--}
-update_tasks_view : UpdateTasksViewRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_view_mutation_response
- -> SelectionSet decodesTo RootMutation
-update_tasks_view requiredArgs____ object____ =
-      Object.selectionForCompositeField "update_tasks_view" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_view_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_view_set_input) ] (object____) (Basics.identity)
-
-
-type alias DeleteTasksViewRequiredArguments = { filter : Api.InputObject.Tasks_view_filter }
-
-{-| Delete rows in table "tasks_view"
-
-  - filter - Filter to select rows to be deleted
-
--}
-delete_tasks_view : DeleteTasksViewRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_view_mutation_response
- -> SelectionSet decodesTo RootMutation
-delete_tasks_view requiredArgs____ object____ =
-      Object.selectionForCompositeField "delete_tasks_view" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_view_filter) ] (object____) (Basics.identity)
-
+type alias InsertTagsOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tags_upsert_on_conflict) }
 
 type alias InsertTagsRequiredArguments = { objects : (List Api.InputObject.Tags_insert_input) }
 
 {-| Insert new rows in table "tags"
 
   - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
 
 -}
-insert_tags : InsertTagsRequiredArguments
+insert_tags : (InsertTagsOptionalArguments -> InsertTagsOptionalArguments)
+ -> InsertTagsRequiredArguments
  -> SelectionSet decodesTo Api.Object.Tags_mutation_response
  -> SelectionSet decodesTo RootMutation
-insert_tags requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_tags" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTags_insert_input |> Encode.list) ] (object____) (Basics.identity)
+insert_tags fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTags_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tags" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTags_insert_input |> Encode.list) ]) (object____) (Basics.identity)
 
 
 type alias UpdateTagsRequiredArguments = { filter : Api.InputObject.Tags_filter
@@ -242,62 +246,30 @@ delete_tags requiredArgs____ object____ =
       Object.selectionForCompositeField "delete_tags" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTags_filter) ] (object____) (Basics.identity)
 
 
-type alias InsertTasksHeadRequiredArguments = { objects : (List Api.InputObject.Tasks_head_insert_input) }
-
-{-| Insert new rows in table "tasks_head"
-
-  - objects - Rows to be inserted
-
--}
-insert_tasks_head : InsertTasksHeadRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_head_mutation_response
- -> SelectionSet decodesTo RootMutation
-insert_tasks_head requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_tasks_head" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_head_insert_input |> Encode.list) ] (object____) (Basics.identity)
-
-
-type alias UpdateTasksHeadRequiredArguments = { filter : Api.InputObject.Tasks_head_filter
- , set : Api.InputObject.Tasks_head_set_input }
-
-{-| Update rows in table "tasks_head"
-
-  - filter - Filter to select rows to be updated
-  - set - Fields to be updated
-
--}
-update_tasks_head : UpdateTasksHeadRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_head_mutation_response
- -> SelectionSet decodesTo RootMutation
-update_tasks_head requiredArgs____ object____ =
-      Object.selectionForCompositeField "update_tasks_head" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_head_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_head_set_input) ] (object____) (Basics.identity)
-
-
-type alias DeleteTasksHeadRequiredArguments = { filter : Api.InputObject.Tasks_head_filter }
-
-{-| Delete rows in table "tasks_head"
-
-  - filter - Filter to select rows to be deleted
-
--}
-delete_tasks_head : DeleteTasksHeadRequiredArguments
- -> SelectionSet decodesTo Api.Object.Tasks_head_mutation_response
- -> SelectionSet decodesTo RootMutation
-delete_tasks_head requiredArgs____ object____ =
-      Object.selectionForCompositeField "delete_tasks_head" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_head_filter) ] (object____) (Basics.identity)
-
+type alias InsertClosedTasksHistogramOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Closed_tasks_histogram_upsert_on_conflict) }
 
 type alias InsertClosedTasksHistogramRequiredArguments = { objects : (List Api.InputObject.Closed_tasks_histogram_insert_input) }
 
 {-| Insert new rows in table "closed_tasks_histogram"
 
   - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
 
 -}
-insert_closed_tasks_histogram : InsertClosedTasksHistogramRequiredArguments
+insert_closed_tasks_histogram : (InsertClosedTasksHistogramOptionalArguments -> InsertClosedTasksHistogramOptionalArguments)
+ -> InsertClosedTasksHistogramRequiredArguments
  -> SelectionSet decodesTo Api.Object.Closed_tasks_histogram_mutation_response
  -> SelectionSet decodesTo RootMutation
-insert_closed_tasks_histogram requiredArgs____ object____ =
-      Object.selectionForCompositeField "insert_closed_tasks_histogram" [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeClosed_tasks_histogram_insert_input |> Encode.list) ] (object____) (Basics.identity)
+insert_closed_tasks_histogram fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeClosed_tasks_histogram_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_closed_tasks_histogram" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeClosed_tasks_histogram_insert_input |> Encode.list) ]) (object____) (Basics.identity)
 
 
 type alias UpdateClosedTasksHistogramRequiredArguments = { filter : Api.InputObject.Closed_tasks_histogram_filter
@@ -328,3 +300,845 @@ delete_closed_tasks_histogram : DeleteClosedTasksHistogramRequiredArguments
  -> SelectionSet decodesTo RootMutation
 delete_closed_tasks_histogram requiredArgs____ object____ =
       Object.selectionForCompositeField "delete_closed_tasks_histogram" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeClosed_tasks_histogram_filter) ] (object____) (Basics.identity)
+
+
+
+
+type alias InsertTasksViewOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_view_upsert_on_conflict) }
+
+type alias InsertTasksViewRequiredArguments = { objects : (List Api.InputObject.Tasks_view_insert_input) }
+
+{-| Insert new rows in table "tasks_view"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_view : (InsertTasksViewOptionalArguments -> InsertTasksViewOptionalArguments)
+ -> InsertTasksViewRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_view_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_view fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_view_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_view" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_view_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksViewRequiredArguments = { filter : Api.InputObject.Tasks_view_filter
+ , set : Api.InputObject.Tasks_view_set_input }
+
+{-| Update rows in table "tasks_view"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_view : UpdateTasksViewRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_view_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_view requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_view" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_view_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_view_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksViewRequiredArguments = { filter : Api.InputObject.Tasks_view_filter }
+
+{-| Delete rows in table "tasks_view"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_view : DeleteTasksViewRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_view_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_view requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_view" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_view_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksOpenOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_open_upsert_on_conflict) }
+
+type alias InsertTasksOpenRequiredArguments = { objects : (List Api.InputObject.Tasks_open_insert_input) }
+
+{-| Insert new rows in table "tasks_open"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_open : (InsertTasksOpenOptionalArguments -> InsertTasksOpenOptionalArguments)
+ -> InsertTasksOpenRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_open_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_open fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_open_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_open" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_open_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksOpenRequiredArguments = { filter : Api.InputObject.Tasks_open_filter
+ , set : Api.InputObject.Tasks_open_set_input }
+
+{-| Update rows in table "tasks_open"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_open : UpdateTasksOpenRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_open_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_open requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_open" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_open_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_open_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksOpenRequiredArguments = { filter : Api.InputObject.Tasks_open_filter }
+
+{-| Delete rows in table "tasks_open"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_open : DeleteTasksOpenRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_open_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_open requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_open" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_open_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksOverdueOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_overdue_upsert_on_conflict) }
+
+type alias InsertTasksOverdueRequiredArguments = { objects : (List Api.InputObject.Tasks_overdue_insert_input) }
+
+{-| Insert new rows in table "tasks_overdue"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_overdue : (InsertTasksOverdueOptionalArguments -> InsertTasksOverdueOptionalArguments)
+ -> InsertTasksOverdueRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_overdue_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_overdue fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_overdue_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_overdue" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_overdue_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksOverdueRequiredArguments = { filter : Api.InputObject.Tasks_overdue_filter
+ , set : Api.InputObject.Tasks_overdue_set_input }
+
+{-| Update rows in table "tasks_overdue"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_overdue : UpdateTasksOverdueRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_overdue_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_overdue requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_overdue" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_overdue_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_overdue_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksOverdueRequiredArguments = { filter : Api.InputObject.Tasks_overdue_filter }
+
+{-| Delete rows in table "tasks_overdue"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_overdue : DeleteTasksOverdueRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_overdue_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_overdue requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_overdue" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_overdue_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksDoneOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_done_upsert_on_conflict) }
+
+type alias InsertTasksDoneRequiredArguments = { objects : (List Api.InputObject.Tasks_done_insert_input) }
+
+{-| Insert new rows in table "tasks_done"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_done : (InsertTasksDoneOptionalArguments -> InsertTasksDoneOptionalArguments)
+ -> InsertTasksDoneRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_done_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_done fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_done_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_done" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_done_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksDoneRequiredArguments = { filter : Api.InputObject.Tasks_done_filter
+ , set : Api.InputObject.Tasks_done_set_input }
+
+{-| Update rows in table "tasks_done"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_done : UpdateTasksDoneRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_done_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_done requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_done" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_done_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_done_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksDoneRequiredArguments = { filter : Api.InputObject.Tasks_done_filter }
+
+{-| Delete rows in table "tasks_done"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_done : DeleteTasksDoneRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_done_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_done requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_done" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_done_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksObsoleteOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_obsolete_upsert_on_conflict) }
+
+type alias InsertTasksObsoleteRequiredArguments = { objects : (List Api.InputObject.Tasks_obsolete_insert_input) }
+
+{-| Insert new rows in table "tasks_obsolete"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_obsolete : (InsertTasksObsoleteOptionalArguments -> InsertTasksObsoleteOptionalArguments)
+ -> InsertTasksObsoleteRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_obsolete_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_obsolete fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_obsolete_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_obsolete" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_obsolete_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksObsoleteRequiredArguments = { filter : Api.InputObject.Tasks_obsolete_filter
+ , set : Api.InputObject.Tasks_obsolete_set_input }
+
+{-| Update rows in table "tasks_obsolete"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_obsolete : UpdateTasksObsoleteRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_obsolete_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_obsolete requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_obsolete" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_obsolete_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_obsolete_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksObsoleteRequiredArguments = { filter : Api.InputObject.Tasks_obsolete_filter }
+
+{-| Delete rows in table "tasks_obsolete"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_obsolete : DeleteTasksObsoleteRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_obsolete_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_obsolete requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_obsolete" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_obsolete_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksDeletableOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_deletable_upsert_on_conflict) }
+
+type alias InsertTasksDeletableRequiredArguments = { objects : (List Api.InputObject.Tasks_deletable_insert_input) }
+
+{-| Insert new rows in table "tasks_deletable"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_deletable : (InsertTasksDeletableOptionalArguments -> InsertTasksDeletableOptionalArguments)
+ -> InsertTasksDeletableRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_deletable_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_deletable fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_deletable_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_deletable" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_deletable_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksDeletableRequiredArguments = { filter : Api.InputObject.Tasks_deletable_filter
+ , set : Api.InputObject.Tasks_deletable_set_input }
+
+{-| Update rows in table "tasks_deletable"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_deletable : UpdateTasksDeletableRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_deletable_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_deletable requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_deletable" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_deletable_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_deletable_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksDeletableRequiredArguments = { filter : Api.InputObject.Tasks_deletable_filter }
+
+{-| Delete rows in table "tasks_deletable"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_deletable : DeleteTasksDeletableRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_deletable_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_deletable requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_deletable" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_deletable_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksWaitingOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_waiting_upsert_on_conflict) }
+
+type alias InsertTasksWaitingRequiredArguments = { objects : (List Api.InputObject.Tasks_waiting_insert_input) }
+
+{-| Insert new rows in table "tasks_waiting"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_waiting : (InsertTasksWaitingOptionalArguments -> InsertTasksWaitingOptionalArguments)
+ -> InsertTasksWaitingRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_waiting_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_waiting fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_waiting_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_waiting" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_waiting_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksWaitingRequiredArguments = { filter : Api.InputObject.Tasks_waiting_filter
+ , set : Api.InputObject.Tasks_waiting_set_input }
+
+{-| Update rows in table "tasks_waiting"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_waiting : UpdateTasksWaitingRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_waiting_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_waiting requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_waiting" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_waiting_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_waiting_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksWaitingRequiredArguments = { filter : Api.InputObject.Tasks_waiting_filter }
+
+{-| Delete rows in table "tasks_waiting"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_waiting : DeleteTasksWaitingRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_waiting_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_waiting requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_waiting" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_waiting_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksRepeatingOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_repeating_upsert_on_conflict) }
+
+type alias InsertTasksRepeatingRequiredArguments = { objects : (List Api.InputObject.Tasks_repeating_insert_input) }
+
+{-| Insert new rows in table "tasks_repeating"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_repeating : (InsertTasksRepeatingOptionalArguments -> InsertTasksRepeatingOptionalArguments)
+ -> InsertTasksRepeatingRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_repeating_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_repeating fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_repeating_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_repeating" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_repeating_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksRepeatingRequiredArguments = { filter : Api.InputObject.Tasks_repeating_filter
+ , set : Api.InputObject.Tasks_repeating_set_input }
+
+{-| Update rows in table "tasks_repeating"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_repeating : UpdateTasksRepeatingRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_repeating_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_repeating requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_repeating" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_repeating_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_repeating_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksRepeatingRequiredArguments = { filter : Api.InputObject.Tasks_repeating_filter }
+
+{-| Delete rows in table "tasks_repeating"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_repeating : DeleteTasksRepeatingRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_repeating_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_repeating requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_repeating" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_repeating_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksRecurringOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_recurring_upsert_on_conflict) }
+
+type alias InsertTasksRecurringRequiredArguments = { objects : (List Api.InputObject.Tasks_recurring_insert_input) }
+
+{-| Insert new rows in table "tasks_recurring"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_recurring : (InsertTasksRecurringOptionalArguments -> InsertTasksRecurringOptionalArguments)
+ -> InsertTasksRecurringRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_recurring_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_recurring fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_recurring_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_recurring" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_recurring_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksRecurringRequiredArguments = { filter : Api.InputObject.Tasks_recurring_filter
+ , set : Api.InputObject.Tasks_recurring_set_input }
+
+{-| Update rows in table "tasks_recurring"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_recurring : UpdateTasksRecurringRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_recurring_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_recurring requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_recurring" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_recurring_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_recurring_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksRecurringRequiredArguments = { filter : Api.InputObject.Tasks_recurring_filter }
+
+{-| Delete rows in table "tasks_recurring"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_recurring : DeleteTasksRecurringRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_recurring_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_recurring requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_recurring" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_recurring_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksNewOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_new_upsert_on_conflict) }
+
+type alias InsertTasksNewRequiredArguments = { objects : (List Api.InputObject.Tasks_new_insert_input) }
+
+{-| Insert new rows in table "tasks_new"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_new : (InsertTasksNewOptionalArguments -> InsertTasksNewOptionalArguments)
+ -> InsertTasksNewRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_new_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_new fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_new_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_new" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_new_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksNewRequiredArguments = { filter : Api.InputObject.Tasks_new_filter
+ , set : Api.InputObject.Tasks_new_set_input }
+
+{-| Update rows in table "tasks_new"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_new : UpdateTasksNewRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_new_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_new requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_new" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_new_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_new_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksNewRequiredArguments = { filter : Api.InputObject.Tasks_new_filter }
+
+{-| Delete rows in table "tasks_new"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_new : DeleteTasksNewRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_new_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_new requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_new" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_new_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksOldOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_old_upsert_on_conflict) }
+
+type alias InsertTasksOldRequiredArguments = { objects : (List Api.InputObject.Tasks_old_insert_input) }
+
+{-| Insert new rows in table "tasks_old"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_old : (InsertTasksOldOptionalArguments -> InsertTasksOldOptionalArguments)
+ -> InsertTasksOldRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_old_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_old fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_old_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_old" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_old_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksOldRequiredArguments = { filter : Api.InputObject.Tasks_old_filter
+ , set : Api.InputObject.Tasks_old_set_input }
+
+{-| Update rows in table "tasks_old"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_old : UpdateTasksOldRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_old_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_old requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_old" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_old_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_old_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksOldRequiredArguments = { filter : Api.InputObject.Tasks_old_filter }
+
+{-| Delete rows in table "tasks_old"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_old : DeleteTasksOldRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_old_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_old requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_old" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_old_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksAllOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_all_upsert_on_conflict) }
+
+type alias InsertTasksAllRequiredArguments = { objects : (List Api.InputObject.Tasks_all_insert_input) }
+
+{-| Insert new rows in table "tasks_all"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_all : (InsertTasksAllOptionalArguments -> InsertTasksAllOptionalArguments)
+ -> InsertTasksAllRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_all_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_all fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_all_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_all" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_all_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksAllRequiredArguments = { filter : Api.InputObject.Tasks_all_filter
+ , set : Api.InputObject.Tasks_all_set_input }
+
+{-| Update rows in table "tasks_all"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_all : UpdateTasksAllRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_all_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_all requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_all" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_all_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_all_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksAllRequiredArguments = { filter : Api.InputObject.Tasks_all_filter }
+
+{-| Delete rows in table "tasks_all"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_all : DeleteTasksAllRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_all_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_all requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_all" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_all_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksNotagOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_notag_upsert_on_conflict) }
+
+type alias InsertTasksNotagRequiredArguments = { objects : (List Api.InputObject.Tasks_notag_insert_input) }
+
+{-| Insert new rows in table "tasks_notag"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_notag : (InsertTasksNotagOptionalArguments -> InsertTasksNotagOptionalArguments)
+ -> InsertTasksNotagRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_notag_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_notag fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_notag_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_notag" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_notag_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksNotagRequiredArguments = { filter : Api.InputObject.Tasks_notag_filter
+ , set : Api.InputObject.Tasks_notag_set_input }
+
+{-| Update rows in table "tasks_notag"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_notag : UpdateTasksNotagRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_notag_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_notag requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_notag" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_notag_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_notag_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksNotagRequiredArguments = { filter : Api.InputObject.Tasks_notag_filter }
+
+{-| Delete rows in table "tasks_notag"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_notag : DeleteTasksNotagRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_notag_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_notag requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_notag" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_notag_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksModifiedOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_modified_upsert_on_conflict) }
+
+type alias InsertTasksModifiedRequiredArguments = { objects : (List Api.InputObject.Tasks_modified_insert_input) }
+
+{-| Insert new rows in table "tasks_modified"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_modified : (InsertTasksModifiedOptionalArguments -> InsertTasksModifiedOptionalArguments)
+ -> InsertTasksModifiedRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_modified_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_modified fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_modified_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_modified" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_modified_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksModifiedRequiredArguments = { filter : Api.InputObject.Tasks_modified_filter
+ , set : Api.InputObject.Tasks_modified_set_input }
+
+{-| Update rows in table "tasks_modified"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_modified : UpdateTasksModifiedRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_modified_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_modified requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_modified" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_modified_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_modified_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksModifiedRequiredArguments = { filter : Api.InputObject.Tasks_modified_filter }
+
+{-| Delete rows in table "tasks_modified"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_modified : DeleteTasksModifiedRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_modified_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_modified requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_modified" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_modified_filter) ] (object____) (Basics.identity)
+
+
+type alias InsertTasksReadyOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_ready_upsert_on_conflict) }
+
+type alias InsertTasksReadyRequiredArguments = { objects : (List Api.InputObject.Tasks_ready_insert_input) }
+
+{-| Insert new rows in table "tasks_ready"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tasks_ready : (InsertTasksReadyOptionalArguments -> InsertTasksReadyOptionalArguments)
+ -> InsertTasksReadyRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_ready_mutation_response
+ -> SelectionSet decodesTo RootMutation
+insert_tasks_ready fillInOptionals____ requiredArgs____ object____ =
+    let
+        filledInOptionals____ =
+            fillInOptionals____ { on_conflict = Absent }
+
+        optionalArgs____ =
+            [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTasks_ready_upsert_on_conflict |> Encode.list) ]
+                |> List.filterMap Basics.identity
+    in
+      Object.selectionForCompositeField "insert_tasks_ready" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTasks_ready_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTasksReadyRequiredArguments = { filter : Api.InputObject.Tasks_ready_filter
+ , set : Api.InputObject.Tasks_ready_set_input }
+
+{-| Update rows in table "tasks_ready"
+
+  - filter - Filter to select rows to be updated
+  - set - Fields to be updated
+
+-}
+update_tasks_ready : UpdateTasksReadyRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_ready_mutation_response
+ -> SelectionSet decodesTo RootMutation
+update_tasks_ready requiredArgs____ object____ =
+      Object.selectionForCompositeField "update_tasks_ready" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_ready_filter), Argument.required "set" requiredArgs____.set (Api.InputObject.encodeTasks_ready_set_input) ] (object____) (Basics.identity)
+
+
+type alias DeleteTasksReadyRequiredArguments = { filter : Api.InputObject.Tasks_ready_filter }
+
+{-| Delete rows in table "tasks_ready"
+
+  - filter - Filter to select rows to be deleted
+
+-}
+delete_tasks_ready : DeleteTasksReadyRequiredArguments
+ -> SelectionSet decodesTo Api.Object.Tasks_ready_mutation_response
+ -> SelectionSet decodesTo RootMutation
+delete_tasks_ready requiredArgs____ object____ =
+      Object.selectionForCompositeField "delete_tasks_ready" [ Argument.required "filter" requiredArgs____.filter (Api.InputObject.encodeTasks_ready_filter) ] (object____) (Basics.identity)

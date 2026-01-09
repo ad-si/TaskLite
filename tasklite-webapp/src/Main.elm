@@ -5,13 +5,15 @@ import Api.InputObject
     exposing
         ( buildStringComparison
         , buildTasks_filter
+        , buildTasks_insert_input
+        , buildTasks_set_input
         , buildTasks_view_filter
         , buildTasks_view_order_by
         )
 import Api.Mutation as Mutation
-import Api.Object exposing (Tasks_head_row, Tasks_view_row)
-import Api.Object.Tasks_head_row as Tasks_head_row exposing (body)
+import Api.Object exposing (Tasks_ready_row, Tasks_view_row)
 import Api.Object.Tasks_mutation_response
+import Api.Object.Tasks_ready_row as Tasks_ready_row exposing (body)
 import Api.Object.Tasks_view_row as Tasks_view_row exposing (body)
 import Api.Query as Query
 import Api.Scalar exposing (Id(..))
@@ -523,18 +525,18 @@ view model =
     }
 
 
-tasksHeadSelection : SelectionSet TodoItem Tasks_head_row
+tasksHeadSelection : SelectionSet TodoItem Tasks_ready_row
 tasksHeadSelection =
     SelectionSet.succeed TodoItem
-        |> with Tasks_head_row.ulid
-        |> with Tasks_head_row.body
-        |> with Tasks_head_row.state
-        |> with Tasks_head_row.closed_utc
-        |> with Tasks_head_row.due_utc
-        |> with Tasks_head_row.review_utc
-        |> with Tasks_head_row.tags
-        |> with Tasks_head_row.repetition_duration
-        |> with Tasks_head_row.recurrence_duration
+        |> with Tasks_ready_row.ulid
+        |> with Tasks_ready_row.body
+        |> with Tasks_ready_row.state
+        |> with Tasks_ready_row.closed_utc
+        |> with Tasks_ready_row.due_utc
+        |> with Tasks_ready_row.review_utc
+        |> with Tasks_ready_row.tags
+        |> with Tasks_ready_row.repetition_duration
+        |> with Tasks_ready_row.recurrence_duration
 
 
 tasksViewSelection : SelectionSet TodoItem Tasks_view_row
@@ -553,7 +555,7 @@ tasksViewSelection =
 
 getTodos : Cmd Msg
 getTodos =
-    Query.tasks_head identity tasksHeadSelection
+    Query.tasks_ready (\opts -> { opts | limit = Present 100 }) tasksHeadSelection
         |> Graphql.Http.queryRequest graphqlApiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> GotTasksResponse)
 
@@ -595,12 +597,16 @@ getTodosWithTag tag =
                 }
         in
         Query.tasks_view
-            (\_ ->
-                { filter = Present <| buildTasks_view_filter setTags
-                , order_by =
-                    Present <|
-                        buildTasks_view_order_by
-                            (\o -> { o | priority = Present Desc })
+            (\opts ->
+                { opts
+                    | filter = Present <| buildTasks_view_filter setTags
+                    , order_by =
+                        Present
+                            [ Just <|
+                                buildTasks_view_order_by
+                                    (\o -> { o | priority = Present Desc })
+                            ]
+                    , limit = Present 100
                 }
             )
             tasksViewSelection
@@ -617,29 +623,14 @@ insertTodo now ulid body =
                 |> String.toLower
     in
     Mutation.insert_tasks
+        identity
         { objects =
-            [ { ulid = ulidString
-              , body = body
-
-              -- TODO: Replace after it's set automatically
-              , modified_utc = now |> Iso8601.fromTime
-              , user = Present "webapp"
-
-              --
-              , awake_utc = Absent
-              , closed_utc = Absent
-              , due_utc = Absent
-              , group_ulid = Absent
-              , metadata = Absent
-              , priority_adjustment = Absent
-              , ready_utc = Absent
-              , recurrence_duration = Absent
-              , repetition_duration = Absent
-              , review_utc = Absent
-              , rowid = Absent
-              , state = Absent
-              , waiting_utc = Absent
-              }
+            [ buildTasks_insert_input
+                { ulid = ulidString
+                , body = body
+                , modified_utc = now |> Iso8601.fromTime
+                }
+                (\opts -> { opts | user = Present "webapp" })
             ]
         }
         Api.Object.Tasks_mutation_response.affected_rows
@@ -902,9 +893,6 @@ update msg model =
 
         UrlChanged url ->
             let
-                _ =
-                    Debug.log "UrlChanged" url
-
                 route =
                     url
                         |> parse routeParser
