@@ -70,6 +70,11 @@ graphqlApiUrl =
     "http://localhost:7458/graphql"
 
 
+pageSize : Int
+pageSize =
+    25
+
+
 dark : List Css.Style -> Css.Style
 dark =
     withMediaQuery [ "(prefers-color-scheme: dark)" ]
@@ -119,6 +124,12 @@ type Msg
     | CompleteAffectedRowsResponse (RemoteData (Graphql.Http.Error Int) Int)
     | DeleteTask String
     | DeleteAffectedRowsResponse (RemoteData (Graphql.Http.Error Int) Int)
+    | LoadMoreTasks
+    | GotMoreTasksResponse
+        (RemoteData
+            (Graphql.Http.Error (List TodoItem))
+            (List TodoItem)
+        )
     | UrlChanged Url
     | ClickedLink Browser.UrlRequest
     | NoOp
@@ -134,6 +145,9 @@ type alias Model =
     , submissionStatus : RemoteData (Graphql.Http.Error Int) Int
     , now : Posix
     , tags : List String
+    , offset : Int
+    , hasMore : Bool
+    , loadingMore : Bool
     }
 
 
@@ -510,7 +524,50 @@ viewBody model =
                     p [] [ text "Loading …" ]
 
                 Success todos ->
-                    div [] (todos |> List.map (viewTodo model.now))
+                    div []
+                        [ div [] (todos |> List.map (viewTodo model.now))
+                        , if model.hasMore then
+                            div [ css [ mt_4, text_center ] ]
+                                [ button
+                                    [ css
+                                        [ cursor_pointer
+                                        , px_4
+                                        , py_2
+                                        , rounded
+                                        , border
+                                        , border_solid
+                                        , border_color gray_400
+                                        , bg_color white
+                                        , hover
+                                            [ bg_color gray_200
+                                            , border_color gray_600
+                                            ]
+                                        , dark
+                                            [ bg_color neutral_800
+                                            , border_color neutral_500
+                                            , text_color neutral_300
+                                            , hover
+                                                [ bg_color neutral_600
+                                                , border_color neutral_300
+                                                ]
+                                            ]
+                                        ]
+                                    , onClick LoadMoreTasks
+                                    , disabled model.loadingMore
+                                    ]
+                                    [ text
+                                        (if model.loadingMore then
+                                            "Loading …"
+
+                                         else
+                                            "Load more"
+                                        )
+                                    ]
+                                ]
+
+                          else
+                            text ""
+                        ]
 
                 Failure error ->
                     viewError error
@@ -553,11 +610,18 @@ tasksViewSelection =
         |> with Tasks_view_row.recurrence_duration
 
 
-getTodos : Cmd Msg
-getTodos =
-    Query.tasks_ready (\opts -> { opts | limit = Present 100 }) tasksHeadSelection
+getTodos : Int -> (RemoteData (Graphql.Http.Error (List TodoItem)) (List TodoItem) -> Msg) -> Cmd Msg
+getTodos offset toMsg =
+    Query.tasks_ready
+        (\opts ->
+            { opts
+                | limit = Present pageSize
+                , offset = Present offset
+            }
+        )
+        tasksHeadSelection
         |> Graphql.Http.queryRequest graphqlApiUrl
-        |> Graphql.Http.send (RemoteData.fromResult >> GotTasksResponse)
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 {-| Refresh todos based on current view
@@ -566,14 +630,26 @@ refreshTodos : Model -> Cmd Msg
 refreshTodos model =
     case model.tags of
         [ tag ] ->
-            getTodosWithTag tag
+            getTodosWithTag tag 0 GotTasksResponse
 
         _ ->
-            getTodos
+            getTodos 0 GotTasksResponse
 
 
-getTodosWithTag : String -> Cmd Msg
-getTodosWithTag tag =
+{-| Load more todos based on current view and offset
+-}
+loadMoreTodos : Model -> Cmd Msg
+loadMoreTodos model =
+    case model.tags of
+        [ tag ] ->
+            getTodosWithTag tag model.offset GotMoreTasksResponse
+
+        _ ->
+            getTodos model.offset GotMoreTasksResponse
+
+
+getTodosWithTag : String -> Int -> (RemoteData (Graphql.Http.Error (List TodoItem)) (List TodoItem) -> Msg) -> Cmd Msg
+getTodosWithTag tag offset toMsg =
     if String.contains "," tag then
         -- TODO: Add support for specifying multiple tags
         Cmd.none
@@ -606,12 +682,13 @@ getTodosWithTag tag =
                                 buildTasks_view_order_by
                                     (\o -> { o | priority = Present Desc })
                             ]
-                    , limit = Present 100
+                    , limit = Present pageSize
+                    , offset = Present offset
                 }
             )
             tasksViewSelection
             |> Graphql.Http.queryRequest graphqlApiUrl
-            |> Graphql.Http.send (RemoteData.fromResult >> GotTasksResponse)
+            |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 insertTodo : Posix -> Ulid -> String -> Cmd Msg
@@ -753,13 +830,13 @@ handleRoute route =
     case route of
         Home ->
             Cmd.batch
-                [ getTodos
+                [ getTodos 0 GotTasksResponse
                 , Task.perform ReceivedTime Time.now
                 ]
 
         Tags tagStr ->
             Cmd.batch
-                [ getTodosWithTag tagStr
+                [ getTodosWithTag tagStr 0 GotTasksResponse
                 , Task.perform ReceivedTime Time.now
                 ]
 
@@ -788,6 +865,9 @@ init _ url key =
 
                 _ ->
                     []
+      , offset = 0
+      , hasMore = True
+      , loadingMore = False
       }
     , handleRoute route
     )
@@ -808,7 +888,19 @@ update msg model =
             )
 
         GotTasksResponse response ->
-            ( { model | remoteTodos = response }, Cmd.none )
+            ( { model
+                | remoteTodos = response
+                , offset = pageSize
+                , hasMore =
+                    case response of
+                        Success todos ->
+                            List.length todos >= pageSize
+
+                        _ ->
+                            False
+              }
+            , Cmd.none
+            )
 
         AddTaskNow ->
             ( { model | submissionStatus = RemoteData.Loading }
@@ -890,6 +982,31 @@ update msg model =
             ( { model | submissionStatus = response }
             , refreshTodos model
             )
+
+        LoadMoreTasks ->
+            ( { model | loadingMore = True }
+            , loadMoreTodos model
+            )
+
+        GotMoreTasksResponse response ->
+            case response of
+                Success newTodos ->
+                    ( { model
+                        | remoteTodos =
+                            model.remoteTodos
+                                |> RemoteData.map (\todos -> todos ++ newTodos)
+                        , offset = model.offset + pageSize
+                        , hasMore = List.length newTodos >= pageSize
+                        , loadingMore = False
+                      }
+                    , Cmd.none
+                    )
+
+                Failure _ ->
+                    ( { model | loadingMore = False }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         UrlChanged url ->
             let
