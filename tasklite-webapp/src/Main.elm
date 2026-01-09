@@ -191,9 +191,14 @@ viewMaybe maybeValue viewFunc =
 
 viewTagStr : String -> Html.Styled.Html Msg
 viewTagStr tagsStr =
+    let
+        tagList =
+            tagsStr
+                |> Json.Decode.decodeString (Json.Decode.list Json.Decode.string)
+                |> Result.withDefault []
+    in
     span []
-        (tagsStr
-            |> String.split ","
+        (tagList
             |> List.map
                 (\tag ->
                     a
