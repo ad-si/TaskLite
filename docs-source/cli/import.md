@@ -195,11 +195,8 @@ Seen at [discussions.apple.com/thread/8570915](
     osascript export-reminders.scpt
     ```
 1. Enter the name of the list you want to export
-    <!--
-      TODO: Use alert after
-            https://github.com/lambdalisue/rs-mdbook-alerts/issues/17
-    -->
-    > **⚠️ Warning** \
+
+    > [!WARNING]
     > It includes *all reminders* - even completed ones - in the list.
     > If it's a long list, it will take a while.
     > A better approach would be to create a new list and move all
