@@ -558,6 +558,18 @@ getTodos =
         |> Graphql.Http.send (RemoteData.fromResult >> GotTasksResponse)
 
 
+{-| Refresh todos based on current view
+-}
+refreshTodos : Model -> Cmd Msg
+refreshTodos model =
+    case model.tags of
+        [ tag ] ->
+            getTodosWithTag tag
+
+        _ ->
+            getTodos
+
+
 getTodosWithTag : String -> Cmd Msg
 getTodosWithTag tag =
     if String.contains "," tag then
@@ -801,7 +813,7 @@ update msg model =
                 | remoteTodos = RemoteData.Loading
                 , submissionStatus = RemoteData.NotAsked
               }
-            , getTodos
+            , refreshTodos model
             )
 
         GotTasksResponse response ->
@@ -843,7 +855,7 @@ update msg model =
                             )
                 , submissionStatus = response
               }
-            , getTodos
+            , refreshTodos model
             )
 
         SetDone ulid ->
@@ -866,7 +878,7 @@ update msg model =
 
         CompleteAffectedRowsResponse response ->
             ( { model | submissionStatus = response }
-            , getTodos
+            , refreshTodos model
             )
 
         DeleteTask ulid ->
@@ -885,7 +897,7 @@ update msg model =
 
         DeleteAffectedRowsResponse response ->
             ( { model | submissionStatus = response }
-            , getTodos
+            , refreshTodos model
             )
 
         UrlChanged url ->
