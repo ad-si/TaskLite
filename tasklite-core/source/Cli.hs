@@ -1298,7 +1298,7 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         ListNoTag -> listNoTag conf now connection availableLinesMb
         ListWithTag tags -> listWithTag conf now connection tags availableLinesMb
         QueryTasks query -> queryTasks conf now connection query availableLinesMb
-        RunSql query -> runSql conf query
+        RunSql query -> runSql connection query
         RunFilter expressions -> runFilter conf now connection expressions availableLinesMb
         Tags -> listTags conf connection
         Projects -> listProjects conf connection

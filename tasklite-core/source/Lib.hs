@@ -112,20 +112,25 @@ import Database.SQLite.Simple (
   NamedParam ((:=)),
   Only (Only),
   Query (Query),
-  SQLData (SQLNull, SQLText),
+  SQLData (..),
   SQLError (sqlError),
+  Statement,
   ToRow,
   changes,
+  columnCount,
+  columnName,
   execute,
   executeNamed,
   execute_,
   field,
+  nextRow,
   open,
   query,
   queryNamed,
   query_,
   toRow,
   withConnection,
+  withStatement,
  )
 import Database.SQLite.Simple.QQ (sql)
 import Numeric (showFFloat)
@@ -157,7 +162,6 @@ import Prettyprinter.Util (reflow)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((</>))
 import System.Posix.User (getEffectiveUserName)
-import System.Process (readProcess)
 import Text.Fuzzily qualified as Fuzzily
 import Text.ParserCombinators.ReadP (
   ReadP,
@@ -3016,20 +3020,50 @@ queryTasks conf now connection sqlQuery availableLinesMb = do
     tasks
 
 
-runSql :: Config -> Text -> IO (Doc AnsiStyle)
-runSql conf sqlQuery = do
-  result <-
-    readProcess
-      "sqlite3"
-      [ conf.dataDir </> conf.dbName
-      , ".headers on"
-      , ".mode csv"
-      , ".separator , '\n'"
-      , T.unpack sqlQuery
-      ]
-      []
-  -- Remove trailing newline
-  pure $ pretty (T.dropEnd 1 $ T.pack result)
+-- | Convert SQLData to CSV-escaped Text
+sqlDataToText :: SQLData -> Text
+sqlDataToText = \case
+  SQLInteger n -> show n
+  SQLFloat f -> show f
+  SQLText t -> "\"" <> T.replace "\"" "\"\"" t <> "\""
+  SQLBlob _ -> "\"<blob>\""
+  SQLNull -> ""
+
+
+-- | Get all column names from a statement
+getColumnNames :: Statement -> IO [Text]
+getColumnNames stmt = do
+  count <- columnCount stmt
+  forM [0 .. count - 1] $ \i -> columnName stmt i
+
+
+-- | Get all rows from a statement as lists of SQLData
+getAllRows :: Statement -> IO [[SQLData]]
+getAllRows stmt = do
+  maybeRow <- nextRow stmt
+  case maybeRow of
+    Nothing -> pure []
+    Just row -> do
+      rest <- getAllRows stmt
+      pure $ row : rest
+
+
+-- | Format rows as CSV
+formatAsCsv :: [Text] -> [[SQLData]] -> Text
+formatAsCsv headers rows =
+  let
+    headerLine = T.intercalate "," headers
+    dataLines = rows <&> \row -> T.intercalate "," (fmap sqlDataToText row)
+  in
+    T.intercalate "\n" (headerLine : dataLines)
+
+
+runSql :: Connection -> Text -> IO (Doc AnsiStyle)
+runSql connection sqlQuery = do
+  withStatement connection (Query sqlQuery) $ \stmt -> do
+    headers <- getColumnNames stmt
+    rows <- getAllRows stmt
+    pure $ pretty $ formatAsCsv headers rows
 
 
 data FilterExp
