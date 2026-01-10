@@ -147,6 +147,7 @@ spec = do
               awake_utc: null
               body: Sample task
               closed_utc: null
+              created_utc: null
               due_utc: null
               group_ulid: null
               metadata: null

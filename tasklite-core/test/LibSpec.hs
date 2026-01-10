@@ -374,6 +374,7 @@ spec = do
           updatedTask `shouldSatisfy` (\task -> task.user /= "")
           updatedTask
             { FullTask.ulid = ""
+            , FullTask.created_utc = Nothing
             , FullTask.modified_utc = ""
             , FullTask.user = ""
             }
@@ -396,6 +397,7 @@ spec = do
           updatedTask `shouldSatisfy` (\task -> task.user /= "")
           updatedTask
             { FullTask.ulid = ""
+            , FullTask.created_utc = Nothing
             , FullTask.modified_utc = ""
             , FullTask.user = ""
             }

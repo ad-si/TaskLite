@@ -6,7 +6,7 @@ Data type to represent tasks from the `tasks_view`
 module FullTask where
 
 import Protolude (
-  Applicative ((<*>)),
+  Applicative (pure, (<*>)),
   Either (Left, Right),
   Eq,
   Float,
@@ -69,12 +69,14 @@ import Task (
   TaskState,
   emptyTask,
  )
+import Utils (ulidText2utc)
 
 
 -- | Final user-facing format of tasks
 data FullTask = FullTask
   { ulid :: Text -- TODO: Use Ulid type
   , body :: Text
+  , created_utc :: Maybe Text
   , modified_utc :: Text
   , awake_utc :: Maybe Text
   , ready_utc :: Maybe Text
@@ -116,25 +118,26 @@ parseJsonArrayField fieldName value = case fieldData value of
 
 -- For conversion from SQLite with SQLite.Simple
 instance FromRow FullTask where
-  fromRow =
-    FullTask
-      <$> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
-      <*> field
+  fromRow = do
+    ulidValue <- field
+    FullTask ulidValue
+      <$> field -- body
+      <*> pure (ulidText2utc ulidValue) -- created_utc (derived from ULID)
+      <*> field -- modified_utc
+      <*> field -- awake_utc
+      <*> field -- ready_utc
+      <*> field -- waiting_utc
+      <*> field -- review_utc
+      <*> field -- due_utc
+      <*> field -- closed_utc
+      <*> field -- state
+      <*> field -- group_ulid
+      <*> field -- repetition_duration
+      <*> field -- recurrence_duration
       <*> fieldWith (parseJsonArrayField "tags")
       <*> fieldWith (parseJsonArrayField "notes")
-      <*> field
-      <*> field
+      <*> field -- priority
+      <*> field -- user
       <*> ( field <&> \case
               Just (Object obj) -> Just $ Object obj
               _ -> Nothing
@@ -174,6 +177,7 @@ emptyFullTask =
   FullTask
     { ulid = ""
     , body = ""
+    , created_utc = Nothing
     , modified_utc = ""
     , awake_utc = Nothing
     , ready_utc = Nothing

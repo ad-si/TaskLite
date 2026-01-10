@@ -166,6 +166,7 @@ spec = do
                       _ -> ""
                 updatedTask
                   { FullTask.ulid = ""
+                  , FullTask.created_utc = Nothing
                   , FullTask.modified_utc = ""
                   , FullTask.user = ""
                   }
@@ -653,6 +654,7 @@ spec = do
           \\"awake_utc\":null,\
           \\"body\":\"Buy milk\",\
           \\"closed_utc\":null,\
+          \\"created_utc\":\"2024-11-18 14:14:07.491\",\
           \\"due_utc\":null,\
           \\"group_ulid\":null,\
           \\"metadata\":null,\

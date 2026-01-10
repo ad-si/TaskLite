@@ -90,6 +90,7 @@ import Utils (
   parseUtcNum,
   setDateTime,
   toUlidTime,
+  ulidText2utc,
   zeroTime,
   zeroUlidTxt,
  )
@@ -487,6 +488,7 @@ importTaskToFullTask ImportTask{task, notes, tags} =
   FullTask.FullTask
     { FullTask.ulid = task.ulid
     , FullTask.body = task.body
+    , FullTask.created_utc = ulidText2utc task.ulid
     , FullTask.modified_utc = task.modified_utc
     , FullTask.awake_utc = task.awake_utc
     , FullTask.ready_utc = task.ready_utc
