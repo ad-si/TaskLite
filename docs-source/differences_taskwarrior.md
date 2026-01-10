@@ -91,7 +91,7 @@ ls           | -          | Pending tasks, short form
 minimal      | -          | Pending tasks, minimal form
 newest       | new        | Most recent pending tasks
 next         | head       | Most urgent tasks
-oldest       | -          | Oldest pending tasks
+oldest       | old        | Oldest pending tasks
 overdue      | overdue    | Overdue tasks
 ready        | ready      | Pending, unblocked, scheduled tasks
 recurring    | recurring  | Pending recurring tasks
@@ -143,7 +143,7 @@ uuids           | -       | Filtered list of UUIDs
 \_zshcommands   | -       | Zsh formatted command list
 \_zshids        | -       | Zsh formatted ID list
 \_zshuuids      | -       | Zsh formatted UUID list
--               | random  | Show a random open task
+\-              | random  | Show a random open task
 
 
 [add]: https://taskwarrior.org/docs/commands/add.html
