@@ -211,18 +211,21 @@ textToDerivedState =
     _ -> Nothing
 
 
+-- TODO: This should be based on the SQL views
 derivedStateToQuery :: DerivedState -> Text
 derivedStateToQuery = \case
-  IsOpen -> "closed_utc is null"
-  IsClosed -> "closed_utc is not null"
+  IsOpen ->
+    "closed_utc IS NULL"
+  IsClosed ->
+    "closed_utc IS NOT NULL"
   IsAsleep ->
-    "awake_utc > datetime('now') and \
-    \(ready_utc is null or ready_utc > datetime('now')) \
-    \and closed_utc is null"
+    "closed_utc IS NULL \
+    \AND awake_utc > datetime('now') \
+    \AND (ready_utc IS NULL OR ready_utc > datetime('now'))"
   IsAwake ->
-    "awake_utc < datetime('now') and \
-    \(ready_utc is null or ready_utc > datetime('now')) \
-    \and closed_utc is null"
+    "closed_utc IS NULL \
+    \AND awake_utc < datetime('now') \
+    \AND (ready_utc IS NULL OR ready_utc > datetime('now'))"
   IsReady ->
     "closed_utc IS NULL \
     \AND ( \
@@ -236,16 +239,19 @@ derivedStateToQuery = \case
     \  ) \
     \)"
   IsWaiting ->
-    "waiting_utc is not null and \
-    \(review_utc is null or review_utc > datetime('now')) \
-    \and closed_utc is null"
+    "closed_utc IS NULL \
+    \AND waiting_utc IS NOT NULL \
+    \AND (review_utc IS NULL OR review_utc > datetime('now'))"
   IsReview ->
-    "waiting_utc is not null and \
-    \(review_utc is null or review_utc < datetime('now')) \
-    \and closed_utc is null"
-  IsDone -> "closed_utc is not null and state is 'Done'"
-  IsObsolete -> "closed_utc is not null and state is 'Obsolete'"
-  IsDeletable -> "closed_utc is not null and state is 'Deletable'"
+    "closed_utc IS NULL \
+    \AND waiting_utc IS NOT NULL \
+    \AND (review_utc IS NULL OR review_utc < datetime('now'))"
+  IsDone ->
+    "closed_utc IS NOT NULL AND state IS 'Done'"
+  IsObsolete ->
+    "closed_utc IS NOT NULL AND state IS 'Obsolete'"
+  IsDeletable ->
+    "closed_utc IS NOT NULL AND state IS 'Deletable'"
   IsBlocked -> "" -- TODO
 
 
