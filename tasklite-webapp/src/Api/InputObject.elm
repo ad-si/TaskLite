@@ -40,69 +40,69 @@ import Json.Decode as Decode
 
 -- Encoder function for OrderingTerm enum
 encodeOrderingTerm : OrderingTerm -> Value
-encodeOrderingTerm = toString >> Encode.string
+encodeOrderingTerm = Encode.enum toString
 
 
 -- Encoder functions for column types
 encodeClosed_tasks_histogram_column : Closed_tasks_histogram_column -> Value
-encodeClosed_tasks_histogram_column = Api.Enum.Closed_tasks_histogram_column.toString >> Encode.string
+encodeClosed_tasks_histogram_column = Encode.enum Api.Enum.Closed_tasks_histogram_column.toString
 
 encodeTags_column : Tags_column -> Value
-encodeTags_column = Api.Enum.Tags_column.toString >> Encode.string
+encodeTags_column = Encode.enum Api.Enum.Tags_column.toString
 
 encodeTask_to_note_column : Task_to_note_column -> Value
-encodeTask_to_note_column = Api.Enum.Task_to_note_column.toString >> Encode.string
+encodeTask_to_note_column = Encode.enum Api.Enum.Task_to_note_column.toString
 
 encodeTask_to_tag_column : Task_to_tag_column -> Value
-encodeTask_to_tag_column = Api.Enum.Task_to_tag_column.toString >> Encode.string
+encodeTask_to_tag_column = Encode.enum Api.Enum.Task_to_tag_column.toString
 
 encodeTasks_column : Tasks_column -> Value
-encodeTasks_column = Api.Enum.Tasks_column.toString >> Encode.string
+encodeTasks_column = Encode.enum Api.Enum.Tasks_column.toString
 
 encodeTasks_all_column : Tasks_all_column -> Value
-encodeTasks_all_column = Api.Enum.Tasks_all_column.toString >> Encode.string
+encodeTasks_all_column = Encode.enum Api.Enum.Tasks_all_column.toString
 
 encodeTasks_deletable_column : Tasks_deletable_column -> Value
-encodeTasks_deletable_column = Api.Enum.Tasks_deletable_column.toString >> Encode.string
+encodeTasks_deletable_column = Encode.enum Api.Enum.Tasks_deletable_column.toString
 
 encodeTasks_done_column : Tasks_done_column -> Value
-encodeTasks_done_column = Api.Enum.Tasks_done_column.toString >> Encode.string
+encodeTasks_done_column = Encode.enum Api.Enum.Tasks_done_column.toString
 
 encodeTasks_modified_column : Tasks_modified_column -> Value
-encodeTasks_modified_column = Api.Enum.Tasks_modified_column.toString >> Encode.string
+encodeTasks_modified_column = Encode.enum Api.Enum.Tasks_modified_column.toString
 
 encodeTasks_new_column : Tasks_new_column -> Value
-encodeTasks_new_column = Api.Enum.Tasks_new_column.toString >> Encode.string
+encodeTasks_new_column = Encode.enum Api.Enum.Tasks_new_column.toString
 
 encodeTasks_notag_column : Tasks_notag_column -> Value
-encodeTasks_notag_column = Api.Enum.Tasks_notag_column.toString >> Encode.string
+encodeTasks_notag_column = Encode.enum Api.Enum.Tasks_notag_column.toString
 
 encodeTasks_obsolete_column : Tasks_obsolete_column -> Value
-encodeTasks_obsolete_column = Api.Enum.Tasks_obsolete_column.toString >> Encode.string
+encodeTasks_obsolete_column = Encode.enum Api.Enum.Tasks_obsolete_column.toString
 
 encodeTasks_old_column : Tasks_old_column -> Value
-encodeTasks_old_column = Api.Enum.Tasks_old_column.toString >> Encode.string
+encodeTasks_old_column = Encode.enum Api.Enum.Tasks_old_column.toString
 
 encodeTasks_open_column : Tasks_open_column -> Value
-encodeTasks_open_column = Api.Enum.Tasks_open_column.toString >> Encode.string
+encodeTasks_open_column = Encode.enum Api.Enum.Tasks_open_column.toString
 
 encodeTasks_overdue_column : Tasks_overdue_column -> Value
-encodeTasks_overdue_column = Api.Enum.Tasks_overdue_column.toString >> Encode.string
+encodeTasks_overdue_column = Encode.enum Api.Enum.Tasks_overdue_column.toString
 
 encodeTasks_ready_column : Tasks_ready_column -> Value
-encodeTasks_ready_column = Api.Enum.Tasks_ready_column.toString >> Encode.string
+encodeTasks_ready_column = Encode.enum Api.Enum.Tasks_ready_column.toString
 
 encodeTasks_recurring_column : Tasks_recurring_column -> Value
-encodeTasks_recurring_column = Api.Enum.Tasks_recurring_column.toString >> Encode.string
+encodeTasks_recurring_column = Encode.enum Api.Enum.Tasks_recurring_column.toString
 
 encodeTasks_repeating_column : Tasks_repeating_column -> Value
-encodeTasks_repeating_column = Api.Enum.Tasks_repeating_column.toString >> Encode.string
+encodeTasks_repeating_column = Encode.enum Api.Enum.Tasks_repeating_column.toString
 
 encodeTasks_view_column : Tasks_view_column -> Value
-encodeTasks_view_column = Api.Enum.Tasks_view_column.toString >> Encode.string
+encodeTasks_view_column = Encode.enum Api.Enum.Tasks_view_column.toString
 
 encodeTasks_waiting_column : Tasks_waiting_column -> Value
-encodeTasks_waiting_column = Api.Enum.Tasks_waiting_column.toString >> Encode.string
+encodeTasks_waiting_column = Encode.enum Api.Enum.Tasks_waiting_column.toString
 
 
 buildBooleanComparison :
