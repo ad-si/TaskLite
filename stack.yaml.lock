@@ -77,7 +77,7 @@ packages:
     url: https://github.com/meteogrid/iso8601-duration/archive/9524d1f02775be1d6c73165c4b4d62a19c8b7698.tar.gz
 snapshots:
 - completed:
-    sha256: 188228e10dbb5b533bae584049b112e72000902e64b17348679a69f92fbc0d32
-    size: 726076
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/24/9.yaml
-  original: lts-24.9
+    sha256: c320c36b8a392602c9076bdd0c656e12dcab30f294105a50c3f8ef963c4c3a0d
+    size: 726760
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/24/27.yaml
+  original: lts-24.27

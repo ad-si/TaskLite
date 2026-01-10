@@ -1,5 +1,5 @@
 # ATTENTION: Also use the corresponding GHC version in the Dockerfile
-resolver: lts-24.9
+resolver: lts-24.27
 system-ghc: true  # Installed via Nix
 
 packages:
