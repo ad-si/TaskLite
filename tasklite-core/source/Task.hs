@@ -224,9 +224,17 @@ derivedStateToQuery = \case
     \(ready_utc is null or ready_utc > datetime('now')) \
     \and closed_utc is null"
   IsReady ->
-    "(awake_utc is null or awake_utc < datetime('now')) \
-    \and ready_utc < datetime('now') \
-    \and closed_utc is null"
+    "closed_utc IS NULL \
+    \AND ( \
+    \  review_utc <= datetime('now') \
+    \  OR ready_utc <= datetime('now') \
+    \  OR ( \
+    \    ready_utc IS NULL \
+    \    AND (awake_utc IS NULL OR awake_utc <= datetime('now')) \
+    \    AND (waiting_utc IS NULL OR waiting_utc > datetime('now')) \
+    \    AND (review_utc IS NULL OR review_utc > datetime('now')) \
+    \  ) \
+    \)"
   IsWaiting ->
     "waiting_utc is not null and \
     \(review_utc is null or review_utc > datetime('now')) \
