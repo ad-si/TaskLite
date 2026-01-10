@@ -31,7 +31,7 @@
             haskellPackages.cabal-install
             haskellPackages.fourmolu
             (pkgs.haskell-language-server.override {
-              supportedGhcVersions = [ "9102" ];
+              supportedGhcVersions = [ "9103" ];
             })
             haskellPackages.hlint
             haskellPackages.stack

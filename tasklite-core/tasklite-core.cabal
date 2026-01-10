@@ -155,8 +155,7 @@ test-suite tasklite-test
     , hspec >=2.11 && <3.0
     , iso8601-duration
     , neat-interpolation ==0.5.*
-    , prettyprinter
-    , prettyprinter-ansi-terminal
+    , prettyprinter-ansi-terminal ==1.1.*
     , protolude >=0.3
     , sqlite-simple
     , tasklite-core

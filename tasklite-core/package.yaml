@@ -110,8 +110,7 @@ tests:
       - iso8601-duration
       - MissingH >= 1.4 && < 1.7
       - neat-interpolation >= 0.5 && < 0.6
-      - prettyprinter
-      - prettyprinter-ansi-terminal
+      - prettyprinter-ansi-terminal >= 1.1 && < 1.2
       - QuickCheck
       - sqlite-simple
       - tasklite-core

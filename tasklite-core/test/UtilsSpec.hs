@@ -16,8 +16,7 @@ import Data.Hourglass (
   ElapsedP (ElapsedP),
   timeGetDateTimeOfDay,
  )
-import Prettyprinter (Doc, pretty)
-import Prettyprinter.Render.Terminal (AnsiStyle, bold, underlined)
+import Prettyprinter.Render.Terminal (bold, underlined)
 import Test.Hspec (Spec, it, shouldBe, shouldNotBe)
 
 import Config (defaultConfig)
