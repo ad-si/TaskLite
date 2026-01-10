@@ -30,9 +30,11 @@ import Protolude as P (
 import Data.Text qualified as T
 import Database.SQLite.Simple as Sql (
   Connection,
+  FromRow,
   Query (..),
   SQLError (sqlErrorDetails),
   execute_,
+  query_,
  )
 import Language.SQL.SimpleSQL.Syntax (
   Alias (..),
@@ -231,6 +233,13 @@ getTable tableName columns =
       , T.intercalate ",\n" columns
       , ")"
       ]
+
+
+selectAllFrom :: (FromRow a) => Connection -> Text -> IO [a]
+selectAllFrom conn tableName =
+  query_ conn $
+    Query $
+      "SELECT * FROM \"" <> escDoubleQuotes tableName <> "\""
 
 
 getColumns :: Text -> [Text] -> Query

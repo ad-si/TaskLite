@@ -108,7 +108,6 @@ server conf =
 getTasks :: Config -> [Text] -> Servant.Handler [FullTask]
 getTasks conf tags = do
   liftIO $
-    -- TODO: Use Task instead of FullTask to fix broken notes export
     execWithConn conf $ \connection ->
       getWithTag connection (Just IsOpen) tags
 

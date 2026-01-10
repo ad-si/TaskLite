@@ -77,8 +77,7 @@ import Data.Yaml (
   YamlMark (YamlMark),
  )
 import Data.Yaml qualified as Yaml
-import Database.SQLite.Simple (Connection, Only (Only), query, query_)
-import Database.SQLite.Simple.QQ (sql)
+import Database.SQLite.Simple (Connection)
 import FullTask (FullTask (..))
 import Hooks (HookResult (message, task), executeHooks, formatHookResult)
 import ImportTask (
@@ -114,6 +113,7 @@ import Prettyprinter.Render.Terminal (
   hPutDoc,
   putDoc,
  )
+import SqlUtils (selectAllFrom)
 import System.Directory (createDirectoryIfMissing, listDirectory, removeFile)
 import System.FilePath (isExtensionOf, takeExtension, (</>))
 import System.Posix.User (getEffectiveUserName)
@@ -532,39 +532,16 @@ ingestDir conf connection dirPath = do
       <+> dquotes (pretty dirPath)
 
 
--- TODO: Use Task instead of FullTask to fix broken notes export
 dumpCsv :: Config -> IO (Doc AnsiStyle)
 dumpCsv conf = do
-  execWithConn conf $ \connection -> do
-    rows :: [FullTask] <- query_ connection "SELECT * FROM tasks_view"
+  execWithConn conf $ \conn -> do
+    rows :: [FullTask] <- selectAllFrom conn "tasks_view"
     pure $ pretty $ TL.decodeUtf8 $ Csv.encodeDefaultOrderedByName rows
 
 
 getNdjsonLines :: Connection -> IO [Doc AnsiStyle]
 getNdjsonLines conn = do
-  -- TODO: Fix after tasks_view is updated to include notes
-  tasksWithoutNotes :: [FullTask] <- query_ conn "SELECT * FROM tasks_view"
-  tasks <-
-    tasksWithoutNotes
-      & P.mapM
-        ( \task -> do
-            notes <-
-              query
-                conn
-                [sql|
-                  SELECT ulid, note
-                  FROM task_to_note
-                  WHERE task_ulid == ?
-                |]
-                (Only task.ulid)
-
-            pure $
-              task
-                { FullTask.notes =
-                    if P.null notes then Nothing else Just notes
-                }
-        )
-
+  tasks :: [FullTask] <- selectAllFrom conn "tasks_view"
   pure $ tasks <&> (Aeson.encode >>> TL.decodeUtf8 >>> pretty)
 
 
@@ -578,37 +555,15 @@ dumpNdjson conf = do
 dumpTaskwarrior :: Config -> IO (Doc AnsiStyle)
 dumpTaskwarrior conf = do
   execWithConn conf $ \conn -> do
-    tasksWithoutNotes :: [FullTask] <- query_ conn "SELECT * FROM tasks_view"
-    tasks <-
-      tasksWithoutNotes
-        & P.mapM
-          ( \task -> do
-              notes <-
-                query
-                  conn
-                  [sql|
-                    SELECT ulid, note
-                    FROM task_to_note
-                    WHERE task_ulid == ?
-                  |]
-                  (Only task.ulid)
-
-              pure $
-                task
-                  { FullTask.notes =
-                      if P.null notes then Nothing else Just notes
-                  }
-          )
-
+    tasks :: [FullTask] <- selectAllFrom conn "tasks_view"
     let twLines = tasks <&> (fullTaskToTwJson >>> Aeson.encode >>> TL.decodeUtf8 >>> pretty)
     pure $ vsep twLines
 
 
 dumpJson :: Config -> IO (Doc AnsiStyle)
 dumpJson conf = do
-  -- TODO: Use Task instead of FullTask to fix broken notes export
-  execWithConn conf $ \connection -> do
-    tasks :: [FullTask] <- query_ connection "SELECT * FROM tasks_view"
+  execWithConn conf $ \conn -> do
+    tasks :: [FullTask] <- selectAllFrom conn "tasks_view"
     pure $ pretty $ fmap (TL.decodeUtf8 . Aeson.encode) tasks
 
 
