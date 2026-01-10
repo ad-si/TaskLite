@@ -47,7 +47,7 @@ executable tasklite
       RecordWildCards
       TypeFamilies
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages -threaded
   build-depends:
       base >=4.18 && <5
     , directory ==1.3.*
