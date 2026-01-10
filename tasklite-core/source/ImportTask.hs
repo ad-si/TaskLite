@@ -384,8 +384,8 @@ instance FromJSON ImportTask where
                         { Note.ulid =
                             theNote.ulid
                               & parseUlidText
-                              <&> P.flip setDateTime crUtc
-                              <&> show @ULID
+                                <&> P.flip setDateTime crUtc
+                                <&> show @ULID
                               & fromMaybe theNote.ulid
                               & T.toLower
                         }

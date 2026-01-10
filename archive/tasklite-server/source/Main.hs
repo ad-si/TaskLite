@@ -179,18 +179,18 @@ startServer appName config = do
           ( \name ->
               ("pre-" `isPrefixOf` name) || ("post-" `isPrefixOf` name)
           )
-        <&> (hooksPathNorm </>)
-        <&> \path -> do
-          perm <- getPermissions path
-          pure (path, perm)
+          <&> (hooksPathNorm </>)
+          <&> \path -> do
+            perm <- getPermissions path
+            pure (path, perm)
 
   hookFilesPermContent <-
     sequence $
       hookFilesPerm
         & filter (\(_, perm) -> executable perm)
-        <&> \(filePath, perm) -> do
-          fileContent <- readFile filePath
-          pure (filePath, perm, fileContent)
+          <&> \(filePath, perm) -> do
+            fileContent <- readFile filePath
+            pure (filePath, perm, fileContent)
 
   let configNorm = addHookFilesToConfig configNormHookDir hookFilesPermContent
 
@@ -230,7 +230,7 @@ startServer appName config = do
 exampleConfig :: Text
 exampleConfig =
   $( makeRelativeToProject "../tasklite-core/example-config.yaml"
-      >>= embedStringFile
+       >>= embedStringFile
    )
 
 

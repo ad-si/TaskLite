@@ -360,7 +360,7 @@ getUpdateAssignments :: Task -> Text
 getUpdateAssignments task =
   task
     & getRecordFields
-    <&> (<> " = ?")
+      <&> (<> " = ?")
     & T.intercalate ", "
 
 
@@ -506,14 +506,14 @@ parseTaskBody bodyWords =
     dueUtcMb =
       metadata
         & P.filter isDueUtc
-        <&> T.replace "due:" ""
+          <&> T.replace "due:" ""
         & P.lastMay
           >>= parseUtc
-        <&> (timePrint utcFormatReadable >>> T.pack)
+          <&> (timePrint utcFormatReadable >>> T.pack)
     createdUtcMb =
       metadata
         & P.filter isCreatedUtc
-        <&> T.replace "created:" ""
+          <&> T.replace "created:" ""
         & P.lastMay
           >>= parseUtc
   in
@@ -892,7 +892,7 @@ showEither :: Config -> Either a UTCTime -> Maybe Text
 showEither conf theEither =
   theEither
     & either (const Nothing) Just
-    <&> (utcTimeToDateTime >>> showDateTime conf)
+      <&> (utcTimeToDateTime >>> showDateTime conf)
 
 
 -- TODO: Eliminate code duplication with createNextRecurrence
@@ -912,7 +912,7 @@ createNextRepetition conf connection task = do
     isoDurEither =
       durTextEither
         <&> encodeUtf8
-          >>= Iso.parseDuration
+        >>= Iso.parseDuration
 
     nextDueMb =
       liftA2
@@ -998,7 +998,7 @@ createNextRecurrence conf connection task = do
     isoDurEither =
       durTextEither
         <&> encodeUtf8
-          >>= Iso.parseDuration
+        >>= Iso.parseDuration
 
     -- If task has no due UTC, use current UTC as the base for recurrence
     nowMb = ulidTextToDateTime newUlidText
@@ -1040,7 +1040,7 @@ createNextRecurrence conf connection task = do
         , Task.modified_utc =
             newUlidText
               & ulidTextToDateTime
-              <&> (timePrint conf.utcFormat >>> T.pack)
+                <&> (timePrint conf.utcFormat >>> T.pack)
               & fromMaybe ""
         , Task.review_utc = Nothing
         }
@@ -1108,9 +1108,9 @@ doTasks conf connection noteWordsMaybe ids = do
           pure $
             fromMaybe "" (noteMessageMaybe <&> (<> hardline))
               <> ( "✅ Finished task"
-                    <+> dquotes (pretty task.body)
-                    <+> "with id"
-                    <+> dquotes (pretty task.ulid)
+                     <+> dquotes (pretty task.body)
+                     <+> "with id"
+                     <+> dquotes (pretty task.ulid)
                  )
               <> fromMaybe "" (logMessageMaybe <&> (hardline <>))
 
@@ -1153,10 +1153,10 @@ endTasks conf connection noteWordsMaybe ids = do
           pure $
             fromMaybe "" (noteMessageMaybe <&> (<> hardline))
               <> ( "⏹  Marked task"
-                    <+> prettyBody
-                    <+> "with id"
-                    <+> prettyId
-                    <+> "as obsolete"
+                     <+> prettyBody
+                     <+> "with id"
+                     <+> prettyId
+                     <+> "as obsolete"
                  )
               <> fromMaybe "" (logMessageMaybe <&> (hardline <>))
 
@@ -1291,8 +1291,8 @@ repeatTasks conf connection duration ids = do
               <+> "to"
               <+> dquotes (pretty durationIsoText)
                 <++> ( creationMb
-                        & fromMaybe
-                          "⚠️ Next task in repetition series could not be created!"
+                         & fromMaybe
+                           "⚠️ Next task in repetition series could not be created!"
                      )
 
   pure $ vsep docs
@@ -1355,8 +1355,8 @@ recurTasks conf connection duration ids = do
               <+> "to"
               <+> dquotes (pretty durationIsoText)
                 <++> ( creationMb
-                        & fromMaybe
-                          "⚠️ Next task in recurrence series could not be created!"
+                         & fromMaybe
+                           "⚠️ Next task in recurrence series could not be created!"
                      )
 
   pure $ vsep docs
@@ -1484,46 +1484,46 @@ formatTaskForInfo conf now (taskV, tags, notes) =
       <> hardline
       <> hardline
       <> ( if P.null tags
-            then mempty
-            else
-              (tags <&> (TaskToTag.tag >>> formatTag conf) & hsep)
-                <> hardline
-                <> hardline
+             then mempty
+             else
+               (tags <&> (TaskToTag.tag >>> formatTag conf) & hsep)
+                 <> hardline
+                 <> hardline
          )
       <> ( if P.null notes
-            then mempty
-            else
-              ( notes
-                  <&> ( \n ->
-                          maybe
-                            mempty
-                            ( grayOut
-                                . pretty
-                                . T.pack
-                                . timePrint
-                                  conf.utcFormatShort
-                            )
-                            (ulidTextToDateTime n.ulid)
-                            <++> align (pretty n.note)
-                      )
-                  & vsep
-              )
-                <> hardline
-                <> hardline
+             then mempty
+             else
+               ( notes
+                   <&> ( \n ->
+                           maybe
+                             mempty
+                             ( grayOut
+                                 . pretty
+                                 . T.pack
+                                 . timePrint
+                                   conf.utcFormatShort
+                             )
+                             (ulidTextToDateTime n.ulid)
+                             <++> align (pretty n.note)
+                       )
+                   & vsep
+               )
+                 <> hardline
+                 <> hardline
          )
       <> ( "   State:"
-            <+> mkGreen (pretty stateHierarchy)
-              <> hardline
+             <+> mkGreen (pretty stateHierarchy)
+               <> hardline
          )
       <> ( "Priority:"
-            <+> annotate
-              conf.priorityStyle
-              (pretty $ FullTask.priority taskV)
-              <> hardline
+             <+> annotate
+               conf.priorityStyle
+               (pretty $ FullTask.priority taskV)
+               <> hardline
          )
       <> ( "    ULID:"
-            <+> grayOut (pretty $ FullTask.ulid taskV)
-              <> hardline
+             <+> grayOut (pretty $ FullTask.ulid taskV)
+               <> hardline
          )
       <> hardline
       <> ( [ (printIf "🆕  Created  ", mbCreatedUtc)
@@ -1535,10 +1535,10 @@ formatTaskForInfo conf now (taskV, tags, notes) =
            , (printIf "✅   Done    ", mbClosedUtc)
            , (printIf "✏️   Modified ", mbModifiedUtc)
            ]
-            & sortBy (compare `on` snd)
-            & P.mapMaybe (\tup -> fst tup (snd tup))
-            & punctuate (pretty ("       ⬇" :: Text))
-            & vsep
+             & sortBy (compare `on` snd)
+             & P.mapMaybe (\tup -> fst tup (snd tup))
+             & punctuate (pretty ("       ⬇" :: Text))
+             & vsep
          )
       <> hardline
       <> maybe
@@ -1566,8 +1566,8 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         )
         (FullTask.group_ulid taskV)
       <> ( "User:"
-            <+> mkGreen (pretty $ FullTask.user taskV)
-              <> hardline
+             <+> mkGreen (pretty $ FullTask.user taskV)
+               <> hardline
          )
       <> hardline
       <> maybe
@@ -1580,23 +1580,23 @@ formatTaskForInfo conf now (taskV, tags, notes) =
         )
         (FullTask.metadata taskV)
       <> ( if P.null tags
-            then mempty
-            else
-              annotate (maybeUnderlined conf) "Tags Detailed:"
-                <> hardline
-                <> hardline
-                <> vsep tagsPretty
-                <> hardline
-                <> hardline
+             then mempty
+             else
+               annotate (maybeUnderlined conf) "Tags Detailed:"
+                 <> hardline
+                 <> hardline
+                 <> vsep tagsPretty
+                 <> hardline
+                 <> hardline
          )
       <> ( if P.null notes
-            then mempty
-            else
-              annotate (maybeUnderlined conf) "Notes Detailed:"
-                <> hardline
-                <> hardline
-                <> vsep notesPretty
-                <> hardline
+             then mempty
+             else
+               annotate (maybeUnderlined conf) "Notes Detailed:"
+                 <> hardline
+                 <> hardline
+                 <> vsep notesPretty
+                 <> hardline
          )
 
 
@@ -1811,7 +1811,7 @@ findTask conf connection aPattern = do
         combinedText =
           scoreParts
             & catMaybes
-            <&> (Fuzzily.rendered >>> reflow)
+              <&> (Fuzzily.rendered >>> reflow)
             & P.intersperse mempty
             & vcat
       in
@@ -1831,12 +1831,12 @@ findTask conf connection aPattern = do
     body =
       tasksScored
         & P.take numOfResults
-        <&> ( \(_, ulid, combinedText) ->
-                annotate
-                  (colr conf ulidColor)
-                  (fill ulidWidth $ pretty $ T.takeEnd ulidWidth ulid)
-                  <> indent 2 combinedText
-            )
+          <&> ( \(_, ulid, combinedText) ->
+                  annotate
+                    (colr conf ulidColor)
+                    (fill ulidWidth $ pretty $ T.takeEnd ulidWidth ulid)
+                    <> indent 2 combinedText
+              )
         & P.intersperse mempty
         & vsep
     footer =
@@ -3198,8 +3198,8 @@ getFilterQuery filterExps orderByMb availableLinesMb = do
     <> Query
       ( "LIMIT "
           <> ( show @P.Int $ case availableLinesMb of
-                Nothing -> -1 -- No limit
-                Just availableLines -> availableLines
+                 Nothing -> -1 -- No limit
+                 Just availableLines -> availableLines
              )
           <> "\n"
       )
@@ -3258,7 +3258,7 @@ formatTasks conf now idColWidth isTruncated tasks =
           concatWith (<++>) $
             ( conf.columns
                 & P.filter (/= EmptyCol)
-                <&> columnToDoc conf idColWidth
+                  <&> columnToDoc conf idColWidth
             )
               <> [line]
 
@@ -3417,7 +3417,7 @@ listNotes conf connection = do
           conf.dateStyle
           ( note.ulid
               & ulidTextToDateTime
-              <&> timePrint ISO8601_Date
+                <&> timePrint ISO8601_Date
               & pretty
           )
         <++> pretty note.note

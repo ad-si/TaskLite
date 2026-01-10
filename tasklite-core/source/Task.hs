@@ -458,7 +458,7 @@ taskToEditableMarkdown conn task = do
       noteContent
         & T.strip
         & T.lines
-        <&> T.stripEnd
+          <&> T.stripEnd
         & T.intercalate "\n#     "
 
     taskWithEmptyBody = task{body = ""}
@@ -473,11 +473,11 @@ taskToEditableMarkdown conn task = do
         <> (("# tags: " :: Text) <> P.show (P.concat tags) <> "\n")
         <> "tags: []\n"
         <> ( ("\n# notes:\n" :: Text)
-              <> ( notes
-                    & P.concat
-                    <&> (\note -> "# - " <> indentNoteContent note)
-                    & T.unlines
-                 )
+               <> ( notes
+                      & P.concat
+                        <&> (\note -> "# - " <> indentNoteContent note)
+                      & T.unlines
+                  )
            )
         <> "notes: []\n"
 

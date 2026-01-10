@@ -876,7 +876,7 @@ lintMigration migration =
   migration
     & Migrations.querySet
     & mapM lintQuery
-    <&> P.const migration
+      <&> P.const migration
 
 
 runMigration :: Connection -> [Query] -> IO (Either SQLError [()])
@@ -927,7 +927,7 @@ runMigrations _ connection = do
                 || (Migrations.id m == UserVersion 0)
                   && (currentVersion == UserVersion 0)
           )
-        <&> lintMigration
+          <&> lintMigration
         & mapM (fmap wrapMigration)
 
   case migrationsUpLinted of

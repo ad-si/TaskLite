@@ -217,10 +217,10 @@ addHookFilesToConfig config = do
             ( conf
             , errors
                 <> [ ("`" <> (filenameParts & T.intercalate "-") <> "` ")
-                      <> "is not a correct hook name.\n"
-                      <> "Hook file names must be in the format: "
-                      <> "<stage>-<event>_<description>.<ext>\n"
-                      <> "E.g `post-launch.v`, or `pre-exit.lua`.\n"
+                       <> "is not a correct hook name.\n"
+                       <> "Hook file names must be in the format: "
+                       <> "<stage>-<event>_<description>.<ext>\n"
+                       <> "E.g `post-launch.v`, or `pre-exit.lua`.\n"
                    ]
             )
     )

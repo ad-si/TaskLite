@@ -286,10 +286,10 @@ emailToImportTask email@(Email.Message headerFields msgBody) =
           { Task.body =
               task.body
                 <> ( msgBody
-                      & lines8
-                      <&> (TL.decodeUtf8 >>> toStrict)
-                      & T.unlines
-                      & T.dropEnd 1
+                       & lines8
+                         <&> (TL.decodeUtf8 >>> toStrict)
+                       & T.unlines
+                       & T.dropEnd 1
                    )
           }
         notes
@@ -439,7 +439,7 @@ importDir conf connection dirPath = do
   resultDocs <-
     files
       & P.filter filterImportable
-      <&> (dirPath </>)
+        <&> (dirPath </>)
       & P.mapM (importFile conf connection)
   pure $ P.fold resultDocs
 
@@ -517,7 +517,7 @@ ingestDir conf connection dirPath = do
   let filePaths =
         files
           & P.filter filterImportable
-          <&> (dirPath </>)
+            <&> (dirPath </>)
   filePaths
     & P.mapM_
       ( \filePath -> do

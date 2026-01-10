@@ -1086,16 +1086,16 @@ commandParserInfo conf =
           ( (mkBold "Add an alias:" <+> hiLite "alias tl tasklite")
               <> hardline
               <> ( mkBold "Add a task with a tag:"
-                    <+> hiLite "tl add Buy milk +groceries"
+                     <+> hiLite "tl add Buy milk +groceries"
                  )
               <> hardline
               <> ( mkBold "… or with the shortcut:"
-                    <+> hiLite "tl buy milk +groceries"
+                     <+> hiLite "tl buy milk +groceries"
                  )
               <> hardline
               <> ( mkBold "List most important tasks:"
-                    <+> hiLite "tl"
-                    <+> parens ("same as" <+> hiLite "tl ready")
+                     <+> hiLite "tl"
+                     <+> parens ("same as" <+> hiLite "tl ready")
                  )
               <> hardline
               <> (mkBold "Complete it:" <+> hiLite "tl do <id>")
@@ -1476,7 +1476,7 @@ printOutput appName argsMb config = do
         ( \name ->
             ("pre-" `isPrefixOf` name) || ("post-" `isPrefixOf` name)
         )
-      <&> (hooksPathNorm </>)
+        <&> (hooksPathNorm </>)
       & P.mapM
         ( \path -> do
             perm <- getPermissions path
@@ -1604,5 +1604,5 @@ printOutput appName argsMb config = do
 exampleConfig :: Text
 exampleConfig =
   $( makeRelativeToProject "example-config.yaml"
-      >>= embedStringFile
+       >>= embedStringFile
    )

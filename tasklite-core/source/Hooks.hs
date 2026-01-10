@@ -139,11 +139,11 @@ executeHooks stdinText hooks = do
   let parsedHookResults :: [P.Either Text HookResult] =
         hookToResult
           & P.filter (T.pack >>> T.strip >>> T.null >>> P.not)
-          <&> ( ( \hookOutput -> do
-                    Aeson.eitherDecodeStrictText (T.pack hookOutput)
+            <&> ( ( \hookOutput -> do
+                      Aeson.eitherDecodeStrictText (T.pack hookOutput)
+                  )
+                    >>> left T.pack
                 )
-                  >>> left T.pack
-              )
 
   pure parsedHookResults
 

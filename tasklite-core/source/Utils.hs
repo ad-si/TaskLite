@@ -217,7 +217,7 @@ ulidText2utc :: Text -> Maybe Text
 ulidText2utc ulid =
   ulid
     & ulidTextToDateTime
-    <&> (timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])) >>> T.pack)
+      <&> (timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])) >>> T.pack)
 
 
 parseUlidText :: Text -> Maybe ULID

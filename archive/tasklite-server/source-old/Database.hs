@@ -222,19 +222,19 @@ deleteIdeaIfBy emailAddress id = do
 
 
 $( makeAcidic
-    ''Database
-    [ 'addUser
-    , 'setTokenWhere
-    , 'getUserByToken
-    , 'logoutByEmailAndToken
-    , 'deleteUserByToken
-    , 'logUserIn
-    , 'getUserByEmail
-    , 'getUsers
-    , 'addIdea
-    , 'updateIdeaIfBy
-    , 'getIdeas
-    , 'getIdeasByEmail
-    , 'deleteIdeaIfBy
-    ]
+     ''Database
+     [ 'addUser
+     , 'setTokenWhere
+     , 'getUserByToken
+     , 'logoutByEmailAndToken
+     , 'deleteUserByToken
+     , 'logUserIn
+     , 'getUserByEmail
+     , 'getUsers
+     , 'addIdea
+     , 'updateIdeaIfBy
+     , 'getIdeas
+     , 'getIdeasByEmail
+     , 'deleteIdeaIfBy
+     ]
  )
