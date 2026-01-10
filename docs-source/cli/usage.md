@@ -184,7 +184,40 @@ Use one of following commands:
 
 - `tl csv`
 - `tl ndjson`
+- `tl tw` - Export in Taskwarrior-compatible NDJSON format
 - `tl backup` - Creates a backup at `$TaskLiteDir/backups/YYYY-MM-DDtHHMM.db`
+
+
+### Taskwarrior Export
+
+The `tl tw` command exports tasks in a format compatible with
+[Taskwarrior](https://taskwarrior.org/)'s JSON format.
+This allows you to migrate tasks from TaskLite to Taskwarrior
+or use Taskwarrior tools with your TaskLite data.
+
+```sh
+tl tw > tasks.ndjson
+task import tasks.ndjson
+```
+
+The export converts TaskLite fields to their Taskwarrior equivalents:
+
+TaskLite Field        | Taskwarrior Field | Notes
+----------------------|-------------------|-------
+`ulid`                | `uuid`            | ULID is converted to UUID format
+`body`                | `description`     |
+`state`               | `status`          | Done → completed, Obsolete/Deletable → deleted
+`created_utc`         | `entry`           | Falls back to ULID timestamp if not set
+`modified_utc`        | `modified`        |
+`closed_utc`          | `end`             |
+`due_utc`             | `due`             |
+`awake_utc`           | `wait`            |
+`ready_utc`           | `scheduled`       |
+`notes`               | `annotations`     |
+`tags`                | `tags`            |
+`priority`            | `priority`        | >2 → H, >0 → M, <0 → L
+`metadata.project`    | `project`         | Extracted from metadata
+`recurrence_duration` | `recur`           |
 
 
 ## Custom Views

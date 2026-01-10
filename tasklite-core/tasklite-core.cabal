@@ -49,6 +49,7 @@ library
       Task
       TaskToNote
       TaskToTag
+      Taskwarrior
       Utils
   other-modules:
       Paths_tasklite_core
@@ -127,6 +128,7 @@ test-suite tasklite-test
       LibSpec
       MigrationsSpec
       SpecHook
+      TaskwarriorSpec
       TestUtils
       TypesSpec
       UtilsSpec

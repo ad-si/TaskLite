@@ -65,7 +65,9 @@ denotate     | unnote     | Remove an annotation from a task
 duplicate    | duplicate  | Clone an existing task
 edit         | edit       | Launch your text editor to modify a task
 execute      | -          | Execute an external command
-[export]     | ndjson     | Export tasks in NDJSON instead of JSON format
+[export]     | json       | Export tasks in JSON format (Array of objects)
+[export] `rc.json.array=off` | ndjson | Export tasks in NDJSON format
+[export] `rc.json.array=off` | tw | Export tasks in Taskwarrior's export format
 help         | help       | Show high-level help, a cheat-sheet
 import       | import     | In addition to JSON supports email files (.eml)
 [log]        | log        | Record an already-completed task

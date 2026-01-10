@@ -159,6 +159,7 @@ import ImportExport (
   dumpJson,
   dumpNdjson,
   dumpSql,
+  dumpTaskwarrior,
   editTask,
   enterTask,
   importDir,
@@ -317,6 +318,7 @@ data Command
   | Csv
   | Json
   | Ndjson
+  | Taskwarrior
   | Sql
   | Backup --
   {- List -}
@@ -922,6 +924,9 @@ commandParser conf =
     <> command "ndjson" (toParserInfo (pure Ndjson)
         "Show tasks in NDJSON format")
 
+    <> command "tw" (toParserInfo (pure Taskwarrior)
+        "Show tasks in Taskwarrior-compatible NDJSON format")
+
     <> command "sql" (toParserInfo (pure Sql)
         "Show SQL commands to create and populate database")
 
@@ -1315,6 +1320,7 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         Csv -> dumpCsv conf
         Json -> dumpJson conf
         Ndjson -> dumpNdjson conf
+        Taskwarrior -> dumpTaskwarrior conf
         Sql -> dumpSql conf
         Backup -> backupDatabase conf
         AddTask bodyWords -> addTaskC bodyWords

@@ -119,6 +119,7 @@ import System.FilePath (isExtensionOf, takeExtension, (</>))
 import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
 import Task (Task (..), emptyTask, setMetadataField, taskToEditableMarkdown)
+import Taskwarrior (fullTaskToTwJson)
 import Text.Editor (markdownTemplate, runUserEditorDWIM)
 import Text.Parsec.Rfc2822 qualified as Email
 import Text.ParserCombinators.Parsec as Parsec (parse)
@@ -572,6 +573,35 @@ dumpNdjson conf = do
   execWithConn conf $ \conn -> do
     lines <- getNdjsonLines conn
     pure $ vsep lines
+
+
+dumpTaskwarrior :: Config -> IO (Doc AnsiStyle)
+dumpTaskwarrior conf = do
+  execWithConn conf $ \conn -> do
+    tasksWithoutNotes :: [FullTask] <- query_ conn "SELECT * FROM tasks_view"
+    tasks <-
+      tasksWithoutNotes
+        & P.mapM
+          ( \task -> do
+              notes <-
+                query
+                  conn
+                  [sql|
+                    SELECT ulid, note
+                    FROM task_to_note
+                    WHERE task_ulid == ?
+                  |]
+                  (Only task.ulid)
+
+              pure $
+                task
+                  { FullTask.notes =
+                      if P.null notes then Nothing else Just notes
+                  }
+          )
+
+    let twLines = tasks <&> (fullTaskToTwJson >>> Aeson.encode >>> TL.decodeUtf8 >>> pretty)
+    pure $ vsep twLines
 
 
 dumpJson :: Config -> IO (Doc AnsiStyle)
