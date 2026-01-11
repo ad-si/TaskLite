@@ -1,5 +1,6 @@
 -- Necessary to print git hash in help output
 -- and to embed example config file
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -48,7 +49,9 @@ import Protolude (
  )
 import Protolude qualified as P
 
+#ifdef API_SERVER
 import AirGQL.Config qualified as AirGQL
+#endif
 import Control.Monad.Catch (catchAll)
 import Data.Aeson as Aeson (KeyValue ((.=)), encode, object)
 import Data.FileEmbed (embedStringFile, makeRelativeToProject)
@@ -237,7 +240,9 @@ import Lib (
  )
 import McpServer (startMcpServer)
 import Migrations (runMigrations)
+#ifdef API_SERVER
 import Server (startServer)
+#endif
 import System.Environment (getProgName, lookupEnv)
 import System.Info (os)
 import Utils (
@@ -373,7 +378,9 @@ data Command
     Alias Text (Maybe [Text])
   | Help
   | PrintConfig
+#ifdef API_SERVER
   | StartServer
+#endif
   | StartMcpServer
   | Gui
   | UlidToUtc Text
@@ -594,8 +601,8 @@ commandParser conf =
 
     <> command "recur" (toParserInfo (RecurTasks
       <$> argument (eitherReader parseDurationString)
-            (metavar "DURATION" <> help "ISO8601 duration \
-              \(e.g. P1DT5H for 1 day and 5 hours)")
+            (metavar "DURATION"
+              <> help "ISO8601 duration (e.g. P1DT5H for 1 day and 5 hours)")
       <*> some (strArgument idsVar))
         "Recur a task DURATION after its due UTC")
 
@@ -949,10 +956,10 @@ commandParser conf =
     <> command "config" (toParserInfo (pure PrintConfig)
         "Print current configuration of TaskLite")
 
+#ifdef API_SERVER
     <> command "server" (toParserInfo (pure StartServer)
-        "Start an API server with several endpoints \
-        \for data access and management \
-        \(including a GraphQL endpoint powered by AirGQL)")
+        "Start an API server with a GraphQL endpoint powered by AirGQL")
+#endif
 
     <> command "mcp" (toParserInfo (pure StartMcpServer)
         "Start an MCP (Model Context Protocol) server for AI assistant integration")
@@ -1383,10 +1390,12 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         Version -> pure $ pretty versionSlug <> hardline
         Help -> pure $ getHelpText progName conf
         PrintConfig -> pure $ pretty conf
+#ifdef API_SERVER
         StartServer -> startServer AirGQL.defaultConfig conf
         StartMcpServer -> do
           startMcpServer conf
           pure $ pretty ("MCP Server stopped" :: Text)
+#endif
         Gui -> openGui conf
         Alias alias _ -> pure $ aliasWarning alias
         UlidToUtc ulid -> pure $ pretty $ ulidText2utc ulid

@@ -31,6 +31,11 @@ source-repository head
   type: git
   location: https://github.com/ad-si/TaskLite
 
+flag api-server
+  description: Build with HTTP/GraphQL API server support
+  manual: True
+  default: True
+
 library
   exposed-modules:
       Base32
@@ -44,7 +49,6 @@ library
       McpServer
       Migrations
       Note
-      Server
       SqlUtils
       Task
       TaskToNote
@@ -71,7 +75,6 @@ library
   build-depends:
       QuickCheck ==2.15.*
     , aeson >=2.2.1 && <2.3
-    , airgql >=0.7.1.2 && <0.8
     , ansi-terminal >=0.11 && <1.2
     , base >=4.18 && <5
     , bytestring >=0.11 && <0.13
@@ -98,10 +101,6 @@ library
     , protolude ==0.3.*
     , quickcheck-instances >=0.3.28 && <0.4
     , random ==1.2.*
-    , servant >=0.18 && <0.21
-    , servant-blaze >=0.7 && <0.10
-    , servant-multipart >=0.11 && <0.13
-    , servant-server >=0.18 && <0.21
     , simple-sql-parser >=0.6 && <0.8
     , sqlite-simple ==0.4.*
     , syb ==0.7.*
@@ -112,13 +111,23 @@ library
     , ulid ==0.3.*
     , unix ==2.8.*
     , vector >=0.12 && <0.14
-    , wai ==3.2.*
-    , wai-app-static ==3.1.*
-    , wai-cors ==0.2.*
-    , wai-extra ==3.1.*
-    , warp >=3.3 && <3.5
     , yaml ==0.11.*
   default-language: GHC2021
+  if flag(api-server)
+    other-modules:
+        Server
+    cpp-options: -DAPI_SERVER
+    build-depends:
+        airgql >=0.7.1.2 && <0.8
+      , servant >=0.18 && <0.21
+      , servant-blaze >=0.7 && <0.10
+      , servant-multipart >=0.11 && <0.13
+      , servant-server >=0.18 && <0.21
+      , wai ==3.2.*
+      , wai-app-static ==3.1.*
+      , wai-cors ==0.2.*
+      , wai-extra ==3.1.*
+      , warp >=3.3 && <3.5
 
 test-suite tasklite-test
   type: exitcode-stdio-1.0

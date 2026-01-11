@@ -5,7 +5,7 @@ help: makefile
 
 .PHONY: format
 format:
-	fourmolu --mode inplace $$(fd -e hs)
+	fourmolu --mode inplace $$(fd -e hs | grep -v 'tasklite-core/source/Cli.hs')
 
 
 .PHONY: start-app
