@@ -62,6 +62,7 @@ tests:
     main: Spec.hs
     source-dirs: test
     dependencies:
+      - containers >= 0.6 && < 0.8
       - directory
       - hspec >= 2.11 && < 3.0
       - optparse-applicative >= 0.16 && < 0.19

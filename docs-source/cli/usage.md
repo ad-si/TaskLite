@@ -40,6 +40,60 @@ It is also possible to immediately add tags when creating a task:
 tl add Improve the TaskLite manual +tasklite +pc
 ```
 
+### Built-in Shortcuts
+
+TaskLite provides several built-in shortcuts to quickly add tasks with common tags:
+
+- `tl write "Email to John"` → Adds "Write Email to John +write"
+- `tl read "Article about Haskell"` → Adds "Read Article about Haskell +read"
+- `tl idea "New feature"` → Adds "New feature +idea"
+- `tl watch "Haskell tutorial"` → Adds "Watch Haskell tutorial +watch"
+- `tl listen "Podcast episode"` → Adds "Listen Podcast episode +listen"
+- `tl buy "Groceries"` → Adds "Buy Groceries +buy"
+- `tl sell "Old laptop"` → Adds "Sell Old laptop +sell"
+- `tl pay "Electric bill"` → Adds "Pay Electric bill +pay"
+- `tl ship "Package to Mom"` → Adds "Ship Package to Mom +ship"
+
+### Custom Shortcuts
+
+You can also define your own shortcuts in the config file.
+For example, to add shortcuts for `cook`, `call`, `fix`, and `shopping`:
+
+```yaml
+shortcuts:
+  cook:
+    prefix: Cook
+    tag: cook
+  call:
+    prefix: Call
+    tag: call
+  fix:
+    tag: fix  # No prefix, just adds the tag
+  shopping:
+    prefix: Buy
+    tags: [shopping, errands]  # Multiple tags
+  quick:
+    prefix: Do
+    tags: []  # No tags, just the prefix
+```
+
+With this configuration:
+
+- `tl cook dinner` → Adds "Cook dinner +cook"
+- `tl call Mom` → Adds "Call Mom +call"
+- `tl fix login bug` → Adds "login bug +fix"
+- `tl shopping milk` → Adds "Buy milk +shopping +errands"
+- `tl quick something` → Adds "Do something"
+
+Each shortcut has the following fields:
+
+- `prefix` (optional): Text to prepend to the task body
+- `tag` (optional): Single tag to add to the task (without the `+` prefix)
+- `tags` (optional): List of tags to add to the task (without the `+` prefix)
+
+You can use either `tag` for a single tag or `tags` for multiple tags.
+If both are specified, they are combined.
+
 And even to set certain fields:
 
 ```shell

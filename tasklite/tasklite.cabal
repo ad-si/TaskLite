@@ -82,6 +82,7 @@ test-suite tasklite-test
   ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wno-orphans -Wredundant-constraints -Wunused-packages
   build-depends:
       base >=4.18 && <5
+    , containers >=0.6 && <0.8
     , directory
     , hspec >=2.11 && <3.0
     , optparse-applicative >=0.16 && <0.19

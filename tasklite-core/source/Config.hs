@@ -29,6 +29,9 @@ import Protolude (
  )
 import Protolude qualified as P
 
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+
 import Data.Aeson (
   FromJSON (parseJSON),
   ToJSON (toJSON),
@@ -105,6 +108,33 @@ data HooksConfig = HooksConfig
   -- TODO: , delete :: HookSet
   }
   deriving (Generic, Show)
+
+
+-- | Custom shortcut for adding tasks with predefined prefix and tags
+data Shortcut = Shortcut
+  { prefix :: Maybe Text
+  -- ^ Optional prefix to prepend to task body (e.g., "Cook")
+  , tags :: [Text]
+  -- ^ Tags to add to the task (without the + prefix)
+  }
+  deriving (Eq, Generic, Show)
+
+
+instance ToJSON Shortcut
+
+
+instance FromJSON Shortcut where
+  parseJSON = withObject "shortcut" $ \o -> do
+    prefix <- o .:? "prefix"
+    -- Support both "tag: xxx" (single) and "tags: [xxx, yyy]" (multiple)
+    tagSingle <- o .:? "tag" .!= ""
+    tagsList <- o .:? "tags" .!= []
+    let tags = case (tagSingle, tagsList) of
+          ("", []) -> []
+          ("", ts) -> ts
+          (t, []) -> [t]
+          (t, ts) -> t : ts -- If both specified, combine them
+    pure $ Shortcut{..}
 
 
 instance ToJSON HooksConfig
@@ -285,6 +315,8 @@ data Config = Config
   , maxWidth :: Maybe Int -- Automatically uses terminal width if not set
   , progressBarWidth :: Int
   , hooks :: HooksConfig
+  , shortcuts :: Map Text Shortcut
+  -- ^ Custom shortcuts for adding tasks (e.g., "cook" -> adds "Cook" prefix and "+cook" tag)
   , noColor :: Bool
   }
   deriving (Generic, Show)
@@ -318,6 +350,7 @@ instance FromJSON Config where
     progressBarWidth <- o .:? "progressBarWidth"
                                 .!= defaultConfig.progressBarWidth
     hooks           <- o .:? "hooks" .!= defaultConfig.hooks
+    shortcuts       <- o .:? "shortcuts" .!= defaultConfig.shortcuts
     noColor         <- o .:? "noColor" .!= defaultConfig.noColor
 
     let maxWidth = maxWidthMb >>=
@@ -423,5 +456,6 @@ defaultConfig =
           , modify = emptyHookSet
           , exit = emptyHookSet
           }
+    , shortcuts = Map.empty
     , noColor = False
     }
