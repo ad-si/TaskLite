@@ -2,12 +2,12 @@
 
 module TypesSpec where
 
-import Protolude (Maybe (..), Text, ($), (&), (<&>), (<>))
+import Protolude (Either (..), Maybe (..), Text, ($), (&), (<&>), (<>))
 import Protolude qualified as P
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-import Config (defaultConfig)
+import Config (Shortcut (..), defaultConfig)
 import Data.Text qualified as T
 import Data.Yaml qualified
 import FullTask (FullTask (body, notes, tags, ulid), emptyFullTask)
@@ -174,3 +174,56 @@ spec = do
             <> "\n"
 
       taskYaml `shouldBe` expected
+
+  describe "Shortcut" $ do
+    it "can be parsed from YAML with prefix and tag" $ do
+      let
+        shortcutYaml :: P.ByteString
+        shortcutYaml =
+          [trimming|
+              prefix: Cook
+              tag: cook
+            |]
+
+        expected :: Shortcut
+        expected =
+          Shortcut
+            { prefix = Just "Cook"
+            , tag = "cook"
+            }
+
+      Data.Yaml.decodeEither' shortcutYaml `shouldBe` Right expected
+
+    it "can be parsed from YAML with tag only" $ do
+      let
+        shortcutYaml :: P.ByteString
+        shortcutYaml =
+          [trimming|
+              tag: fix
+            |]
+
+        expected :: Shortcut
+        expected =
+          Shortcut
+            { prefix = Nothing
+            , tag = "fix"
+            }
+
+      Data.Yaml.decodeEither' shortcutYaml `shouldBe` Right expected
+
+    it "defaults to empty tag when tag is not specified" $ do
+      let
+        shortcutYaml :: P.ByteString
+        shortcutYaml =
+          [trimming|
+              prefix: Cook
+            |]
+
+        expected :: Shortcut
+        expected =
+          Shortcut
+            { prefix = Just "Cook"
+            , tag = ""
+            }
+
+      Data.Yaml.decodeEither' shortcutYaml `shouldBe` Right expected

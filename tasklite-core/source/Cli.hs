@@ -152,8 +152,10 @@ import Config (
   Config (..),
   HookSet (..),
   HooksConfig (..),
+  Shortcut (..),
   addHookFilesToConfig,
  )
+import Data.Map.Strict qualified as Map
 import Control.Arrow ((>>>))
 import Hooks (executeHooks, formatHookResult)
 import ImportExport (
@@ -385,6 +387,8 @@ data Command
   | Gui
   | UlidToUtc Text
   | ExternalCommand Text (Maybe [Text])
+  | AddCustomShortcut Shortcut [Text]
+  -- ^ Custom shortcut command from config
   deriving (Show, Eq)
 
 
@@ -448,6 +452,20 @@ getCommand (alias, commandName) =
       (progDesc $ T.unpack $ alias <> "-> " <> commandName)
 
 
+-- | Create a parser for a custom shortcut from config
+getShortcutCommand :: (Text, Shortcut) -> Mod CommandFields Command
+getShortcutCommand (cmdName, shortcut) =
+  command (T.unpack cmdName) $
+    info
+      (AddCustomShortcut shortcut <$> some (strArgument
+        (metavar "BODY" <> help "Body of the task")))
+      (progDesc $ T.unpack $ description)
+  where
+    description = case shortcut.prefix of
+      Just pfx -> pfx <> " something (custom shortcut)"
+      Nothing -> "Add task with +" <> shortcut.tag <> " tag (custom shortcut)"
+
+
 toParserInfo :: Parser a -> Text -> ParserInfo a
 toParserInfo parser description =
   info parser (fullDesc <> progDesc (T.unpack description))
@@ -472,6 +490,7 @@ idsVar =
 -- | Help Sections
 basic_sec
   , shortcut_sec
+  , custom_shortcut_sec
   , list_sec
   , vis_sec
   , i_o_sec
@@ -482,6 +501,7 @@ basic_sec
     (Text, Text)
 basic_sec = ("{{basic_sec}}", "Basic Commands")
 shortcut_sec = ("{{shortcut_sec}}", "Shortcuts to Add a Task")
+custom_shortcut_sec = ("{{custom_shortcut_sec}}", "Custom Shortcuts")
 list_sec = ("{{list_sec}}", "List Commands")
 vis_sec = ("{{vis_sec}}", "Visualizations")
 i_o_sec = ("{{i_o_sec}}", "I/O Commands")
@@ -729,6 +749,16 @@ commandParser conf =
         (metavar "BODY" <> help "Body of the task")))
         "Ship an item to someone")
     )
+
+  -- Custom shortcuts from config (only show section if there are shortcuts)
+  <|> (if null (Map.toList conf.shortcuts)
+      then P.empty
+      else hsubparser
+        (  metavar (T.unpack $ snd custom_shortcut_sec)
+        <> commandGroup (T.unpack $ fst custom_shortcut_sec)
+        <> foldMap getShortcutCommand (Map.toList conf.shortcuts)
+        )
+      )
 
   <|> hsubparser
     (  metavar (T.unpack $ snd list_sec)
@@ -1158,6 +1188,7 @@ helpReplacements :: Config -> [(Text, Doc AnsiStyle)]
 helpReplacements conf =
   [ basic_sec
   , shortcut_sec
+  , custom_shortcut_sec
   , list_sec
   , vis_sec
   , i_o_sec
@@ -1340,6 +1371,14 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         AddSell bodyWords -> addTaskC $ ["Sell"] <> bodyWords <> ["+sell"]
         AddPay bodyWords -> addTaskC $ ["Pay"] <> bodyWords <> ["+pay"]
         AddShip bodyWords -> addTaskC $ ["Ship"] <> bodyWords <> ["+ship"]
+        AddCustomShortcut shortcut bodyWords ->
+          let
+            prefixWords = case shortcut.prefix of
+              Just pfx -> [pfx]
+              Nothing -> []
+            tagWord = "+" <> shortcut.tag
+          in
+            addTaskC $ prefixWords <> bodyWords <> [tagWord]
         LogTask bodyWords -> logTask conf connection bodyWords
         EnterTask -> enterTask conf connection
         ReadyOn datetime ids -> setReadyUtc conf connection datetime ids

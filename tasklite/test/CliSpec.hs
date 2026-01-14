@@ -33,8 +33,9 @@ import Cli (
   printOutput,
   renderIOWithConfig,
  )
-import Config (Config, Hook (Hook), HookSet (HookSet), defaultConfig)
+import Config (Config, Hook (Hook), HookSet (HookSet), Shortcut (Shortcut), defaultConfig)
 import Config qualified
+import Data.Map.Strict qualified as Map
 import System.Directory (
   Permissions (executable, readable),
   emptyPermissions,
@@ -244,3 +245,58 @@ spec tmpDirPath = do
         content <- P.readFile filePath
         -- Should contain ANSI escape codes
         T.unpack content `shouldContain` "\ESC["
+
+    it "includes custom shortcuts in help when configured" $ do
+      let
+        testShortcut =
+          Shortcut
+            { Config.prefix = Just "Cook"
+            , Config.tag = "cook"
+            }
+        testConf =
+          defaultConfig
+            { Config.shortcuts = Map.fromList [("cook", testShortcut)]
+            }
+        failure :: ParserFailure ParserHelp =
+          parserFailure
+            defaultPrefs
+            (commandParserInfo testConf)
+            (ShowHelpText P.Nothing)
+            []
+        helpText =
+          renderFailure failure "xxx" & P.fst
+
+      helpText `shouldContain` "cook"
+      helpText `shouldContain` "custom shortcut"
+
+    it "adds task with custom shortcut prefix and tag" $ do
+      let
+        testShortcut =
+          Shortcut
+            { Config.prefix = Just "Cook"
+            , Config.tag = "cook"
+            }
+        testConf =
+          defaultConfig
+            { Config.shortcuts = Map.fromList [("cook", testShortcut)]
+            }
+
+      _ <- printOutput "test-app" (Just ["cook", "dinner"]) testConf
+
+      () `shouldBe` ()
+
+    it "adds task with custom shortcut tag only (no prefix)" $ do
+      let
+        testShortcut =
+          Shortcut
+            { Config.prefix = Nothing
+            , Config.tag = "fix"
+            }
+        testConf =
+          defaultConfig
+            { Config.shortcuts = Map.fromList [("fix", testShortcut)]
+            }
+
+      _ <- printOutput "test-app" (Just ["fix", "bug", "in", "login"]) testConf
+
+      () `shouldBe` ()
