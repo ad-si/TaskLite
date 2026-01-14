@@ -46,6 +46,7 @@ library
       ImportExport
       ImportTask
       Lib
+      LuaRunner
       McpServer
       Migrations
       Note
@@ -91,6 +92,8 @@ library
     , generic-random >=1.3 && <1.6
     , githash >=0.1.6 && <0.2
     , hsemail >=2.0 && <2.3
+    , hslua ==2.3.*
+    , hslua-aeson ==2.3.*
     , iso8601-duration >=0.1.1 && <0.2
     , mcp-server ==0.1.*
     , optparse-applicative >=0.16 && <0.19

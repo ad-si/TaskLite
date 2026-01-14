@@ -276,6 +276,42 @@ fn main() {
 ```
 
 
+## Lua Scripts
+
+Save the examples in the hooks directory as `post-add.lua`, etc.
+Lua is the recommended language because TaskLite includes an embedded
+Lua interpreter with the `tl` namespace for utilities like JSON parsing.
+
+
+### Post Add
+
+This example automatically adds a `music` tag when a task has the `jazz` tag:
+
+```lua
+stdin = io.read("*all")
+data = tl.json.decode(stdin)
+
+if data.taskAdded.tags == tl.json.null then
+  return
+end
+
+for _, tag in ipairs(data.taskAdded.tags) do
+  if tag == "jazz" then
+    local handle = io.popen(
+      "tasklite tag music " .. data.taskAdded.ulid,
+      "r"
+    )
+    if handle then
+      handle:read("*a")
+      handle:close()
+    end
+    print(tl.json.encode({message = "Added music tag"}))
+    return
+  end
+end
+```
+
+
 ## Shell Scripts
 
 Save the examples in the hooks directory as `pre-launch.sh`, etc.

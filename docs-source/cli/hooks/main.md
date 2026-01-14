@@ -17,18 +17,47 @@ Otherwise, the file will be executed as a shell script.
 
 Currently supported interpreters are:
 `lua`, `python3`, `ruby`, `node`, and [`v`][vlang].
-It's recommended to write you scripts in the [V programming language][vlang]
-due to its high performance (script is compiled on first execution),
-its great ergonomics, and its comprehensive standard library.
-The compiled versions of the script will be cached as
-`_v_executable_.<name-of-script>` in the hooks directory.
-?
+
 [vlang]: https://vlang.io
 
-Another good alternative is [Lua](https://www.lua.org/)
-as it is simple, lightweight, and fast.
-Furthermore, future versions of TaskLite will include the Lua interpreter
-to make it independent of the system's installed Lua interpreter.
+**Lua is the recommended language** for writing hooks because TaskLite
+includes an embedded Lua interpreter, making hooks portable and independent
+of system installations. Lua hooks also have access to the `tl` namespace
+which provides useful utilities (see below).
+
+Alternatively, you can use the [V programming language][vlang]
+for high performance (scripts are compiled on first execution).
+The compiled versions will be cached as
+`_v_executable_.<name-of-script>` in the hooks directory.
+
+
+## The `tl` Namespace (Lua Only)
+
+Lua hooks have access to a global `tl` namespace that provides
+TaskLite-specific utilities. Currently available:
+
+
+### `tl.json`
+
+A JSON encoding/decoding module:
+
+- `tl.json.decode(string)` - Parse a JSON string into a Lua table
+- `tl.json.encode(table)` - Convert a Lua table to a JSON string
+- `tl.json.null` - A value representing JSON null (for comparisons)
+
+Example:
+
+```lua
+stdin = io.read("*all")
+data = tl.json.decode(stdin)
+
+if data.taskAdded.tags == tl.json.null then
+  return
+end
+
+-- Process the task...
+print(tl.json.encode({message = "Hook completed"}))
+```
 
 If the hook files are shell scripts, they must be executable (`chmod +x`).
 Otherwise, they can't be executed directly by TaskLite.
