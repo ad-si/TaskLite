@@ -176,6 +176,12 @@ spec = do
       taskYaml `shouldBe` expected
 
   describe "Shortcut" $ do
+    let
+      parseShortcut :: P.ByteString -> Shortcut
+      parseShortcut yaml = case Data.Yaml.decodeEither' yaml of
+        Right s -> s
+        Left err -> P.panic $ "Failed to parse shortcut: " <> P.show err
+
     it "can be parsed from YAML with prefix and tag" $ do
       let
         shortcutYaml :: P.ByteString
@@ -184,15 +190,16 @@ spec = do
               prefix: Cook
               tag: cook
             |]
+            & P.encodeUtf8
 
         expected :: Shortcut
         expected =
           Shortcut
             { prefix = Just "Cook"
-            , tag = "cook"
+            , tags = ["cook"]
             }
 
-      Data.Yaml.decodeEither' shortcutYaml `shouldBe` Right expected
+      parseShortcut shortcutYaml `shouldBe` expected
 
     it "can be parsed from YAML with tag only" $ do
       let
@@ -201,29 +208,69 @@ spec = do
           [trimming|
               tag: fix
             |]
+            & P.encodeUtf8
 
         expected :: Shortcut
         expected =
           Shortcut
             { prefix = Nothing
-            , tag = "fix"
+            , tags = ["fix"]
             }
 
-      Data.Yaml.decodeEither' shortcutYaml `shouldBe` Right expected
+      parseShortcut shortcutYaml `shouldBe` expected
 
-    it "defaults to empty tag when tag is not specified" $ do
+    it "can be parsed from YAML with tags list" $ do
+      let
+        shortcutYaml :: P.ByteString
+        shortcutYaml =
+          [trimming|
+              prefix: Cook
+              tags: [cook, food]
+            |]
+            & P.encodeUtf8
+
+        expected :: Shortcut
+        expected =
+          Shortcut
+            { prefix = Just "Cook"
+            , tags = ["cook", "food"]
+            }
+
+      parseShortcut shortcutYaml `shouldBe` expected
+
+    it "can be parsed from YAML with empty tags list" $ do
+      let
+        shortcutYaml :: P.ByteString
+        shortcutYaml =
+          [trimming|
+              prefix: Cook
+              tags: []
+            |]
+            & P.encodeUtf8
+
+        expected :: Shortcut
+        expected =
+          Shortcut
+            { prefix = Just "Cook"
+            , tags = []
+            }
+
+      parseShortcut shortcutYaml `shouldBe` expected
+
+    it "defaults to empty tags when neither tag nor tags is specified" $ do
       let
         shortcutYaml :: P.ByteString
         shortcutYaml =
           [trimming|
               prefix: Cook
             |]
+            & P.encodeUtf8
 
         expected :: Shortcut
         expected =
           Shortcut
             { prefix = Just "Cook"
-            , tag = ""
+            , tags = []
             }
 
-      Data.Yaml.decodeEither' shortcutYaml `shouldBe` Right expected
+      parseShortcut shortcutYaml `shouldBe` expected

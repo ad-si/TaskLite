@@ -57,7 +57,7 @@ TaskLite provides several built-in shortcuts to quickly add tasks with common ta
 ### Custom Shortcuts
 
 You can also define your own shortcuts in the config file.
-For example, to add shortcuts for `cook`, `call`, and `fix`:
+For example, to add shortcuts for `cook`, `call`, `fix`, and `shopping`:
 
 ```yaml
 shortcuts:
@@ -69,6 +69,12 @@ shortcuts:
     tag: call
   fix:
     tag: fix  # No prefix, just adds the tag
+  shopping:
+    prefix: Buy
+    tags: [shopping, errands]  # Multiple tags
+  quick:
+    prefix: Do
+    tags: []  # No tags, just the prefix
 ```
 
 With this configuration:
@@ -76,11 +82,17 @@ With this configuration:
 - `tl cook dinner` → Adds "Cook dinner +cook"
 - `tl call Mom` → Adds "Call Mom +call"
 - `tl fix login bug` → Adds "login bug +fix"
+- `tl shopping milk` → Adds "Buy milk +shopping +errands"
+- `tl quick something` → Adds "Do something"
 
 Each shortcut has the following fields:
 
 - `prefix` (optional): Text to prepend to the task body
-- `tag`: Tag to add to the task (without the `+` prefix)
+- `tag` (optional): Single tag to add to the task (without the `+` prefix)
+- `tags` (optional): List of tags to add to the task (without the `+` prefix)
+
+You can use either `tag` for a single tag or `tags` for multiple tags.
+If both are specified, they are combined.
 
 And even to set certain fields:
 

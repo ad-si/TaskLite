@@ -33,7 +33,13 @@ import Cli (
   printOutput,
   renderIOWithConfig,
  )
-import Config (Config, Hook (Hook), HookSet (HookSet), Shortcut (Shortcut), defaultConfig)
+import Config (
+  Config,
+  Hook (Hook),
+  HookSet (HookSet),
+  Shortcut (Shortcut),
+  defaultConfig,
+ )
 import Config qualified
 import Data.Map.Strict qualified as Map
 import System.Directory (
@@ -251,7 +257,7 @@ spec tmpDirPath = do
         testShortcut =
           Shortcut
             { Config.prefix = Just "Cook"
-            , Config.tag = "cook"
+            , Config.tags = ["cook"]
             }
         testConf =
           defaultConfig
@@ -274,7 +280,7 @@ spec tmpDirPath = do
         testShortcut =
           Shortcut
             { Config.prefix = Just "Cook"
-            , Config.tag = "cook"
+            , Config.tags = ["cook"]
             }
         testConf =
           defaultConfig
@@ -290,7 +296,7 @@ spec tmpDirPath = do
         testShortcut =
           Shortcut
             { Config.prefix = Nothing
-            , Config.tag = "fix"
+            , Config.tags = ["fix"]
             }
         testConf =
           defaultConfig

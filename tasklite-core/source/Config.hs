@@ -110,12 +110,12 @@ data HooksConfig = HooksConfig
   deriving (Generic, Show)
 
 
--- | Custom shortcut for adding tasks with predefined prefix and tag
+-- | Custom shortcut for adding tasks with predefined prefix and tags
 data Shortcut = Shortcut
   { prefix :: Maybe Text
   -- ^ Optional prefix to prepend to task body (e.g., "Cook")
-  , tag :: Text
-  -- ^ Tag to add to the task (without the + prefix)
+  , tags :: [Text]
+  -- ^ Tags to add to the task (without the + prefix)
   }
   deriving (Eq, Generic, Show)
 
@@ -126,7 +126,14 @@ instance ToJSON Shortcut
 instance FromJSON Shortcut where
   parseJSON = withObject "shortcut" $ \o -> do
     prefix <- o .:? "prefix"
-    tag <- o .:? "tag" .!= ""
+    -- Support both "tag: xxx" (single) and "tags: [xxx, yyy]" (multiple)
+    tagSingle <- o .:? "tag" .!= ""
+    tagsList <- o .:? "tags" .!= []
+    let tags = case (tagSingle, tagsList) of
+          ("", []) -> []
+          ("", ts) -> ts
+          (t, []) -> [t]
+          (t, ts) -> t : ts -- If both specified, combine them
     pure $ Shortcut{..}
 
 

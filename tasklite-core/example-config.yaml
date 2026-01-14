@@ -45,8 +45,9 @@ progressBarWidth: 24
 #       - interpreter: python3
 #         body: print('Python test')
 
-# Custom shortcuts to quickly add tasks with a tag.
+# Custom shortcuts to quickly add tasks with tags.
 # For example: `tl cook Dinner` will add a task "Cook Dinner +cook"
+# You can use either `tag` for a single tag or `tags` for multiple tags.
 # shortcuts:
 #   cook:
 #     prefix: Cook
@@ -65,3 +66,8 @@ progressBarWidth: 24
 #     tag: email
 #   fix:
 #     tag: fix
+#   shopping:
+#     prefix: Buy
+#     tags: [shopping, errands]  # Multiple tags
+#   quick:
+#     tags: []  # No tags, just the prefix

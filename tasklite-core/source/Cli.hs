@@ -463,7 +463,10 @@ getShortcutCommand (cmdName, shortcut) =
   where
     description = case shortcut.prefix of
       Just pfx -> pfx <> " something (custom shortcut)"
-      Nothing -> "Add task with +" <> shortcut.tag <> " tag (custom shortcut)"
+      Nothing -> case shortcut.tags of
+        [] -> "Add task (custom shortcut)"
+        [t] -> "Add task with +" <> t <> " tag (custom shortcut)"
+        ts -> "Add task with " <> T.intercalate ", " (fmap ("+" <>) ts) <> " tags (custom shortcut)"
 
 
 toParserInfo :: Parser a -> Text -> ParserInfo a
@@ -1376,9 +1379,9 @@ executeCLiCommand config now connection progName args availableLinesMb = do
             prefixWords = case shortcut.prefix of
               Just pfx -> [pfx]
               Nothing -> []
-            tagWord = "+" <> shortcut.tag
+            tagWords = fmap ("+" <>) shortcut.tags
           in
-            addTaskC $ prefixWords <> bodyWords <> [tagWord]
+            addTaskC $ prefixWords <> bodyWords <> tagWords
         LogTask bodyWords -> logTask conf connection bodyWords
         EnterTask -> enterTask conf connection
         ReadyOn datetime ids -> setReadyUtc conf connection datetime ids
