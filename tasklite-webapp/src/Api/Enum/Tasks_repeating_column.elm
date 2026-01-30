@@ -8,167 +8,118 @@ import Json.Decode as Decode exposing (Decoder)
 {-| This enum contains a variant for each column in the table
 -}
 type Tasks_repeating_column
-    = Ulid
-    | Body
-    | Modified_utc
-    | Awake_utc
-    | Ready_utc
-    | Waiting_utc
-    | Review_utc
-    | Due_utc
-    | Closed_utc
-    | State
-    | Group_ulid
-    | Repetition_duration
-    | Recurrence_duration
-    | Tags
-    | Notes
-    | Priority
-    | User
-    | Metadata
+  = Ulid
+  | Body
+  | Modified_utc
+  | Awake_utc
+  | Ready_utc
+  | Waiting_utc
+  | Review_utc
+  | Due_utc
+  | Closed_utc
+  | State
+  | Group_ulid
+  | Repetition_duration
+  | Recurrence_duration
+  | Tags
+  | Notes
+  | Priority
+  | User
+  | Metadata
+
+
 list : List Tasks_repeating_column
 list =
-    [Ulid, Body, Modified_utc, Awake_utc, Ready_utc, Waiting_utc, Review_utc, Due_utc, Closed_utc, State, Group_ulid, Repetition_duration, Recurrence_duration, Tags, Notes, Priority, User, Metadata]
+  [ Ulid, Body, Modified_utc, Awake_utc, Ready_utc, Waiting_utc, Review_utc, Due_utc, Closed_utc, State, Group_ulid, Repetition_duration, Recurrence_duration, Tags, Notes, Priority, User, Metadata ]
+
+
 decoder : Decoder Tasks_repeating_column
 decoder =
-    Decode.string
-        |> Decode.andThen
-            (\string ->
-                case string of
-                    "ulid" ->
-                        Decode.succeed Ulid
-
-                    "body" ->
-                        Decode.succeed Body
-
-                    "modified_utc" ->
-                        Decode.succeed Modified_utc
-
-                    "awake_utc" ->
-                        Decode.succeed Awake_utc
-
-                    "ready_utc" ->
-                        Decode.succeed Ready_utc
-
-                    "waiting_utc" ->
-                        Decode.succeed Waiting_utc
-
-                    "review_utc" ->
-                        Decode.succeed Review_utc
-
-                    "due_utc" ->
-                        Decode.succeed Due_utc
-
-                    "closed_utc" ->
-                        Decode.succeed Closed_utc
-
-                    "state" ->
-                        Decode.succeed State
-
-                    "group_ulid" ->
-                        Decode.succeed Group_ulid
-
-                    "repetition_duration" ->
-                        Decode.succeed Repetition_duration
-
-                    "recurrence_duration" ->
-                        Decode.succeed Recurrence_duration
-
-                    "tags" ->
-                        Decode.succeed Tags
-
-                    "notes" ->
-                        Decode.succeed Notes
-
-                    "priority" ->
-                        Decode.succeed Priority
-
-                    "user" ->
-                        Decode.succeed User
-
-                    "metadata" ->
-                        Decode.succeed Metadata
-
-                    _ ->
-                        Decode.fail ("Invalid Tasks_repeating_column type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
+  Decode.string
+    |> Decode.andThen
+        (\string -> case string of
+            "ulid" ->
+              Decode.succeed Ulid
+            "body" ->
+              Decode.succeed Body
+            "modified_utc" ->
+              Decode.succeed Modified_utc
+            "awake_utc" ->
+              Decode.succeed Awake_utc
+            "ready_utc" ->
+              Decode.succeed Ready_utc
+            "waiting_utc" ->
+              Decode.succeed Waiting_utc
+            "review_utc" ->
+              Decode.succeed Review_utc
+            "due_utc" ->
+              Decode.succeed Due_utc
+            "closed_utc" ->
+              Decode.succeed Closed_utc
+            "state" ->
+              Decode.succeed State
+            "group_ulid" ->
+              Decode.succeed Group_ulid
+            "repetition_duration" ->
+              Decode.succeed Repetition_duration
+            "recurrence_duration" ->
+              Decode.succeed Recurrence_duration
+            "tags" ->
+              Decode.succeed Tags
+            "notes" ->
+              Decode.succeed Notes
+            "priority" ->
+              Decode.succeed Priority
+            "user" ->
+              Decode.succeed User
+            "metadata" ->
+              Decode.succeed Metadata
+            _ ->
+              Decode.fail ("Invalid Tasks_repeating_column type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
         )
-        
+
 
 {-| Convert from the union type representing the Enum to a string that the GraphQL server will recognize.
 -}
 toString : Tasks_repeating_column -> String
 toString enum____ =
-    case enum____ of
-        Ulid ->
-                "ulid"
-
-
-        Body ->
-                "body"
-
-
-        Modified_utc ->
-                "modified_utc"
-
-
-        Awake_utc ->
-                "awake_utc"
-
-
-        Ready_utc ->
-                "ready_utc"
-
-
-        Waiting_utc ->
-                "waiting_utc"
-
-
-        Review_utc ->
-                "review_utc"
-
-
-        Due_utc ->
-                "due_utc"
-
-
-        Closed_utc ->
-                "closed_utc"
-
-
-        State ->
-                "state"
-
-
-        Group_ulid ->
-                "group_ulid"
-
-
-        Repetition_duration ->
-                "repetition_duration"
-
-
-        Recurrence_duration ->
-                "recurrence_duration"
-
-
-        Tags ->
-                "tags"
-
-
-        Notes ->
-                "notes"
-
-
-        Priority ->
-                "priority"
-
-
-        User ->
-                "user"
-
-
-        Metadata ->
-                "metadata"
+  case enum____ of
+    Ulid ->
+      "ulid"
+    Body ->
+      "body"
+    Modified_utc ->
+      "modified_utc"
+    Awake_utc ->
+      "awake_utc"
+    Ready_utc ->
+      "ready_utc"
+    Waiting_utc ->
+      "waiting_utc"
+    Review_utc ->
+      "review_utc"
+    Due_utc ->
+      "due_utc"
+    Closed_utc ->
+      "closed_utc"
+    State ->
+      "state"
+    Group_ulid ->
+      "group_ulid"
+    Repetition_duration ->
+      "repetition_duration"
+    Recurrence_duration ->
+      "recurrence_duration"
+    Tags ->
+      "tags"
+    Notes ->
+      "notes"
+    Priority ->
+      "priority"
+    User ->
+      "user"
+    Metadata ->
+      "metadata"
 
 
 {-| Convert from a String representation to an elm representation enum.
@@ -184,77 +135,42 @@ This can be useful for generating Strings to use for <select> menus to check whi
 -}
 fromString : String -> Maybe Tasks_repeating_column
 fromString enumString____ =
-    case enumString____ of
-        "ulid" ->
-                Just Ulid
-
-
-        "body" ->
-                Just Body
-
-
-        "modified_utc" ->
-                Just Modified_utc
-
-
-        "awake_utc" ->
-                Just Awake_utc
-
-
-        "ready_utc" ->
-                Just Ready_utc
-
-
-        "waiting_utc" ->
-                Just Waiting_utc
-
-
-        "review_utc" ->
-                Just Review_utc
-
-
-        "due_utc" ->
-                Just Due_utc
-
-
-        "closed_utc" ->
-                Just Closed_utc
-
-
-        "state" ->
-                Just State
-
-
-        "group_ulid" ->
-                Just Group_ulid
-
-
-        "repetition_duration" ->
-                Just Repetition_duration
-
-
-        "recurrence_duration" ->
-                Just Recurrence_duration
-
-
-        "tags" ->
-                Just Tags
-
-
-        "notes" ->
-                Just Notes
-
-
-        "priority" ->
-                Just Priority
-
-
-        "user" ->
-                Just User
-
-
-        "metadata" ->
-                Just Metadata
-
-        _ ->
-                Nothing
+  case enumString____ of
+    "ulid" ->
+      Just Ulid
+    "body" ->
+      Just Body
+    "modified_utc" ->
+      Just Modified_utc
+    "awake_utc" ->
+      Just Awake_utc
+    "ready_utc" ->
+      Just Ready_utc
+    "waiting_utc" ->
+      Just Waiting_utc
+    "review_utc" ->
+      Just Review_utc
+    "due_utc" ->
+      Just Due_utc
+    "closed_utc" ->
+      Just Closed_utc
+    "state" ->
+      Just State
+    "group_ulid" ->
+      Just Group_ulid
+    "repetition_duration" ->
+      Just Repetition_duration
+    "recurrence_duration" ->
+      Just Recurrence_duration
+    "tags" ->
+      Just Tags
+    "notes" ->
+      Just Notes
+    "priority" ->
+      Just Priority
+    "user" ->
+      Just User
+    "metadata" ->
+      Just Metadata
+    _ ->
+      Nothing

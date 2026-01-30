@@ -8,39 +8,38 @@ import Json.Decode as Decode exposing (Decoder)
 {-| This enum contains a variant for each column in the table
 -}
 type Closed_tasks_histogram_column
-    = Date_short
-    | Num_of_closed_tasks
+  = Date_short
+  | Num_of_closed_tasks
+
+
 list : List Closed_tasks_histogram_column
 list =
-    [Date_short, Num_of_closed_tasks]
+  [ Date_short, Num_of_closed_tasks ]
+
+
 decoder : Decoder Closed_tasks_histogram_column
 decoder =
-    Decode.string
-        |> Decode.andThen
-            (\string ->
-                case string of
-                    "date_short" ->
-                        Decode.succeed Date_short
-
-                    "num_of_closed_tasks" ->
-                        Decode.succeed Num_of_closed_tasks
-
-                    _ ->
-                        Decode.fail ("Invalid Closed_tasks_histogram_column type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
+  Decode.string
+    |> Decode.andThen
+        (\string -> case string of
+            "date_short" ->
+              Decode.succeed Date_short
+            "num_of_closed_tasks" ->
+              Decode.succeed Num_of_closed_tasks
+            _ ->
+              Decode.fail ("Invalid Closed_tasks_histogram_column type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
         )
-        
+
 
 {-| Convert from the union type representing the Enum to a string that the GraphQL server will recognize.
 -}
 toString : Closed_tasks_histogram_column -> String
 toString enum____ =
-    case enum____ of
-        Date_short ->
-                "date_short"
-
-
-        Num_of_closed_tasks ->
-                "num_of_closed_tasks"
+  case enum____ of
+    Date_short ->
+      "date_short"
+    Num_of_closed_tasks ->
+      "num_of_closed_tasks"
 
 
 {-| Convert from a String representation to an elm representation enum.
@@ -56,13 +55,10 @@ This can be useful for generating Strings to use for <select> menus to check whi
 -}
 fromString : String -> Maybe Closed_tasks_histogram_column
 fromString enumString____ =
-    case enumString____ of
-        "date_short" ->
-                Just Date_short
-
-
-        "num_of_closed_tasks" ->
-                Just Num_of_closed_tasks
-
-        _ ->
-                Nothing
+  case enumString____ of
+    "date_short" ->
+      Just Date_short
+    "num_of_closed_tasks" ->
+      Just Num_of_closed_tasks
+    _ ->
+      Nothing

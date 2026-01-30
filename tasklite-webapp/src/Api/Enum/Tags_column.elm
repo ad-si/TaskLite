@@ -8,55 +8,48 @@ import Json.Decode as Decode exposing (Decoder)
 {-| This enum contains a variant for each column in the table
 -}
 type Tags_column
-    = Tag
-    | Open
-    | Closed
-    | Progress
+  = Tag
+  | Open
+  | Closed
+  | Progress
+
+
 list : List Tags_column
 list =
-    [Tag, Open, Closed, Progress]
+  [ Tag, Open, Closed, Progress ]
+
+
 decoder : Decoder Tags_column
 decoder =
-    Decode.string
-        |> Decode.andThen
-            (\string ->
-                case string of
-                    "tag" ->
-                        Decode.succeed Tag
-
-                    "open" ->
-                        Decode.succeed Open
-
-                    "closed" ->
-                        Decode.succeed Closed
-
-                    "progress" ->
-                        Decode.succeed Progress
-
-                    _ ->
-                        Decode.fail ("Invalid Tags_column type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
+  Decode.string
+    |> Decode.andThen
+        (\string -> case string of
+            "tag" ->
+              Decode.succeed Tag
+            "open" ->
+              Decode.succeed Open
+            "closed" ->
+              Decode.succeed Closed
+            "progress" ->
+              Decode.succeed Progress
+            _ ->
+              Decode.fail ("Invalid Tags_column type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
         )
-        
+
 
 {-| Convert from the union type representing the Enum to a string that the GraphQL server will recognize.
 -}
 toString : Tags_column -> String
 toString enum____ =
-    case enum____ of
-        Tag ->
-                "tag"
-
-
-        Open ->
-                "open"
-
-
-        Closed ->
-                "closed"
-
-
-        Progress ->
-                "progress"
+  case enum____ of
+    Tag ->
+      "tag"
+    Open ->
+      "open"
+    Closed ->
+      "closed"
+    Progress ->
+      "progress"
 
 
 {-| Convert from a String representation to an elm representation enum.
@@ -72,21 +65,14 @@ This can be useful for generating Strings to use for <select> menus to check whi
 -}
 fromString : String -> Maybe Tags_column
 fromString enumString____ =
-    case enumString____ of
-        "tag" ->
-                Just Tag
-
-
-        "open" ->
-                Just Open
-
-
-        "closed" ->
-                Just Closed
-
-
-        "progress" ->
-                Just Progress
-
-        _ ->
-                Nothing
+  case enumString____ of
+    "tag" ->
+      Just Tag
+    "open" ->
+      Just Open
+    "closed" ->
+      Just Closed
+    "progress" ->
+      Just Progress
+    _ ->
+      Nothing

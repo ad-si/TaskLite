@@ -16,12 +16,14 @@ import Api.ScalarCodecs
 import Json.Decode as Decode
 import Graphql.Internal.Encode as Encode exposing (Value)
 
+
 affected_rows : SelectionSet Int Api.Object.Closed_tasks_histogram_mutation_response
 affected_rows =
-      Object.selectionForField "Int" "affected_rows" [] (Decode.int)
+  Object.selectionForField "Int" "affected_rows" [] (Decode.int)
 
 
-returning : SelectionSet decodesTo Api.Object.Closed_tasks_histogram_row
- -> SelectionSet (List decodesTo) Api.Object.Closed_tasks_histogram_mutation_response
+returning :
+  SelectionSet decodesTo Api.Object.Closed_tasks_histogram_row
+  -> SelectionSet (List decodesTo) Api.Object.Closed_tasks_histogram_mutation_response
 returning object____ =
-      Object.selectionForCompositeField "returning" [] (object____) (Basics.identity >> Decode.list)
+  Object.selectionForCompositeField "returning" [] (object____) (Basics.identity >> Decode.list)

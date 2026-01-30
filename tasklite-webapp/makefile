@@ -7,6 +7,11 @@ node_modules: package.json package-lock.json
 	if test ! -d $@; then npm install; fi
 
 
+.PHONY: format
+format: node_modules
+	elmfmt -i src
+
+
 .PHONY: start
 start: node_modules
 	NODE_OPTIONS=--openssl-legacy-provider \
@@ -22,6 +27,7 @@ build: node_modules
 .PHONY: generate-api
 generate-api: node_modules
 	npx elm-graphql --skip-elm-format http://localhost:7458/graphql
+	$(MAKE) format
 
 
 .PHONY: clean

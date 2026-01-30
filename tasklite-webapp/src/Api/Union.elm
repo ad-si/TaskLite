@@ -2,7 +2,6 @@
 -- https://github.com/dillonkearns/elm-graphql
 module Api.Union exposing (..)
 
-
 placeholder : String
 placeholder =
-    ""
+  ""

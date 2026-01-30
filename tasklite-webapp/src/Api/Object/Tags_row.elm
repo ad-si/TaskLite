@@ -16,29 +16,30 @@ import Api.ScalarCodecs
 import Json.Decode as Decode
 import Graphql.Internal.Encode as Encode exposing (Value)
 
+
 {-| 
 -}
 tag : SelectionSet (Maybe String) Api.Object.Tags_row
 tag =
-      Object.selectionForField "(Maybe String)" "tag" [] (Decode.string |> Decode.nullable)
+  Object.selectionForField "(Maybe String)" "tag" [] (Decode.string |> Decode.nullable)
 
 
 {-| 
 -}
 open : SelectionSet (Maybe String) Api.Object.Tags_row
 open =
-      Object.selectionForField "(Maybe String)" "open" [] (Decode.string |> Decode.nullable)
+  Object.selectionForField "(Maybe String)" "open" [] (Decode.string |> Decode.nullable)
 
 
 {-| 
 -}
 closed : SelectionSet (Maybe String) Api.Object.Tags_row
 closed =
-      Object.selectionForField "(Maybe String)" "closed" [] (Decode.string |> Decode.nullable)
+  Object.selectionForField "(Maybe String)" "closed" [] (Decode.string |> Decode.nullable)
 
 
 {-| 
 -}
 progress : SelectionSet (Maybe String) Api.Object.Tags_row
 progress =
-      Object.selectionForField "(Maybe String)" "progress" [] (Decode.string |> Decode.nullable)
+  Object.selectionForField "(Maybe String)" "progress" [] (Decode.string |> Decode.nullable)

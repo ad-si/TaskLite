@@ -6,21 +6,22 @@ import Json.Decode as Decode exposing (Decoder)
 import Api.Scalar exposing (defaultCodecs)
 
 
-type alias Id
-    = Api.Scalar.Id
+type alias Id =
+  Api.Scalar.Id
 
 
-type alias Tasks_state_String
-    = Api.Scalar.Tasks_state_String
+type alias Tasks_state_String =
+  Api.Scalar.Tasks_state_String
 
 
-type alias Upload
-    = Api.Scalar.Upload
+type alias Upload =
+  Api.Scalar.Upload
 
 
 codecs : Api.Scalar.Codecs Id Tasks_state_String Upload
 codecs =
-    Api.Scalar.defineCodecs
-        {
-        codecId = defaultCodecs.codecId    , codecTasks_state_String = defaultCodecs.codecTasks_state_String    , codecUpload = defaultCodecs.codecUpload
-        }
+  Api.Scalar.defineCodecs
+    { codecId = defaultCodecs.codecId
+    , codecTasks_state_String = defaultCodecs.codecTasks_state_String
+    , codecUpload = defaultCodecs.codecUpload
+    }

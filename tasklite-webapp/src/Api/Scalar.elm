@@ -2,7 +2,6 @@
 -- https://github.com/dillonkearns/elm-graphql
 module Api.Scalar exposing (Codecs, Id(..), Tasks_state_String(..), Upload(..), defaultCodecs, defineCodecs, unwrapCodecs, unwrapEncoder)
 
-
 import Graphql.Internal.Builder.Object as Object
 import Json.Decode as Decode exposing (Decoder)
 import Graphql.Internal.Encode
@@ -11,61 +10,66 @@ import Graphql.Codec exposing (Codec)
 
 
 type Id
-    = Id String
+  = Id String
 
 
 type Tasks_state_String
-    = Tasks_state_String String
+  = Tasks_state_String String
 
 
 type Upload
-    = Upload String
+  = Upload String
+
 
 defineCodecs :
-    {codecId : Codec valueId
- , codecTasks_state_String : Codec valueTasks_state_String
- , codecUpload : Codec valueUpload}
-    -> Codecs valueId valueTasks_state_String valueUpload
+  { codecId : Codec valueId
+  , codecTasks_state_String : Codec valueTasks_state_String
+  , codecUpload : Codec valueUpload
+  }
+  -> Codecs valueId valueTasks_state_String valueUpload
 defineCodecs definitions =
-    Codecs definitions
+  Codecs definitions
 
 
 unwrapCodecs :
-    Codecs valueId valueTasks_state_String valueUpload
-    -> {codecId : Codec valueId
- , codecTasks_state_String : Codec valueTasks_state_String
- , codecUpload : Codec valueUpload}
+  Codecs valueId valueTasks_state_String valueUpload
+  -> { codecId : Codec valueId
+  , codecTasks_state_String : Codec valueTasks_state_String
+  , codecUpload : Codec valueUpload
+  }
 unwrapCodecs (Codecs unwrappedCodecs) =
-    unwrappedCodecs
+  unwrappedCodecs
 
 
 unwrapEncoder :
-    (RawCodecs valueId valueTasks_state_String valueUpload -> Codec getterValue)
-    -> Codecs valueId valueTasks_state_String valueUpload
-    -> getterValue
-    -> Graphql.Internal.Encode.Value
+  (RawCodecs valueId valueTasks_state_String valueUpload -> Codec getterValue)
+  -> Codecs valueId valueTasks_state_String valueUpload
+  -> getterValue
+  -> Graphql.Internal.Encode.Value
 unwrapEncoder getter (Codecs unwrappedCodecs) =
-    (unwrappedCodecs |> getter |> .encoder) >> Graphql.Internal.Encode.fromJson
+  (unwrappedCodecs |> getter |> .encoder) >> Graphql.Internal.Encode.fromJson
 
 
 type Codecs valueId valueTasks_state_String valueUpload
-    = Codecs (RawCodecs valueId valueTasks_state_String valueUpload)
+  = Codecs (RawCodecs valueId valueTasks_state_String valueUpload)
 
 
 type alias RawCodecs valueId valueTasks_state_String valueUpload =
-    {codecId : Codec valueId
- , codecTasks_state_String : Codec valueTasks_state_String
- , codecUpload : Codec valueUpload}
+  { codecId : Codec valueId
+  , codecTasks_state_String : Codec valueTasks_state_String
+  , codecUpload : Codec valueUpload
+  }
 
 
 defaultCodecs : RawCodecs Id Tasks_state_String Upload
 defaultCodecs =
-    {codecId =
-  { encoder = \(Id raw) -> Encode.string raw
- , decoder = Object.scalarDecoder |> Decode.map Id }
- , codecTasks_state_String =
-  { encoder = \(Tasks_state_String raw) -> Encode.string raw
- , decoder = Object.scalarDecoder |> Decode.map Tasks_state_String }
- , codecUpload =
-  { encoder = \(Upload raw) -> Encode.string raw
- , decoder = Object.scalarDecoder |> Decode.map Upload }}
+  { codecId = { encoder = \(Id raw) -> Encode.string raw
+    , decoder = Object.scalarDecoder |> Decode.map Id
+    }
+  , codecTasks_state_String = { encoder = \(Tasks_state_String raw) -> Encode.string raw
+    , decoder = Object.scalarDecoder |> Decode.map Tasks_state_String
+    }
+  , codecUpload = { encoder = \(Upload raw) -> Encode.string raw
+    , decoder = Object.scalarDecoder |> Decode.map Upload
+    }
+  }

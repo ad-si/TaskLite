@@ -16,15 +16,16 @@ import Api.ScalarCodecs
 import Json.Decode as Decode
 import Graphql.Internal.Encode as Encode exposing (Value)
 
+
 {-| 
 -}
 date_short : SelectionSet (Maybe String) Api.Object.Closed_tasks_histogram_row
 date_short =
-      Object.selectionForField "(Maybe String)" "date_short" [] (Decode.string |> Decode.nullable)
+  Object.selectionForField "(Maybe String)" "date_short" [] (Decode.string |> Decode.nullable)
 
 
 {-| 
 -}
 num_of_closed_tasks : SelectionSet (Maybe String) Api.Object.Closed_tasks_histogram_row
 num_of_closed_tasks =
-      Object.selectionForField "(Maybe String)" "num_of_closed_tasks" [] (Decode.string |> Decode.nullable)
+  Object.selectionForField "(Maybe String)" "num_of_closed_tasks" [] (Decode.string |> Decode.nullable)

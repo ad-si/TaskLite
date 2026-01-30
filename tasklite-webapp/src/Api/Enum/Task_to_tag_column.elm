@@ -8,55 +8,48 @@ import Json.Decode as Decode exposing (Decoder)
 {-| This enum contains a variant for each column in the table
 -}
 type Task_to_tag_column
-    = Rowid
-    | Ulid
-    | Task_ulid
-    | Tag
+  = Rowid
+  | Ulid
+  | Task_ulid
+  | Tag
+
+
 list : List Task_to_tag_column
 list =
-    [Rowid, Ulid, Task_ulid, Tag]
+  [ Rowid, Ulid, Task_ulid, Tag ]
+
+
 decoder : Decoder Task_to_tag_column
 decoder =
-    Decode.string
-        |> Decode.andThen
-            (\string ->
-                case string of
-                    "rowid" ->
-                        Decode.succeed Rowid
-
-                    "ulid" ->
-                        Decode.succeed Ulid
-
-                    "task_ulid" ->
-                        Decode.succeed Task_ulid
-
-                    "tag" ->
-                        Decode.succeed Tag
-
-                    _ ->
-                        Decode.fail ("Invalid Task_to_tag_column type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
+  Decode.string
+    |> Decode.andThen
+        (\string -> case string of
+            "rowid" ->
+              Decode.succeed Rowid
+            "ulid" ->
+              Decode.succeed Ulid
+            "task_ulid" ->
+              Decode.succeed Task_ulid
+            "tag" ->
+              Decode.succeed Tag
+            _ ->
+              Decode.fail ("Invalid Task_to_tag_column type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
         )
-        
+
 
 {-| Convert from the union type representing the Enum to a string that the GraphQL server will recognize.
 -}
 toString : Task_to_tag_column -> String
 toString enum____ =
-    case enum____ of
-        Rowid ->
-                "rowid"
-
-
-        Ulid ->
-                "ulid"
-
-
-        Task_ulid ->
-                "task_ulid"
-
-
-        Tag ->
-                "tag"
+  case enum____ of
+    Rowid ->
+      "rowid"
+    Ulid ->
+      "ulid"
+    Task_ulid ->
+      "task_ulid"
+    Tag ->
+      "tag"
 
 
 {-| Convert from a String representation to an elm representation enum.
@@ -72,21 +65,14 @@ This can be useful for generating Strings to use for <select> menus to check whi
 -}
 fromString : String -> Maybe Task_to_tag_column
 fromString enumString____ =
-    case enumString____ of
-        "rowid" ->
-                Just Rowid
-
-
-        "ulid" ->
-                Just Ulid
-
-
-        "task_ulid" ->
-                Just Task_ulid
-
-
-        "tag" ->
-                Just Tag
-
-        _ ->
-                Nothing
+  case enumString____ of
+    "rowid" ->
+      Just Rowid
+    "ulid" ->
+      Just Ulid
+    "task_ulid" ->
+      Just Task_ulid
+    "tag" ->
+      Just Tag
+    _ ->
+      Nothing

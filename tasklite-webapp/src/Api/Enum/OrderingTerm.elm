@@ -12,31 +12,30 @@ import Json.Decode as Decode exposing (Decoder)
 
 -}
 type OrderingTerm
-    = Asc
-    | Desc
+  = Asc
+  | Desc
+
+
 list : List OrderingTerm
 list =
-    [Asc, Desc]
+  [ Asc, Desc ]
+
+
 decoder : Decoder OrderingTerm
 decoder =
-    Decode.string
-        |> Decode.andThen
-            (\string ->
-                case string of
-                    "ASC" ->
-                        Decode.succeed Asc
-
-                    "asc" ->
-                        Decode.succeed Asc
-
-                    "DESC" ->
-                        Decode.succeed Desc
-
-                    "desc" ->
-                        Decode.succeed Desc
-
-                    _ ->
-                        Decode.fail ("Invalid OrderingTerm type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
+  Decode.string
+    |> Decode.andThen
+        (\string -> case string of
+            "ASC" ->
+              Decode.succeed Asc
+            "asc" ->
+              Decode.succeed Asc
+            "DESC" ->
+              Decode.succeed Desc
+            "desc" ->
+              Decode.succeed Desc
+            _ ->
+              Decode.fail ("Invalid OrderingTerm type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
         )
 
 
@@ -44,13 +43,11 @@ decoder =
 -}
 toString : OrderingTerm -> String
 toString enum____ =
-    case enum____ of
-        Asc ->
-                "ASC"
-
-
-        Desc ->
-                "DESC"
+  case enum____ of
+    Asc ->
+      "ASC"
+    Desc ->
+      "DESC"
 
 
 {-| Convert from a String representation to an elm representation enum.
@@ -66,21 +63,14 @@ This can be useful for generating Strings to use for <select> menus to check whi
 -}
 fromString : String -> Maybe OrderingTerm
 fromString enumString____ =
-    case enumString____ of
-        "ASC" ->
-                Just Asc
-
-
-        "asc" ->
-                Just Asc
-
-
-        "DESC" ->
-                Just Desc
-
-
-        "desc" ->
-                Just Desc
-
-        _ ->
-                Nothing
+  case enumString____ of
+    "ASC" ->
+      Just Asc
+    "asc" ->
+      Just Asc
+    "DESC" ->
+      Just Desc
+    "desc" ->
+      Just Desc
+    _ ->
+      Nothing
