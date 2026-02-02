@@ -8,7 +8,7 @@ node_modules: package.json package-lock.json
 
 
 .PHONY: format
-format: node_modules
+format:
 	elmfmt -i src
 
 

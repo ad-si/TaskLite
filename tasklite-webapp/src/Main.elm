@@ -786,7 +786,7 @@ handleRoute route =
       Cmd.none
 
 
-init : Flags -> Url -> Key -> (Model, Cmd Msg)
+init : Flags -> Url -> Key -> ( Model, Cmd Msg )
 init _ url key =
   let
     route =
@@ -810,7 +810,7 @@ init _ url key =
   )
 
 
-update : Msg -> Model -> (Model, Cmd Msg)
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
     ReceivedTime time ->
