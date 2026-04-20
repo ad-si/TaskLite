@@ -342,7 +342,7 @@ data Command
   | ListDeletable
   | ListReady
   | ListWaiting
-  | ListOverdue
+  | ListOverdue (Maybe [Text])
   | ListRepeating
   | ListRecurring
   | ListNoTag
@@ -803,8 +803,12 @@ commandParser conf =
     -- <> command "quarter"  -- … last day of the quarter
     -- <> command "year"  -- … last day of the year
 
-    <> command "overdue" (toParserInfo (pure ListOverdue)
-        "List all overdue tasks by priority desc")
+    <> command "overdue"
+        (toParserInfo
+          (ListOverdue <$> optional ( some
+            (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions")))
+              "List all overdue tasks by priority desc \
+              \filtered by the specified expression")
 
     <> command "repeating" (toParserInfo (pure ListRepeating)
         "List all repeating tasks by priority desc")
@@ -1333,7 +1337,8 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         ListOpen taskFilter -> openTasks conf now connection taskFilter availableLinesMb
         ListModified -> modifiedTasks conf now connection AllItems availableLinesMb
         ListModifiedOnly -> modifiedTasks conf now connection ModifiedItemsOnly availableLinesMb
-        ListOverdue -> overdueTasks conf now connection availableLinesMb
+        ListOverdue taskFilter ->
+          overdueTasks conf now connection taskFilter availableLinesMb
         ListRepeating -> listRepeating conf now connection availableLinesMb
         ListRecurring -> listRecurring conf now connection availableLinesMb
         ListReady -> listReady conf now connection availableLinesMb

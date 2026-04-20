@@ -2864,9 +2864,58 @@ modifiedTasks conf now connection listModifiedFlag availableLinesMb = do
 
 
 overdueTasks ::
-  Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
-overdueTasks conf now connection =
-  listFromView conf now connection "tasks_overdue"
+  Config ->
+  DateTime ->
+  Connection ->
+  Maybe [Text] ->
+  Maybe Int ->
+  IO (Doc AnsiStyle)
+overdueTasks conf now connection filterExpression availableLinesMb = do
+  let
+    parserResults =
+      readP_to_S filterExpsParser $
+        T.unpack (unwords $ fromMaybe [""] filterExpression)
+    filterMay = listToMaybe parserResults
+
+  case filterMay of
+    Nothing ->
+      listFromView conf now connection "tasks_overdue" availableLinesMb
+    Just (filterExps, _) -> do
+      let
+        ppInvalidFilter = \case
+          (InvalidFilter error) ->
+            dquotes (pretty error) <+> "is an invalid filter"
+          (HasStatus Nothing) -> "Filter contains an invalid state value"
+          _ -> "The functions should not be called with a valid function"
+        errors = P.filter (not . isValidFilter) filterExps
+
+      if P.length errors > 0
+        then
+          pure $
+            vsep (fmap (annotate (colr conf Red) . ppInvalidFilter) errors)
+              <> hardline
+              <> hardline
+        else do
+          let
+            isStateExp = \case (HasStatus _) -> True; _ -> False
+            filterExpWithOpen =
+              if P.any isStateExp filterExps
+                then filterExps
+                else HasStatus (Just IsOpen) : filterExps
+            filterExpWithOverdue = HasDue "now" : filterExpWithOpen
+            sqlQuery =
+              getFilterQuery
+                filterExpWithOverdue
+                (Just "priority DESC, due_utc ASC, ulid DESC")
+                availableLinesMb
+
+          tasks <- query_ connection sqlQuery
+          formatTasksColor
+            conf
+            connection
+            now
+            (wasListTruncated availableLinesMb tasks)
+            tasks
 
 
 doneTasks :: Config -> DateTime -> Connection -> Maybe Int -> IO (Doc AnsiStyle)
