@@ -90,6 +90,8 @@ data FullTask = FullTask
   , recurrence_duration :: Maybe Text
   , tags :: Maybe [Text]
   , notes :: Maybe [Note]
+  , blockers :: Maybe [Text]
+  , blocked :: Maybe [Text]
   , priority :: Maybe Float
   , user :: Text
   , metadata :: Maybe Aeson.Value
@@ -136,6 +138,8 @@ instance FromRow FullTask where
       <*> field -- recurrence_duration
       <*> fieldWith (parseJsonArrayField "tags")
       <*> fieldWith (parseJsonArrayField "notes")
+      <*> fieldWith (parseJsonArrayField "blockers")
+      <*> fieldWith (parseJsonArrayField "blocked")
       <*> field -- priority
       <*> field -- user
       <*> ( field <&> \case
@@ -191,6 +195,8 @@ emptyFullTask =
     , recurrence_duration = Nothing
     , tags = Nothing
     , notes = Nothing
+    , blockers = Nothing
+    , blocked = Nothing
     , priority = Nothing
     , user = ""
     , metadata = Nothing
@@ -216,6 +222,8 @@ selectQuery =
       recurrence_duration,
       tags,
       notes,
+      blockers,
+      blocked,
       priority,
       user,
       metadata

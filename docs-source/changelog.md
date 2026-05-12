@@ -6,6 +6,21 @@ This document lists all notable changes to the functionality of TaskLite.
 <!-- toc -->
 ---
 
+## Unreleased
+
+
+#### 💻 General
+
+- Add task dependency support via `blocks` / `unblocks` subcommands
+    and `blocks:<id>` / `blocked-by:<id>` body tokens for `tl add`
+    ([#14](https://github.com/ad-si/TaskLite/issues/14)).
+    The new `task_to_task` table can carry arbitrary relation types;
+    only `blocks` is wired up in the CLI for now.
+    `tasks_view` exposes `blockers` and `blocked` JSON-array columns.
+    `tl do` / `tl end` / `tl trash` refuse to close a task while at
+    least one of its blockers is still open.
+
+
 ## 2025-07-26 - [0.5]
 
 [0.5]: https://github.com/ad-si/TaskLite/releases/tag/v0.5.0.0

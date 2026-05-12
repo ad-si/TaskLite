@@ -252,6 +252,7 @@ import Task (
 import Task qualified
 import TaskToNote (TaskToNote (..))
 import TaskToTag (TaskToTag (..))
+import TaskToTask (TaskToTask (..))
 import Utils (
   IdText,
   ListModifiedFlag (..),
@@ -488,13 +489,22 @@ formatUlid =
  | Returns a tuple (body, tags, dueUtcMb, createdUtcMb)
  TODO: Replace with parsec implementation
 -}
-parseTaskBody :: [Text] -> (Text, [Text], Maybe Text, Maybe DateTime)
+parseTaskBody ::
+  [Text] -> (Text, [Text], Maybe Text, Maybe DateTime, [Text], [Text])
 parseTaskBody bodyWords =
   let
     isTag = ("+" `T.isPrefixOf`)
     isDueUtc = ("due:" `T.isPrefixOf`)
     isCreatedUtc = ("created:" `T.isPrefixOf`)
-    isMeta word = isTag word || isDueUtc word || isCreatedUtc word
+    isBlocks = ("blocks:" `T.isPrefixOf`)
+    isBlockedBy w =
+      "blocked-by:" `T.isPrefixOf` w || "blockedby:" `T.isPrefixOf` w
+    isMeta word =
+      isTag word
+        || isDueUtc word
+        || isCreatedUtc word
+        || isBlocks word
+        || isBlockedBy word
     -- Handle case when word is actually a text
     bodyWordsReversed = bodyWords & T.unwords & T.words & P.reverse
     body =
@@ -520,8 +530,16 @@ parseTaskBody bodyWords =
           <&> T.replace "created:" ""
         & P.lastMay
           >>= parseUtc
+    blocks =
+      metadata
+        & P.filter isBlocks
+          <&> T.replace "blocks:" ""
+    blockedBy =
+      metadata
+        & P.filter isBlockedBy
+          <&> (T.replace "blocked-by:" "" >>> T.replace "blockedby:" "")
   in
-    (body, tags, dueUtcMb, createdUtcMb)
+    (body, tags, dueUtcMb, createdUtcMb, blocks, blockedBy)
 
 
 -- | Get (ulid, modified_utc, effectiveUserName) from the environment
@@ -558,7 +576,8 @@ addTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 addTask conf connection bodyWords = do
   (ulid, modified_utc, effectiveUserName) <- getTriple conf
   let
-    (body, tags, dueUtcMb, createdUtcMb) = parseTaskBody bodyWords
+    (body, tags, dueUtcMb, createdUtcMb, blocks, blockedBy) =
+      parseTaskBody bodyWords
     importTaskDraft =
       ImportTask
         { task =
@@ -610,7 +629,11 @@ addTask conf connection bodyWords = do
         )
 
   insertRecord "tasks" connection importTask.task
-  warnings <- insertTags conf connection Nothing importTask.task importTask.tags
+  tagWarnings <-
+    insertTags conf connection Nothing importTask.task importTask.tags
+  relWarnings <-
+    addRelations conf connection importTask.task "blocks" blocks blockedBy
+  let warnings = vsepCollapse [tagWarnings, relWarnings]
 
   -- TODO: Use RETURNING clause in `insertRecord` instead
   (insertedTasks :: [FullTask]) <-
@@ -664,7 +687,8 @@ logTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 logTask conf connection bodyWords = do
   (ulid, modified_utc, effectiveUserName) <- getTriple conf
   let
-    (body, extractedTags, dueUtcMb, createdUtcMb) = parseTaskBody bodyWords
+    (body, extractedTags, dueUtcMb, createdUtcMb, _blocks, _blockedBy) =
+      parseTaskBody bodyWords
     tags = extractedTags <> ["log"]
     task =
       emptyTask
@@ -755,6 +779,44 @@ setClosedWithState connection task theTaskState = do
     [ ":ulid" := task.ulid
     , ":state" := theTaskState
     ]
+
+
+{-| Returns the ULID + body of every still-open task that blocks the given
+task via a `relation = 'blocks'` row in `task_to_task`. A blocker counts
+as open when its `closed_utc IS NULL`. Used to gate close actions.
+-}
+openBlockersOf :: Connection -> Task -> IO [(Text, Text)]
+openBlockersOf connection task =
+  query
+    connection
+    [sql|
+      SELECT b.ulid, b.body
+      FROM task_to_task r
+      JOIN tasks b ON b.ulid == r.source_task_ulid
+      WHERE r.target_task_ulid == ?
+        AND r.relation == 'blocks'
+        AND b.closed_utc IS NULL
+    |]
+    (Only task.ulid)
+
+
+-- | Render the "task is blocked, refusing to close" message.
+blockedWarning :: Config -> Task -> [(Text, Text)] -> Doc AnsiStyle
+blockedWarning conf task blockers =
+  annotate (colr conf Yellow) $
+    "⚠️  Task"
+      <+> dquotes (pretty task.body)
+      <+> "is blocked by"
+      <+> pretty (P.length blockers)
+      <+> "open task(s). "
+      <+> "Close them first or remove the relation with `tl unblocks`:"
+        <++> P.foldMap
+          ( \(u, b) ->
+              annotate conf.idStyle (pretty u)
+                <++> pretty b
+                <> hardline
+          )
+          blockers
 
 
 setReadyUtc ::
@@ -1093,30 +1155,34 @@ doTasks conf connection noteWordsMaybe ids = do
               <+> prettyId
               <+> "is already done"
         else do
-          logMessageMaybe <-
-            if isJust task.repetition_duration
-              then createNextRepetition conf connection task
-              else
-                if isJust task.recurrence_duration
-                  then createNextRecurrence conf connection task
-                  else pure Nothing
+          blockers <- openBlockersOf connection task
+          if not (P.null blockers)
+            then pure $ blockedWarning conf task blockers
+            else do
+              logMessageMaybe <-
+                if isJust task.repetition_duration
+                  then createNextRepetition conf connection task
+                  else
+                    if isJust task.recurrence_duration
+                      then createNextRecurrence conf connection task
+                      else pure Nothing
 
-          noteMessageMaybe <- case noteWordsMaybe of
-            Nothing -> pure Nothing
-            Just noteWords ->
-              liftIO $
-                addNote conf connection (unwords noteWords) ids <&> Just
+              noteMessageMaybe <- case noteWordsMaybe of
+                Nothing -> pure Nothing
+                Just noteWords ->
+                  liftIO $
+                    addNote conf connection (unwords noteWords) ids <&> Just
 
-          setClosedWithState connection task $ Just Done
+              setClosedWithState connection task $ Just Done
 
-          pure $
-            fromMaybe "" (noteMessageMaybe <&> (<> hardline))
-              <> ( "✅ Finished task"
-                     <+> dquotes (pretty task.body)
-                     <+> "with id"
-                     <+> dquotes (pretty task.ulid)
-                 )
-              <> fromMaybe "" (logMessageMaybe <&> (hardline <>))
+              pure $
+                fromMaybe "" (noteMessageMaybe <&> (<> hardline))
+                  <> ( "✅ Finished task"
+                         <+> dquotes (pretty task.body)
+                         <+> "with id"
+                         <+> dquotes (pretty task.ulid)
+                     )
+                  <> fromMaybe "" (logMessageMaybe <&> (hardline <>))
 
   pure $ vsep docs
 
@@ -1138,31 +1204,35 @@ endTasks conf connection noteWordsMaybe ids = do
               <+> prettyId
               <+> "is already marked as obsolete"
         else do
-          logMessageMaybe <-
-            if isJust task.repetition_duration
-              then createNextRepetition conf connection task
-              else
-                if isJust task.recurrence_duration
-                  then createNextRecurrence conf connection task
-                  else pure Nothing
+          blockers <- openBlockersOf connection task
+          if not (P.null blockers)
+            then pure $ blockedWarning conf task blockers
+            else do
+              logMessageMaybe <-
+                if isJust task.repetition_duration
+                  then createNextRepetition conf connection task
+                  else
+                    if isJust task.recurrence_duration
+                      then createNextRecurrence conf connection task
+                      else pure Nothing
 
-          noteMessageMaybe <- case noteWordsMaybe of
-            Nothing -> pure Nothing
-            Just noteWords ->
-              liftIO $
-                addNote conf connection (unwords noteWords) ids <&> Just
+              noteMessageMaybe <- case noteWordsMaybe of
+                Nothing -> pure Nothing
+                Just noteWords ->
+                  liftIO $
+                    addNote conf connection (unwords noteWords) ids <&> Just
 
-          setClosedWithState connection task $ Just Obsolete
+              setClosedWithState connection task $ Just Obsolete
 
-          pure $
-            fromMaybe "" (noteMessageMaybe <&> (<> hardline))
-              <> ( "⏹  Marked task"
-                     <+> prettyBody
-                     <+> "with id"
-                     <+> prettyId
-                     <+> "as obsolete"
-                 )
-              <> fromMaybe "" (logMessageMaybe <&> (hardline <>))
+              pure $
+                fromMaybe "" (noteMessageMaybe <&> (<> hardline))
+                  <> ( "⏹  Marked task"
+                         <+> prettyBody
+                         <+> "with id"
+                         <+> prettyId
+                         <+> "as obsolete"
+                     )
+                  <> fromMaybe "" (logMessageMaybe <&> (hardline <>))
 
   pure $ vsep docs
 
@@ -1171,27 +1241,31 @@ trashTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 trashTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
-      setClosedWithState connection task $ Just Deletable
-      numOfChanges <- changes connection
+      blockers <- openBlockersOf connection task
+      if not (P.null blockers) && task.state /= Just Deletable
+        then pure $ blockedWarning conf task blockers
+        else do
+          setClosedWithState connection task $ Just Deletable
+          numOfChanges <- changes connection
 
-      let
-        prettyBody = dquotes $ pretty task.body
-        prettyId = dquotes $ pretty task.ulid
+          let
+            prettyBody = dquotes $ pretty task.body
+            prettyId = dquotes $ pretty task.ulid
 
-      pure $
-        if numOfChanges == 0
-          then
-            "⚠️  Task"
-              <+> prettyBody
-              <+> "with id"
-              <+> prettyId
-              <+> "is already marked as deletable"
-          else
-            "🗑  Marked task"
-              <+> prettyBody
-              <+> "with id"
-              <+> prettyId
-              <+> "as deletable"
+          pure $
+            if numOfChanges == 0
+              then
+                "⚠️  Task"
+                  <+> prettyBody
+                  <+> "with id"
+                  <+> prettyId
+                  <+> "is already marked as deletable"
+              else
+                "🗑  Marked task"
+                  <+> prettyBody
+                  <+> "with id"
+                  <+> prettyId
+                  <+> "as deletable"
 
   pure $ vsep docs
 
@@ -1937,6 +2011,173 @@ deleteTag conf connection tag ids = do
           else getResultMsg task ("💥 Removed tag \"" <> pretty tag <> "\"")
 
   pure $ vsep docs
+
+
+{-| Insert a single `task_to_task` row, resolving raw source/target ULIDs
+(no prefix expansion — caller is expected to have already resolved them).
+Catches the table's CHECK / UNIQUE constraint errors and turns them into
+user-facing warnings.
+-}
+insertRelationRow ::
+  Config ->
+  Connection ->
+  -- | relation
+  Text ->
+  -- | source_task_ulid
+  Text ->
+  -- | target_task_ulid
+  Text ->
+  IO (Doc AnsiStyle)
+insertRelationRow conf connection relation src tgt = do
+  newUlid <- formatUlid getULID
+  now <- fmap (T.pack . timePrint conf.utcFormat) timeCurrentP
+  catchIf
+    (\(err :: SQLError) -> err.sqlError == ErrorConstraint)
+    ( do
+        insertRecord
+          "task_to_task"
+          connection
+          TaskToTask
+            { ulid = newUlid
+            , source_task_ulid = src
+            , target_task_ulid = tgt
+            , relation = relation
+            }
+        -- Bump modified_utc on both endpoints so list views reflect the change
+        executeNamed
+          connection
+          [sql|
+            UPDATE tasks
+            SET modified_utc = :now
+            WHERE ulid == :src OR ulid == :tgt
+          |]
+          [":now" := now, ":src" := src, ":tgt" := tgt]
+        pure ""
+    )
+    ( \(_ :: SQLError) ->
+        pure $
+          annotate (colr conf Yellow) $
+            "⚠️ Relation"
+              <+> dquotes (pretty relation)
+              <+> "from"
+              <+> dquotes (pretty src)
+              <+> "to"
+              <+> dquotes (pretty tgt)
+              <+> "is invalid or already exists"
+    )
+
+
+{-| Wire up relations for a newly-added task. `outgoing` are target ULIDs the
+new task is the source of (e.g. `blocks:<id>`); `incoming` are source ULIDs
+the new task is the target of (e.g. `blocked-by:<id>`). Each given ULID is
+prefix-resolved against the `tasks` table.
+-}
+addRelations ::
+  Config ->
+  Connection ->
+  -- | the newly added task
+  Task ->
+  -- | relation, e.g. "blocks"
+  Text ->
+  -- | outgoing (this task is source)
+  [Text] ->
+  -- | incoming (this task is target)
+  [Text] ->
+  IO (Doc AnsiStyle)
+addRelations conf connection task relation outgoing incoming = do
+  outDocs <- forM outgoing $ \idSubstr ->
+    execWithTask conf connection idSubstr $ \other ->
+      insertRelationRow conf connection relation task.ulid other.ulid
+  inDocs <- forM incoming $ \idSubstr ->
+    execWithTask conf connection idSubstr $ \other ->
+      insertRelationRow conf connection relation other.ulid task.ulid
+  pure $ vsepCollapse (outDocs <> inDocs)
+
+
+{-| Standalone "link two existing tasks" command. Resolves both ULIDs via
+prefix lookup, then inserts the relation.
+-}
+addRelation ::
+  Config ->
+  Connection ->
+  -- | relation
+  Text ->
+  -- | source id
+  IdText ->
+  -- | target id
+  IdText ->
+  IO (Doc AnsiStyle)
+addRelation conf connection relation srcId tgtId = do
+  execWithTask conf connection srcId $ \src ->
+    execWithTask conf connection tgtId $ \tgt -> do
+      result <- insertRelationRow conf connection relation src.ulid tgt.ulid
+      pure $
+        if show result == T.empty
+          then
+            "🔗 Linked task"
+              <+> dquotes (pretty src.body)
+              <+> "with relation"
+              <+> dquotes (pretty relation)
+              <+> "to task"
+              <+> dquotes (pretty tgt.body)
+          else result
+
+
+deleteRelation ::
+  Config ->
+  Connection ->
+  -- | relation
+  Text ->
+  -- | source id
+  IdText ->
+  -- | target id
+  IdText ->
+  IO (Doc AnsiStyle)
+deleteRelation conf connection relation srcId tgtId = do
+  execWithTask conf connection srcId $ \src ->
+    execWithTask conf connection tgtId $ \tgt -> do
+      executeNamed
+        connection
+        [sql|
+          DELETE FROM task_to_task
+          WHERE
+            source_task_ulid == :src
+            AND target_task_ulid == :tgt
+            AND relation == :relation
+        |]
+        [ ":src" := src.ulid
+        , ":tgt" := tgt.ulid
+        , ":relation" := relation
+        ]
+      numOfChanges <- changes connection
+      pure $
+        if numOfChanges == 0
+          then
+            annotate (colr conf Yellow) $
+              "⚠️  Relation"
+                <+> dquotes (pretty relation)
+                <+> "from"
+                <+> dquotes (pretty src.ulid)
+                <+> "to"
+                <+> dquotes (pretty tgt.ulid)
+                <+> "does not exist"
+          else
+            "💥 Removed"
+              <+> dquotes (pretty relation)
+              <+> "relation from"
+              <+> dquotes (pretty src.body)
+              <+> "to"
+              <+> dquotes (pretty tgt.body)
+
+
+blockTasks ::
+  Config -> Connection -> IdText -> IdText -> IO (Doc AnsiStyle)
+blockTasks conf connection = addRelation conf connection "blocks"
+
+
+unblockTasks ::
+  Config -> Connection -> IdText -> IdText -> IO (Doc AnsiStyle)
+unblockTasks conf connection = deleteRelation conf connection "blocks"
 
 
 addNote :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)

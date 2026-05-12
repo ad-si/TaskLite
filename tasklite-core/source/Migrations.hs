@@ -835,6 +835,452 @@ _6_ =
           }
 
 
+-- | Drop statements for the views defined in `_6_` (depend on `tasks_view`)
+dropDerivedViews :: [Query]
+dropDerivedViews =
+  [ "DROP VIEW IF EXISTS tasks_open"
+  , "DROP VIEW IF EXISTS tasks_overdue"
+  , "DROP VIEW IF EXISTS tasks_done"
+  , "DROP VIEW IF EXISTS tasks_obsolete"
+  , "DROP VIEW IF EXISTS tasks_deletable"
+  , "DROP VIEW IF EXISTS tasks_waiting"
+  , "DROP VIEW IF EXISTS tasks_ready"
+  , "DROP VIEW IF EXISTS tasks_repeating"
+  , "DROP VIEW IF EXISTS tasks_recurring"
+  , "DROP VIEW IF EXISTS tasks_new"
+  , "DROP VIEW IF EXISTS tasks_old"
+  , "DROP VIEW IF EXISTS tasks_all"
+  , "DROP VIEW IF EXISTS tasks_notag"
+  , "DROP VIEW IF EXISTS tasks_modified"
+  ]
+
+
+{-| CREATE statements for the views defined in `_6_` (depend on `tasks_view`).
+SQLite resolves `SELECT *` at view-creation time, so these must be recreated
+whenever `tasks_view` changes shape.
+-}
+createDerivedViews :: [Query]
+createDerivedViews =
+  [ [sql|
+      CREATE VIEW tasks_open AS
+      SELECT *
+      FROM tasks_view
+      WHERE closed_utc IS NULL
+      ORDER BY
+        priority DESC,
+        due_utc ASC,
+        ulid DESC
+    |]
+  , [sql|
+      CREATE VIEW tasks_overdue AS
+      SELECT *
+      FROM tasks_view
+      WHERE
+        closed_utc IS NULL
+        AND due_utc < datetime('now')
+      ORDER BY
+        priority DESC,
+        due_utc ASC,
+        ulid DESC
+    |]
+  , [sql|
+      CREATE VIEW tasks_done AS
+      SELECT *
+      FROM tasks_view
+      WHERE
+        closed_utc IS NOT NULL
+        AND state == 'Done'
+      ORDER BY closed_utc DESC
+    |]
+  , [sql|
+      CREATE VIEW tasks_obsolete AS
+      SELECT *
+      FROM tasks_view
+      WHERE
+        closed_utc IS NOT NULL
+        AND state == 'Obsolete'
+      ORDER BY ulid DESC
+    |]
+  , [sql|
+      CREATE VIEW tasks_deletable AS
+      SELECT *
+      FROM tasks_view
+      WHERE
+        closed_utc IS NOT NULL
+        AND state == 'Deletable'
+      ORDER BY ulid DESC
+    |]
+  , [sql|
+      CREATE VIEW tasks_waiting AS
+      SELECT *
+      FROM tasks_view
+      WHERE
+        closed_utc IS NULL
+        AND waiting_utc IS NOT NULL
+        AND (review_utc > datetime('now') OR review_utc IS NULL)
+      ORDER BY waiting_utc DESC
+    |]
+  , [sql|
+      CREATE VIEW tasks_ready AS
+      SELECT *
+      FROM tasks_view
+      WHERE
+        closed_utc IS NULL
+        AND (
+          review_utc <= datetime('now')
+          OR ready_utc <= datetime('now')
+          OR (
+            ready_utc IS NULL
+            AND (awake_utc IS NULL OR awake_utc <= datetime('now'))
+            AND (waiting_utc IS NULL OR waiting_utc > datetime('now'))
+            AND (review_utc IS NULL OR review_utc > datetime('now'))
+          )
+        )
+      ORDER BY
+        priority DESC,
+        due_utc ASC,
+        ulid DESC
+    |]
+  , [sql|
+      CREATE VIEW tasks_repeating AS
+      SELECT *
+      FROM tasks_view
+      WHERE repetition_duration IS NOT NULL
+      ORDER BY repetition_duration DESC
+    |]
+  , [sql|
+      CREATE VIEW tasks_recurring AS
+      SELECT *
+      FROM tasks_view
+      WHERE recurrence_duration IS NOT NULL
+      ORDER BY recurrence_duration DESC
+    |]
+  , [sql|
+      CREATE VIEW tasks_new AS
+      SELECT *
+      FROM tasks_view
+      ORDER BY ulid DESC
+    |]
+  , [sql|
+      CREATE VIEW tasks_old AS
+      SELECT *
+      FROM tasks_view
+      WHERE closed_utc IS NULL
+      ORDER BY ulid ASC
+    |]
+  , [sql|
+      CREATE VIEW tasks_all AS
+      SELECT *
+      FROM tasks_view
+      ORDER BY ulid ASC
+    |]
+  , [sql|
+      CREATE VIEW tasks_notag AS
+      SELECT *
+      FROM tasks_view
+      WHERE
+        closed_utc IS NULL
+        AND tags IS NULL
+      ORDER BY
+        priority DESC,
+        due_utc ASC,
+        ulid DESC
+    |]
+  , [sql|
+      CREATE VIEW tasks_modified AS
+      SELECT *
+      FROM tasks_view
+      ORDER BY modified_utc DESC
+    |]
+  ]
+
+
+-- | View definition for tasks_view in migration 5 (no blockers/blocked yet)
+tasksViewQuery_v5 :: Query
+tasksViewQuery_v5 =
+  [sql|
+    CREATE VIEW tasks_view AS
+    SELECT
+      tasks.ulid AS ulid,
+      tasks.body AS body,
+      tasks.modified_utc AS modified_utc,
+      tasks.awake_utc AS awake_utc,
+      tasks.ready_utc AS ready_utc,
+      tasks.waiting_utc AS waiting_utc,
+      tasks.review_utc AS review_utc,
+      tasks.due_utc AS due_utc,
+      tasks.closed_utc AS closed_utc,
+      tasks.state AS state,
+      tasks.group_ulid AS group_ulid,
+      tasks.repetition_duration AS repetition_duration,
+      tasks.recurrence_duration AS recurrence_duration,
+      nullif(
+        (
+          SELECT json_group_array(task_to_tag.tag)
+          FROM task_to_tag
+          WHERE task_to_tag.task_ulid == tasks.ulid
+        ),
+        '[]'
+      ) AS tags,
+      nullif(
+        (
+          SELECT json_group_array(
+            json_object('ulid', task_to_note.ulid, 'body', task_to_note.note)
+          )
+          FROM task_to_note
+          WHERE task_to_note.task_ulid == tasks.ulid
+        ),
+        '[]'
+      ) AS notes,
+      ifnull(tasks.priority_adjustment, 0.0)
+        + CASE
+            WHEN awake_utc IS NULL THEN 0.0
+            WHEN awake_utc >= datetime('now') THEN -5.0
+            WHEN awake_utc >= datetime('now', '-1 days') THEN 1.0
+            WHEN awake_utc >= datetime('now', '-2 days') THEN 2.0
+            WHEN awake_utc >= datetime('now', '-5 days') THEN 5.0
+            WHEN awake_utc < datetime('now', '-5 days') THEN 9.0
+          END
+        + CASE
+            WHEN waiting_utc IS NULL THEN 0.0
+            WHEN waiting_utc >= datetime('now') THEN 0.0
+            WHEN waiting_utc < datetime('now') THEN -10.0
+          END
+        + CASE
+            WHEN review_utc IS NULL THEN 0.0
+            WHEN review_utc >= datetime('now') THEN 0.0
+            WHEN review_utc < datetime('now') THEN 20.0
+          END
+        + CASE
+            WHEN due_utc IS NULL THEN 0.0
+            WHEN due_utc >= datetime('now', '+24 days') THEN 0.0
+            WHEN due_utc >= datetime('now', '+6 days') THEN 3.0
+            WHEN due_utc >= datetime('now') THEN 6.0
+            WHEN due_utc >= datetime('now', '-6 days') THEN 9.0
+            WHEN due_utc >= datetime('now', '-24 days') THEN 12.0
+            WHEN due_utc < datetime('now', '-24 days') THEN 15.0
+          END
+        + CASE
+            WHEN state IS NULL THEN 0.0
+            WHEN state == 'Done' THEN 0.0
+            WHEN state == 'Obsolete' THEN -1.0
+            WHEN state == 'Deletable' THEN -10.0
+          END
+        + CASE
+            WHEN (
+              SELECT count(task_to_note.note)
+              FROM task_to_note
+              WHERE task_to_note.task_ulid == tasks.ulid
+            ) == 0 THEN 0.0
+            ELSE 1.0
+          END
+        + CASE
+            WHEN (
+              SELECT count(task_to_tag.tag)
+              FROM task_to_tag
+              WHERE task_to_tag.task_ulid == tasks.ulid
+            ) == 0 THEN 0.0
+            ELSE 2.0
+          END
+        AS priority,
+      tasks.user AS user,
+      tasks.metadata AS metadata
+    FROM
+      tasks
+  |]
+
+
+{-| tasks_view in migration 7 — adds blockers/blocked JSON-array columns
+sourced from the new `task_to_task` table.
+-}
+tasksViewQuery_v7 :: Query
+tasksViewQuery_v7 =
+  [sql|
+    CREATE VIEW tasks_view AS
+    SELECT
+      tasks.ulid AS ulid,
+      tasks.body AS body,
+      tasks.modified_utc AS modified_utc,
+      tasks.awake_utc AS awake_utc,
+      tasks.ready_utc AS ready_utc,
+      tasks.waiting_utc AS waiting_utc,
+      tasks.review_utc AS review_utc,
+      tasks.due_utc AS due_utc,
+      tasks.closed_utc AS closed_utc,
+      tasks.state AS state,
+      tasks.group_ulid AS group_ulid,
+      tasks.repetition_duration AS repetition_duration,
+      tasks.recurrence_duration AS recurrence_duration,
+      nullif(
+        (
+          SELECT json_group_array(task_to_tag.tag)
+          FROM task_to_tag
+          WHERE task_to_tag.task_ulid == tasks.ulid
+        ),
+        '[]'
+      ) AS tags,
+      nullif(
+        (
+          SELECT json_group_array(
+            json_object('ulid', task_to_note.ulid, 'body', task_to_note.note)
+          )
+          FROM task_to_note
+          WHERE task_to_note.task_ulid == tasks.ulid
+        ),
+        '[]'
+      ) AS notes,
+      nullif(
+        (
+          SELECT json_group_array(task_to_task.source_task_ulid)
+          FROM task_to_task
+          WHERE task_to_task.target_task_ulid == tasks.ulid
+            AND task_to_task.relation == 'blocks'
+        ),
+        '[]'
+      ) AS blockers,
+      nullif(
+        (
+          SELECT json_group_array(task_to_task.target_task_ulid)
+          FROM task_to_task
+          WHERE task_to_task.source_task_ulid == tasks.ulid
+            AND task_to_task.relation == 'blocks'
+        ),
+        '[]'
+      ) AS blocked,
+      ifnull(tasks.priority_adjustment, 0.0)
+        + CASE
+            WHEN awake_utc IS NULL THEN 0.0
+            WHEN awake_utc >= datetime('now') THEN -5.0
+            WHEN awake_utc >= datetime('now', '-1 days') THEN 1.0
+            WHEN awake_utc >= datetime('now', '-2 days') THEN 2.0
+            WHEN awake_utc >= datetime('now', '-5 days') THEN 5.0
+            WHEN awake_utc < datetime('now', '-5 days') THEN 9.0
+          END
+        + CASE
+            WHEN waiting_utc IS NULL THEN 0.0
+            WHEN waiting_utc >= datetime('now') THEN 0.0
+            WHEN waiting_utc < datetime('now') THEN -10.0
+          END
+        + CASE
+            WHEN review_utc IS NULL THEN 0.0
+            WHEN review_utc >= datetime('now') THEN 0.0
+            WHEN review_utc < datetime('now') THEN 20.0
+          END
+        + CASE
+            WHEN due_utc IS NULL THEN 0.0
+            WHEN due_utc >= datetime('now', '+24 days') THEN 0.0
+            WHEN due_utc >= datetime('now', '+6 days') THEN 3.0
+            WHEN due_utc >= datetime('now') THEN 6.0
+            WHEN due_utc >= datetime('now', '-6 days') THEN 9.0
+            WHEN due_utc >= datetime('now', '-24 days') THEN 12.0
+            WHEN due_utc < datetime('now', '-24 days') THEN 15.0
+          END
+        + CASE
+            WHEN state IS NULL THEN 0.0
+            WHEN state == 'Done' THEN 0.0
+            WHEN state == 'Obsolete' THEN -1.0
+            WHEN state == 'Deletable' THEN -10.0
+          END
+        + CASE
+            WHEN (
+              SELECT count(task_to_note.note)
+              FROM task_to_note
+              WHERE task_to_note.task_ulid == tasks.ulid
+            ) == 0 THEN 0.0
+            ELSE 1.0
+          END
+        + CASE
+            WHEN (
+              SELECT count(task_to_tag.tag)
+              FROM task_to_tag
+              WHERE task_to_tag.task_ulid == tasks.ulid
+            ) == 0 THEN 0.0
+            ELSE 2.0
+          END
+        AS priority,
+      tasks.user AS user,
+      tasks.metadata AS metadata
+    FROM
+      tasks
+  |]
+
+
+_7_ :: MigrateDirection -> Migration
+_7_ =
+  let
+    base =
+      Migration
+        { id = UserVersion 7
+        , querySet = []
+        }
+  in
+    \case
+      MigrateUp ->
+        base
+          { Migrations.querySet =
+              [ [sql|
+                  CREATE TABLE task_to_task (
+                    ulid             TEXT NOT NULL PRIMARY KEY,
+                    source_task_ulid TEXT NOT NULL,
+                    target_task_ulid TEXT NOT NULL,
+                    relation         TEXT NOT NULL,
+                    FOREIGN KEY(source_task_ulid) REFERENCES tasks(ulid),
+                    FOREIGN KEY(target_task_ulid) REFERENCES tasks(ulid),
+                    CONSTRAINT no_self_relation
+                      CHECK (source_task_ulid != target_task_ulid),
+                    CONSTRAINT no_duplicate_relation
+                      UNIQUE (source_task_ulid, target_task_ulid, relation),
+                    -- ULIDs are 26 lowercase Crockford-Base32 chars
+                    -- (digits + a-z minus i, l, o, u)
+                    CONSTRAINT valid_ulid CHECK (
+                      length(ulid) == 26
+                      AND ulid NOT GLOB
+                        '*[^0123456789abcdefghjkmnpqrstvwxyz]*'
+                    ),
+                    CONSTRAINT valid_source_task_ulid CHECK (
+                      length(source_task_ulid) == 26
+                      AND source_task_ulid NOT GLOB
+                        '*[^0123456789abcdefghjkmnpqrstvwxyz]*'
+                    ),
+                    CONSTRAINT valid_target_task_ulid CHECK (
+                      length(target_task_ulid) == 26
+                      AND target_task_ulid NOT GLOB
+                        '*[^0123456789abcdefghjkmnpqrstvwxyz]*'
+                    ),
+                    CONSTRAINT non_empty_relation
+                      CHECK (length(relation) > 0)
+                  )
+                |]
+              , [sql|
+                  CREATE INDEX idx_task_to_task_target_relation
+                    ON task_to_task(target_task_ulid, relation)
+                |]
+              , [sql|
+                  CREATE INDEX idx_task_to_task_source_relation
+                    ON task_to_task(source_task_ulid, relation)
+                |]
+              ]
+                <> dropDerivedViews
+                <> [ "DROP VIEW IF EXISTS tasks_view"
+                   , tasksViewQuery_v7
+                   ]
+                <> createDerivedViews
+          }
+      MigrateDown ->
+        base
+          { Migrations.querySet =
+              dropDerivedViews
+                <> [ "DROP VIEW IF EXISTS tasks_view"
+                   , tasksViewQuery_v5
+                   ]
+                <> createDerivedViews
+                <> [ "DROP INDEX IF EXISTS idx_task_to_task_target_relation"
+                   , "DROP INDEX IF EXISTS idx_task_to_task_source_relation"
+                   , "DROP TABLE IF EXISTS task_to_task"
+                   ]
+          }
+
+
 hasDuplicates :: (Eq a) => [a] -> Bool
 hasDuplicates [] = False
 hasDuplicates (x : xs) =
@@ -898,7 +1344,7 @@ runMigrations _ connection = do
       IO [UserVersion]
 
   let
-    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_]
+    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_, _7_]
 
     migrationsUp = fmap ($ MigrateUp) migrations
     (UserVersion userVersionMax) =

@@ -652,6 +652,8 @@ spec = do
         taskJson =
           "[{\
           \\"awake_utc\":null,\
+          \\"blocked\":null,\
+          \\"blockers\":null,\
           \\"body\":\"Buy milk\",\
           \\"closed_utc\":null,\
           \\"created_utc\":\"2024-11-18 14:14:07.491\",\

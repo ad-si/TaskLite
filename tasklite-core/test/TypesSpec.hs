@@ -145,6 +145,8 @@ spec = do
         expected =
           [trimming|
               awake_utc: null
+              blocked: null
+              blockers: null
               body: Sample task
               closed_utc: null
               created_utc: null

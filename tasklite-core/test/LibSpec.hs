@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module LibSpec where
 
 import Protolude (
@@ -23,7 +25,14 @@ import Data.List.Utils (subIndex)
 import Data.Text (unpack)
 import Data.Text qualified as T
 import Data.Time.ISO8601.Duration qualified as Iso
-import Database.SQLite.Simple (SQLData (SQLNull), query_)
+import Database.SQLite.Simple (
+  NamedParam ((:=)),
+  SQLData (SQLNull),
+  SQLError,
+  executeNamed,
+  query_,
+ )
+import Database.SQLite.Simple.QQ (sql)
 import Test.Hspec (
   Spec,
   context,
@@ -50,12 +59,14 @@ import Lib (
   addNote,
   addTag,
   addTask,
+  blockTasks,
   countTasks,
   deleteNote,
   deleteTag,
   deleteTasks,
   doTasks,
   duplicateTasks,
+  endTasks,
   headTasks,
   infoTask,
   insertRecord,
@@ -69,6 +80,8 @@ import Lib (
   runFilter,
   setDueUtc,
   setReadyUtc,
+  trashTasks,
+  unblockTasks,
   unrepeatTasks,
   updateTask,
   wasListTruncated,
@@ -95,6 +108,8 @@ import TaskToNote (TaskToNote (TaskToNote, ulid))
 import TaskToNote qualified
 import TaskToTag (TaskToTag)
 import TaskToTag qualified
+import TaskToTask (TaskToTask)
+import TaskToTask qualified
 import TestUtils (withMemoryDb)
 import Time.System (dateCurrent)
 import Utils (parseUtc, zeroTime, zeroUlidTxt)
@@ -118,6 +133,15 @@ task1 =
   emptyTask
     { Task.ulid = "01hs68z7mdg4ktpxbv0yfafznq"
     , Task.body = "New task 1"
+    , Task.modified_utc = "2024-03-17 13:17:44.461"
+    }
+
+
+task2 :: Task
+task2 =
+  emptyTask
+    { Task.ulid = "01hs68z7mdg4ktpxbv0yfafzr2"
+    , Task.body = "New task 2"
     , Task.modified_utc = "2024-03-17 13:17:44.461"
     }
 
@@ -254,6 +278,118 @@ spec = do
         delResult <- deleteTag conf memConn "test" [exampleTask.ulid]
         unpack (show delResult) `shouldContain` "not set"
 
+    it "blocks one task by another" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        insertRecord "tasks" memConn task2
+        result <- blockTasks conf memConn task1.ulid task2.ulid
+        unpack (show result) `shouldStartWith` "🔗 Linked task"
+        rows :: [TaskToTask] <-
+          query_ memConn "SELECT * FROM task_to_task"
+        case rows of
+          [row] -> do
+            row.source_task_ulid `shouldBe` task1.ulid
+            row.target_task_ulid `shouldBe` task2.ulid
+            row.relation `shouldBe` "blocks"
+          _ -> P.die "Expected exactly one task_to_task row"
+
+    it "rejects self-blocking" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        result <- blockTasks conf memConn task1.ulid task1.ulid
+        unpack (show result) `shouldContain` "invalid or already exists"
+        rows :: [TaskToTask] <-
+          query_ memConn "SELECT * FROM task_to_task"
+        rows `shouldBe` []
+
+    it "rejects duplicate blocks relations" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        insertRecord "tasks" memConn task2
+        _ <- blockTasks conf memConn task1.ulid task2.ulid
+        result <- blockTasks conf memConn task1.ulid task2.ulid
+        unpack (show result) `shouldContain` "invalid or already exists"
+        rows :: [TaskToTask] <-
+          query_ memConn "SELECT * FROM task_to_task"
+        P.length rows `shouldBe` 1
+
+    it "unblocks two tasks" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        insertRecord "tasks" memConn task2
+        _ <- blockTasks conf memConn task1.ulid task2.ulid
+        result <- unblockTasks conf memConn task1.ulid task2.ulid
+        unpack (show result) `shouldStartWith` "💥 Removed"
+        rows :: [TaskToTask] <-
+          query_ memConn "SELECT * FROM task_to_task"
+        rows `shouldBe` []
+
+    it "warns when unblocking a non-existent relation" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        insertRecord "tasks" memConn task2
+        result <- unblockTasks conf memConn task1.ulid task2.ulid
+        unpack (show result) `shouldContain` "does not exist"
+
+    it "parses blocks: token when adding a task" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        _ <- addTask conf memConn ["Child", "blocks:" <> task1.ulid]
+        rows :: [TaskToTask] <-
+          query_ memConn "SELECT * FROM task_to_task"
+        case rows of
+          [row] -> do
+            row.target_task_ulid `shouldBe` task1.ulid
+            row.relation `shouldBe` "blocks"
+            row.source_task_ulid `shouldNotBe` task1.ulid
+          _ -> P.die "Expected exactly one task_to_task row"
+
+    it "rejects malformed ULIDs at the SQL layer" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        insertRecord "tasks" memConn task2
+        let
+          insertRow :: Text -> Text -> P.IO ()
+          insertRow rowUlid relation =
+            executeNamed
+              memConn
+              [sql|
+                INSERT INTO task_to_task
+                  (ulid, source_task_ulid, target_task_ulid, relation)
+                VALUES (:ulid, :src, :tgt, :rel)
+              |]
+              [ ":ulid" := rowUlid
+              , ":src" := task1.ulid
+              , ":tgt" := task2.ulid
+              , ":rel" := relation
+              ]
+        -- Uppercase letters and Crockford-excluded chars (i/l/o/u)
+        -- must be rejected.
+        insertRow "01HS68Z7MDG4KTPXBV0YFAFZNI" "blocks"
+          `shouldThrow` (\(_ :: SQLError) -> True)
+        -- Wrong length must be rejected.
+        insertRow "01hs68z7mdg4ktpxbv0yfafzn" "blocks"
+          `shouldThrow` (\(_ :: SQLError) -> True)
+        -- Empty relation must be rejected.
+        insertRow "01hs68z7mdg4ktpxbv0yfafzns" ""
+          `shouldThrow` (\(_ :: SQLError) -> True)
+        rows :: [TaskToTask] <-
+          query_ memConn "SELECT * FROM task_to_task"
+        rows `shouldBe` []
+
+    it "parses blocked-by: token when adding a task" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        _ <- addTask conf memConn ["Parent", "blocked-by:" <> task1.ulid]
+        rows :: [TaskToTask] <-
+          query_ memConn "SELECT * FROM task_to_task"
+        case rows of
+          [row] -> do
+            row.source_task_ulid `shouldBe` task1.ulid
+            row.relation `shouldBe` "blocks"
+            row.target_task_ulid `shouldNotBe` task1.ulid
+          _ -> P.die "Expected exactly one task_to_task row"
+
     it "adds a note" $ do
       withMemoryDb conf $ \memConn -> do
         insertRecord "tasks" memConn exampleTask
@@ -317,6 +453,46 @@ spec = do
             updatedTask `shouldSatisfy` (\task -> task.state == Just Done)
             updatedTask `shouldSatisfy` (\task -> isJust task.closed_utc)
           _ -> P.die "Found more than one task"
+
+    it "refuses to complete a task with open blockers" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        insertRecord "tasks" memConn task2
+        _ <- blockTasks conf memConn task1.ulid task2.ulid
+        result <- doTasks conf memConn Nothing [task2.ulid]
+        unpack (show result) `shouldContain` "is blocked by"
+        -- The blocked task must remain open.
+        tasks :: [Task] <-
+          query_ memConn "SELECT * FROM tasks WHERE state IS NOT NULL"
+        tasks `shouldBe` []
+
+    it "refuses to end (obsolete) a task with open blockers" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        insertRecord "tasks" memConn task2
+        _ <- blockTasks conf memConn task1.ulid task2.ulid
+        result <- endTasks conf memConn Nothing [task2.ulid]
+        unpack (show result) `shouldContain` "is blocked by"
+
+    it "refuses to trash a task with open blockers" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        insertRecord "tasks" memConn task2
+        _ <- blockTasks conf memConn task1.ulid task2.ulid
+        result <- trashTasks conf memConn [task2.ulid]
+        unpack (show result) `shouldContain` "is blocked by"
+
+    it "allows completing a blocked task once its blocker is closed" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        insertRecord "tasks" memConn task2
+        _ <- blockTasks conf memConn task1.ulid task2.ulid
+        -- Close the blocker first.
+        blockerResult <- doTasks conf memConn Nothing [task1.ulid]
+        unpack (show blockerResult) `shouldStartWith` "✅ Finished task"
+        -- Now the originally-blocked task can be closed.
+        targetResult <- doTasks conf memConn Nothing [task2.ulid]
+        unpack (show targetResult) `shouldStartWith` "✅ Finished task"
 
     it "deletes it" $ do
       withMemoryDb conf $ \memConn -> do

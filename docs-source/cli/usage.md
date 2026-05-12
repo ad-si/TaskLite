@@ -100,9 +100,70 @@ And even to set certain fields:
 tl add Buy milk +groceries due:2020-09-01 created:2020-08-27
 ```
 
+A new task can also be linked to existing tasks at add time using
+`blocks:<id>` (this task blocks the referenced task) or
+`blocked-by:<id>` (this task is blocked by the referenced task).
+See [Dependencies](#dependencies) below for details.
+
 **Attention:**
 The tags and special commands must be the last parameters,
 but their order doesn't matter.
+
+
+## Dependencies
+
+A task can be marked as blocking another task. The blocker must be
+completed before the blocked task can be worked on — useful for
+modelling subtasks or sequential workflows.
+
+Link two existing tasks:
+
+```shell
+tl blocks <blocker-id> <blocked-id>
+```
+
+For example, "Buy ingredients" blocks "Cook dinner":
+
+```shell
+tl add Cook dinner
+tl add Buy ingredients
+tl blocks <buy-id> <cook-id>
+```
+
+The same relation can be set at add time using the body tokens
+`blocks:` or `blocked-by:`. Both forms are equivalent:
+
+```shell
+# Add a child that blocks an existing parent task
+tl add Buy ingredients blocks:<cook-id>
+
+# Add a parent that is blocked by an existing child task
+tl add Cook dinner blocked-by:<buy-id>
+```
+
+Multiple `blocks:` or `blocked-by:` tokens can be combined in a single
+`tl add` command, and IDs may be ULID prefixes (any unique prefix works).
+
+To remove a `blocks` relation:
+
+```shell
+tl unblocks <blocker-id> <blocked-id>
+```
+
+The resolved blockers and blocked tasks are shown in `tl info <id>`
+output and are also available in the `blockers` / `blocked` columns
+of the `tasks_view` SQL view.
+
+
+### Closing Blocked Tasks
+
+A task with at least one *open* blocker cannot be closed via
+`tl do`, `tl end`, or `tl trash` — the command prints a warning
+listing the open blockers and leaves the task unchanged. Once
+every blocker has been closed (done, obsolete, or deletable), the
+blocked task can be closed normally. Removing the relation with
+`tl unblocks <blocker-id> <blocked-id>` lifts the gate without
+needing to close the blocker.
 
 
 ## Edit

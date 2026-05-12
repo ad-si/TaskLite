@@ -181,6 +181,7 @@ import Lib (
   addTag,
   addTask,
   adjustPriority,
+  blockTasks,
   countTasks,
   deletableTasks,
   deleteNote,
@@ -225,6 +226,7 @@ import Lib (
   startTasks,
   stopTasks,
   trashTasks,
+  unblockTasks,
   uncloseTasks,
   undueTasks,
   unmetaTasks,
@@ -298,6 +300,8 @@ data Command
     Prioritize Float [IdText]
   | AddTag TagText [IdText]
   | DeleteTag TagText [IdText]
+  | BlockTasks IdText IdText
+  | UnblockTasks IdText IdText
   | AddNote Text [IdText]
   | DeleteNote IdText
   | SetDueUtc DateTime [IdText]
@@ -675,6 +679,20 @@ commandParser conf =
       <$> strArgument (metavar "TAG" <> help "The tag")
       <*> some (strArgument idsVar))
       "Delete a tag from specified tasks")
+
+    <> command "blocks" (toParserInfo (BlockTasks
+      <$> strArgument
+            (metavar "BLOCKER_ID" <> help "The task that blocks")
+      <*> strArgument
+            (metavar "BLOCKED_ID" <> help "The task being blocked"))
+      "Mark one task as blocking another")
+
+    <> command "unblocks" (toParserInfo (UnblockTasks
+      <$> strArgument
+            (metavar "BLOCKER_ID" <> help "The blocking task")
+      <*> strArgument
+            (metavar "BLOCKED_ID" <> help "The blocked task"))
+      "Remove a blocks relation between two tasks")
 
     <> command "note" (toParserInfo (AddNote
       <$> strArgument (metavar "NOTE" <> help "The note")
@@ -1416,6 +1434,10 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         FindTask aPattern -> findTask conf connection aPattern
         AddTag tagText ids -> addTag conf connection tagText ids
         DeleteTag tagText ids -> deleteTag conf connection tagText ids
+        BlockTasks blockerId blockedId ->
+          blockTasks conf connection blockerId blockedId
+        UnblockTasks blockerId blockedId ->
+          unblockTasks conf connection blockerId blockedId
         AddNote noteText ids -> addNote conf connection noteText ids
         DeleteNote id -> deleteNote conf connection id
         SetDueUtc datetime ids -> setDueUtc conf connection datetime ids

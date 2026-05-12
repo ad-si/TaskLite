@@ -54,6 +54,7 @@ library
       Task
       TaskToNote
       TaskToTag
+      TaskToTask
       Taskwarrior
       Utils
   other-modules:
