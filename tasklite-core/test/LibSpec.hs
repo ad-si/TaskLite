@@ -50,7 +50,12 @@ import Test.Hspec (
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (NonNegative (..))
 
-import Config (defaultConfig)
+import Config (
+  Hook (Hook),
+  HookSet (HookSet),
+  defaultConfig,
+ )
+import Config qualified
 import Data.Hourglass (TimeFormat (..), timePrint)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
@@ -80,6 +85,8 @@ import Lib (
   runFilter,
   setDueUtc,
   setReadyUtc,
+  startTasks,
+  stopTasks,
   trashTasks,
   unblockTasks,
   unrepeatTasks,
@@ -396,6 +403,52 @@ spec = do
         noteResult <- addNote conf memConn "A test note" [exampleTask.ulid]
         unpack (show noteResult)
           `shouldStartWith` "🗒  Added a note to task"
+
+    let postModifyLuaHook =
+          Hook
+            { Config.filePath = Nothing
+            , Config.interpreter = "lua"
+            , Config.body = "print('{\"message\":\"post-modify ran\"}')"
+            }
+        confWithPostModify =
+          conf
+            { Config.hooks =
+                conf.hooks
+                  { Config.modify =
+                      HookSet
+                        { pre = []
+                        , post = [postModifyLuaHook]
+                        }
+                  }
+            }
+
+    it "fires post-modify hook on `start`" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        result <-
+          startTasks confWithPostModify memConn [exampleTask.ulid]
+        unpack (show result) `shouldContain` "post-modify ran"
+
+    it "fires post-modify hook on `stop`" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        result <-
+          stopTasks confWithPostModify memConn [exampleTask.ulid]
+        unpack (show result) `shouldContain` "post-modify ran"
+
+    it "fires post-modify hook on `do`" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        result <-
+          doTasks confWithPostModify memConn Nothing [exampleTask.ulid]
+        unpack (show result) `shouldContain` "post-modify ran"
+
+    it "fires post-modify hook on `tag`" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        result <-
+          addTag confWithPostModify memConn "test" [exampleTask.ulid]
+        unpack (show result) `shouldContain` "post-modify ran"
 
     -- it "correctly wraps multiline notes" $ do
     --   See error:

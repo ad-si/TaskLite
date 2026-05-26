@@ -203,8 +203,9 @@ import Config (
     utcFormat,
     utcFormatShort
   ),
+  Hook,
   HookSet (post, pre),
-  HooksConfig (add),
+  HooksConfig (add, modify),
   defaultConfig,
  )
 import Control.Monad.Catch (catchAll, catchIf)
@@ -379,6 +380,79 @@ updateTask connection task = do
           <> " WHERE ulid == ?"
     )
     (toRow task <> [SQLText task.ulid])
+
+
+loadFullTaskByUlid :: Connection -> Text -> IO (Maybe FullTask)
+loadFullTaskByUlid conn taskUlid = do
+  rows :: [FullTask] <-
+    queryNamed
+      conn
+      "SELECT * FROM tasks_view WHERE ulid == :ulid"
+      [":ulid" := taskUlid]
+  pure $ P.head rows
+
+
+runPreModifyHooks :: Config -> Connection -> Text -> IO (Doc AnsiStyle)
+runPreModifyHooks conf conn taskUlid = do
+  let preHooks :: [Hook] = conf.hooks.modify.pre
+  case preHooks of
+    [] -> pure Empty
+    _ -> do
+      args <- getArgs
+      fullTaskMb <- loadFullTaskByUlid conn taskUlid
+      let payload = case fullTaskMb of
+            Just t -> object ["arguments" .= args, "taskToModify" .= t]
+            Nothing -> object ["arguments" .= args]
+      results <-
+        executeHooks
+          (TL.toStrict $ TL.decodeUtf8 $ Aeson.encode payload)
+          preHooks
+      msgs <- forM results $ \case
+        Left err -> do
+          _ <- exitFailure
+          pure (pretty err)
+        Right hookResult ->
+          pure (formatHookResult conf hookResult)
+      pure $ vsepCollapse msgs
+
+
+runPostModifyHooks :: Config -> Connection -> Text -> IO (Doc AnsiStyle)
+runPostModifyHooks conf conn taskUlid = do
+  let postHooks :: [Hook] = conf.hooks.modify.post
+  case postHooks of
+    [] -> pure Empty
+    _ -> do
+      args <- getArgs
+      fullTaskMb <- loadFullTaskByUlid conn taskUlid
+      let payload = case fullTaskMb of
+            Just t -> object ["arguments" .= args, "taskModified" .= t]
+            Nothing -> object ["arguments" .= args]
+      results <-
+        executeHooks
+          (TL.toStrict $ TL.decodeUtf8 $ Aeson.encode payload)
+          postHooks
+      pure $
+        vsepCollapse $
+          results <&> \case
+            Left err -> "ERROR:" <+> pretty err
+            Right hookResult -> formatHookResult conf hookResult
+
+
+{-| Wrap a single-task mutation with pre- and post-modify hooks.
+The pre hook sees the task as it currently exists; the post hook
+sees the task as it exists after `action` returns.
+-}
+withModifyHooks ::
+  Config ->
+  Connection ->
+  Text ->
+  IO (Doc AnsiStyle) ->
+  IO (Doc AnsiStyle)
+withModifyHooks conf conn taskUlid action = do
+  preMsg <- runPreModifyHooks conf conn taskUlid
+  actionMsg <- action
+  postMsg <- runPostModifyHooks conf conn taskUlid
+  pure $ vsepCollapse [preMsg, actionMsg, postMsg]
 
 
 handleTagDupError :: Config -> Text -> (Applicative f) => e -> f (Doc AnsiStyle)
@@ -825,20 +899,21 @@ setReadyUtc conf connection datetime ids = do
   let utcText = T.pack $ timePrint conf.utcFormat datetime
 
   docs <- forM ids $ \idSubstr ->
-    execWithTask conf connection idSubstr $ \task -> do
-      updateTask connection $ task{Task.ready_utc = Just utcText}
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        updateTask connection $ task{Task.ready_utc = Just utcText}
 
-      let
-        prettyBody = dquotes $ pretty task.body
-        prettyId = dquotes $ pretty task.ulid
+        let
+          prettyBody = dquotes $ pretty task.body
+          prettyId = dquotes $ pretty task.ulid
 
-      pure $
-        "📅 Set ready UTC of task"
-          <+> prettyBody
-          <+> "with id"
-          <+> prettyId
-          <+> "to"
-          <+> dquotes (pretty utcText)
+        pure $
+          "📅 Set ready UTC of task"
+            <+> prettyBody
+            <+> "with id"
+            <+> prettyId
+            <+> "to"
+            <+> dquotes (pretty utcText)
 
   pure $ vsep docs
 
@@ -847,52 +922,53 @@ waitFor ::
   Config -> Connection -> Iso.Duration -> [Text] -> IO (Doc AnsiStyle)
 waitFor conf connection duration ids = do
   docs <- forM ids $ \idSubstr ->
-    execWithTask conf connection idSubstr $ \task -> do
-      now <- timeCurrentP
-      let
-        nowAsText = (T.pack . timePrint conf.utcFormat) now
-        threeDays =
-          (T.pack . timePrint conf.utcFormat)
-            ( utcTimeToDateTime $
-                Iso.addDuration duration $
-                  dateTimeToUtcTime $
-                    timeFromElapsedP now
-            )
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        now <- timeCurrentP
+        let
+          nowAsText = (T.pack . timePrint conf.utcFormat) now
+          threeDays =
+            (T.pack . timePrint conf.utcFormat)
+              ( utcTimeToDateTime $
+                  Iso.addDuration duration $
+                    dateTimeToUtcTime $
+                      timeFromElapsedP now
+              )
 
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET
-            waiting_utc = :waiting_utc,
-            review_utc = :review_utc
-          WHERE
-            ulid == :ulid
-        |]
-        [ ":ulid" := task.ulid
-        , ":waiting_utc" := nowAsText
-        , ":review_utc" := threeDays
-        ]
+        executeNamed
+          connection
+          [sql|
+            UPDATE tasks
+            SET
+              waiting_utc = :waiting_utc,
+              review_utc = :review_utc
+            WHERE
+              ulid == :ulid
+          |]
+          [ ":ulid" := task.ulid
+          , ":waiting_utc" := nowAsText
+          , ":review_utc" := threeDays
+          ]
 
-      let
-        prettyBody = dquotes $ pretty task.body
-        prettyId = dquotes $ pretty task.ulid
+        let
+          prettyBody = dquotes $ pretty task.body
+          prettyId = dquotes $ pretty task.ulid
 
-      numOfChanges <- changes connection
+        numOfChanges <- changes connection
 
-      pure $
-        if numOfChanges == 0
-          then
-            "⚠️  An error occurred while moving task"
-              <+> prettyBody
-                <> "with id"
-              <+> prettyId
-              <+> "into waiting mode"
-          else
-            "⏳  Set waiting UTC and review UTC for task"
-              <+> prettyBody
-              <+> "with id"
-              <+> prettyId
+        pure $
+          if numOfChanges == 0
+            then
+              "⚠️  An error occurred while moving task"
+                <+> prettyBody
+                  <> "with id"
+                <+> prettyId
+                <+> "into waiting mode"
+            else
+              "⏳  Set waiting UTC and review UTC for task"
+                <+> prettyBody
+                <+> "with id"
+                <+> prettyId
 
   pure $ vsep docs
 
@@ -927,7 +1003,7 @@ reviewTasksIn conf connection duration ids = do
 
       if isJust task.closed_utc
         then pure $ warningStart <+> "is already closed"
-        else do
+        else withModifyHooks conf connection task.ulid $ do
           executeNamed
             connection
             [sql|
@@ -1158,7 +1234,7 @@ doTasks conf connection noteWordsMaybe ids = do
           blockers <- openBlockersOf connection task
           if not (P.null blockers)
             then pure $ blockedWarning conf task blockers
-            else do
+            else withModifyHooks conf connection task.ulid $ do
               logMessageMaybe <-
                 if isJust task.repetition_duration
                   then createNextRepetition conf connection task
@@ -1170,8 +1246,8 @@ doTasks conf connection noteWordsMaybe ids = do
               noteMessageMaybe <- case noteWordsMaybe of
                 Nothing -> pure Nothing
                 Just noteWords ->
-                  liftIO $
-                    addNote conf connection (unwords noteWords) ids <&> Just
+                  addNoteForTask conf connection (unwords noteWords) task
+                    <&> Just
 
               setClosedWithState connection task $ Just Done
 
@@ -1207,7 +1283,7 @@ endTasks conf connection noteWordsMaybe ids = do
           blockers <- openBlockersOf connection task
           if not (P.null blockers)
             then pure $ blockedWarning conf task blockers
-            else do
+            else withModifyHooks conf connection task.ulid $ do
               logMessageMaybe <-
                 if isJust task.repetition_duration
                   then createNextRepetition conf connection task
@@ -1219,8 +1295,8 @@ endTasks conf connection noteWordsMaybe ids = do
               noteMessageMaybe <- case noteWordsMaybe of
                 Nothing -> pure Nothing
                 Just noteWords ->
-                  liftIO $
-                    addNote conf connection (unwords noteWords) ids <&> Just
+                  addNoteForTask conf connection (unwords noteWords) task
+                    <&> Just
 
               setClosedWithState connection task $ Just Obsolete
 
@@ -1244,7 +1320,7 @@ trashTasks conf connection ids = do
       blockers <- openBlockersOf connection task
       if not (P.null blockers) && task.state /= Just Deletable
         then pure $ blockedWarning conf task blockers
-        else do
+        else withModifyHooks conf connection task.ulid $ do
           setClosedWithState connection task $ Just Deletable
           numOfChanges <- changes connection
 
@@ -1318,60 +1394,61 @@ repeatTasks conf connection duration ids = do
   let durationIsoText = decodeUtf8 $ Iso.formatDuration duration
 
   docs <- forM ids $ \idSubstr ->
-    execWithTask conf connection idSubstr $ \task -> do
-      groupUlid <- formatUlid getULID
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        groupUlid <- formatUlid getULID
 
-      recDur :: [Only SQLData] <-
-        queryNamed
-          connection
-          [sql|
-            UPDATE tasks
-            SET
-              repetition_duration = :repetition_duration,
-              group_ulid = :group_ulid
-            WHERE
-              ulid == :ulid AND
-              recurrence_duration IS NULL
-            RETURNING recurrence_duration
-          |]
-          [ ":repetition_duration" := durationIsoText
-          , ":group_ulid" := groupUlid
-          , ":ulid" := task.ulid
-          ]
+        recDur :: [Only SQLData] <-
+          queryNamed
+            connection
+            [sql|
+              UPDATE tasks
+              SET
+                repetition_duration = :repetition_duration,
+                group_ulid = :group_ulid
+              WHERE
+                ulid == :ulid AND
+                recurrence_duration IS NULL
+              RETURNING recurrence_duration
+            |]
+            [ ":repetition_duration" := durationIsoText
+            , ":group_ulid" := groupUlid
+            , ":ulid" := task.ulid
+            ]
 
-      if recDur /= [Only SQLNull]
-        then
-          pure $
-            "⚠️ Task"
-              <+> dquotes (pretty task.body)
-              <+> "with id"
-              <+> dquotes (pretty task.ulid)
-              <+> "is already in a recurrence series"
-        else do
-          -- If repetition is set for already closed task,
-          -- next task in series must be created immediately
-          creationMb <-
-            if isNothing task.closed_utc
-              then pure $ Just mempty
-              else
-                liftIO $
-                  createNextRepetition conf connection $
-                    task
-                      { Task.repetition_duration = Just durationIsoText
-                      , Task.group_ulid = Just groupUlid
-                      }
+        if recDur /= [Only SQLNull]
+          then
+            pure $
+              "⚠️ Task"
+                <+> dquotes (pretty task.body)
+                <+> "with id"
+                <+> dquotes (pretty task.ulid)
+                <+> "is already in a recurrence series"
+          else do
+            -- If repetition is set for already closed task,
+            -- next task in series must be created immediately
+            creationMb <-
+              if isNothing task.closed_utc
+                then pure $ Just mempty
+                else
+                  liftIO $
+                    createNextRepetition conf connection $
+                      task
+                        { Task.repetition_duration = Just durationIsoText
+                        , Task.group_ulid = Just groupUlid
+                        }
 
-          pure $
-            "📅 Set repeat duration of task"
-              <+> dquotes (pretty task.body)
-              <+> "with id"
-              <+> dquotes (pretty task.ulid)
-              <+> "to"
-              <+> dquotes (pretty durationIsoText)
-                <++> ( creationMb
-                         & fromMaybe
-                           "⚠️ Next task in repetition series could not be created!"
-                     )
+            pure $
+              "📅 Set repeat duration of task"
+                <+> dquotes (pretty task.body)
+                <+> "with id"
+                <+> dquotes (pretty task.ulid)
+                <+> "to"
+                <+> dquotes (pretty durationIsoText)
+                  <++> ( creationMb
+                           & fromMaybe
+                             "⚠️ Next task in repetition series could not be created!"
+                       )
 
   pure $ vsep docs
 
@@ -1382,60 +1459,61 @@ recurTasks conf connection duration ids = do
   let durationIsoText = decodeUtf8 $ Iso.formatDuration duration
 
   docs <- forM ids $ \idSubstr ->
-    execWithTask conf connection idSubstr $ \task -> do
-      groupUlid <- formatUlid getULID
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        groupUlid <- formatUlid getULID
 
-      repDur :: [Only SQLData] <-
-        queryNamed
-          connection
-          [sql|
-            UPDATE tasks
-            SET
-              recurrence_duration = :recurrence_duration,
-              group_ulid = :group_ulid
-            WHERE
-              ulid == :ulid AND
-              repetition_duration IS NULL
-            RETURNING repetition_duration
-          |]
-          [ ":recurrence_duration" := durationIsoText
-          , ":group_ulid" := groupUlid
-          , ":ulid" := task.ulid
-          ]
+        repDur :: [Only SQLData] <-
+          queryNamed
+            connection
+            [sql|
+              UPDATE tasks
+              SET
+                recurrence_duration = :recurrence_duration,
+                group_ulid = :group_ulid
+              WHERE
+                ulid == :ulid AND
+                repetition_duration IS NULL
+              RETURNING repetition_duration
+            |]
+            [ ":recurrence_duration" := durationIsoText
+            , ":group_ulid" := groupUlid
+            , ":ulid" := task.ulid
+            ]
 
-      if repDur /= [Only SQLNull]
-        then
-          pure $
-            "⚠️ Task"
-              <+> dquotes (pretty task.body)
-              <+> "with id"
-              <+> dquotes (pretty task.ulid)
-              <+> "is already in a repetition series"
-        else do
-          -- If recurrence is set for already closed task,
-          -- next task in series must be created immediately
-          creationMb <-
-            if isNothing task.closed_utc
-              then pure $ Just mempty
-              else
-                liftIO $
-                  createNextRecurrence conf connection $
-                    task
-                      { Task.recurrence_duration = Just durationIsoText
-                      , Task.group_ulid = Just groupUlid
-                      }
+        if repDur /= [Only SQLNull]
+          then
+            pure $
+              "⚠️ Task"
+                <+> dquotes (pretty task.body)
+                <+> "with id"
+                <+> dquotes (pretty task.ulid)
+                <+> "is already in a repetition series"
+          else do
+            -- If recurrence is set for already closed task,
+            -- next task in series must be created immediately
+            creationMb <-
+              if isNothing task.closed_utc
+                then pure $ Just mempty
+                else
+                  liftIO $
+                    createNextRecurrence conf connection $
+                      task
+                        { Task.recurrence_duration = Just durationIsoText
+                        , Task.group_ulid = Just groupUlid
+                        }
 
-          pure $
-            "📅 Set recurrence duration of task"
-              <+> dquotes (pretty task.body)
-              <+> "with id"
-              <+> dquotes (pretty task.ulid)
-              <+> "to"
-              <+> dquotes (pretty durationIsoText)
-                <++> ( creationMb
-                         & fromMaybe
-                           "⚠️ Next task in recurrence series could not be created!"
-                     )
+            pure $
+              "📅 Set recurrence duration of task"
+                <+> dquotes (pretty task.body)
+                <+> "with id"
+                <+> dquotes (pretty task.ulid)
+                <+> "to"
+                <+> dquotes (pretty durationIsoText)
+                  <++> ( creationMb
+                           & fromMaybe
+                             "⚠️ Next task in recurrence series could not be created!"
+                       )
 
   pure $ vsep docs
 
@@ -1445,36 +1523,37 @@ adjustPriority conf adjustment ids = do
   dbPath <- getDbPath conf
   withConnection dbPath $ \connection -> do
     docs <- forM ids $ \idSubstr -> do
-      execWithTask conf connection idSubstr $ \task -> do
-        executeNamed
-          connection
-          [sql|
-            UPDATE tasks
-            SET priority_adjustment =
-              ifnull(priority_adjustment, 0) + :adjustment
-            WHERE ulid == :ulid
-          |]
-          [ ":adjustment" := adjustment
-          , ":ulid" := task.ulid
-          ]
+      execWithTask conf connection idSubstr $ \task ->
+        withModifyHooks conf connection task.ulid $ do
+          executeNamed
+            connection
+            [sql|
+              UPDATE tasks
+              SET priority_adjustment =
+                ifnull(priority_adjustment, 0) + :adjustment
+              WHERE ulid == :ulid
+            |]
+            [ ":adjustment" := adjustment
+            , ":ulid" := task.ulid
+            ]
 
-        numOfChanges <- changes connection
+          numOfChanges <- changes connection
 
-        let prettyBody = dquotes $ pretty task.body
+          let prettyBody = dquotes $ pretty task.body
 
-        pure $
-          if numOfChanges == 0
-            then
-              "⚠️ An error occurred while adjusting the priority of task"
-                <+> prettyBody
-            else
-              (if adjustment > 0 then "⬆️  Increased" else "⬇️  Decreased")
-                <+> "priority of task"
-                <+> prettyBody
-                <+> "with id"
-                <+> dquotes (pretty task.ulid)
-                <+> "by"
-                <+> pretty (abs adjustment)
+          pure $
+            if numOfChanges == 0
+              then
+                "⚠️ An error occurred while adjusting the priority of task"
+                  <+> prettyBody
+              else
+                (if adjustment > 0 then "⬆️  Increased" else "⬇️  Decreased")
+                  <+> "priority of task"
+                  <+> prettyBody
+                  <+> "with id"
+                  <+> dquotes (pretty task.ulid)
+                  <+> "by"
+                  <+> pretty (abs adjustment)
 
     pure $ vsep docs
 
@@ -1947,7 +2026,7 @@ addTag conf conn tag ids = do
       catchIf
         -- TODO: Find out why it's not `ErrorConstraintUnique`
         (\(err :: SQLError) -> err.sqlError == ErrorConstraint)
-        ( do
+        ( withModifyHooks conf conn task.ulid $ do
             insertRecord
               "task_to_tag"
               conn
@@ -1985,30 +2064,31 @@ addTag conf conn tag ids = do
 deleteTag :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
 deleteTag conf connection tag ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          DELETE FROM task_to_tag
-          WHERE
-            task_ulid == :task_ulid
-            AND tag == :tag
-        |]
-        [ ":task_ulid" := task.ulid
-        , ":tag" := tag
-        ]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            DELETE FROM task_to_tag
+            WHERE
+              task_ulid == :task_ulid
+              AND tag == :tag
+          |]
+          [ ":task_ulid" := task.ulid
+          , ":tag" := tag
+          ]
 
-      numOfChanges <- changes connection
+        numOfChanges <- changes connection
 
-      pure $
-        if numOfChanges == 0
-          then
-            annotate (colr conf Yellow) $
-              "⚠️  Tag"
-                <+> dquotes (pretty tag)
-                <+> "is not set for task"
-                <+> dquotes (pretty task.ulid)
-          else getResultMsg task ("💥 Removed tag \"" <> pretty tag <> "\"")
+        pure $
+          if numOfChanges == 0
+            then
+              annotate (colr conf Yellow) $
+                "⚠️  Tag"
+                  <+> dquotes (pretty tag)
+                  <+> "is not set for task"
+                  <+> dquotes (pretty task.ulid)
+            else getResultMsg task ("💥 Removed tag \"" <> pretty tag <> "\"")
 
   pure $ vsep docs
 
@@ -2109,18 +2189,20 @@ addRelation ::
   IO (Doc AnsiStyle)
 addRelation conf connection relation srcId tgtId = do
   execWithTask conf connection srcId $ \src ->
-    execWithTask conf connection tgtId $ \tgt -> do
-      result <- insertRelationRow conf connection relation src.ulid tgt.ulid
-      pure $
-        if show result == T.empty
-          then
-            "🔗 Linked task"
-              <+> dquotes (pretty src.body)
-              <+> "with relation"
-              <+> dquotes (pretty relation)
-              <+> "to task"
-              <+> dquotes (pretty tgt.body)
-          else result
+    execWithTask conf connection tgtId $ \tgt ->
+      withModifyHooks conf connection src.ulid $
+        withModifyHooks conf connection tgt.ulid $ do
+          result <- insertRelationRow conf connection relation src.ulid tgt.ulid
+          pure $
+            if show result == T.empty
+              then
+                "🔗 Linked task"
+                  <+> dquotes (pretty src.body)
+                  <+> "with relation"
+                  <+> dquotes (pretty relation)
+                  <+> "to task"
+                  <+> dquotes (pretty tgt.body)
+              else result
 
 
 deleteRelation ::
@@ -2135,39 +2217,41 @@ deleteRelation ::
   IO (Doc AnsiStyle)
 deleteRelation conf connection relation srcId tgtId = do
   execWithTask conf connection srcId $ \src ->
-    execWithTask conf connection tgtId $ \tgt -> do
-      executeNamed
-        connection
-        [sql|
-          DELETE FROM task_to_task
-          WHERE
-            source_task_ulid == :src
-            AND target_task_ulid == :tgt
-            AND relation == :relation
-        |]
-        [ ":src" := src.ulid
-        , ":tgt" := tgt.ulid
-        , ":relation" := relation
-        ]
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then
-            annotate (colr conf Yellow) $
-              "⚠️  Relation"
-                <+> dquotes (pretty relation)
-                <+> "from"
-                <+> dquotes (pretty src.ulid)
-                <+> "to"
-                <+> dquotes (pretty tgt.ulid)
-                <+> "does not exist"
-          else
-            "💥 Removed"
-              <+> dquotes (pretty relation)
-              <+> "relation from"
-              <+> dquotes (pretty src.body)
-              <+> "to"
-              <+> dquotes (pretty tgt.body)
+    execWithTask conf connection tgtId $ \tgt ->
+      withModifyHooks conf connection src.ulid $
+        withModifyHooks conf connection tgt.ulid $ do
+          executeNamed
+            connection
+            [sql|
+              DELETE FROM task_to_task
+              WHERE
+                source_task_ulid == :src
+                AND target_task_ulid == :tgt
+                AND relation == :relation
+            |]
+            [ ":src" := src.ulid
+            , ":tgt" := tgt.ulid
+            , ":relation" := relation
+            ]
+          numOfChanges <- changes connection
+          pure $
+            if numOfChanges == 0
+              then
+                annotate (colr conf Yellow) $
+                  "⚠️  Relation"
+                    <+> dquotes (pretty relation)
+                    <+> "from"
+                    <+> dquotes (pretty src.ulid)
+                    <+> "to"
+                    <+> dquotes (pretty tgt.ulid)
+                    <+> "does not exist"
+              else
+                "💥 Removed"
+                  <+> dquotes (pretty relation)
+                  <+> "relation from"
+                  <+> dquotes (pretty src.body)
+                  <+> "to"
+                  <+> dquotes (pretty tgt.body)
 
 
 blockTasks ::
@@ -2180,43 +2264,50 @@ unblockTasks ::
 unblockTasks conf connection = deleteRelation conf connection "blocks"
 
 
+-- | Insert a note for a task without firing modify hooks.
+addNoteForTask :: Config -> Connection -> Text -> Task -> IO (Doc AnsiStyle)
+addNoteForTask conf connection noteBody task = do
+  now <- timeCurrentP <&> (timePrint conf.utcFormat >>> T.pack)
+  ulid <- formatUlid getULID
+
+  insertRecord
+    "task_to_note"
+    connection
+    TaskToNote
+      { ulid
+      , task_ulid = task.ulid
+      , TaskToNote.note = noteBody
+      }
+
+  -- TODO: Check if modified_utc could be set via SQL trigger
+  executeNamed
+    connection
+    [sql|
+      UPDATE tasks
+      SET modified_utc = :now
+      WHERE ulid == :ulid
+    |]
+    [ ":now" := now
+    , ":ulid" := task.ulid
+    ]
+
+  let
+    prettyBody = dquotes $ pretty task.body
+    prettyId = dquotes $ pretty task.ulid
+
+  pure $
+    "🗒  Added a note to task"
+      <+> prettyBody
+      <+> "with id"
+      <+> prettyId
+
+
 addNote :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
 addNote conf connection noteBody ids = do
   docs <- forM ids $ \idSubstr ->
-    execWithTask conf connection idSubstr $ \task -> do
-      now <- timeCurrentP <&> (timePrint conf.utcFormat >>> T.pack)
-      ulid <- formatUlid getULID
-
-      insertRecord
-        "task_to_note"
-        connection
-        TaskToNote
-          { ulid
-          , task_ulid = task.ulid
-          , TaskToNote.note = noteBody
-          }
-
-      -- TODO: Check if modified_utc could be set via SQL trigger
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET modified_utc = :now
-          WHERE ulid == :ulid
-        |]
-        [ ":now" := now
-        , ":ulid" := task.ulid
-        ]
-
-      let
-        prettyBody = dquotes $ pretty task.body
-        prettyId = dquotes $ pretty task.ulid
-
-      pure $
-        "🗒  Added a note to task"
-          <+> prettyBody
-          <+> "with id"
-          <+> prettyId
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $
+        addNoteForTask conf connection noteBody task
 
   pure $ vsep docs
 
@@ -2260,20 +2351,21 @@ setDueUtc conf connection datetime ids = do
     utcText = T.pack $ timePrint conf.utcFormat datetime
 
   docs <- forM ids $ \idSubstr ->
-    execWithTask conf connection idSubstr $ \task -> do
-      updateTask connection task{Task.due_utc = Just utcText}
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        updateTask connection task{Task.due_utc = Just utcText}
 
-      let
-        prettyBody = dquotes $ pretty task.body
-        prettyId = dquotes $ pretty task.ulid
+        let
+          prettyBody = dquotes $ pretty task.body
+          prettyId = dquotes $ pretty task.ulid
 
-      pure $
-        "📅 Set due UTC of task"
-          <+> prettyBody
-          <+> "with id"
-          <+> prettyId
-          <+> "to"
-          <+> dquotes (pretty utcText)
+        pure $
+          "📅 Set due UTC of task"
+            <+> prettyBody
+            <+> "with id"
+            <+> prettyId
+            <+> "to"
+            <+> dquotes (pretty utcText)
 
   pure $ vsep docs
 
@@ -2300,26 +2392,27 @@ getWarnMsg conf task msg = do
 uncloseTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 uncloseTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET
-            closed_utc = NULL,
-            state = NULL
-          WHERE
-            ulid == :ulid AND
-            closed_utc IS NOT NULL AND
-            state IS NOT NULL
-        |]
-        [":ulid" := task.ulid]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            UPDATE tasks
+            SET
+              closed_utc = NULL,
+              state = NULL
+            WHERE
+              ulid == :ulid AND
+              closed_utc IS NOT NULL AND
+              state IS NOT NULL
+          |]
+          [":ulid" := task.ulid]
 
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then getWarnMsg conf task "is still open"
-          else getResultMsg task "💥 Removed close timestamp and state field"
+        numOfChanges <- changes connection
+        pure $
+          if numOfChanges == 0
+            then getWarnMsg conf task "is still open"
+            else getResultMsg task "💥 Removed close timestamp and state field"
 
   pure $ vsep docs
 
@@ -2327,23 +2420,24 @@ uncloseTasks conf connection ids = do
 undueTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 undueTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET due_utc = NULL
-          WHERE
-            ulid == :ulid AND
-            due_utc IS NOT NULL
-        |]
-        [":ulid" := task.ulid]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            UPDATE tasks
+            SET due_utc = NULL
+            WHERE
+              ulid == :ulid AND
+              due_utc IS NOT NULL
+          |]
+          [":ulid" := task.ulid]
 
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then getWarnMsg conf task "does not have a due timestamp"
-          else getResultMsg task "💥 Removed due timestamp"
+        numOfChanges <- changes connection
+        pure $
+          if numOfChanges == 0
+            then getWarnMsg conf task "does not have a due timestamp"
+            else getResultMsg task "💥 Removed due timestamp"
 
   pure $ vsep docs
 
@@ -2351,23 +2445,24 @@ undueTasks conf connection ids = do
 unwaitTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unwaitTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET waiting_utc = NULL
-          WHERE
-            ulid == :ulid AND
-            waiting_utc IS NOT NULL
-        |]
-        [":ulid" := task.ulid]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            UPDATE tasks
+            SET waiting_utc = NULL
+            WHERE
+              ulid == :ulid AND
+              waiting_utc IS NOT NULL
+          |]
+          [":ulid" := task.ulid]
 
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then getWarnMsg conf task "does not have a waiting timestamp"
-          else getResultMsg task "💥 Removed waiting and review timestamps"
+        numOfChanges <- changes connection
+        pure $
+          if numOfChanges == 0
+            then getWarnMsg conf task "does not have a waiting timestamp"
+            else getResultMsg task "💥 Removed waiting and review timestamps"
 
   pure $ vsep docs
 
@@ -2375,23 +2470,24 @@ unwaitTasks conf connection ids = do
 unwakeTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unwakeTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET awake_utc = NULL
-          WHERE
-            ulid == :ulid AND
-            awake_utc IS NOT NULL
-        |]
-        [":ulid" := task.ulid]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            UPDATE tasks
+            SET awake_utc = NULL
+            WHERE
+              ulid == :ulid AND
+              awake_utc IS NOT NULL
+          |]
+          [":ulid" := task.ulid]
 
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then getWarnMsg conf task "does not have an awake timestamp"
-          else getResultMsg task "💥 Removed awake timestamp"
+        numOfChanges <- changes connection
+        pure $
+          if numOfChanges == 0
+            then getWarnMsg conf task "does not have an awake timestamp"
+            else getResultMsg task "💥 Removed awake timestamp"
 
   pure $ vsep docs
 
@@ -2399,23 +2495,24 @@ unwakeTasks conf connection ids = do
 unreadyTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unreadyTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET ready_utc = NULL
-          WHERE
-            ulid == :ulid AND
-            ready_utc IS NOT NULL
-        |]
-        [":ulid" := task.ulid]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            UPDATE tasks
+            SET ready_utc = NULL
+            WHERE
+              ulid == :ulid AND
+              ready_utc IS NOT NULL
+          |]
+          [":ulid" := task.ulid]
 
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then getWarnMsg conf task "does not have a ready timestamp"
-          else getResultMsg task "💥 Removed ready timestamp"
+        numOfChanges <- changes connection
+        pure $
+          if numOfChanges == 0
+            then getWarnMsg conf task "does not have a ready timestamp"
+            else getResultMsg task "💥 Removed ready timestamp"
 
   pure $ vsep docs
 
@@ -2423,23 +2520,24 @@ unreadyTasks conf connection ids = do
 unreviewTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unreviewTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET review_utc = NULL
-          WHERE
-            ulid == :ulid AND
-            review_utc IS NOT NULL
-        |]
-        [":ulid" := task.ulid]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            UPDATE tasks
+            SET review_utc = NULL
+            WHERE
+              ulid == :ulid AND
+              review_utc IS NOT NULL
+          |]
+          [":ulid" := task.ulid]
 
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then getWarnMsg conf task "does not have a review timestamp"
-          else getResultMsg task "💥 Removed review timestamp"
+        numOfChanges <- changes connection
+        pure $
+          if numOfChanges == 0
+            then getWarnMsg conf task "does not have a review timestamp"
+            else getResultMsg task "💥 Removed review timestamp"
 
   pure $ vsep docs
 
@@ -2447,23 +2545,24 @@ unreviewTasks conf connection ids = do
 unrepeatTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unrepeatTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET repetition_duration = NULL
-          WHERE
-            ulid == :ulid AND
-            repetition_duration IS NOT NULL
-        |]
-        [":ulid" := task.ulid]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            UPDATE tasks
+            SET repetition_duration = NULL
+            WHERE
+              ulid == :ulid AND
+              repetition_duration IS NOT NULL
+          |]
+          [":ulid" := task.ulid]
 
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then getWarnMsg conf task "does not have a repetition duration"
-          else getResultMsg task "💥 Removed repetition duration"
+        numOfChanges <- changes connection
+        pure $
+          if numOfChanges == 0
+            then getWarnMsg conf task "does not have a repetition duration"
+            else getResultMsg task "💥 Removed repetition duration"
 
   pure $ vsep docs
 
@@ -2471,23 +2570,24 @@ unrepeatTasks conf connection ids = do
 unrecurTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unrecurTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET recurrence_duration = NULL
-          WHERE
-            ulid == :ulid AND
-            recurrence_duration IS NOT NULL
-        |]
-        [":ulid" := task.ulid]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            UPDATE tasks
+            SET recurrence_duration = NULL
+            WHERE
+              ulid == :ulid AND
+              recurrence_duration IS NOT NULL
+          |]
+          [":ulid" := task.ulid]
 
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then getWarnMsg conf task "does not have a recurrence duration"
-          else getResultMsg task "💥 Removed recurrence duration"
+        numOfChanges <- changes connection
+        pure $
+          if numOfChanges == 0
+            then getWarnMsg conf task "does not have a recurrence duration"
+            else getResultMsg task "💥 Removed recurrence duration"
 
   pure $ vsep docs
 
@@ -2495,20 +2595,21 @@ unrecurTasks conf connection ids = do
 untagTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 untagTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          DELETE FROM task_to_tag
-          WHERE task_ulid == :task_ulid
-        |]
-        [":task_ulid" := task.ulid]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            DELETE FROM task_to_tag
+            WHERE task_ulid == :task_ulid
+          |]
+          [":task_ulid" := task.ulid]
 
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then getWarnMsg conf task "does not have any tags"
-          else getResultMsg task "💥 Removed all tags"
+        numOfChanges <- changes connection
+        pure $
+          if numOfChanges == 0
+            then getWarnMsg conf task "does not have any tags"
+            else getResultMsg task "💥 Removed all tags"
 
   pure $ vsep docs
 
@@ -2516,20 +2617,21 @@ untagTasks conf connection ids = do
 unnoteTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unnoteTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          DELETE FROM task_to_note
-          WHERE task_ulid == :task_ulid
-        |]
-        [":task_ulid" := task.ulid]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            DELETE FROM task_to_note
+            WHERE task_ulid == :task_ulid
+          |]
+          [":task_ulid" := task.ulid]
 
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then getWarnMsg conf task "does not have any notes"
-          else getResultMsg task "💥 Deleted all notes"
+        numOfChanges <- changes connection
+        pure $
+          if numOfChanges == 0
+            then getWarnMsg conf task "does not have any notes"
+            else getResultMsg task "💥 Deleted all notes"
 
   pure $ vsep docs
 
@@ -2537,23 +2639,24 @@ unnoteTasks conf connection ids = do
 unprioTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unprioTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET priority_adjustment = NULL
-          WHERE
-            ulid == :ulid AND
-            priority_adjustment IS NOT NULL
-        |]
-        [":ulid" := task.ulid]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            UPDATE tasks
+            SET priority_adjustment = NULL
+            WHERE
+              ulid == :ulid AND
+              priority_adjustment IS NOT NULL
+          |]
+          [":ulid" := task.ulid]
 
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then getWarnMsg conf task "does not have a priority adjustment"
-          else getResultMsg task "💥 Removed priority adjustment"
+        numOfChanges <- changes connection
+        pure $
+          if numOfChanges == 0
+            then getWarnMsg conf task "does not have a priority adjustment"
+            else getResultMsg task "💥 Removed priority adjustment"
 
   pure $ vsep docs
 
@@ -2561,23 +2664,24 @@ unprioTasks conf connection ids = do
 unmetaTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
 unmetaTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
-    execWithTask conf connection idSubstr $ \task -> do
-      executeNamed
-        connection
-        [sql|
-          UPDATE tasks
-          SET metadata = NULL
-          WHERE
-            ulid == :ulid AND
-            metadata IS NOT NULL
-        |]
-        [":ulid" := task.ulid]
+    execWithTask conf connection idSubstr $ \task ->
+      withModifyHooks conf connection task.ulid $ do
+        executeNamed
+          connection
+          [sql|
+            UPDATE tasks
+            SET metadata = NULL
+            WHERE
+              ulid == :ulid AND
+              metadata IS NOT NULL
+          |]
+          [":ulid" := task.ulid]
 
-      numOfChanges <- changes connection
-      pure $
-        if numOfChanges == 0
-          then getWarnMsg conf task "does not have any metadata"
-          else getResultMsg task "💥 Removed metadata"
+        numOfChanges <- changes connection
+        pure $
+          if numOfChanges == 0
+            then getWarnMsg conf task "does not have any metadata"
+            else getResultMsg task "💥 Removed metadata"
 
   pure $ vsep docs
 
