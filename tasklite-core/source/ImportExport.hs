@@ -185,13 +185,18 @@ insertImported conf connection task = do
 importJson :: Config -> Connection -> IO (Doc AnsiStyle)
 importJson conf connection = do
   content <- BSL.getContents
-  -- Try to decode as an array first
+  -- Determine the top-level shape first so that a genuine parse error
+  -- (e.g. an unsupported field) is surfaced instead of being masked by
+  -- the fallback decode of the other shape.
   case Aeson.eitherDecode content of
-    Right (importTaskRecs :: [ImportTask]) -> do
-      P.mapM_ (insertImported conf connection) importTaskRecs
-      pure "Done"
-    Left _ -> do
-      -- If array decoding fails, try to decode as a single object
+    Left error -> die $ T.pack error <> " in task \n" <> show content
+    Right (Aeson.Array _) ->
+      case Aeson.eitherDecode content of
+        Left error -> die $ T.pack error <> " in task \n" <> show content
+        Right (importTaskRecs :: [ImportTask]) -> do
+          P.mapM_ (insertImported conf connection) importTaskRecs
+          pure "Done"
+    Right (_ :: Aeson.Value) ->
       case Aeson.eitherDecode content of
         Left error -> die $ T.pack error <> " in task \n" <> show content
         Right (importTaskRec :: ImportTask) -> do
@@ -203,13 +208,20 @@ decodeAndInsertYaml ::
   Config -> Connection -> BSL.LazyByteString -> IO (Doc AnsiStyle)
 decodeAndInsertYaml conf conn content = do
   let strictContent = BSL.toStrict content
-  -- Try to decode as an array first
+  -- Determine the top-level shape first so that a genuine parse error
+  -- (e.g. an unsupported field) is surfaced instead of being masked by
+  -- the fallback decode of the other shape.
   case Yaml.decodeEither' strictContent of
-    Right (importTaskRecs :: [ImportTask]) -> do
-      P.mapM_ (insertImported conf conn) importTaskRecs
-      pure "Done"
-    Left _ -> do
-      -- If array decoding fails, try to decode as a single object
+    Left error ->
+      die $ T.pack $ Yaml.prettyPrintParseException error
+    Right (Aeson.Array _) ->
+      case Yaml.decodeEither' strictContent of
+        Left error ->
+          die $ T.pack $ Yaml.prettyPrintParseException error
+        Right (importTaskRecs :: [ImportTask]) -> do
+          P.mapM_ (insertImported conf conn) importTaskRecs
+          pure "Done"
+    Right (_ :: Aeson.Value) ->
       case Yaml.decodeEither' strictContent of
         Left error ->
           die $ T.pack $ Yaml.prettyPrintParseException error
