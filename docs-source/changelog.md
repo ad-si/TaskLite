@@ -11,6 +11,9 @@ This document lists all notable changes to the functionality of TaskLite.
 
 #### 💻 General
 
+- Add a `--utc` flag to `tl do`, `tl doonly`, `tl doall`, `tl end`, and
+    `tl endall` to set an explicit closing timestamp instead of the
+    current time (e.g. `tl do <id> --utc "2020-01-15 08:30:00"`).
 - Add task dependency support via `blocks` / `unblocks` subcommands
     and `blocks:<id>` / `blocked-by:<id>` body tokens for `tl add`
     ([#14](https://github.com/ad-si/TaskLite/issues/14)).

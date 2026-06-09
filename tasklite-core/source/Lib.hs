@@ -855,6 +855,26 @@ setClosedWithState connection task theTaskState = do
     ]
 
 
+{-| Override the `closed_utc` set by the `set_closed_utc_after_update` trigger
+with an explicit timestamp (e.g. supplied via the `--utc` flag).
+Does nothing when no timestamp is given.
+-}
+overrideClosedUtc ::
+  Config -> Connection -> Maybe DateTime -> Task -> IO ()
+overrideClosedUtc conf connection closedUtcMaybe task =
+  forM_ closedUtcMaybe $ \closedUtc ->
+    executeNamed
+      connection
+      [sql|
+        UPDATE tasks
+        SET closed_utc = :closed_utc
+        WHERE ulid == :ulid
+      |]
+      [ ":closed_utc" := T.pack (timePrint conf.utcFormat closedUtc)
+      , ":ulid" := task.ulid
+      ]
+
+
 {-| Returns the ULID + body of every still-open task that blocks the given
 task via a `relation = 'blocks'` row in `task_to_task`. A blocker counts
 as open when its `closed_utc IS NULL`. Used to gate close actions.
@@ -1214,8 +1234,14 @@ createNextRecurrence conf connection task = do
           <+> dquotes (pretty newUlidText)
 
 
-doTasks :: Config -> Connection -> Maybe [Text] -> [Text] -> IO (Doc AnsiStyle)
-doTasks conf connection noteWordsMaybe ids = do
+doTasks ::
+  Config ->
+  Connection ->
+  Maybe DateTime ->
+  Maybe [Text] ->
+  [Text] ->
+  IO (Doc AnsiStyle)
+doTasks conf connection closedUtcMaybe noteWordsMaybe ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
       let
@@ -1250,6 +1276,7 @@ doTasks conf connection noteWordsMaybe ids = do
                     <&> Just
 
               setClosedWithState connection task $ Just Done
+              overrideClosedUtc conf connection closedUtcMaybe task
 
               pure $
                 fromMaybe "" (noteMessageMaybe <&> (<> hardline))
@@ -1263,8 +1290,14 @@ doTasks conf connection noteWordsMaybe ids = do
   pure $ vsep docs
 
 
-endTasks :: Config -> Connection -> Maybe [Text] -> [Text] -> IO (Doc AnsiStyle)
-endTasks conf connection noteWordsMaybe ids = do
+endTasks ::
+  Config ->
+  Connection ->
+  Maybe DateTime ->
+  Maybe [Text] ->
+  [Text] ->
+  IO (Doc AnsiStyle)
+endTasks conf connection closedUtcMaybe noteWordsMaybe ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
       let
@@ -1299,6 +1332,7 @@ endTasks conf connection noteWordsMaybe ids = do
                     <&> Just
 
               setClosedWithState connection task $ Just Obsolete
+              overrideClosedUtc conf connection closedUtcMaybe task
 
               pure $
                 fromMaybe "" (noteMessageMaybe <&> (<> hardline))

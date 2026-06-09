@@ -97,6 +97,7 @@ import Options.Applicative (
   maybeReader,
   metavar,
   noIntersperse,
+  option,
   parserFailure,
   progDesc,
   progDescDoc,
@@ -285,10 +286,10 @@ data Command
   | WaitFor Iso.Duration [IdText]
   | ReviewTasks [IdText]
   | ReviewTasksIn Iso.Duration [IdText]
-  | DoTasks [IdText]
-  | DoOneTask IdText (Maybe [Text])
-  | EndTasks [IdText]
-  | EndOneTask IdText (Maybe [Text])
+  | DoTasks (Maybe DateTime) [IdText]
+  | DoOneTask IdText (Maybe DateTime) (Maybe [Text])
+  | EndTasks (Maybe DateTime) [IdText]
+  | EndOneTask IdText (Maybe DateTime) (Maybe [Text])
   | TrashTasks [IdText]
   | DeleteTasks [IdText]
   | RepeatTasks Iso.Duration [IdText]
@@ -494,6 +495,18 @@ idsVar =
   metavar "TASK_ID ..." <> help "Ids of the tasks (Ulid)"
 
 
+-- | Optional `--utc` flag to set an explicit closing timestamp
+closedUtcOption :: Parser (Maybe DateTime)
+closedUtcOption =
+  optional $
+    option
+      (maybeReader (parseUtc . T.pack))
+      ( long "utc"
+          <> metavar "CLOSE_UTC"
+          <> help "Timestamp when the task was closed (instead of now)"
+      )
+
+
 -- | Help Sections
 basic_sec
   , shortcut_sec
@@ -589,24 +602,28 @@ commandParser conf =
 
     <> command "do" (toParserInfo (DoOneTask
         <$> strArgument idsVar
+        <*> closedUtcOption
         <*> optional (some (strArgument (metavar "CLOSING_NOTE"
               <> help "Final note to explain why and how it was done"))))
         "Mark a task as done and add optional closing note")
 
     <> command "doonly" (toParserInfo
-        (DoOneTask <$> strArgument idsVar <*> pure Nothing)
+        (DoOneTask <$> strArgument idsVar <*> closedUtcOption <*> pure Nothing)
         "Mark only one task as done")
 
-    <> command "doall" (toParserInfo (DoTasks <$> some (strArgument idsVar))
+    <> command "doall" (toParserInfo
+        (DoTasks <$> closedUtcOption <*> some (strArgument idsVar))
         "Mark one or more tasks as done")
 
     <> command "end" (toParserInfo (EndOneTask
         <$> strArgument idsVar
+        <*> closedUtcOption
         <*> optional (some (strArgument (metavar "CLOSING_NOTE"
               <> help "Final note to explain why and how it was closed"))))
         "Mark a task as obsolete and add optional closing note")
 
-    <> command "endall" (toParserInfo (EndTasks <$> some (strArgument idsVar))
+    <> command "endall" (toParserInfo
+        (EndTasks <$> closedUtcOption <*> some (strArgument idsVar))
         "Mark a task as obsolete")
 
     <> command "edit" (toParserInfo (EditTask <$> strArgument idVar)
@@ -1414,10 +1431,12 @@ executeCLiCommand config now connection progName args availableLinesMb = do
           let days3 = Iso.DurationDate (Iso.DurDateDay (Iso.DurDay 3) Nothing)
           in  reviewTasksIn conf connection days3 ids
         ReviewTasksIn days ids -> reviewTasksIn conf connection days ids
-        DoTasks ids -> doTasks conf connection Nothing ids
-        DoOneTask id noteWords -> doTasks conf connection noteWords [id]
-        EndTasks ids -> endTasks conf connection Nothing ids
-        EndOneTask id noteWords -> endTasks conf connection noteWords [id]
+        DoTasks utcMb ids -> doTasks conf connection utcMb Nothing ids
+        DoOneTask id utcMb noteWords ->
+          doTasks conf connection utcMb noteWords [id]
+        EndTasks utcMb ids -> endTasks conf connection utcMb Nothing ids
+        EndOneTask id utcMb noteWords ->
+          endTasks conf connection utcMb noteWords [id]
         EditTask id -> editTask conf connection id
         TrashTasks ids -> trashTasks conf connection ids
         DeleteTasks ids -> deleteTasks conf connection ids

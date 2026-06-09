@@ -440,7 +440,7 @@ spec = do
       withMemoryDb conf $ \memConn -> do
         insertRecord "tasks" memConn exampleTask
         result <-
-          doTasks confWithPostModify memConn Nothing [exampleTask.ulid]
+          doTasks confWithPostModify memConn Nothing Nothing [exampleTask.ulid]
         unpack (show result) `shouldContain` "post-modify ran"
 
     it "fires post-modify hook on `tag`" $ do
@@ -498,7 +498,7 @@ spec = do
     it "completes it" $ do
       withMemoryDb conf $ \memConn -> do
         insertRecord "tasks" memConn exampleTask
-        doResult <- doTasks conf memConn Nothing [exampleTask.ulid]
+        doResult <- doTasks conf memConn Nothing Nothing [exampleTask.ulid]
         unpack (show doResult) `shouldStartWith` "✅ Finished task"
         tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
         case tasks of
@@ -507,12 +507,29 @@ spec = do
             updatedTask `shouldSatisfy` (\task -> isJust task.closed_utc)
           _ -> P.die "Found more than one task"
 
+    it "completes it with an explicit closed UTC via --utc" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        let utcTxt = "2020-01-15 08:30:00"
+        case parseUtc utcTxt of
+          Nothing -> P.die "Invalid UTC string"
+          Just utcStamp -> do
+            doResult <-
+              doTasks conf memConn (Just utcStamp) Nothing [exampleTask.ulid]
+            unpack (show doResult) `shouldStartWith` "✅ Finished task"
+            tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+            case tasks of
+              [updatedTask] -> do
+                updatedTask.state `shouldBe` Just Done
+                updatedTask.closed_utc `shouldBe` Just "2020-01-15 08:30:00"
+              _ -> P.die "Found more than one task"
+
     it "refuses to complete a task with open blockers" $ do
       withMemoryDb conf $ \memConn -> do
         insertRecord "tasks" memConn task1
         insertRecord "tasks" memConn task2
         _ <- blockTasks conf memConn task1.ulid task2.ulid
-        result <- doTasks conf memConn Nothing [task2.ulid]
+        result <- doTasks conf memConn Nothing Nothing [task2.ulid]
         unpack (show result) `shouldContain` "is blocked by"
         -- The blocked task must remain open.
         tasks :: [Task] <-
@@ -524,7 +541,7 @@ spec = do
         insertRecord "tasks" memConn task1
         insertRecord "tasks" memConn task2
         _ <- blockTasks conf memConn task1.ulid task2.ulid
-        result <- endTasks conf memConn Nothing [task2.ulid]
+        result <- endTasks conf memConn Nothing Nothing [task2.ulid]
         unpack (show result) `shouldContain` "is blocked by"
 
     it "refuses to trash a task with open blockers" $ do
@@ -541,10 +558,10 @@ spec = do
         insertRecord "tasks" memConn task2
         _ <- blockTasks conf memConn task1.ulid task2.ulid
         -- Close the blocker first.
-        blockerResult <- doTasks conf memConn Nothing [task1.ulid]
+        blockerResult <- doTasks conf memConn Nothing Nothing [task1.ulid]
         unpack (show blockerResult) `shouldStartWith` "✅ Finished task"
         -- Now the originally-blocked task can be closed.
-        targetResult <- doTasks conf memConn Nothing [task2.ulid]
+        targetResult <- doTasks conf memConn Nothing Nothing [task2.ulid]
         unpack (show targetResult) `shouldStartWith` "✅ Finished task"
 
     it "deletes it" $ do
