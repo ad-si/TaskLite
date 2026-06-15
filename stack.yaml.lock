@@ -47,16 +47,12 @@ packages:
   original:
     hackage: time-hourglass-0.3.0
 - completed:
-    name: mcp-server
+    hackage: mcp-server-0.1.0.20@sha256:d8781fdfe837962cf0a9168e85f7248698dfbb75a1bcc4af35f3d285f9740381,6141
     pantry-tree:
-      sha256: 5f41b2beb3fa4fdbcf0a9b402d5b303765680a586d79f98fccbb9602fe91a929
-      size: 2432
-    sha256: 36e42a71874ab061c1e7fa76480ad1497d4f47b309c22d1da9d72ad8bb224ffa
-    size: 41918
-    url: https://github.com/ad-si/haskell-mcp-server/archive/96ab6f89b9c19468b43ccb665fecf8170a01b2bb.tar.gz
-    version: 0.1.0.20
+      sha256: 2f79cb2ff6069aa6cea472b70ad722cf35c1851041c7cf2555699022349e391c
+      size: 1887
   original:
-    url: https://github.com/ad-si/haskell-mcp-server/archive/96ab6f89b9c19468b43ccb665fecf8170a01b2bb.tar.gz
+    hackage: mcp-server-0.1.0.20
 - completed:
     name: simple-sql-parser
     pantry-tree:

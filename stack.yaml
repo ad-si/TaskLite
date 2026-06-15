@@ -14,11 +14,10 @@ extra-deps:
   - graphql-spice-1.0.2.0
   - time-hourglass-0.3.0
 
-  # Fork that echoes the client-requested protocol version during negotiation
+  # Echoes the client-requested protocol version during negotiation
   # (e.g. 2025-11-25) instead of forcing the hardcoded 2025-06-18, which made
   # clients like Claude Code warn about an unsupported protocol version.
-  - github: ad-si/haskell-mcp-server
-    commit: 96ab6f89b9c19468b43ccb665fecf8170a01b2bb
+  - mcp-server-0.1.0.20
 
   - github: Airsequel/simple-sql-parser
     commit: 680f2b77c53fcc086dc7d5f498f764ad2235b828
