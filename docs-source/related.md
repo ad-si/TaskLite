@@ -15,6 +15,7 @@ fits the bill:
 Name          | Description
 --------------|-----------------------------------------------------------------
 [Buku]        | Store and manage your bookmarks from the command line
+[Cfait]       | Fast, offline-first task manager for terminal, desktop, and phone
 [Dooit]       | A TUI todo manager
 [Dstask]      | Single binary CLI todo manager with git sync and markdown notes
 [Etm]         | Event and task manager
@@ -145,6 +146,8 @@ Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 
 
 [Buku]: https://github.com/jarun/Buku
+
+[Cfait]: https://codeberg.org/trougnouf/cfait
 
 [CommitTasks]: https://github.com/ZeroX-DG/CommitTasks
 [CTGH]: https://github.com/ZeroX-DG/CommitTasks
