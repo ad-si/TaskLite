@@ -33,5 +33,7 @@
 
 - [Development](./development.md)
 
+- [Code of Conduct](./code_of_conduct.md)
+
 - [Archive](./archive/main.md)
     - [Desktop App](./archive/desktop_app.md)

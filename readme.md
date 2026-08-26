@@ -18,3 +18,21 @@ CLI task manager built with [Haskell] and [SQLite].
 
 
 ## [Documentation][TaskLite]
+
+
+## Community
+
+Everyone participating in the TaskLite community
+is expected to follow our [Code of Conduct](./code_of_conduct.md).
+
+
+## License
+
+TaskLite is free and open source software, licensed under the [AGPL-3.0](./license).
+
+
+---
+
+[![Deploys by Netlify](https://www.netlify.com/assets/badges/netlify-badge-color-accent.svg)](https://www.netlify.com)
+
+This site is powered by [Netlify](https://www.netlify.com).
