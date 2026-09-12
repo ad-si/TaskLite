@@ -42,38 +42,43 @@ Name          | Description
 
 #### Stats
 
-Updated on 2024-05-05.
+Updated on 2026-09-12.
 
 <!-- Uses non breaking hyphens for date hyphens -->
 
-Nr|Name          |Stars|Commits|Contrib.| Code             | 1. Commit
--:|--------------|----:|------:|-------:|:----------------:|----------
- 1|[nb]          | 7495|   7395|     20 |[Shell][nb]       |2014‑11‑12
- 2|[Buku]        | 6160|   2058|     69 |[Python][Buku]    |2015‑11‑02
- 3|[Neorg]       | 5872|   3323|    108 |[Lua][Neorg]      |2021‑04‑11
- 4|[Todo.txt]    | 5477|    483|     66 |[Shell][TtxtGH]   |2009‑03‑05
- 5|[Org mode]    |~4000| ~25000|    543 |[EmacsLisp][OmC]  |2003‑01‑01
- 6|[Taskwarrior] | 3904|  11650|    147 |[C++][TwGH]       |2008‑04‑19
- 7|[Vim-OrgMode] | 3083|   1044|     47 |[Python][VomGH]   |2010‑10‑09
- 8|[Nvim-OrgMode]| 2752|   1081|     55 |[Lua][NvomGH]     |2021‑05‑13
- 9|[Dooit]       | 1908|    948|     14 |[Python][Dooit]   |2022‑04‑17
- 9|[Toodles]     |  966|    211|     13 |[Haskell][TooGH]  |2018‑09‑04
-10|[Dstask]      |  770|    882|     14 |[Go][Dstask]      |2018‑12‑08
-10|[Topydo]      |  750|   1446|     13 |[Python][Topydo]  |2014‑10‑19
-11|[Eureka]      |  738|    258|      8 |[Rust][Eureka]    |2017‑11‑20
-12|[Vikunja]     |  707|   9732|     56 |[Go][VikGH]       |2018-06-10
-13|[Todoman]     |  472|    974|     35 |[Python][TmGH]    |2015‑03‑29
-14|[Smos]        |  283|   2741|     23 |[Haskell][SmosGH] |2018‑07‑29
-15|[TTDL]        |  193|    247|      7 |[Rust][TTDL]      |2018‑12‑30
-16|[TaskLite]    |  191|    444|      5 |[Haskell][TLGH]   |2018‑06‑04
-17|[Unfog]       |  184|    198|      4 |[Haskell][Unfog]  |2019‑10‑22
-18|[td-cli]      |  184|    310|      2 |[Python][td-cli]  |2018‑06‑03
-19|[Etm]         |   40|   3879|      4 |[Python][Etm]     |2017‑09‑02
-20|[taskfinder]  |   20|    203|      3 |[Rust][taskfinder]|2023-12-22
-20|[HamsterBase Tasks]|90|  189|      1 |[TypeScript][HBT]|2023-12-22
+Nr|Name               |Stars|Commits|Contrib.| Code             |  1. Commit
+-:|-------------------|----:|------:|-------:|:----------------:|-----------
+ 1|[nb]               | 8404|   7852|      30|[Shell][nb]       | 2014‑11‑13
+ 2|[Neorg]            | 7490|   3733|     132|[Lua][Neorg]      | 2021‑04‑11
+ 3|[Buku]             | 7198|   2263|      75|[Python][Buku]    | 2015‑11‑01
+ 4|[Todo.txt]         | 6175|    624|      60|[Shell][TtxtGH]   | 2009‑03‑06
+ 5|[Taskwarrior]      | 6059|  12048|     184|[C++][TwGH]       | 2008‑04‑20
+ 6|[Vikunja]          | 5366|  15517|     149|[Go][VikGH]       | 2018‑06‑10
+ 7|[Org mode]         |~4000|  29148|     839|[EmacsLisp][OmC]  |~2003‑01‑01
+ 8|[Nvim-OrgMode]     | 3875|   1551|     101|[Lua][NvomGH]     | 2021‑05‑13
+ 9|[Vim-OrgMode]      | 3185|   1060|      54|[Python][VomGH]   | 2010‑10‑09
+10|[Dooit]            | 2949|   2334|      22|[Python][Dooit]   | 2022‑04‑19
+11|[Dstask]           | 1202|    990|      29|[Go][Dstask]      | 2018‑12‑08
+12|[Toodles]          |  981|    211|      10|[Haskell][TooGH]  | 2018‑09‑05
+13|[Topydo]           |  937|   1478|      14|[Python][Topydo]  | 2014‑06‑08
+14|[Eureka]           |  877|    264|       8|[Rust][Eureka]    | 2017‑11‑20
+15|[Todoman]          |  592|   1073|      38|[Python][TmGH]    | 2015‑03‑30
+16|[HamsterBase Tasks]|  339|    348|       1|[TypeScript][HBT] | 2025‑04‑08
+17|[Smos]             |  314|   2826|      25|[Haskell][SmosGH] | 2018‑07‑29
+18|[TaskLite]         |  288|    628|       9|[Haskell][TLGH]   | 2018‑06‑04
+19|[TTDL]             |  262|    397|      10|[Rust][TTDL]      | 2019‑01‑05
+20|[td-cli]           |  215|    353|       3|[Python][td-cli]  | 2018‑06‑09
+21|[Unfog]            |  205|    200|       4|[Haskell][Unfog]  | 2019‑10‑22
+22|[Cfait]            |  132|   2105|      29|[Rust][Cfait]     | 2025‑11‑21
+23|[Etm]              |   52|   4009|       4|[Python][Etm]     | 2017‑09‑02
+24|[taskfinder]       |   35|    311|       5|[Rust][taskfinder]| 2023‑12‑22
+25|[t (crisfeim)]     |   13|    488|       1|[OCaml][tOc]      | 2026‑06‑01
 
 Numbers with a `~` are not necessarily comparable,
 as they are either estimated or from another platform than GitHub.
+[Cfait] and [taskfinder] are hosted on Codeberg,
+[Org mode] on Savannah, and their star counts are therefore not
+comparable to the GitHub ones either.
 
 
 ### Commercial
@@ -128,22 +133,25 @@ Name          | Description
 
 #### Stats
 
-Updated on 2024-05-05.
+Updated on 2026-09-12.
 
 Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 -------------|----:|------:|-------:|:----------------:|----------
-[Taskbook]   | 8888|    232|     28 |[JavaScript][TbGH]|2018‑02‑12
-[Taskell]    | 1703|   1064|     10 |[Haskell][TllGH]  |2017‑11‑15
-[Ultralist]  |  947|    419|     20 |[Go][UlGH]        |2016‑04‑23
-[t]          |  740|     97|      9 |[Python][t]       |2009‑08‑26
-[Pomoday]    |  577|    165|     14 |[TypeScript][PGH] |2019‑10‑24
-[git-pending]|  303|     37|      2 |[JavaScript][gpGH]|2019‑06‑17
-[CommitTasks]|  294|     94|      4 |[JavaScript][CTGH]|2018‑08‑17
-[Ff]         |  190|    833|     10 |[Haskell][Ff]     |2017‑12‑29
-[Yokadi]     |  129|   1159|     12 |[Python][YGH]     |2008‑08‑24
-[Tracli]     |   37|     62|      3 |[JavaScript][TrGH]|2019‑07‑15
-[Eagle]      |   27|     46|      1 |[Python][Eagle]   |2018‑10‑28
-[Work]       |   24|     67|      1 |[Rust][Work]      |2020‑07‑15
+[Taskbook]   | 9345|    245|      28|[JavaScript][TbGH]|2018‑02‑12
+[Taskell]    | 1783|   1064|      10|[Haskell][TllGH]  |2017‑11‑15
+[Ultralist]  |  952|    419|      20|[Go][UlGH]        |2016‑04‑23
+[t]          |  809|     97|       8|[Python][t]       |2009‑08‑26
+[Pomoday]    |  600|    165|      14|[TypeScript][PGH] |2019‑10‑25
+[git-pending]|  333|      4|       1|[JavaScript][gpGH]|2024‑01‑28
+[CommitTasks]|  292|     94|       4|[JavaScript][CTGH]|2018‑08‑17
+[Ff]         |  202|    918|      10|[Haskell][Ff]     |2017‑12‑29
+[Yokadi]     |  136|   1210|      12|[Python][YGH]     |2008‑06‑07
+[Tracli]     |   36|     62|       3|[JavaScript][TrGH]|2019‑07‑15
+[Eagle]      |   27|     46|       1|[Python][Eagle]   |2018‑10‑28
+[Work]       |   26|     67|       1|[Rust][Work]      |2020‑07‑15
+
+[git-pending]'s Git history was wiped in 2024,
+which is why it only has 4 commits left.
 
 
 [Buku]: https://github.com/jarun/Buku
@@ -190,6 +198,7 @@ Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 [t]: https://github.com/sjl/t
 
 [t (crisfeim)]: https://github.com/crisfeim/t
+[tOc]: https://github.com/crisfeim/t
 
 [Taskbook]: https://github.com/klauscfhq/taskbook
 [TbGH]: https://github.com/klauscfhq/taskbook

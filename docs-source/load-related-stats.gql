@@ -7,11 +7,15 @@ query CountStargazers {
   TaskLite: repository(owner: "ad-si", name: "TaskLite") { ...Stats }
   yokadi: repository(owner: "agateau", name: "yokadi") { ...Stats }
   toodles: repository(owner: "aviaviavi", name: "toodles") { ...Stats }
+  tOcaml: repository(owner: "crisfeim", name: "t") { ...Stats }
   etmDgraham: repository(owner: "dagraham", name: "etm-dgraham") { ...Stats }
   tdCli: repository(owner: "darrikonn", name: "td-cli") { ...Stats }
   ff: repository(owner: "ff-notes", name: "ff") { ...Stats }
   work: repository(owner: "g-w1", name: "work") { ...Stats }
+  vikunja: repository(owner: "go-vikunja", name: "vikunja") { ...Stats }
   taskwarrior: repository(owner: "GothenburgBitFactory", name: "taskwarrior") {
+    ...Stats }
+  hamsterbaseTasks: repository(owner: "hamsterbase", name: "tasks") {
     ...Stats }
   pomodayV2: repository(owner: "huytd", name: "pomoday-v2") { ...Stats }
   eagle: repository(owner: "im-n1", name: "eagle") { ...Stats }
@@ -33,6 +37,7 @@ query CountStargazers {
   taskell: repository(owner: "smallhadroncollider", name: "taskell") {
     ...Stats }
   todo_txtCli: repository(owner: "todotxt", name: "todo.txt-cli") { ...Stats }
+  topydo: repository(owner: "topydo", name: "topydo") { ...Stats }
   ultralist: repository(owner: "ultralist", name: "ultralist") { ...Stats }
   unfogCli: repository(owner: "unfog-io", name: "unfog-cli") { ...Stats }
   ttdl: repository(owner: "VladimirMarkelov", name: "ttdl") { ...Stats }
