@@ -25,6 +25,7 @@ Name          | Description
 [Nvim-OrgMode]| Orgmode clone written in Lua for Neovim
 [Org mode]    | Notes and todo lists powered by an Emacs based plain-text system
 [Smos]        | Purely functional semantic tree-based editor (like [Org mode])
+[t (crisfeim)]| Minimalist CLI todo manager with Git and Fossil commit support
 [taskfinder]  | TUI to extract and display tasks from plain text files
 [Taskwarrior] | Command line task management
 [td-cli]      | Command line todo list manager
@@ -187,6 +188,8 @@ Name         |Stars|Commits|Contrib.| Code             | 1. Commit
 [SmosGH]: https://github.com/NorfairKing/smos
 
 [t]: https://github.com/sjl/t
+
+[t (crisfeim)]: https://github.com/crisfeim/t
 
 [Taskbook]: https://github.com/klauscfhq/taskbook
 [TbGH]: https://github.com/klauscfhq/taskbook
