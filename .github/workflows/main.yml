@@ -3,32 +3,32 @@ name: Haskell Stack CI
 on: [push]
 
 jobs:
-  linux:
+  build:
+    name: ${{ matrix.os }} (${{ matrix.arch }})
     strategy:
+      fail-fast: false
       matrix:
-        arch: [x86_64, arm64]
         include:
-          - arch: x86_64
+          - os: linux
+            arch: x86_64
             runner: ubuntu-24.04
-            artifact: tasklite_linux_x86_64
-          - arch: arm64
+          - os: linux
+            arch: arm64
             runner: ubuntu-24.04-arm
-            artifact: tasklite_linux_arm64
+          - os: macos
+            arch: x86_64
+            runner: macos-15-intel
+          - os: macos
+            arch: arm64
+            runner: macos-26
 
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Lua
-        uses: leafo/gh-actions-lua@v10
-
-      - name: Cache .stack-work
-        uses: actions/cache@v4
-        with:
-          path: .stack-work
-          key: tasklite_stack-work_linux_${{ matrix.arch }}
-          restore-keys: tasklite_stack-work_linux_${{ matrix.arch }}
+        uses: leafo/gh-actions-lua@v13
 
       - name: Setup Stack
         uses: haskell-actions/setup@v2
@@ -37,85 +37,44 @@ jobs:
           stack-no-global: true
 
       - name: Cache Stack build files
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.stack
-            airsequel-cli/.stack-work
+            .stack-work
           key: >-
-            ${{ runner.os }}-${{ matrix.arch }}-stack-${{
-            hashFiles('stack.yaml.lock', 'airsequel-cli/package.yaml') }}
+            ${{ matrix.os }}-${{ matrix.arch }}-stack-${{
+            hashFiles('stack.yaml.lock', 'tasklite/package.yaml',
+            'tasklite-core/package.yaml') }}-${{ github.sha }}
           restore-keys: |
-            ${{runner.os}}-${{ matrix.arch }}-stack
+            ${{ matrix.os }}-${{ matrix.arch }}-stack-${{ hashFiles('stack.yaml.lock', 'tasklite/package.yaml', 'tasklite-core/package.yaml') }}-
+            ${{ matrix.os }}-${{ matrix.arch }}-stack-
 
       - name: Install TaskLite CLI tool
-        run: stack install tasklite
+        # Retried, because fetching from hackage.haskell.org
+        # intermittently fails on GitHub's runners
+        run: |
+          for attempt in 1 2 3; do
+            stack --local-bin-path ./dist install tasklite && exit 0
+            echo "::warning::stack install failed (attempt $attempt of 3)"
+            sleep 30
+          done
+          exit 1
 
       - name: Run test suite
         run: stack test
 
       - name: Test adding of tasks
-        run: /home/runner/.local/bin/tasklite add Buy milk
+        run: ./dist/tasklite add Buy milk
 
       - name: Test listing of tasks
-        run: /home/runner/.local/bin/tasklite
+        run: ./dist/tasklite
 
-      - name: Upload Linux Release
-        uses: actions/upload-artifact@v4
+      - name: Upload Release
+        uses: actions/upload-artifact@v7
         with:
-          path: /home/runner/.local/bin/tasklite
-          name: ${{ matrix.artifact }}
-
-  macos:
-    strategy:
-      matrix:
-        arch: [x86_64, arm64]
-        include:
-          - arch: x86_64
-            runner: macos-15-intel
-            artifact: tasklite_macos_x86_64
-          - arch: arm64
-            runner: macos-26
-            artifact: tasklite_macos_arm64
-
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Lua
-        uses: leafo/gh-actions-lua@v10
-
-      - name: Cache .stack-work
-        uses: actions/cache@v4
-        with:
-          path: .stack-work
-          key: tasklite_stack-work_macos_${{ matrix.arch }}
-          restore-keys: tasklite_stack-work_macos_${{ matrix.arch }}
-
-      - name: Setup Stack
-        uses: haskell-actions/setup@v2
-        with:
-          enable-stack: true
-          stack-no-global: true
-
-      - name: Install TaskLite CLI tool
-        run: stack install tasklite
-
-      - name: Run test suite
-        run: stack test
-
-      - name: Test adding of tasks
-        run: /Users/runner/.local/bin/tasklite add Buy milk
-
-      - name: Test listing of tasks
-        run: /Users/runner/.local/bin/tasklite
-
-      - name: Upload MacOS Release
-        uses: actions/upload-artifact@v4
-        with:
-          path: /Users/runner/.local/bin/tasklite
-          name: ${{ matrix.artifact }}
+          path: ./dist/tasklite
+          name: tasklite_${{ matrix.os }}_${{ matrix.arch }}
 
   docker:
     runs-on: ubuntu-24.04
@@ -147,7 +106,7 @@ jobs:
   # windows:
   #   runs-on: windows-latest
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@v7
 
   #     - name: Install stack
   #       shell: cmd
@@ -157,7 +116,7 @@ jobs:
   #       run: stack install tasklite
 
   #     - name: Upload Windows Release
-  #       uses: actions/upload-artifact@v4
+  #       uses: actions/upload-artifact@v7
   #       with:
   #         path: '%APPDATA%\local\bin\tasklite.exe'
   #         name: tasklite_windows_x86_64.exe
