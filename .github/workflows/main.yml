@@ -140,6 +140,11 @@ jobs:
           file: ./Dockerfile
           push: ${{ steps.meta.outputs.push == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
+          # `mode=max` is required, because the expensive
+          # `stack install --only-dependencies` layer lives in the
+          # `builder` stage and is not part of the exported image
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
