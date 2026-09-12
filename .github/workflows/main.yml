@@ -36,19 +36,28 @@ jobs:
           enable-stack: true
           stack-no-global: true
 
-      - name: Cache Stack build files
+      # ~500 MB per platform, but only changes when the dependencies do,
+      # so it is keyed on the package definitions instead of the commit
+      - name: Cache Stack dependencies
         uses: actions/cache@v6
         with:
-          path: |
-            ~/.stack
-            .stack-work
+          path: ~/.stack
           key: >-
-            ${{ matrix.os }}-${{ matrix.arch }}-stack-${{
+            ${{ matrix.os }}-${{ matrix.arch }}-stack-deps-${{
             hashFiles('stack.yaml.lock', 'tasklite/package.yaml',
-            'tasklite-core/package.yaml') }}-${{ github.sha }}
+            'tasklite-core/package.yaml') }}
           restore-keys: |
-            ${{ matrix.os }}-${{ matrix.arch }}-stack-${{ hashFiles('stack.yaml.lock', 'tasklite/package.yaml', 'tasklite-core/package.yaml') }}-
-            ${{ matrix.os }}-${{ matrix.arch }}-stack-
+            ${{ matrix.os }}-${{ matrix.arch }}-stack-deps-
+
+      # Only ~20 MB, so a fresh copy per commit is affordable and
+      # keeps incremental compilation working
+      - name: Cache Stack build artifacts
+        uses: actions/cache@v6
+        with:
+          path: .stack-work
+          key: ${{ matrix.os }}-${{ matrix.arch }}-stack-work-${{ github.sha }}
+          restore-keys: |
+            ${{ matrix.os }}-${{ matrix.arch }}-stack-work-
 
       - name: Install TaskLite CLI tool
         # Retried, because fetching from hackage.haskell.org
