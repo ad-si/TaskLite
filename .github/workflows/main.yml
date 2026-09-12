@@ -80,25 +80,57 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Git Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
+
+      # Only `main` and `v*` tags are published to Docker Hub.
+      # Every other branch merely builds the image to verify the Dockerfile.
+      - name: Determine image tags
+        id: meta
+        env:
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$REPO" != "ad-si/TaskLite" ]; then
+            # Forks don't have the Docker Hub secrets
+            echo 'push=false' >> "$GITHUB_OUTPUT"
+            echo 'tags=adius/tasklite:ci' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$REF" in
+            refs/heads/main)
+              echo 'push=true' >> "$GITHUB_OUTPUT"
+              echo 'tags=adius/tasklite:latest' >> "$GITHUB_OUTPUT"
+              ;;
+            refs/tags/v*)
+              echo 'push=true' >> "$GITHUB_OUTPUT"
+              echo "tags=adius/tasklite:$REF_NAME,adius/tasklite:latest" \
+                >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo 'push=false' >> "$GITHUB_OUTPUT"
+              echo 'tags=adius/tasklite:ci' >> "$GITHUB_OUTPUT"
+              ;;
+          esac
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        if: steps.meta.outputs.push == 'true'
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push
         id: docker_build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
-          push: true
-          tags: adius/tasklite:latest
+          push: ${{ steps.meta.outputs.push == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
