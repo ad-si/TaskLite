@@ -96,6 +96,7 @@ and SaaS providers:
 - [Remember The Milk] - Web based task- and time-management.
 - [Tasker] - Tool for managing tasks, processes, and employees.
 - [TaskPaper] - Plain text to-do lists (macOS app).
+- [tasks.txt] - Keyboard driven native macOS app for todo.txt files.
 - [Things] - Personal task manager to achieve your goals (Apple only).
 - [Todoist] - SaaS to-do list to organize work and life.
 - [Trello] - Web based Kanban list-making application.
@@ -108,6 +109,7 @@ and SaaS providers:
 [Remember The Milk]: https://rememberthemilk.com
 [Tasker]: https://www.taskertools.com
 [TaskPaper]: https://www.taskpaper.com
+[tasks.txt]: https://taskstxt.app
 [Things]: https://culturedcode.com/things/
 [Todoist]: https://todoist.com
 [Trello]: https://trello.com
