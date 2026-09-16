@@ -25,6 +25,7 @@ query CountStargazers {
   gitPending: repository(owner: "kamranahmedse", name: "git-pending") {
     ...Stats }
   taskbook: repository(owner: "klauscfhq", name: "taskbook") { ...Stats }
+  taskdog: repository(owner: "Kohei-Wada", name: "taskdog") { ...Stats }
   dooit: repository(owner: "kraanzu", name: "dooit") { ...Stats }
   dstask: repository(owner: "naggie", name: "dstask") { ...Stats }
   smos: repository(owner: "NorfairKing", name: "smos") { ...Stats }

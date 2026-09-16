@@ -26,6 +26,7 @@ Name          | Description
 [Org mode]    | Notes and todo lists powered by an Emacs based plain-text system
 [Smos]        | Purely functional semantic tree-based editor (like [Org mode])
 [t (crisfeim)]| Minimalist CLI todo manager with Git and Fossil commit support
+[taskdog]     | Terminal task manager with intelligent schedule optimization
 [taskfinder]  | TUI to extract and display tasks from plain text files
 [Taskwarrior] | Command line task management
 [td-cli]      | Command line todo list manager
@@ -64,17 +65,18 @@ Nr|Name               |Stars|Commits|Contrib.| Code             |  1. Commit
 13|[Topydo]           |  937|   1478|      14|[Python][Topydo]  | 2014‑06‑08
 14|[Eureka]           |  877|    264|       8|[Rust][Eureka]    | 2017‑11‑20
 15|[Todoman]          |  592|   1073|      38|[Python][TmGH]    | 2015‑03‑30
-16|[HamsterBase Tasks]|  339|    348|       1|[TypeScript][HBT] | 2025‑04‑08
-17|[Smos]             |  314|   2826|      25|[Haskell][SmosGH] | 2018‑07‑29
-18|[TaskLite]         |  288|    628|       9|[Haskell][TLGH]   | 2018‑06‑04
-19|[TTDL]             |  262|    397|      10|[Rust][TTDL]      | 2019‑01‑05
-20|[td-cli]           |  215|    353|       3|[Python][td-cli]  | 2018‑06‑09
-21|[Unfog]            |  205|    200|       4|[Haskell][Unfog]  | 2019‑10‑22
-22|[Cfait]            |  132|   2105|      29|[Rust][Cfait]     | 2025‑11‑21
-23|[Tudo]             |   53|     35|       1|[Rust][Tudo]      | 2026‑06‑28
-24|[Etm]              |   52|   4009|       4|[Python][Etm]     | 2017‑09‑02
-25|[taskfinder]       |   35|    311|       5|[Rust][taskfinder]| 2023‑12‑22
-26|[t (crisfeim)]     |   13|    488|       1|[OCaml][tOc]      | 2026‑06‑01
+16|[taskdog]          |  352|   1141|      16|[Python][taskdog] | 2025‑10‑10
+17|[HamsterBase Tasks]|  339|    348|       1|[TypeScript][HBT] | 2025‑04‑08
+18|[Smos]             |  314|   2826|      25|[Haskell][SmosGH] | 2018‑07‑29
+19|[TaskLite]         |  288|    628|       9|[Haskell][TLGH]   | 2018‑06‑04
+20|[TTDL]             |  262|    397|      10|[Rust][TTDL]      | 2019‑01‑05
+21|[td-cli]           |  215|    353|       3|[Python][td-cli]  | 2018‑06‑09
+22|[Unfog]            |  205|    200|       4|[Haskell][Unfog]  | 2019‑10‑22
+23|[Cfait]            |  132|   2105|      29|[Rust][Cfait]     | 2025‑11‑21
+24|[Tudo]             |   53|     35|       1|[Rust][Tudo]      | 2026‑06‑28
+25|[Etm]              |   52|   4009|       4|[Python][Etm]     | 2017‑09‑02
+26|[taskfinder]       |   35|    311|       5|[Rust][taskfinder]| 2023‑12‑22
+27|[t (crisfeim)]     |   13|    488|       1|[OCaml][tOc]      | 2026‑06‑01
 
 Numbers with a `~` are not necessarily comparable,
 as they are either estimated or from another platform than GitHub.
@@ -212,6 +214,8 @@ which is why it only has 4 commits left.
 
 [TaskLite]: https://tasklite.org
 [TLGH]: https://github.com/ad-si/TaskLite
+
+[taskdog]: https://github.com/Kohei-Wada/taskdog
 
 [taskfinder]: https://codeberg.org/kdwarn/taskfinder
 
