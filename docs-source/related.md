@@ -34,6 +34,7 @@ Name          | Description
 [Toodles]     | Project management from the TODO's in your codebase
 [Topydo]      | Powerful todo list application for the console based on todo.txt
 [TTDL]        | Terminal Todo List Manager
+[Tudo]        | Fast, local, keyboard driven todo list & notebook TUI
 [Unfog]       | A simple CLI task and time manager
 [Vikunja]     | Self-hostable to-do app
 [Vim-OrgMode] | Text outlining and task management based on Emacs' Org-Mode
@@ -70,9 +71,10 @@ Nr|Name               |Stars|Commits|Contrib.| Code             |  1. Commit
 20|[td-cli]           |  215|    353|       3|[Python][td-cli]  | 2018‑06‑09
 21|[Unfog]            |  205|    200|       4|[Haskell][Unfog]  | 2019‑10‑22
 22|[Cfait]            |  132|   2105|      29|[Rust][Cfait]     | 2025‑11‑21
-23|[Etm]              |   52|   4009|       4|[Python][Etm]     | 2017‑09‑02
-24|[taskfinder]       |   35|    311|       5|[Rust][taskfinder]| 2023‑12‑22
-25|[t (crisfeim)]     |   13|    488|       1|[OCaml][tOc]      | 2026‑06‑01
+23|[Tudo]             |   53|     35|       1|[Rust][Tudo]      | 2026‑06‑28
+24|[Etm]              |   52|   4009|       4|[Python][Etm]     | 2017‑09‑02
+25|[taskfinder]       |   35|    311|       5|[Rust][taskfinder]| 2023‑12‑22
+26|[t (crisfeim)]     |   13|    488|       1|[OCaml][tOc]      | 2026‑06‑01
 
 Numbers with a `~` are not necessarily comparable,
 as they are either estimated or from another platform than GitHub.
@@ -231,6 +233,8 @@ which is why it only has 4 commits left.
 [TrGH]: https://github.com/ridvankaradag/tracli-terminal
 
 [TTDL]: https://github.com/VladimirMarkelov/ttdl
+
+[Tudo]: https://github.com/jolleyDesign/tudo
 
 [Ultralist]: https://ultralist.io
 [UlGH]: https://github.com/ultralist/ultralist

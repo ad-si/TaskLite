@@ -21,6 +21,7 @@ query CountStargazers {
   eagle: repository(owner: "im-n1", name: "eagle") { ...Stats }
   Buku: repository(owner: "jarun", name: "Buku") { ...Stats }
   vimOrgmode: repository(owner: "jceb", name: "vim-orgmode") { ...Stats }
+  tudo: repository(owner: "jolleyDesign", name: "tudo") { ...Stats }
   gitPending: repository(owner: "kamranahmedse", name: "git-pending") {
     ...Stats }
   taskbook: repository(owner: "klauscfhq", name: "taskbook") { ...Stats }
