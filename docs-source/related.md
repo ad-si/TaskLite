@@ -20,6 +20,7 @@ Name          | Description
 [Dstask]      | Single binary CLI todo manager with git sync and markdown notes
 [Etm]         | Event and task manager
 [Eureka]      | CLI tool to input and store ideas without leaving the terminal
+[micasa]      | Modal TUI for tracking home projects, maintenance, and appliances
 [nb]          | CLI note-taking, bookmarking, archiving, and knowledge base app
 [Neorg]       | Tool for structured note taking and project/task management
 [Nvim-OrgMode]| Orgmode clone written in Lua for Neovim
@@ -60,23 +61,24 @@ Nr|Name               |Stars|Commits|Contrib.| Code             |  1. Commit
  8|[Nvim-OrgMode]     | 3875|   1551|     101|[Lua][NvomGH]     | 2021‑05‑13
  9|[Vim-OrgMode]      | 3185|   1060|      54|[Python][VomGH]   | 2010‑10‑09
 10|[Dooit]            | 2949|   2334|      22|[Python][Dooit]   | 2022‑04‑19
-11|[Dstask]           | 1202|    990|      29|[Go][Dstask]      | 2018‑12‑08
-12|[Toodles]          |  981|    211|      10|[Haskell][TooGH]  | 2018‑09‑05
-13|[Topydo]           |  937|   1478|      14|[Python][Topydo]  | 2014‑06‑08
-14|[Eureka]           |  877|    264|       8|[Rust][Eureka]    | 2017‑11‑20
-15|[Todoman]          |  592|   1073|      38|[Python][TmGH]    | 2015‑03‑30
-16|[taskdog]          |  352|   1141|      16|[Python][taskdog] | 2025‑10‑10
-17|[HamsterBase Tasks]|  339|    348|       1|[TypeScript][HBT] | 2025‑04‑08
-18|[Smos]             |  314|   2826|      25|[Haskell][SmosGH] | 2018‑07‑29
-19|[TaskLite]         |  288|    628|       9|[Haskell][TLGH]   | 2018‑06‑04
-20|[TTDL]             |  262|    397|      10|[Rust][TTDL]      | 2019‑01‑05
-21|[td-cli]           |  215|    353|       3|[Python][td-cli]  | 2018‑06‑09
-22|[Unfog]            |  205|    200|       4|[Haskell][Unfog]  | 2019‑10‑22
-23|[Cfait]            |  132|   2105|      29|[Rust][Cfait]     | 2025‑11‑21
-24|[Tudo]             |   53|     35|       1|[Rust][Tudo]      | 2026‑06‑28
-25|[Etm]              |   52|   4009|       4|[Python][Etm]     | 2017‑09‑02
-26|[taskfinder]       |   35|    311|       5|[Rust][taskfinder]| 2023‑12‑22
-27|[t (crisfeim)]     |   13|    488|       1|[OCaml][tOc]      | 2026‑06‑01
+11|[micasa]           | 1280|   1288|       4|[Go][micasaGH]    | 2026‑02‑05
+12|[Dstask]           | 1202|    990|      29|[Go][Dstask]      | 2018‑12‑08
+13|[Toodles]          |  981|    211|      10|[Haskell][TooGH]  | 2018‑09‑05
+14|[Topydo]           |  937|   1478|      14|[Python][Topydo]  | 2014‑06‑08
+15|[Eureka]           |  877|    264|       8|[Rust][Eureka]    | 2017‑11‑20
+16|[Todoman]          |  592|   1073|      38|[Python][TmGH]    | 2015‑03‑30
+17|[taskdog]          |  352|   1141|      16|[Python][taskdog] | 2025‑10‑10
+18|[HamsterBase Tasks]|  339|    348|       1|[TypeScript][HBT] | 2025‑04‑08
+19|[Smos]             |  314|   2826|      25|[Haskell][SmosGH] | 2018‑07‑29
+20|[TaskLite]         |  288|    628|       9|[Haskell][TLGH]   | 2018‑06‑04
+21|[TTDL]             |  262|    397|      10|[Rust][TTDL]      | 2019‑01‑05
+22|[td-cli]           |  215|    353|       3|[Python][td-cli]  | 2018‑06‑09
+23|[Unfog]            |  205|    200|       4|[Haskell][Unfog]  | 2019‑10‑22
+24|[Cfait]            |  132|   2105|      29|[Rust][Cfait]     | 2025‑11‑21
+25|[Tudo]             |   53|     35|       1|[Rust][Tudo]      | 2026‑06‑28
+26|[Etm]              |   52|   4009|       4|[Python][Etm]     | 2017‑09‑02
+27|[taskfinder]       |   35|    311|       5|[Rust][taskfinder]| 2023‑12‑22
+28|[t (crisfeim)]     |   13|    488|       1|[OCaml][tOc]      | 2026‑06‑01
 
 Numbers with a `~` are not necessarily comparable,
 as they are either estimated or from another platform than GitHub.
@@ -184,6 +186,9 @@ which is why it only has 4 commits left.
 
 [HamsterBase Tasks]: https://tasks.hamsterbase.com
 [HBT]: https://github.com/hamsterbase/tasks
+
+[micasa]: https://micasa.dev
+[micasaGH]: https://github.com/micasa-dev/micasa
 
 [nb]: https://github.com/xwmx/nb
 
