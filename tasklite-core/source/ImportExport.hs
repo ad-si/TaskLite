@@ -89,6 +89,7 @@ import ImportTask (
  )
 import Lib (
   addEmptyTask,
+  deleteTasks,
   execWithConn,
   execWithTask,
   insertNotes,
@@ -631,15 +632,39 @@ data EditMode
   | OpenEditorRequireEdit
 
 
+data EditResult
+  = -- | The edited task and the valid YAML content from the frontmatter
+    Edited ImportTask P.ByteString
+  | -- | The frontmatter contained `state: x`
+    DeleteRequested
+
+
+-- | Check if the YAML content contains `state: x` to request deletion
+isDeleteRequest :: P.ByteString -> Bool
+isDeleteRequest yamlContent =
+  let
+    parseState :: Value -> Parser Bool
+    parseState = \case
+      Object obj -> pure $ case KeyMap.lookup "state" obj of
+        Just (String state) -> T.toLower (T.strip state) == "x"
+        _ -> False
+      _ -> pure False
+  in
+    Yaml.decodeEither' yamlContent
+      & rightToMaybe
+      & (=<<) (parseMaybe parseState)
+      & (== Just True)
+
+
 {-| Edit task until it's valid Markdown with frontmatter and can be decoded.
-| Return the the tuple `(task, valid YAML content from frontmatter)`
+| Return the edited task or a deletion request (`state: x`).
 -}
 editUntilValidMarkdown ::
   EditMode ->
   Connection ->
   P.ByteString ->
   P.ByteString ->
-  IO (Either ParseException (ImportTask, P.ByteString))
+  IO (Either ParseException EditResult)
 editUntilValidMarkdown editMode conn initialMarkdown wipMarkdown = do
   markdownAfterEdit <- case editMode of
     ApplyPreEdit editFunc -> pure $ editFunc wipMarkdown
@@ -674,7 +699,12 @@ editUntilValidMarkdown editMode conn initialMarkdown wipMarkdown = do
                   putErrLn $ Yaml.prettyPrintParseException error <> "\n"
               editUntilValidMarkdown editMode conn initialMarkdown markdownAfterEdit
             Right newTask -> do
-              pure $ Right (newTask, BSL.toStrict yamlContent)
+              let yamlContentStrict = BSL.toStrict yamlContent
+              pure $
+                Right $
+                  if isDeleteRequest yamlContentStrict
+                    then DeleteRequested
+                    else Edited newTask yamlContentStrict
 
 
 insertTaskFromEdit ::
@@ -807,7 +837,8 @@ enterTask conf conn = do
     Left error -> case error of
       InvalidYaml (Just (YamlException "")) -> pure P.mempty
       _ -> pure $ pretty $ Yaml.prettyPrintParseException error
-    Right (importTaskRec, newContent) -> do
+    Right DeleteRequested -> pure "❌ Discarded new task"
+    Right (Edited importTaskRec newContent) -> do
       modified_utc <- formatElapsedP conf timeCurrentP
       insertTaskFromEdit conf conn importTaskRec newContent modified_utc Nothing
 
@@ -821,7 +852,8 @@ editTaskByTask conf editMode conn taskToEdit = do
     Left error -> case error of
       InvalidYaml (Just (YamlException "")) -> pure P.mempty
       _ -> pure $ pretty $ Yaml.prettyPrintParseException error
-    Right (importTaskRec, newContent) -> do
+    Right DeleteRequested -> deleteTasks conf conn [taskToEdit.ulid]
+    Right (Edited importTaskRec newContent) -> do
       insertTaskFromEdit
         conf
         conn

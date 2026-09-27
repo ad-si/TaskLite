@@ -758,6 +758,24 @@ spec = do
         let errMsg = "Tag \"" <> T.unpack existTag <> "\" is already assigned"
         show cliOutput `shouldContain` errMsg
 
+    it "deletes the task if state is set to x" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        _ <- insertTags conf memConn Nothing task1 ["some-tag"]
+
+        cliOutput <-
+          editTaskByTask
+            conf
+            (ApplyPreEdit $ replaceBs "state: null" "state: x")
+            memConn
+            task1
+        show cliOutput `shouldContain` "Deleted task"
+
+        tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+        tasks `shouldBe` []
+        (tags :: [[P.Text]]) <- query_ memConn "SELECT tag FROM task_to_tag"
+        tags `shouldBe` []
+
     it "lets you change the closed_utc" $ do
       withMemoryDb defaultConfig $ \memConn -> do
         insertRecord "tasks" memConn task1

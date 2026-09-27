@@ -178,6 +178,16 @@ This will open your default editor,
 as specified in the environment variables `$VISUAL` or `$EDITOR`.
 You can then easily edit existing fields and add new fields.
 
+To delete the task, set its state to `x` and save the file:
+
+```yaml
+state: x
+```
+
+This permanently deletes the task including its tags and notes
+(same as `tl delete`).
+To only move it to the trash, use `state: Deletable` instead.
+
 This feature allows for a powerful batch editing workflow.
 Use an SQL query to select a subsection of your tasks
 and then edit all of them one by one:

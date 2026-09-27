@@ -22,6 +22,7 @@ This document lists all notable changes to the functionality of TaskLite.
     `tasks_view` exposes `blockers` and `blocked` JSON-array columns.
     `tl do` / `tl end` / `tl trash` refuse to close a task while at
     least one of its blockers is still open.
+- Delete a task from within `tl edit` by setting `state: x`.
 
 
 ## 2025-07-26 - [0.5]
