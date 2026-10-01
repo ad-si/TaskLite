@@ -1,0 +1,63 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  height: 100vh;
+  margin: 0;
+  padding: 0.8rem;
+  box-sizing: border-box;
+}
+
+#editor {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid GrayText;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.cm-editor {
+  height: 100%;
+}
+
+.cm-scroller {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+#error {
+  margin: 0;
+  padding: 0.6rem;
+  white-space: pre-wrap;
+  color: #b00020;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  #error {
+    color: #ff6b6b;
+  }
+}
+
+footer {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.hint {
+  flex: 1;
+  opacity: 0.7;
+}
+
+button {
+  padding: 0.3rem 1rem;
+}

@@ -151,3 +151,18 @@ clean:
 	rm -rf tasklite-app/.stack-work
 	rm -rf tasklite-core/.stack-work
 	rm -rf tasklite/.stack-work
+
+
+tasklite-thunderbird/node_modules: tasklite-thunderbird/package-lock.json
+	cd tasklite-thunderbird && npm ci
+	touch $@
+
+
+.PHONY: thunderbird-addon  # Build the Thunderbird add-on
+thunderbird-addon: tasklite-thunderbird/node_modules
+	cd tasklite-thunderbird && npm run build
+	rm -f tasklite-thunderbird/tasklite.xpi
+	cd tasklite-thunderbird/extension \
+	&& zip -r ../tasklite.xpi \
+		manifest.json background.js edit.html edit.bundle.js edit.css icons
+

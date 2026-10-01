@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "TaskLite",
+  "description": "Add emails as tasks to TaskLite",
+  "version": "0.1.0",
+  "author": "Adrian Sieber",
+  "homepage_url": "https://tasklite.org",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "thunderbird@tasklite.org",
+      "strict_min_version": "140.0"
+    }
+  },
+  "icons": {
+    "32": "icons/icon-32.png",
+    "64": "icons/icon-64.png"
+  },
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "permissions": [
+    "menus",
+    "messagesRead",
+    "nativeMessaging",
+    "notifications"
+  ]
+}

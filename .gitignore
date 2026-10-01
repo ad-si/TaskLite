@@ -4,3 +4,6 @@
 /docs
 /docs-source/images/pattern.jpg
 dist-newstyle
+/tasklite-thunderbird/tasklite.xpi
+/tasklite-thunderbird/extension/edit.bundle.js
+/tasklite-thunderbird/node_modules

@@ -30,6 +30,11 @@ This document lists all notable changes to the functionality of TaskLite.
     The task body now consists of the subject and the text content,
     instead of the raw undecoded email body followed by the subject.
     The `cc` header is now stored in the metadata.
+- Add a [Thunderbird add-on](./automation.md#thunderbird-add-on)
+    to import emails via their context menu
+    and optionally edit the new task right away.
+- Add `tl nativehost install` and `tl nativehost run` commands
+    to use TaskLite as a native messaging host for add-ons.
 
 
 ## 2025-07-26 - [0.5]

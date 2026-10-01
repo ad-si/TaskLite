@@ -57,6 +57,7 @@ library:
   dependencies:
     - aeson >= 2.2.1 && < 2.3
     - ansi-terminal >= 0.11 && < 1.2
+    - base64-bytestring >= 1.2 && < 1.3
     - bytestring >= 0.11 && < 0.13
     - case-insensitive >= 1.2 && < 1.3
     - cassava >= 0.5.2 && < 0.6

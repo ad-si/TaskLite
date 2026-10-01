@@ -244,6 +244,7 @@ import Lib (
   waitTasks,
  )
 import McpServer (startMcpServer)
+import NativeMessaging (installNativeHost, runNativeHost)
 import Migrations (runMigrations)
 #ifdef API_SERVER
 import Server (startServer)
@@ -389,6 +390,8 @@ data Command
   | StartServer
 #endif
   | StartMcpServer
+  | NativeHostRun
+  | NativeHostInstall
   | Gui
   | UlidToUtc Text
   | ExternalCommand Text (Maybe [Text])
@@ -1036,6 +1039,15 @@ commandParser conf =
     <> command "mcp" (toParserInfo (pure StartMcpServer)
         "Start an MCP (Model Context Protocol) server for AI assistant integration")
 
+    <> command "nativehost" (toParserInfo
+        (hsubparser
+          (  command "run" (toParserInfo (pure NativeHostRun)
+                "Handle one request from an add-on (started by the add-on)")
+          <> command "install" (toParserInfo (pure NativeHostInstall)
+                "Register the native messaging host for the Thunderbird add-on")
+          ))
+        "Native messaging host for the TaskLite Thunderbird add-on")
+
     <> command "gui" (toParserInfo (pure Gui)
         "Open the TaskLite SQLite database with your default GUI program")
 
@@ -1484,6 +1496,8 @@ executeCLiCommand config now connection progName args availableLinesMb = do
           startMcpServer conf
           pure $ pretty ("MCP Server stopped" :: Text)
 #endif
+        NativeHostRun -> runNativeHost conf connection
+        NativeHostInstall -> installNativeHost conf
         Gui -> openGui conf
         Alias alias _ -> pure $ aliasWarning alias
         UlidToUtc ulid -> pure $ pretty $ ulidText2utc ulid
@@ -1683,11 +1697,17 @@ printOutput appName argsMb config = do
         ("find" : _) -> True
         _ -> False
 
+    -- stdout is reserved for the native messaging protocol
+    outputHandle =
+      case earlyParseResult of
+        Success cliOpts | cliOpts.cliCommand == NativeHostRun -> P.stderr
+        _ -> stdout
+
     putDocCustom document = do
       P.when isFindCommand $ hSetBuffering stdout (BlockBuffering Nothing)
       renderIOWithConfig
         configNorm
-        stdout
+        outputHandle
         ( defaultLayoutOptions
             { layoutPageWidth = AvailablePerLine outputWidth 1.0
             }

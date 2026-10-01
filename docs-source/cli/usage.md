@@ -318,6 +318,9 @@ They are mapped to tasks like this:
 The task's ULID is derived from the email,
 so importing the same email twice fails instead of creating a duplicate.
 
+To import emails directly from Thunderbird,
+check out the [Thunderbird add-on](../automation.md#thunderbird-add-on).
+
 
 ## Export
 
