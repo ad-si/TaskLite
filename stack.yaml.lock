@@ -54,6 +54,13 @@ packages:
   original:
     hackage: mcp-server-0.1.0.20
 - completed:
+    hackage: purebred-email-0.7@sha256:168a313a67402cae8c8bb03546d1b024d301b6f426552164fd603172870ebd7b,4353
+    pantry-tree:
+      sha256: 69edeaefb7ce2e887dae60c00077cc5988f400826f9b72b2b38b585ca23ea3a1
+      size: 2676
+  original:
+    hackage: purebred-email-0.7
+- completed:
     name: simple-sql-parser
     pantry-tree:
       sha256: a7f399e93b6cb3056e43702b57ecda1a6a86dfdbeca4361ae3d2d27518ba4fe7

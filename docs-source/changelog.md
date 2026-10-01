@@ -23,6 +23,13 @@ This document lists all notable changes to the functionality of TaskLite.
     `tl do` / `tl end` / `tl trash` refuse to close a task while at
     least one of its blockers is still open.
 - Delete a task from within `tl edit` by setting `state: x`.
+- Rewrite the email (`.eml`) importer to properly support MIME:
+    Multipart emails, quoted-printable and base64 encodings, charsets,
+    encoded words in headers (e.g. non-ASCII subjects),
+    and HTML-only emails, which are converted to plain text.
+    The task body now consists of the subject and the text content,
+    instead of the raw undecoded email body followed by the subject.
+    The `cc` header is now stored in the metadata.
 
 
 ## 2025-07-26 - [0.5]

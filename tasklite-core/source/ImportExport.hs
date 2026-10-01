@@ -15,23 +15,17 @@ import Protolude (
   Either (..),
   Eq ((==)),
   FilePath,
-  Foldable (foldl),
   Functor (fmap),
-  Hashable (hash),
   IO,
-  Integral (toInteger),
   Maybe (..),
-  Num (abs),
   Semigroup ((<>)),
   Text,
   Traversable (sequence),
   die,
-  fromMaybe,
   putErrLn,
   rightToMaybe,
   show,
   stderr,
-  toStrict,
   ($),
   (&),
   (+),
@@ -68,9 +62,7 @@ import Data.Monoid.Extra (mwhen)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TL
-import Data.ULID (ulidFromInteger)
 import Data.ULID.TimeStamp (ULIDTimeStamp, getULIDTimeStamp)
-import Data.Vector qualified as V
 import Data.Yaml (
   ParseException (InvalidYaml),
   YamlException (YamlException, YamlParseException),
@@ -78,6 +70,7 @@ import Data.Yaml (
  )
 import Data.Yaml qualified as Yaml
 import Database.SQLite.Simple (Connection)
+import Email (emailToImportTask)
 import FullTask (FullTask (..))
 import Hooks (HookResult (message, task), executeHooks, formatHookResult)
 import ImportTask (
@@ -119,23 +112,17 @@ import System.Directory (createDirectoryIfMissing, listDirectory, removeFile)
 import System.FilePath (isExtensionOf, takeExtension, (</>))
 import System.Posix.User (getEffectiveUserName)
 import System.Process (readProcess)
-import Task (Task (..), emptyTask, setMetadataField, taskToEditableMarkdown)
+import Task (Task (..), emptyTask, taskToEditableMarkdown)
 import Taskwarrior (fullTaskToTwJson)
 import Text.Editor (markdownTemplate, runUserEditorDWIM)
-import Text.Parsec.Rfc2822 qualified as Email
-import Text.ParserCombinators.Parsec as Parsec (parse)
-import Text.PortableLines.ByteString.Lazy (lines8)
 import Time.System (dateCurrent, timeCurrent, timeCurrentP)
 import Utils (
   IdText,
   colr,
   countCharTL,
-  emptyUlid,
   formatElapsedP,
-  setDateTime,
   ulidTextToDateTime,
   zeroUlidTxt,
-  zonedTimeToDateTime,
   (<!!>),
   (<$$>),
  )
@@ -286,103 +273,10 @@ importEml :: Config -> Connection -> IO (Doc AnsiStyle)
 importEml conf connection = do
   content <- BSL.getContents
 
-  case Parsec.parse Email.message "<stdin>" content of
-    Left error -> die $ show error
-    Right email -> insertImportTask conf connection $ emailToImportTask email
-
-
-emailToImportTask :: Email.GenericMessage BSL.ByteString -> ImportTask
-emailToImportTask email@(Email.Message headerFields msgBody) =
-  let
-    addBody (ImportTask task notes tags wasExplicit) =
-      ImportTask
-        task
-          { Task.body =
-              task.body
-                <> ( msgBody
-                       & lines8
-                         <&> (TL.decodeUtf8 >>> toStrict)
-                       & T.unlines
-                       & T.dropEnd 1
-                   )
-          }
-        notes
-        tags
-        wasExplicit
-
-    namesToJson names =
-      Array $
-        V.fromList $
-          names
-            <&> ( \(Email.NameAddr name emailAddress) ->
-                    Object $
-                      KeyMap.fromList
-                        [ ("name", Aeson.String $ T.pack $ fromMaybe "" name)
-                        , ("email", Aeson.String $ T.pack emailAddress)
-                        ]
-                )
-
-    addHeaderToTask :: ImportTask -> Email.Field -> ImportTask
-    addHeaderToTask impTask@(ImportTask task notes tags wasExplicit) headerValue =
-      case headerValue of
-        Email.Date emailDate ->
-          let
-            utc = zonedTimeToDateTime emailDate
-            ulidGeneratedRes =
-              (email & show :: Text)
-                & (hash >>> toInteger >>> abs >>> ulidFromInteger)
-            ulidCombined =
-              (ulidGeneratedRes & P.fromRight emptyUlid)
-                `setDateTime` utc
-          in
-            ImportTask
-              task
-                { Task.ulid = T.toLower $ show ulidCombined
-                , Task.modified_utc =
-                    T.pack $ timePrint (toFormat importUtcFormat) utc
-                }
-              notes
-              tags
-              wasExplicit
-        Email.From names ->
-          ImportTask
-            (setMetadataField "from" (namesToJson names) task)
-            notes
-            tags
-            wasExplicit
-        Email.To names ->
-          ImportTask
-            (setMetadataField "to" (namesToJson names) task)
-            notes
-            tags
-            wasExplicit
-        Email.MessageID msgId ->
-          ImportTask
-            (setMetadataField "messageId" (Aeson.String $ T.pack msgId) task)
-            notes
-            tags
-            wasExplicit
-        Email.Subject subj ->
-          ImportTask
-            task{Task.body = task.body <> T.pack subj}
-            notes
-            tags
-            wasExplicit
-        Email.Keywords kwords ->
-          ImportTask
-            task
-            notes
-            (tags <> fmap (T.unwords . fmap T.pack) kwords)
-            wasExplicit
-        Email.Comments cmnts ->
-          ImportTask
-            (setMetadataField "comments" (Aeson.String $ T.pack cmnts) task)
-            notes
-            tags
-            wasExplicit
-        _ -> impTask
-  in
-    foldl addHeaderToTask (addBody emptyImportTask) headerFields
+  case emailToImportTask content of
+    Left error -> die error
+    Right importTaskRec ->
+      setMissingFields importTaskRec P.>>= insertImportTask conf connection
 
 
 isDirError :: Config -> FilePath -> P.SomeException -> IO (Doc AnsiStyle)
@@ -428,9 +322,10 @@ importFile conf conn filePath = do
           ".md" -> decodeAndInsertMd content
           ".markdown" -> decodeAndInsertMd content
           ".eml" ->
-            case Parsec.parse Email.message filePath content of
-              Left error -> die $ show error
-              Right email -> insertImportTask conf conn $ emailToImportTask email
+            case emailToImportTask content of
+              Left error -> die $ T.pack filePath <> ": " <> error
+              Right importTaskRec ->
+                setMissingFields importTaskRec P.>>= insertImportTask conf conn
           _ ->
             die $ T.pack $ "File type " <> fileExt <> " is not supported"
     )
@@ -505,10 +400,10 @@ ingestFile conf connection filePath = do
           ".md" -> ingestMd content
           ".markdown" -> ingestMd content
           ".eml" ->
-            case Parsec.parse Email.message filePath content of
-              Left error -> die $ show error
-              Right email -> do
-                let taskRecord@ImportTask{task} = emailToImportTask email
+            case emailToImportTask content of
+              Left error -> die $ T.pack filePath <> ": " <> error
+              Right importTaskRec -> do
+                taskRecord@ImportTask{task} <- setMissingFields importTaskRec
                 sequence
                   [ insertImportTask conf connection taskRecord
                   , editTaskByTask conf OpenEditor connection task

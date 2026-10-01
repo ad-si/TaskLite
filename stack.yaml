@@ -19,6 +19,8 @@ extra-deps:
   # clients like Claude Code warn about an unsupported protocol version.
   - mcp-server-0.1.0.20
 
+  - purebred-email-0.7
+
   - github: Airsequel/simple-sql-parser
     commit: 680f2b77c53fcc086dc7d5f498f764ad2235b828
 

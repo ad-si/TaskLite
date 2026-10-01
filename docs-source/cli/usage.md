@@ -303,6 +303,22 @@ its value is used instead.
 > While they can be imported, the creation date is set to 1970-01-01.
 
 
+### Emails
+
+Emails (`.eml` files) can be imported with `tl import mail.eml`
+or via stdin with `tl importeml < mail.eml`.
+They are mapped to tasks like this:
+
+- **Body:** Subject, an empty line,
+    and the text content (or the HTML content converted to text)
+- **Creation date:** `Date` header
+- **Tags:** `Keywords` header
+- **Metadata:** `from`, `to`, `cc`, `messageId`, and `comments`
+
+The task's ULID is derived from the email,
+so importing the same email twice fails instead of creating a duplicate.
+
+
 ## Export
 
 Use one of following commands:
