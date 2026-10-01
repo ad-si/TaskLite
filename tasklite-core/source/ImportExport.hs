@@ -571,35 +571,58 @@ editUntilValidMarkdown editMode conn initialMarkdown wipMarkdown = do
       -- Content doesn't have to be changed -> log nothing
       OpenEditor -> ""
       _ -> "⚠️ Nothing changed"
-    else do
-      case markdownAfterEdit & BSL.fromStrict & parseMarkdownWithFrontMatter of
-        Left error -> do
-          putErrLn $ error <> "\n"
-          editUntilValidMarkdown editMode conn initialMarkdown markdownAfterEdit
-        Right (yamlContent, _) -> do
-          case BSL.toStrict yamlContent & Yaml.decodeEither' of
-            Left error -> do
-              case error of
-                -- Adjust the line and column numbers to be 1-based
-                InvalidYaml
-                  (Just (YamlParseException prblm ctxt (YamlMark idx line col))) ->
-                    let yamlMark = YamlMark (idx + 1) (line + 1) (col + 1)
-                    in  putErrLn $
-                          Yaml.prettyPrintParseException
-                            ( InvalidYaml
-                                (Just (YamlParseException prblm ctxt yamlMark))
-                            )
-                            <> "\n"
-                _ ->
-                  putErrLn $ Yaml.prettyPrintParseException error <> "\n"
-              editUntilValidMarkdown editMode conn initialMarkdown markdownAfterEdit
-            Right newTask -> do
-              let yamlContentStrict = BSL.toStrict yamlContent
-              pure $
-                Right $
-                  if isDeleteRequest yamlContentStrict
-                    then DeleteRequested
-                    else Edited newTask yamlContentStrict
+    else case parseEditedMarkdown markdownAfterEdit of
+      Left error -> do
+        putErrLn $ error <> "\n"
+        editUntilValidMarkdown editMode conn initialMarkdown markdownAfterEdit
+      Right editResult -> pure $ Right editResult
+
+
+{-| Parse the Markdown with YAML frontmatter of an edited task
+(as created by `taskToEditableMarkdown`).
+-}
+parseEditedMarkdown :: P.ByteString -> Either Text EditResult
+parseEditedMarkdown markdown =
+  case markdown & BSL.fromStrict & parseMarkdownWithFrontMatter of
+    Left error -> Left error
+    Right (yamlContent, _) -> do
+      let yamlContentStrict = BSL.toStrict yamlContent
+      case Yaml.decodeEither' yamlContentStrict of
+        Left error ->
+          Left $
+            T.pack $
+              Yaml.prettyPrintParseException $
+                case error of
+                  -- Adjust the line and column numbers to be 1-based
+                  InvalidYaml
+                    (Just (YamlParseException prblm ctxt (YamlMark idx line col))) ->
+                      InvalidYaml $
+                        Just $
+                          YamlParseException
+                            prblm
+                            ctxt
+                            (YamlMark (idx + 1) (line + 1) (col + 1))
+                  _ -> error
+        Right newTask ->
+          Right $
+            if isDeleteRequest yamlContentStrict
+              then DeleteRequested
+              else Edited newTask yamlContentStrict
+
+
+-- | Apply the result of editing an existing task
+applyEditResult ::
+  Config -> Connection -> Task -> EditResult -> IO (Doc AnsiStyle)
+applyEditResult conf conn taskToEdit = \case
+  DeleteRequested -> deleteTasks conf conn [taskToEdit.ulid]
+  Edited importTaskRec newContent ->
+    insertTaskFromEdit
+      conf
+      conn
+      importTaskRec
+      newContent
+      taskToEdit.modified_utc
+      taskToEdit.closed_utc
 
 
 insertTaskFromEdit ::
@@ -747,15 +770,7 @@ editTaskByTask conf editMode conn taskToEdit = do
     Left error -> case error of
       InvalidYaml (Just (YamlException "")) -> pure P.mempty
       _ -> pure $ pretty $ Yaml.prettyPrintParseException error
-    Right DeleteRequested -> deleteTasks conf conn [taskToEdit.ulid]
-    Right (Edited importTaskRec newContent) -> do
-      insertTaskFromEdit
-        conf
-        conn
-        importTaskRec
-        newContent
-        taskToEdit.modified_utc
-        taskToEdit.closed_utc
+    Right editResult -> applyEditResult conf conn taskToEdit editResult
 
 
 -- TODO: Eliminate code duplications with `addTask`

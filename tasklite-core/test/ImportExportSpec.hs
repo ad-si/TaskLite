@@ -5,6 +5,7 @@ import Protolude (
   Maybe (..),
   Text,
   fromMaybe,
+  pure,
   show,
   ($),
   (&),
@@ -12,6 +13,8 @@ import Protolude (
   (<>),
  )
 import Protolude qualified as P
+
+import Control.Arrow ((>>>))
 
 import Data.Aeson (Value (Object), decode, eitherDecode, eitherDecodeStrictText)
 import Data.Aeson.KeyMap qualified as KeyMap
@@ -28,6 +31,7 @@ import Test.Hspec (
   describe,
   it,
   shouldBe,
+  shouldContain,
   shouldNotBe,
   shouldStartWith,
  )
@@ -35,7 +39,12 @@ import Test.Hspec (
 import Config (defaultConfig)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
-import ImportExport (getNdjsonLines, insertImportTask)
+import ImportExport (
+  EditResult (DeleteRequested, Edited),
+  getNdjsonLines,
+  insertImportTask,
+  parseEditedMarkdown,
+ )
 import ImportTask (
   ImportTask (ImportTask, closedUtcWasExplicit, notes, tags, task),
   setMissingFields,
@@ -629,6 +638,27 @@ spec = do
                 insertedTask.tags `shouldBe` Nothing
                 insertedTask.notes `shouldBe` Nothing
               _ -> P.die "Expected exactly one task"
+
+  describe "parseEditedMarkdown" $ do
+    let parse = T.encodeUtf8 >>> parseEditedMarkdown
+
+    it "parses the frontmatter and body of an edited task" $ do
+      case parse "---\ntags: [work]\n...\n\nNew body\n" of
+        Right (Edited importTask _) -> do
+          importTask.task.body `shouldBe` "New body"
+          importTask.tags `shouldBe` ["work"]
+        Right DeleteRequested -> P.die "Unexpected delete request"
+        Left error -> P.die error
+
+    it "detects deletion requests" $ do
+      case parse "---\nstate: x\n...\n\nBody\n" of
+        Right DeleteRequested -> pure ()
+        _ -> P.die "Expected a delete request"
+
+    it "reports YAML errors with 1-based positions" $ do
+      case parse "---\nfoo: [\n...\n\nBody\n" of
+        Left error -> T.unpack error `shouldContain` "line 2"
+        Right _ -> P.die "Expected a parse error"
 
   describe "Export" $ do
     it "exports several tasks as NDJSON including notes" $ do
