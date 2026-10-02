@@ -14,22 +14,129 @@ backed by an [AirGQL](https://github.com/Airsequel/AirGQL) GraphQL server.
 
 ### Start the Server
 
-To use it you first need to start the server:
-
-```sh
-tasklite server
-```
-
-Then you need to start the web app server:
+The TaskLite server provides the GraphQL API
+and also serves the web app.
+First build the web app:
 
 ```sh
 git clone https://github.com/ad-si/TaskLite
 cd TaskLite/tasklite-webapp
-make start
+make build
+```
+
+Then start the server from the root of the repository:
+
+```sh
+cd ..
+tasklite server
 ```
 
 The web app will then be available at
-[localhost:3000](http://localhost:3000).
+[localhost:7458](http://localhost:7458)
+and the GraphQL API at
+[localhost:7458/graphql](http://localhost:7458/graphql).
+The server only accepts connections from the local machine.
+
+The web app is served from `tasklite-webapp/build`
+relative to the current working directory.
+If the server is started from another directory,
+only the API is available.
+
+
+### Run in the Background on OS Start
+
+The `services` directory contains files to start the server automatically.
+They assume that `tasklite` is installed at `~/.local/bin/tasklite`
+(the location used by `make install`).
+If it is installed somewhere else (check with `command -v tasklite`),
+adjust the path in the file.
+
+Run the following commands from the root of the repository
+after building the web app as described above.
+
+
+#### macOS
+
+Install the [LaunchAgent](https://support.apple.com/guide/terminal/apdc6c1077b-5d5d-4d35-9c19-60f2397b2369)
+and load it:
+
+```sh
+sed \
+  -e "s|REPLACE_HOME|$HOME|g" \
+  -e "s|REPLACE_REPO_PATH|$PWD|g" \
+  services/com.tasklite.server.plist \
+  > ~/Library/LaunchAgents/com.tasklite.server.plist
+
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.tasklite.server.plist
+```
+
+The server now starts whenever you log in
+and is restarted if it crashes.
+Logs are written to `~/Library/Logs/tasklite.out.log`
+and `~/Library/Logs/tasklite.err.log`.
+
+To restart it (e.g. after installing a new version of TaskLite):
+
+```sh
+launchctl kickstart -k gui/$(id -u)/com.tasklite.server
+```
+
+To stop it and disable the automatic start:
+
+```sh
+launchctl bootout gui/$(id -u)/com.tasklite.server
+rm ~/Library/LaunchAgents/com.tasklite.server.plist
+```
+
+
+#### Linux
+
+Install the [systemd](https://systemd.io) user service and enable it:
+
+```sh
+mkdir -p ~/.config/systemd/user
+
+sed "s|REPLACE_REPO_PATH|$PWD|g" \
+  services/tasklite-server.service \
+  > ~/.config/systemd/user/tasklite-server.service
+
+systemctl --user daemon-reload
+systemctl --user enable --now tasklite-server
+```
+
+The server now starts whenever you log in
+and is restarted if it crashes.
+To start it at boot, even before you log in,
+run `loginctl enable-linger`.
+
+Show the logs with `journalctl --user --unit tasklite-server`.
+
+To restart it (e.g. after installing a new version of TaskLite):
+
+```sh
+systemctl --user restart tasklite-server
+```
+
+To stop it and disable the automatic start:
+
+```sh
+systemctl --user disable --now tasklite-server
+rm ~/.config/systemd/user/tasklite-server.service
+```
+
+
+### Development
+
+To work on the web app, start the development server
+while the TaskLite server is running:
+
+```sh
+cd tasklite-webapp
+make start
+```
+
+The development version will then be available at
+[localhost:7459](http://localhost:7459).
 
 
 ## Dashboard
@@ -65,10 +172,10 @@ is to create an HTML file with multiple iframes that load the different views.
 </head>
 <body>
   <div id="grid">
-    <iframe src="http://localhost:3000/tags/focus"></iframe>
-    <iframe src="http://localhost:3000/tags/chore"></iframe>
-    <iframe src="http://localhost:3000/tags/buy"></iframe>
-    <iframe src="http://localhost:3000/tags/work"></iframe>
+    <iframe src="http://localhost:7458/tags/focus"></iframe>
+    <iframe src="http://localhost:7458/tags/chore"></iframe>
+    <iframe src="http://localhost:7458/tags/buy"></iframe>
+    <iframe src="http://localhost:7458/tags/work"></iframe>
   </div>
 </body>
 </html>

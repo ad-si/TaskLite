@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  macOS LaunchAgent for starting the TaskLite server at login.
+
+  Replace the placeholders with your home directory
+  and the path of your TaskLite clone.
+
+  See "Run in the Background on OS Start" in
+  docs-source/web_based_guis/web_app.md for full instructions.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.tasklite.server</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>REPLACE_HOME/.local/bin/tasklite</string>
+    <string>server</string>
+  </array>
+
+  <!-- launchd's bare PATH omits Homebrew, which hook interpreters live in. -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <!-- The web app is served from tasklite-webapp/build relative to this. -->
+  <key>WorkingDirectory</key>
+  <string>REPLACE_REPO_PATH</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Restart on crash, but not after a clean exit. -->
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>REPLACE_HOME/Library/Logs/tasklite.out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>REPLACE_HOME/Library/Logs/tasklite.err.log</string>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

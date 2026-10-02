@@ -1,0 +1,18 @@
+# systemd user service for starting the TaskLite server at login.
+#
+# Replace the placeholder with the path of your TaskLite clone.
+#
+# See "Run in the Background on OS Start" in
+# docs-source/web_based_guis/web_app.md for full instructions.
+
+[Unit]
+Description=TaskLite server (GraphQL API and web app)
+
+[Service]
+ExecStart=%h/.local/bin/tasklite server
+# The web app is served from tasklite-webapp/build relative to this.
+WorkingDirectory=REPLACE_REPO_PATH
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
