@@ -27,6 +27,7 @@ import Network.Wai.Application.Static (defaultWebAppSettings)
 import Network.Wai.Handler.Warp (
   defaultSettings,
   runSettings,
+  setHost,
   setOnException,
   setPort,
  )
@@ -68,6 +69,7 @@ import Servant.Multipart (
  )
 import Servant.Server (Server)
 import Servant.Server qualified as Servant
+import System.Directory (doesDirectoryExist)
 import WaiAppStatic.Types (
   LookupResult (LRFile, LRFolder, LRNotFound),
   StaticSettings (ssLookupFile),
@@ -206,7 +208,14 @@ platformApp ctx dbPath = do
 
   Servant.serveWithContext platformAPI context $
     platformServer ctx dbPath
-      :<|> serveDirectoryWith (webappServerSettings "tasklite-app/build")
+      :<|> serveDirectoryWith (webappServerSettings webappDir)
+
+
+{-| Directory of the built web app (`make build` in tasklite-webapp),
+relative to the working directory of the server
+-}
+webappDir :: Text
+webappDir = "tasklite-webapp/build"
 
 
 corsMiddleware :: Middleware
@@ -230,6 +239,8 @@ startServer _airgqlConf taskliteConf = do
     runWarp =
       runSettings $
         defaultSettings
+          -- Only accept connections from this machine
+          & setHost "127.0.0.1"
           & setPort port
           & setOnException
             ( \_ exception -> do
@@ -255,6 +266,15 @@ startServer _airgqlConf taskliteConf = do
       <> "Starting GraphQL server at http://localhost:"
       <> show port
       <> "/graphql"
+
+  webappExists <- doesDirectoryExist $ T.unpack webappDir
+  if webappExists
+    then putText $ "Serving web app at http://localhost:" <> show port
+    else
+      P.putErrText $
+        "Web app is not served, because directory \""
+          <> webappDir
+          <> "\" does not exist in the current working directory"
 
   dbPath <- P.liftIO $ getDbPath taskliteConf
 
