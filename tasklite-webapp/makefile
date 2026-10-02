@@ -15,6 +15,7 @@ format:
 .PHONY: start
 start: node_modules
 	NODE_OPTIONS=--openssl-legacy-provider \
+	PORT=7459 \
 	npx elm-app start --no-debug --no-browser
 
 

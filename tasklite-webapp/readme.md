@@ -8,15 +8,10 @@ backed by an [AirGQL](https://github.com/Airsequel/AirGQL) GraphQL server.
 
 ## Development
 
-1. Install dependencies with `npm install`.
-1. Build GraphQL connector code:
-    ```sh
-    npx elm-graphql --skip-elm-format \
-      http://localhost:7458/graphql
-    ```
-1. Start the development server by running:
-    ```sh
-    npx elm reactor
-    ```
+1. Start the TaskLite server with `tasklite server`.
+1. Build GraphQL connector code with `make generate-api`.
+1. Start the development server with `make start`.
 
-You can now access the app at <localhost:8000/src/>.
+You can now access the app at <http://localhost:7459>.
+The TaskLite server only accepts cross-origin requests
+from this development server.

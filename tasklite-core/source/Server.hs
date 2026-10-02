@@ -4,6 +4,8 @@ module Server where
 
 import Protolude (
   Applicative (pure),
+  Bool (False),
+  ByteString,
   Eq ((==)),
   IO,
   Int,
@@ -16,13 +18,20 @@ import Protolude (
   show,
   ($),
   (&),
+  (<&>),
   (||),
  )
 import Protolude qualified as P
 
 import Data.Aeson (Object)
 import Data.Text qualified as T
-import Network.Wai (Application, Middleware)
+import Network.HTTP.Types (hContentType, status403)
+import Network.Wai (
+  Application,
+  Middleware,
+  requestHeaderHost,
+  responseLBS,
+ )
 import Network.Wai.Application.Static (defaultWebAppSettings)
 import Network.Wai.Handler.Warp (
   defaultSettings,
@@ -32,6 +41,7 @@ import Network.Wai.Handler.Warp (
   setPort,
  )
 import Network.Wai.Middleware.Cors (
+  CorsResourcePolicy (corsMethods, corsOrigins, corsRequestHeaders),
   cors,
   corsMethods,
   corsRequestHeaders,
@@ -218,16 +228,49 @@ webappDir :: Text
 webappDir = "tasklite-webapp/build"
 
 
-corsMiddleware :: Middleware
-corsMiddleware =
+{-| Only allow cross-origin requests from the web app
+(served by this server or by its development server on port 7459).
+Browsers also send an `Origin` header for same-origin POST requests,
+therefore the server's own origins must be allowed as well.
+-}
+corsMiddleware :: Int -> Middleware
+corsMiddleware port =
   let
+    allowedOrigins :: [ByteString]
+    allowedOrigins = do
+      host <- ["localhost", "127.0.0.1"]
+      originPort <- [port, 7459]
+      pure $ "http://" <> host <> ":" <> show originPort
+
     policy =
       simpleCorsResourcePolicy
-        { corsRequestHeaders = ["Content-Type", "Authorization"]
+        { corsOrigins = Just (allowedOrigins, False)
+        , corsRequestHeaders = ["Content-Type", "Authorization"]
         , corsMethods = "PUT" : simpleMethods
         }
   in
     cors (const $ Just policy)
+
+
+{-| Reject requests whose `Host` header does not refer to this machine.
+Prevents DNS rebinding attacks, where a website changes its domain
+to resolve to 127.0.0.1 and thereby circumvents the CORS policy.
+-}
+hostCheckMiddleware :: Int -> Middleware
+hostCheckMiddleware port app request respond =
+  let
+    allowedHosts :: [ByteString]
+    allowedHosts =
+      ["localhost", "127.0.0.1"] <&> \host -> host <> ":" <> show port
+  in
+    if P.maybe False (`P.elem` allowedHosts) (requestHeaderHost request)
+      then app request respond
+      else
+        respond $
+          responseLBS
+            status403
+            [(hContentType, "text/plain; charset=utf-8")]
+            "Forbidden: Invalid Host header"
 
 
 -- | Uses AirGQL to provide a GraphQL endpoint at /graphql
@@ -278,6 +321,9 @@ startServer _airgqlConf taskliteConf = do
 
   dbPath <- P.liftIO $ getDbPath taskliteConf
 
-  runWarp $ corsMiddleware $ platformApp ctx dbPath
+  runWarp $
+    hostCheckMiddleware port $
+      corsMiddleware port $
+        platformApp ctx dbPath
 
   pure P.mempty
