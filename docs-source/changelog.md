@@ -23,6 +23,8 @@ This document lists all notable changes to the functionality of TaskLite.
     `tl do` / `tl end` / `tl trash` refuse to close a task while at
     least one of its blockers is still open.
 - Delete a task from within `tl edit` by setting `state: x`.
+- Existing tags and notes can now be edited and removed in `tl edit`
+    (and in the editor of the Thunderbird add-on).
 - Rewrite the email (`.eml`) importer to properly support MIME:
     Multipart emails, quoted-printable and base64 encodings, charsets,
     encoded words in headers (e.g. non-ASCII subjects),

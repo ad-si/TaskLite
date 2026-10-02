@@ -43,6 +43,8 @@ import Data.Aeson as Aeson (
   Value (Object),
   eitherDecodeStrictText,
   encode,
+  object,
+  (.=),
  )
 import Data.Aeson.Key as Key (fromText)
 import Data.Aeson.KeyMap as KeyMap (fromList, insert)
@@ -76,11 +78,13 @@ import Config (defaultConfig, utcFormat)
 import Control.Arrow ((>>>))
 import Database.SQLite.Simple (
   Connection,
-  Only (Only),
+  Only (Only, fromOnly),
   SQLData (SQLNull),
   query,
  )
 import Database.SQLite.Simple.QQ (sql)
+
+import Note (Note)
 
 
 data TaskState
@@ -427,7 +431,7 @@ setMetadataField fieldNameText value task =
 -}
 taskToEditableMarkdown :: Connection -> Task -> P.IO P.ByteString
 taskToEditableMarkdown conn task = do
-  (tags :: [[P.Text]]) <-
+  (tags :: [Only P.Text]) <-
     if T.null task.ulid
       then pure []
       else
@@ -437,30 +441,25 @@ taskToEditableMarkdown conn task = do
             SELECT tag
             FROM task_to_tag
             WHERE task_ulid == ?
+            ORDER BY rowid
           |]
           (Only task.ulid)
 
-  (notes :: [[P.Text]]) <-
+  (notes :: [Note]) <-
     if T.null task.ulid
       then pure []
       else
         query
           conn
           [sql|
-            SELECT note
+            SELECT ulid, note
             FROM task_to_note
             WHERE task_ulid == ?
+            ORDER BY ulid
           |]
           (Only task.ulid)
 
   let
-    indentNoteContent noteContent =
-      noteContent
-        & T.strip
-        & T.lines
-          <&> T.stripEnd
-        & T.intercalate "\n#     "
-
     taskWithEmptyBody = task{body = ""}
     frontmatterYaml =
       ( taskWithEmptyBody
@@ -468,18 +467,10 @@ taskToEditableMarkdown conn task = do
           & P.decodeUtf8
           & T.replace "\nbody: ''\n" "\n"
       )
-        <> "\n# | Existing tags and notes can't be edited here, \
-           \but new ones can be added\n\n"
-        <> (("# tags: " :: Text) <> P.show (P.concat tags) <> "\n")
-        <> "tags: []\n"
-        <> ( ("\n# notes:\n" :: Text)
-               <> ( notes
-                      & P.concat
-                        <&> (\note -> "# - " <> indentNoteContent note)
-                      & T.unlines
-                  )
-           )
-        <> "notes: []\n"
+        <> "\n"
+        <> P.decodeUtf8 (Yaml.encode $ object ["tags" .= (tags <&> fromOnly)])
+        <> "\n# | New notes can be added as plain text\n"
+        <> P.decodeUtf8 (Yaml.encode $ object ["notes" .= notes])
 
   pure $
     ("---\n" <> frontmatterYaml <> "...\n\n" <> body task)

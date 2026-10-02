@@ -650,6 +650,25 @@ spec = do
         Right DeleteRequested -> P.die "Unexpected delete request"
         Left error -> P.die error
 
+    it "parses existing notes and new plain text notes" $ do
+      let markdown =
+            "---\nnotes:\n\
+            \- body: Existing note\n  ulid: 01hxsjgzmdx48yzk39v852razr\n\
+            \- New note\n...\n\nBody\n"
+      case parse markdown of
+        Right (Edited importTask _) ->
+          case importTask.notes of
+            [existingNote, newNote] -> do
+              existingNote
+                `shouldBe` Note
+                  { ulid = "01hxsjgzmdx48yzk39v852razr"
+                  , body = "Existing note"
+                  }
+              newNote.body `shouldBe` "New note"
+            _ -> P.die "Expected exactly two notes"
+        Right DeleteRequested -> P.die "Unexpected delete request"
+        Left error -> P.die error
+
     it "detects deletion requests" $ do
       case parse "---\nstate: x\n...\n\nBody\n" of
         Right DeleteRequested -> pure ()

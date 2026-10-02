@@ -533,6 +533,84 @@ insertNotes conf connection mbCreatedUtc task notes = do
   pure $ vsepCollapse insertWarnings
 
 
+-- | Set the tags of a task by removing missing and inserting new ones
+syncTags :: Config -> Connection -> Task -> [Text] -> IO (Doc AnsiStyle)
+syncTags conf connection task tags = do
+  existingTags :: [Only Text] <-
+    query
+      connection
+      [sql|
+        SELECT tag
+        FROM task_to_tag
+        WHERE task_ulid == ?
+      |]
+      (Only task.ulid)
+
+  let existingTagsText = existingTags <&> \(Only tag) -> tag
+
+  forM_ (existingTagsText & P.filter (`P.notElem` tags)) $ \tag ->
+    executeNamed
+      connection
+      [sql|
+        DELETE FROM task_to_tag
+        WHERE
+          task_ulid == :task_ulid
+          AND tag == :tag
+      |]
+      [ ":task_ulid" := task.ulid
+      , ":tag" := tag
+      ]
+
+  insertTags conf connection Nothing task $
+    tags & P.filter (`P.notElem` existingTagsText)
+
+
+{-| Set the notes of a task by removing missing, updating changed,
+and inserting new ones (matched by their ULIDs)
+-}
+syncNotes :: Config -> Connection -> Task -> [Note] -> IO (Doc AnsiStyle)
+syncNotes conf connection task notes = do
+  existingNotes :: [Note] <-
+    query
+      connection
+      [sql|
+        SELECT ulid, note
+        FROM task_to_note
+        WHERE task_ulid == ?
+      |]
+      (Only task.ulid)
+
+  let
+    noteUlids = notes <&> (.ulid)
+    existingNoteUlids = existingNotes <&> (.ulid)
+
+  forM_ (existingNotes & P.filter ((.ulid) >>> (`P.notElem` noteUlids))) $
+    \theNote ->
+      executeNamed
+        connection
+        [sql|
+          DELETE FROM task_to_note
+          WHERE ulid == :ulid
+        |]
+        [":ulid" := theNote.ulid]
+
+  forM_ (notes & P.filter (`P.notElem` existingNotes)) $ \theNote ->
+    P.when (theNote.ulid `P.elem` existingNoteUlids) $
+      executeNamed
+        connection
+        [sql|
+          UPDATE task_to_note
+          SET note = :note
+          WHERE ulid == :ulid
+        |]
+        [ ":note" := theNote.body
+        , ":ulid" := theNote.ulid
+        ]
+
+  insertNotes conf connection Nothing task $
+    notes & P.filter ((.ulid) >>> (`P.notElem` existingNoteUlids))
+
+
 -- | Tuple is (Maybe createdUtc, noteBody)
 insertNoteTuples :: Connection -> Task -> [(Maybe DateTime, Text)] -> IO ()
 insertNoteTuples connection task notes = do

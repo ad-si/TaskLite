@@ -88,6 +88,8 @@ import Lib (
   insertNotes,
   insertRecord,
   insertTags,
+  syncNotes,
+  syncTags,
   updateTask,
  )
 import Note (Note (..))
@@ -710,8 +712,8 @@ insertTaskFromEdit conf conn importTaskRec newContent modified_utc origClosedUtc
   P.when shouldPreserveClosedUtc $ do
     updateTask conn taskFixedUtc
 
-  tagWarnings <- insertTags conf conn Nothing taskFixedUtc importTaskRec.tags
-  noteWarnings <- insertNotes conf conn Nothing taskFixedUtc notesCorrectUtc
+  tagWarnings <- syncTags conf conn taskFixedUtc importTaskRec.tags
+  noteWarnings <- syncNotes conf conn taskFixedUtc notesCorrectUtc
 
   args <- P.getArgs
   postModifyResults <-

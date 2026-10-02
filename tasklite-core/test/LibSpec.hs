@@ -730,24 +730,91 @@ spec = do
       P.show repeatRes2 `shouldContain` "is already in a recurrence series"
 
   context "Editing a task" $ do
-    it "shows warning if a tag was duplicated" $ do
+    it "keeps existing tags without warnings when adding new ones" $ do
       withMemoryDb defaultConfig $ \memConn -> do
-        let existTag = "existing-tag"
         insertRecord "tasks" memConn task1
-        warnings <- insertTags conf memConn Nothing task1 [existTag]
+        warnings <- insertTags conf memConn Nothing task1 ["existing-tag"]
         P.show warnings `shouldBe` T.empty
         cliOutput <-
           editTaskByTask
             conf
             ( ApplyPreEdit $
-                replaceBs
-                  "\n...\n"
-                  ("\ntags: " <> P.show [existTag, "new-tag"] <> "\n...\n")
+                replaceBs "- existing-tag\n" "- existing-tag\n- new-tag\n"
             )
             memConn
             task1
-        let errMsg = "Tag \"" <> T.unpack existTag <> "\" is already assigned"
-        show cliOutput `shouldContain` errMsg
+        show cliOutput `shouldNotContain` "already assigned"
+        (tags :: [[P.Text]]) <-
+          query_ memConn "SELECT tag FROM task_to_tag ORDER BY tag"
+        tags `shouldBe` [["existing-tag"], ["new-tag"]]
+
+    it "removes tags which were deleted" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        _ <- insertTags conf memConn Nothing task1 ["tag-a", "tag-b"]
+        _ <-
+          editTaskByTask
+            conf
+            (ApplyPreEdit $ replaceBs "- tag-a\n" "")
+            memConn
+            task1
+        (tags :: [[P.Text]]) <- query_ memConn "SELECT tag FROM task_to_tag"
+        tags `shouldBe` [["tag-b"]]
+
+    it "updates edited notes in place" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        let noteUlid = "01hxsjgzmdx48yzk39v852razr"
+        insertRecord
+          "task_to_note"
+          memConn
+          TaskToNote
+            { TaskToNote.ulid = noteUlid
+            , TaskToNote.task_ulid = task1.ulid
+            , TaskToNote.note = "Old note"
+            }
+        _ <-
+          editTaskByTask
+            conf
+            (ApplyPreEdit $ replaceBs "body: Old note" "body: New note")
+            memConn
+            task1
+        taskToNotes :: [TaskToNote] <-
+          query_ memConn "SELECT * FROM task_to_note"
+        taskToNotes
+          `shouldBe` [ TaskToNote
+                         { TaskToNote.ulid = noteUlid
+                         , TaskToNote.task_ulid = task1.ulid
+                         , TaskToNote.note = "New note"
+                         }
+                     ]
+
+    it "removes notes which were deleted" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        P.forM_
+          [ ("01hxsjgzmdx48yzk39v852raza", "Note A")
+          , ("01hxsjgzmdx48yzk39v852razb", "Note B")
+          ]
+          $ \(noteUlid, note) ->
+            insertRecord
+              "task_to_note"
+              memConn
+              TaskToNote
+                { TaskToNote.ulid = noteUlid
+                , TaskToNote.task_ulid = task1.ulid
+                , TaskToNote.note = note
+                }
+        _ <-
+          editTaskByTask
+            conf
+            ( ApplyPreEdit $
+                replaceBs "- body: Note A\n  ulid: 01hxsjgzmdx48yzk39v852raza\n" ""
+            )
+            memConn
+            task1
+        (notes :: [[P.Text]]) <- query_ memConn "SELECT note FROM task_to_note"
+        notes `shouldBe` [["Note B"]]
 
     it "deletes the task if state is set to x" $ do
       withMemoryDb defaultConfig $ \memConn -> do
@@ -895,9 +962,10 @@ spec = do
         cliOutput <-
           editTaskByTask
             conf
+            -- Append plain text notes to the existing ones
             ( ApplyPreEdit $
-                replaceBs "notes: []" $
-                  "notes: " <> P.show [note, note]
+                replaceBs "\n...\n" $
+                  "\n- " <> P.encodeUtf8 note <> "\n- " <> P.encodeUtf8 note <> "\n...\n"
             )
             memConn
             task1

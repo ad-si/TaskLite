@@ -107,18 +107,25 @@ spec = do
                 user: ''
                 waiting_utc: null
 
-                # | Existing tags and notes can't be edited here, but new ones can be added
+                tags:
+                - tag-0
+                - tag-1
+                - tag-2
+                - tag-3
+                - tag-4
+                - tag-5
+                - tag-6
+                - tag-7
+                - tag-8
+                - tag-9
 
-                # tags: ["tag-0","tag-1","tag-2","tag-3","tag-4","tag-5","tag-6","tag-7","tag-8","tag-9"]
-                tags: []
-
-                # notes:
-                # - Sample note 1 is quite long so we can observer how automatic wrapping can produce unexpected results.
-                # - Sample note 2 is short
-                #     but has
-                #     surprising
-                #     line breaks.
-                notes: []
+                # | New notes can be added as plain text
+                notes:
+                - body: Sample note 1 is quite long so we can observer how automatic wrapping can
+                    produce unexpected results.
+                  ulid: 01hw5n9m99papg470w8j9k9vd3
+                - body: "\nSample note 2 is short\nbut has  \nsurprising  \nline breaks."
+                  ulid: 01hw5n9y3q27zys83b139s7e2r
                 ...
 
                 Sample task

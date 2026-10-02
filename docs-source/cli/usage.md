@@ -178,6 +178,19 @@ This will open your default editor,
 as specified in the environment variables `$VISUAL` or `$EDITOR`.
 You can then easily edit existing fields and add new fields.
 
+Tags and notes can be added, changed, and removed as well.
+Existing notes are identified by their ULID,
+while new notes can simply be added as plain text:
+
+```yaml
+tags:
+- work
+notes:
+- body: An existing note
+  ulid: 01hwcw7k2d3n9xq8m6v4p1r5ts
+- A new note
+```
+
 To delete the task, set its state to `x` and save the file:
 
 ```yaml

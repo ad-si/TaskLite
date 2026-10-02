@@ -17,7 +17,6 @@ import Protolude (
   Semigroup ((<>)),
   Show,
   Text,
-  asum,
   fromMaybe,
   hush,
   isJust,
@@ -362,15 +361,15 @@ instance FromJSON ImportTask where
       maybeRecurrence = recurrence_duration' <|> recur_duration'
       recurrence_duration = parseIsoDurationMb maybeRecurrence
 
+    let
+      -- Notes can be objects with a body (and a ulid) or plain text
+      parseNote :: Value -> Parser Note
+      parseNote = \case
+        String noteText -> pure $ textToNote createdUtc noteText
+        noteValue -> parseJSON noteValue
     o_notes <-
-      asum
-        [ o .:? "notes" :: Parser (Maybe [Note])
-        , do
-            notesMb <- o .:? "notes" :: Parser (Maybe [Text])
-            pure $ case notesMb of
-              Just textNotes -> Just $ textNotes <&> textToNote createdUtc
-              Nothing -> Just []
-        ]
+      (o .:? "notes" :: Parser (Maybe [Value]))
+        >>= P.traverse (P.traverse parseNote)
     annotations <- o .:? "annotations" :: Parser (Maybe [Annotation])
 
     let
