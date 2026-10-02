@@ -666,13 +666,6 @@ spec = do
 
   it "counts tasks" $ do
     withMemoryDb defaultConfig $ \memConn -> do
-      let
-        task2 =
-          emptyTask
-            { Task.ulid = "01hs690f9hkzk9z7zews9j2k1d"
-            , Task.body = "New task 2"
-            }
-
       count0 <- countTasks defaultConfig memConn P.mempty
       show count0 `shouldBe` ("0" :: Text)
 
@@ -694,16 +687,14 @@ spec = do
   it "gets new tasks" $ do
     withMemoryDb defaultConfig $ \memConn -> do
       let
-        task2 =
-          emptyTask
-            { Task.ulid = "01hs6zsf3c0vqx6egfnmbqtmvy"
-            , Task.body = "New task 2"
-            , Task.closed_utc = Just "2024-04-10T18:54:10Z"
+        doneTask =
+          task2
+            { Task.closed_utc = Just "2024-04-10T18:54:10Z"
             , Task.state = Just Done
             }
 
       insertRecord "tasks" memConn task1
-      insertRecord "tasks" memConn task2
+      insertRecord "tasks" memConn doneTask
 
       cliOutput <- newTasks defaultConfig now memConn (Just ["state:done"]) Nothing
       show cliOutput `shouldContain` "New task 2"
