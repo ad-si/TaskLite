@@ -83,7 +83,7 @@ ifNull ifValue thenValue =
   App
     [Name Nothing "ifnull"]
     [ Iden [ifValue]
-    , NumLit $ T.unpack thenValue
+    , NumLit thenValue
     ]
 
 
@@ -153,7 +153,7 @@ castTo :: ScalarExpr -> Text -> ScalarExpr
 castTo scalarExpr castType =
   Cast
     scalarExpr
-    (TypeName [Name Nothing $ T.unpack castType])
+    (TypeName [Name Nothing castType])
 
 
 add :: ScalarExpr -> ScalarExpr -> ScalarExpr

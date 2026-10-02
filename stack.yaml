@@ -8,10 +8,9 @@ packages:
 
 extra-deps:
   - aeson-2.2.1.0
-  - airgql-0.7.1.2
   - double-x-encoding-1.2.1
   - fuzzily-0.2.1.0
-  - graphql-spice-1.0.2.0
+  - graphql-spice-1.0.5.0
   - time-hourglass-0.3.0
 
   # Echoes the client-requested protocol version during negotiation
@@ -21,8 +20,13 @@ extra-deps:
 
   - purebred-email-0.7
 
+  # Unreleased fix for parsing the untyped `sqlite_stat1` and `sqlite_stat4`
+  # tables created by `ANALYZE`. Use the Hackage release once available.
+  - github: Airsequel/AirGQL
+    commit: c209edca09696a909d066d4f5ae5cbef53d15d0b
+
   - github: Airsequel/simple-sql-parser
-    commit: 680f2b77c53fcc086dc7d5f498f764ad2235b828
+    commit: ab82249523cd6a68ca9481b2de8436f89eca56db
 
   - github: meteogrid/iso8601-duration
     commit: 9524d1f02775be1d6c73165c4b4d62a19c8b7698

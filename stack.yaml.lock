@@ -12,13 +12,6 @@ packages:
   original:
     hackage: aeson-2.2.1.0
 - completed:
-    hackage: airgql-0.7.1.2@sha256:43e5f5d98391b4515a71489498a1a60e9e3baef6a7e23e74d3e45ef8ba3c5c92,6971
-    pantry-tree:
-      sha256: 3fbb535a536df207b8c3173c95406deaebf5cf931566cc79442b5fec3cefdd28
-      size: 1722
-  original:
-    hackage: airgql-0.7.1.2
-- completed:
     hackage: double-x-encoding-1.2.1@sha256:9dfc5a74ad82f507a5adeeddc7e32545cde04d11716fc44cd9bd2160bb38fb4c,1813
     pantry-tree:
       sha256: 9d0d9316d3da245a690dabecee9fb1797a10e09344758e9b8e7f7cb2728b5c04
@@ -33,12 +26,12 @@ packages:
   original:
     hackage: fuzzily-0.2.1.0
 - completed:
-    hackage: graphql-spice-1.0.2.0@sha256:97d22da8ec38342408bcd237e91e76ffcdad4f14df666f62b0b1ccba6bf39b87,2000
+    hackage: graphql-spice-1.0.5.0@sha256:87e3c4b4770b66c99f66f17602d691ac0c679743d6434d3bfe0e9eab19b6494f,2215
     pantry-tree:
-      sha256: d60774d462c7c0af08c82b3f754e0ac49e598640e382c417e1809880192747cb
-      size: 937
+      sha256: 3e87ec9671176921f0ac7e3547e45d2dd22ad31c91c8fc418a74fe786b28733a
+      size: 938
   original:
-    hackage: graphql-spice-1.0.2.0
+    hackage: graphql-spice-1.0.5.0
 - completed:
     hackage: time-hourglass-0.3.0@sha256:ee02356fe24919ec43ae17fc0007398c2fd0bbe822833b2d7a9c849537b90580,3114
     pantry-tree:
@@ -63,14 +56,14 @@ packages:
 - completed:
     name: simple-sql-parser
     pantry-tree:
-      sha256: a7f399e93b6cb3056e43702b57ecda1a6a86dfdbeca4361ae3d2d27518ba4fe7
-      size: 3846
-    sha256: 5731c4471e011dede78b8f1d8812dd5eeb1c79024307f0b03f1855f9028e43e0
-    size: 137333
-    url: https://github.com/Airsequel/simple-sql-parser/archive/680f2b77c53fcc086dc7d5f498f764ad2235b828.tar.gz
-    version: 0.6.1
+      sha256: 6f0184986152e9fdc7dcf5e00e14354bc0e42aa6dd010ffc473f09fcf7df7f02
+      size: 3886
+    sha256: ac438d98abc68b667458c143f114ef00d32a08c478c6175cd0ce956f3cb31a03
+    size: 142998
+    url: https://github.com/Airsequel/simple-sql-parser/archive/ab82249523cd6a68ca9481b2de8436f89eca56db.tar.gz
+    version: 0.8.0
   original:
-    url: https://github.com/Airsequel/simple-sql-parser/archive/680f2b77c53fcc086dc7d5f498f764ad2235b828.tar.gz
+    url: https://github.com/Airsequel/simple-sql-parser/archive/ab82249523cd6a68ca9481b2de8436f89eca56db.tar.gz
 - completed:
     name: iso8601-duration
     pantry-tree:

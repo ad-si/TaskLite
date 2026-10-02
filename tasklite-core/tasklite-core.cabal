@@ -109,7 +109,7 @@ library
     , purebred-email ==0.7.*
     , quickcheck-instances >=0.3.28 && <0.4
     , random ==1.2.*
-    , simple-sql-parser >=0.6 && <0.8
+    , simple-sql-parser ==0.8.*
     , sqlite-simple ==0.4.*
     , syb ==0.7.*
     , tagsoup ==0.14.*
@@ -127,7 +127,7 @@ library
         Server
     cpp-options: -DAPI_SERVER
     build-depends:
-        airgql >=0.7.1.2 && <0.8
+        airgql >=0.7.1.3 && <0.8
       , servant >=0.18 && <0.21
       , servant-blaze >=0.7 && <0.10
       , servant-multipart >=0.11 && <0.13

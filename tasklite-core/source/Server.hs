@@ -83,7 +83,7 @@ import AirGQL.ExternalAppContext (
     sqliteLib
   ),
  )
-import AirGQL.Lib (SQLPost)
+import AirGQL.Lib (SQLPost, readOnly)
 import AirGQL.Servant.Database (
   apiDatabaseSchemaGetHandler,
   apiDatabaseVacuumPostHandler,
@@ -91,10 +91,12 @@ import AirGQL.Servant.Database (
 import AirGQL.Servant.GraphQL (
   gqlQueryPostHandler,
   playgroundDefaultQueryHandler,
-  readOnlyGqlPostHandler,
  )
 import AirGQL.Servant.SqlQuery (sqlQueryPostHandler)
-import AirGQL.Types.SchemaConf (SchemaConf (pragmaConf), defaultSchemaConf)
+import AirGQL.Types.SchemaConf (
+  SchemaConf (accessMode, pragmaConf),
+  defaultSchemaConf,
+ )
 import AirGQL.Types.SqlQueryPostResult (SqlQueryPostResult)
 import AirGQL.Types.Types (GQLPost)
 import Config as TaskLite (Config)
@@ -151,18 +153,22 @@ redirectToPlayground =
       }
 
 
-platformServer :: ExternalAppContext -> Text -> Server PlatformAPI
+platformServer :: ExternalAppContext -> P.FilePath -> Server PlatformAPI
 platformServer ctx dbPath = do
+  let dbId = T.pack dbPath
   sqlQueryPostHandler defaultSchemaConf.pragmaConf dbPath
     :<|> redirectToPlayground
-    :<|> gqlQueryPostHandler defaultSchemaConf dbPath
-    :<|> readOnlyGqlPostHandler dbPath
-    :<|> playgroundDefaultQueryHandler dbPath
+    :<|> gqlQueryPostHandler defaultSchemaConf dbPath dbId
+    :<|> gqlQueryPostHandler
+      defaultSchemaConf{accessMode = readOnly}
+      dbPath
+      dbId
+    :<|> playgroundDefaultQueryHandler dbPath dbId
     :<|> apiDatabaseSchemaGetHandler ctx dbPath
     :<|> apiDatabaseVacuumPostHandler dbPath
 
 
-platformApp :: ExternalAppContext -> Text -> Application
+platformApp :: ExternalAppContext -> P.FilePath -> Application
 platformApp ctx dbPath = do
   let
     maxFileSizeInByte :: Int = AirGQL.defaultConfig.maxDbSize
@@ -252,6 +258,6 @@ startServer _airgqlConf taskliteConf = do
 
   dbPath <- P.liftIO $ getDbPath taskliteConf
 
-  runWarp $ corsMiddleware $ platformApp ctx (T.pack dbPath)
+  runWarp $ corsMiddleware $ platformApp ctx dbPath
 
   pure P.mempty
