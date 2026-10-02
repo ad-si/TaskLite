@@ -273,24 +273,26 @@ viewTodo now todo =
             , ifDisabledElse
                 (disabled True)
                 (\ulid -> onCheck
-                    (\bool -> if bool
-                        then SetDone ulid
-                        else
-                          -- TODO: Implement
-                          NoOp
+                    (\bool ->
+                        if bool
+                          then SetDone ulid
+                          else
+                            -- TODO: Implement
+                            NoOp
                     )
                 )
             ]
             []
         , viewMaybe
             todo.review_utc
-            (\review_utc -> if review_utc < Iso8601.fromTime now
-                then span
-                  [ css [ text_color green_500, text_sm, mr_4 ]
-                  , title "Must be reviewed"
-                  ]
-                  [ text "🔎" ]
-                else text ""
+            (\review_utc ->
+                if review_utc < Iso8601.fromTime now
+                  then span
+                    [ css [ text_color green_500, text_sm, mr_4 ]
+                    , title "Must be reviewed"
+                    ]
+                    [ text "🔎" ]
+                  else text ""
             )
         , span
             [ css
@@ -869,9 +871,10 @@ update msg model =
           | remoteTodos = model.remoteTodos
               |> RemoteData.map
                   (List.map
-                      (\todo -> if todo.ulid == Just ulid
-                          then { todo | state = Just "Done" }
-                          else todo
+                      (\todo ->
+                          if todo.ulid == Just ulid
+                            then { todo | state = Just "Done" }
+                            else todo
                       )
                   )
         }

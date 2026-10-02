@@ -33,12 +33,19 @@ import Graphql.Internal.Builder.Object as Object
 import Graphql.Internal.Encode as Encode exposing (Value)
 import Graphql.OptionalArgument exposing (OptionalArgument(..))
 import Graphql.SelectionSet exposing (SelectionSet)
-import Json.Decode as Decode-- Encoder function for OrderingTerm enum
+import Json.Decode as Decode
+
+
+-- Encoder function for OrderingTerm enum
+
+
 encodeOrderingTerm : OrderingTerm -> Value
 encodeOrderingTerm = Encode.enum toString
 
 
 -- Encoder functions for column types
+
+
 encodeClosed_tasks_histogram_column : Closed_tasks_histogram_column -> Value
 encodeClosed_tasks_histogram_column = Encode.enum Api.Enum.Closed_tasks_histogram_column.toString
 
@@ -1693,6 +1700,8 @@ encodeTasks_view_set_input input____ =
 
 
 -- Generated types for task views
+
+
 buildTasks_all_filter :
   (Tasks_all_filterOptionalFields -> Tasks_all_filterOptionalFields)
   -> Tasks_all_filter
@@ -5390,6 +5399,8 @@ encodeTasks_waiting_insert_input input____ =
 
 
 -- Generated upsert_on_conflict types for task views
+
+
 buildTasks_all_upsert_on_conflict :
   Tasks_all_upsert_on_conflictRequiredFields
   -> (Tasks_all_upsert_on_conflictOptionalFields -> Tasks_all_upsert_on_conflictOptionalFields)
