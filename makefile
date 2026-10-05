@@ -44,6 +44,14 @@ install:
 		tasklite
 
 
+.PHONY: restart-server  # Restart the OS service running `tasklite server`
+restart-server:
+	if test "$$(uname)" = Darwin; \
+	then launchctl kickstart -k gui/$$(id -u)/com.tasklite.server; \
+	else systemctl --user restart tasklite-server; \
+	fi
+
+
 # Build the documentation
 docs: book.toml docs-source
 	stack haddock --haddock-for-hackage
