@@ -27,6 +27,8 @@ import Data.Text qualified as T
 import Data.Time.ISO8601.Duration qualified as Iso
 import Database.SQLite.Simple (
   NamedParam ((:=)),
+  Only (Only),
+  Query,
   SQLData (SQLNull),
   SQLError,
   executeNamed,
@@ -211,6 +213,46 @@ spec = do
       result <- addTask conf memConn ["Just a test"]
       unpack (show result)
         `shouldStartWith` "🆕 Added task \"Just a test\" with id"
+
+  context "When tasks have the same priority" $ do
+    let
+      taskWithDue =
+        emptyTask
+          { Task.ulid = "01hs68z7mdg4ktpxbv0yfafzr1"
+          , Task.body = "Task with due date"
+          , Task.due_utc = Just "2082-10-03 00:00:00"
+          }
+      taskWithoutDue =
+        emptyTask
+          { Task.ulid = "01hs68z7mdg4ktpxbv0yfafzr2"
+          , Task.body = "Task without due date"
+          }
+
+    it "sorts tasks without due date last in views" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn taskWithDue
+        insertRecord "tasks" memConn taskWithoutDue
+        let viewNames :: [Query] = ["tasks_open", "tasks_ready", "tasks_notag"]
+        P.forM_ viewNames $ \viewName -> do
+          (ulids :: [Only Text]) <-
+            query_ memConn $ "SELECT ulid FROM " <> viewName
+          ulids `shouldBe` [Only taskWithDue.ulid, Only taskWithoutDue.ulid]
+
+    it "lists tasks without due date last" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn taskWithDue
+        insertRecord "tasks" memConn taskWithoutDue
+        result <- headTasks conf now memConn Nothing
+        T.breakOn "Task without due date" (show result)
+          & P.fst
+          & (`shouldSatisfy` T.isInfixOf "Task with due date")
+
+    it "lists task with due date as next task" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn taskWithDue
+        insertRecord "tasks" memConn taskWithoutDue
+        result <- nextTask conf memConn
+        unpack (show result) `shouldContain` "Task with due date"
 
   context "When a task exists" $ do
     it "updates a task" $ do

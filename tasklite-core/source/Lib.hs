@@ -279,6 +279,12 @@ import Utils (
  )
 
 
+-- | Default ORDER BY clause for task lists (tasks without due date last)
+priorityOrderTxt :: Text
+priorityOrderTxt =
+  "priority DESC, due_utc IS NULL, due_utc ASC, ulid DESC"
+
+
 noTasksWarning :: Text
 noTasksWarning =
   "No tasks available. "
@@ -1916,13 +1922,15 @@ nextTask conf connection = do
   tasks :: [FullTask] <-
     query_
       connection
-      [sql|
-        SELECT *
-        FROM tasks_view
-        WHERE closed_utc IS NULL
-        ORDER BY priority DESC
-        LIMIT 1
-      |]
+      ( [sql|
+          SELECT *
+          FROM tasks_view
+          WHERE closed_utc IS NULL
+          ORDER BY
+        |]
+          <> Query priorityOrderTxt
+          <> " LIMIT 1"
+      )
 
   case tasks of
     [fullTask] -> do
@@ -3264,7 +3272,7 @@ openTasks conf now connection filterExpression availableLinesMb = do
             sqlQuery =
               getFilterQuery
                 filterExpWithOpen
-                (Just "priority DESC, due_utc ASC, ulid DESC")
+                (Just priorityOrderTxt)
                 availableLinesMb
 
           tasks <- query_ connection sqlQuery
@@ -3363,7 +3371,7 @@ overdueTasks conf now connection filterExpression availableLinesMb = do
             sqlQuery =
               getFilterQuery
                 filterExpWithOverdue
-                (Just "priority DESC, due_utc ASC, ulid DESC")
+                (Just priorityOrderTxt)
                 availableLinesMb
 
           tasks <- query_ connection sqlQuery
@@ -3470,10 +3478,9 @@ getWithTag connection stateMaybe availableLinesMb tags = do
         <> Query ulidsQuery
         <> ") tasks1\n\
            \LEFT JOIN tasks_view ON tasks1.ulid IS tasks_view.ulid\n\
-           \ORDER BY \n\
-           \  priority DESC,\n\
-           \  due_utc ASC,\n\
-           \  ulid DESC\n\
+           \ORDER BY "
+        <> Query priorityOrderTxt
+        <> "\n\
            \LIMIT "
         <> Query
           ( show @Int $ case availableLinesMb of
@@ -3720,14 +3727,9 @@ getFilterQuery filterExps orderByMb availableLinesMb = do
       "SELECT tasks.ulid FROM tasks\n"
         <> unlines queries
 
-    orderBy = Query $ case orderByMb of
-      Nothing ->
-        "ORDER BY \n\
-        \  priority DESC,\n\
-        \  due_utc ASC,\n\
-        \  ulid DESC\n"
-      Just orderByTxt ->
-        "ORDER BY \n" <> orderByTxt <> "\n"
+    orderBy =
+      Query $
+        "ORDER BY \n" <> fromMaybe priorityOrderTxt orderByMb <> "\n"
 
   FullTask.selectQuery
     <> "FROM ("

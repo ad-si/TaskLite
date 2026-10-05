@@ -858,19 +858,18 @@ dropDerivedViews =
 {-| CREATE statements for the views defined in `_6_` (depend on `tasks_view`).
 SQLite resolves `SELECT *` at view-creation time, so these must be recreated
 whenever `tasks_view` changes shape.
+`priorityOrder` is the ORDER BY clause of the priority-sorted views.
 -}
-createDerivedViews :: [Query]
-createDerivedViews =
+createDerivedViewsWith :: Query -> [Query]
+createDerivedViewsWith priorityOrder =
   [ [sql|
       CREATE VIEW tasks_open AS
       SELECT *
       FROM tasks_view
       WHERE closed_utc IS NULL
       ORDER BY
-        priority DESC,
-        due_utc ASC,
-        ulid DESC
     |]
+      <> priorityOrder
   , [sql|
       CREATE VIEW tasks_overdue AS
       SELECT *
@@ -879,10 +878,8 @@ createDerivedViews =
         closed_utc IS NULL
         AND due_utc < datetime('now')
       ORDER BY
-        priority DESC,
-        due_utc ASC,
-        ulid DESC
     |]
+      <> priorityOrder
   , [sql|
       CREATE VIEW tasks_done AS
       SELECT *
@@ -937,10 +934,8 @@ createDerivedViews =
           )
         )
       ORDER BY
-        priority DESC,
-        due_utc ASC,
-        ulid DESC
     |]
+      <> priorityOrder
   , [sql|
       CREATE VIEW tasks_repeating AS
       SELECT *
@@ -982,10 +977,8 @@ createDerivedViews =
         closed_utc IS NULL
         AND tags IS NULL
       ORDER BY
-        priority DESC,
-        due_utc ASC,
-        ulid DESC
     |]
+      <> priorityOrder
   , [sql|
       CREATE VIEW tasks_modified AS
       SELECT *
@@ -993,6 +986,19 @@ createDerivedViews =
       ORDER BY modified_utc DESC
     |]
   ]
+
+
+-- | Derived views of migration 6 (tasks without due date sorted first)
+createDerivedViews_v6 :: [Query]
+createDerivedViews_v6 =
+  createDerivedViewsWith "priority DESC, due_utc ASC, ulid DESC"
+
+
+-- | Derived views of migration 8 (tasks without due date sorted last)
+createDerivedViews_v8 :: [Query]
+createDerivedViews_v8 =
+  createDerivedViewsWith
+    "priority DESC, due_utc IS NULL, due_utc ASC, ulid DESC"
 
 
 -- | View definition for tasks_view in migration 5 (no blockers/blocked yet)
@@ -1264,7 +1270,7 @@ _7_ =
                 <> [ "DROP VIEW IF EXISTS tasks_view"
                    , tasksViewQuery_v7
                    ]
-                <> createDerivedViews
+                <> createDerivedViews_v6
           }
       MigrateDown ->
         base
@@ -1273,11 +1279,34 @@ _7_ =
                 <> [ "DROP VIEW IF EXISTS tasks_view"
                    , tasksViewQuery_v5
                    ]
-                <> createDerivedViews
+                <> createDerivedViews_v6
                 <> [ "DROP INDEX IF EXISTS idx_task_to_task_target_relation"
                    , "DROP INDEX IF EXISTS idx_task_to_task_source_relation"
                    , "DROP TABLE IF EXISTS task_to_task"
                    ]
+          }
+
+
+-- | Migration 8: Sort tasks without a due date after tasks with one
+_8_ :: MigrateDirection -> Migration
+_8_ =
+  let
+    base =
+      Migration
+        { id = UserVersion 8
+        , querySet = []
+        }
+  in
+    \case
+      MigrateUp ->
+        base
+          { Migrations.querySet =
+              dropDerivedViews <> createDerivedViews_v8
+          }
+      MigrateDown ->
+        base
+          { Migrations.querySet =
+              dropDerivedViews <> createDerivedViews_v6
           }
 
 
@@ -1344,7 +1373,7 @@ runMigrations _ connection = do
       IO [UserVersion]
 
   let
-    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_, _7_]
+    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_]
 
     migrationsUp = fmap ($ MigrateUp) migrations
     (UserVersion userVersionMax) =

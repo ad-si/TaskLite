@@ -279,7 +279,7 @@ For example, I have following `work` command in my `$PATH`:
 tasklite query \
   "(tags is null or tags like '%work%') \
     and closed_utc is null \
-    order by priority desc, due_utc asc, ulid desc \
+    order by priority desc, due_utc is null, due_utc asc, ulid desc \
     limit 10"
 ```
 
