@@ -4,14 +4,17 @@ import Api.Enum.OrderingTerm exposing (OrderingTerm(..))
 import Api.InputObject
   exposing
     ( buildStringComparison
+    , buildTask_to_tag_filter
     , buildTasks_filter
     , buildTasks_insert_input
     , buildTasks_set_input
     , buildTasks_view_filter
     , buildTasks_view_order_by
+    , StringComparison
     )
 import Api.Mutation as Mutation
 import Api.Object exposing (Tasks_ready_row, Tasks_view_row)
+import Api.Object.Task_to_tag_row as Task_to_tag_row
 import Api.Object.Tasks_mutation_response
 import Api.Object.Tasks_ready_row as Tasks_ready_row exposing (body)
 import Api.Object.Tasks_view_row as Tasks_view_row exposing (body)
@@ -55,6 +58,7 @@ import Iso8601
 import Json.Decode
 import List
 import Random
+import Set
 import RemoteData exposing (RemoteData(..))
 import Tailwind.Theme exposing (..)
 import Tailwind.Utilities exposing (..)
@@ -133,11 +137,22 @@ type alias Model =
   , newTask : String
   , submissionStatus : RemoteData (Graphql.Http.Error Int) Int
   , now : Posix
-  , tags : List String
+  , tagFilter : TagFilter
   , offset : Int
   , hasMore : Bool
   , loadingMore : Bool
   }
+
+
+type alias TagFilter =
+  { include : List String
+  , exclude : List String
+  }
+
+
+emptyTagFilter : TagFilter
+emptyTagFilter =
+  { include = [], exclude = [] }
 
 
 type alias Flags =
@@ -399,10 +414,9 @@ viewBody model =
                 ]
             , div
                 [ css [ text_color gray_500 ] ]
-                (model.tags
-                  |> List.map
-                      (\tag -> span [ css [ mr_2 ] ] [ text <| "+" ++ tag ]
-                      )
+                ((model.tagFilter.include |> List.map ((++) "+"))
+                  ++ (model.tagFilter.exclude |> List.map ((++) "-"))
+                  |> List.map (\tag -> span [ css [ mr_2 ] ] [ text tag ])
                 )
             , div
                 [ css [ flex, flex_1, justify_end ] ]
@@ -594,59 +608,126 @@ getTodos offset toMsg =
 -}
 refreshTodos : Model -> Cmd Msg
 refreshTodos model =
-  case model.tags of
-    [tag] ->
-      getTodosWithTag tag 0 GotTasksResponse
-    _ ->
-      getTodos 0 GotTasksResponse
+  getTodosForFilter model.tagFilter 0 GotTasksResponse
 
 
 {-| Load more todos based on current view and offset
 -}
 loadMoreTodos : Model -> Cmd Msg
 loadMoreTodos model =
-  case model.tags of
-    [tag] ->
-      getTodosWithTag tag model.offset GotMoreTasksResponse
-    _ ->
-      getTodos model.offset GotMoreTasksResponse
+  getTodosForFilter model.tagFilter model.offset GotMoreTasksResponse
 
 
-getTodosWithTag : String -> Int -> (RemoteData (Graphql.Http.Error (List TodoItem)) (List TodoItem) -> Msg) -> Cmd Msg
-getTodosWithTag tag offset toMsg =
-  if String.contains "," tag
-    then
-      -- TODO: Add support for specifying multiple tags
-      Cmd.none
-    else
-      let
-        setTags filter =
-          { filter
-            | tags = Present <|
-                buildStringComparison
-                  (\c -> { c
-                      | like_ = Present <| "%" ++ tag ++ "%"
-                    }
-                  )
-            , closed_utc = Present <|
-                buildStringComparison (\c -> { c | eq_ = Null })
-          }
-      in
-      Query.tasks_view
-        (\opts -> { opts
-            | where_ = Present <| buildTasks_view_filter setTags
-            , order_by = Present
-                [ Just <|
-                    buildTasks_view_order_by
-                      (\o -> { o | priority = Present Desc })
-                ]
-            , limit = Present pageSize
-            , offset = Present offset
-          }
+getTodosForFilter : TagFilter -> Int -> (RemoteData (Graphql.Http.Error (List TodoItem)) (List TodoItem) -> Msg) -> Cmd Msg
+getTodosForFilter tagFilter offset toMsg =
+  if List.isEmpty tagFilter.include && List.isEmpty tagFilter.exclude
+    then getTodos offset toMsg
+    else getTodosWithTags tagFilter offset toMsg
+
+
+{-| Get the open tasks which have all included tags and none of the excluded.
+First fetches the ULIDs of all tasks with any of the tags
+and then the tasks filtered by those ULIDs.
+-}
+getTodosWithTags : TagFilter -> Int -> (RemoteData (Graphql.Http.Error (List TodoItem)) (List TodoItem) -> Msg) -> Cmd Msg
+getTodosWithTags tagFilter offset toMsg =
+  Query.task_to_tag
+    (\opts -> { opts
+        | where_ = Present <|
+            buildTask_to_tag_filter
+              (\f -> { f
+                  | tag = Present <|
+                      buildStringComparison
+                        (\c -> { c
+                            | in_ = Present <|
+                                List.map
+                                  Just
+                                  (tagFilter.include ++ tagFilter.exclude)
+                          }
+                        )
+                }
+              )
+      }
+    )
+    (SelectionSet.map2
+        Tuple.pair
+        Task_to_tag_row.tag
+        Task_to_tag_row.task_ulid
+    )
+    |> Graphql.Http.queryRequest graphqlApiUrl
+    |> Graphql.Http.toTask
+    |> Task.mapError (Graphql.Http.mapError (always []))
+    |> Task.andThen
+        (\tagRows -> case tagFilterUlids tagFilter tagRows of
+            Just ulidComparison ->
+              getOpenTodosTask ulidComparison offset
+            Nothing ->
+              Task.succeed []
         )
-        tasksViewSelection
-        |> Graphql.Http.queryRequest graphqlApiUrl
-        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+    |> Task.attempt (RemoteData.fromResult >> toMsg)
+
+
+{-| Build the ULID comparison for the tasks matching the tag filter
+from (tag, task ULID) pairs.
+Returns `Nothing` if no task can match.
+-}
+tagFilterUlids : TagFilter -> List ( String, String ) -> Maybe StringComparison
+tagFilterUlids tagFilter tagRows =
+  let
+    ulidsWithTag tag =
+      tagRows
+        |> List.filter (\( rowTag, _ ) -> rowTag == tag)
+        |> List.map Tuple.second
+        |> Set.fromList
+
+    excludedUlids =
+      tagFilter.exclude
+        |> List.map ulidsWithTag
+        |> List.foldl Set.union Set.empty
+  in
+  case List.map ulidsWithTag tagFilter.include of
+    [] ->
+      Just <|
+        buildStringComparison
+          (\c -> { c | nin_ = Present <| List.map Just <| Set.toList excludedUlids })
+    firstSet :: otherSets ->
+      let
+        includedUlids =
+          List.foldl Set.intersect firstSet otherSets
+            |> (\ulids -> Set.diff ulids excludedUlids)
+      in
+      if Set.isEmpty includedUlids
+        then Nothing
+        else Just <|
+          buildStringComparison
+            (\c -> { c | in_ = Present <| List.map Just <| Set.toList includedUlids })
+
+
+getOpenTodosTask : StringComparison -> Int -> Task.Task (Graphql.Http.Error (List TodoItem)) (List TodoItem)
+getOpenTodosTask ulidComparison offset =
+  let
+    setFilter filter =
+      { filter
+        | ulid = Present ulidComparison
+        , closed_utc = Present <|
+            buildStringComparison (\c -> { c | eq_ = Null })
+      }
+  in
+  Query.tasks_view
+    (\opts -> { opts
+        | where_ = Present <| buildTasks_view_filter setFilter
+        , order_by = Present
+            [ Just <|
+                buildTasks_view_order_by
+                  (\o -> { o | priority = Present Desc })
+            ]
+        , limit = Present pageSize
+        , offset = Present offset
+      }
+    )
+    tasksViewSelection
+    |> Graphql.Http.queryRequest graphqlApiUrl
+    |> Graphql.Http.toTask
 
 
 insertTodo : Posix -> Ulid -> String -> Cmd Msg
@@ -724,7 +805,7 @@ ulidFilter ulid =
 
 type Route
   = Home
-  | Tags String
+  | Tags TagFilter
   | New
   | NotFound
 
@@ -733,9 +814,48 @@ routeParser : Parser (Route -> a) a
 routeParser =
   oneOf
     [ Url.Parser.top |> Url.Parser.map Home
-    , (s "tags" </> string) |> Url.Parser.map Tags
+    , (s "tags" </> string) |> Url.Parser.map (parseTagFilter >> Tags)
     , s "new" |> Url.Parser.map New
     ]
+
+
+{-| Parse a comma separated list of tags (e.g. `work,-chore`)
+where tags prefixed with `-` are excluded
+and all other tags (optionally prefixed with `+`) are included.
+-}
+parseTagFilter : String -> TagFilter
+parseTagFilter tagsStr =
+  let
+    tags =
+      tagsStr
+        |> Url.percentDecode
+        |> Maybe.withDefault tagsStr
+        |> String.split ","
+        |> List.map String.trim
+  in
+  { include = tags
+      |> List.filter (\tag -> not (String.startsWith "-" tag))
+      |> List.map
+          (\tag ->
+              if String.startsWith "+" tag
+                then String.dropLeft 1 tag
+                else tag
+          )
+      |> List.filter (not << String.isEmpty)
+  , exclude = tags
+      |> List.filter (String.startsWith "-")
+      |> List.map (String.dropLeft 1)
+      |> List.filter (not << String.isEmpty)
+  }
+
+
+routeTagFilter : Route -> TagFilter
+routeTagFilter route =
+  case route of
+    Tags tagFilter ->
+      tagFilter
+    _ ->
+      emptyTagFilter
 
 
 handleRoute : Route -> Cmd Msg
@@ -746,9 +866,9 @@ handleRoute route =
         [ getTodos 0 GotTasksResponse
         , Task.perform ReceivedTime Time.now
         ]
-    Tags tagStr ->
+    Tags tagFilter ->
       Cmd.batch
-        [ getTodosWithTag tagStr 0 GotTasksResponse
+        [ getTodosForFilter tagFilter 0 GotTasksResponse
         , Task.perform ReceivedTime Time.now
         ]
     New ->
@@ -768,11 +888,7 @@ init _ url key =
     , newTask = ""
     , submissionStatus = RemoteData.NotAsked
     , now = Time.millisToPosix 0
-    , tags = case route of
-        Tags tagStr ->
-          String.split "," tagStr
-        _ ->
-          []
+    , tagFilter = routeTagFilter route
     , offset = 0
     , hasMore = True
     , loadingMore = False
@@ -897,11 +1013,7 @@ update msg model =
       in
       ( { model
           | remoteTodos = RemoteData.Loading
-          , tags = case route of
-              Tags tagStr ->
-                String.split "," tagStr
-              _ ->
-                []
+          , tagFilter = routeTagFilter route
         }
       , handleRoute route
       )
