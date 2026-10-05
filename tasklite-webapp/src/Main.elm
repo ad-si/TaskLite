@@ -625,16 +625,16 @@ getTodosWithTag tag offset toMsg =
             | tags = Present <|
                 buildStringComparison
                   (\c -> { c
-                      | like = Present <| "%" ++ tag ++ "%"
+                      | like_ = Present <| "%" ++ tag ++ "%"
                     }
                   )
             , closed_utc = Present <|
-                buildStringComparison (\c -> { c | eq = Null })
+                buildStringComparison (\c -> { c | eq_ = Null })
           }
       in
       Query.tasks_view
         (\opts -> { opts
-            | filter = Present <| buildTasks_view_filter setTags
+            | where_ = Present <| buildTasks_view_filter setTags
             , order_by = Present
                 [ Just <|
                     buildTasks_view_order_by
@@ -679,43 +679,19 @@ TODO: Support completing repetition and recurrence tasks
 setTodoCompleted : String -> Cmd Msg
 setTodoCompleted ulid =
   Mutation.update_tasks
-    { filter = buildTasks_filter
-        (\f -> { f
-            | ulid = Present <|
-                buildStringComparison
-                  (\c -> { c | eq = Present ulid }) -- TODO: Add when Airsequel supports
-            --       several filters simultaneously
-            -- recurrence_duration =
-            --     Present <|
-            --         buildStringComparison
-            --             (\c -> { c | eq = Present "0" })
-            -- repetition_duration =
-            --     Present <|
-            --         buildStringComparison
-            --             (\c -> { c | eq = Present "0" })
-          }
-        )
-    , set = { state = Present "Done" -- SQL trigger will update `closed_utc`
-      -- TODO: Figure out why setting `modified_utc`
-      --       prevents recursive trigger calls
-      , modified_utc = Present "" --
-      , closed_utc = Absent
-      , awake_utc = Absent
-      , body = Absent
-      , due_utc = Absent
-      , group_ulid = Absent
-      , metadata = Absent
-      , priority_adjustment = Absent
-      , ready_utc = Absent
-      , recurrence_duration = Absent
-      , repetition_duration = Absent
-      , review_utc = Absent
-      , rowid = Absent
-      , ulid = Absent
-      , user = Absent
-      , waiting_utc = Absent
+    (\args -> { args
+        | where_ = Present <| ulidFilter ulid
+        , set_ = Present <|
+            buildTasks_set_input
+              (\set -> { set
+                  | state = Present "Done" -- SQL trigger will update `closed_utc`
+                  -- TODO: Figure out why setting `modified_utc`
+                  --       prevents recursive trigger calls
+                  , modified_utc = Present ""
+                }
+              )
       }
-    }
+    )
     Api.Object.Tasks_mutation_response.affected_rows
     |> Graphql.Http.mutationRequest graphqlApiUrl
     |> Graphql.Http.send
@@ -726,31 +702,24 @@ deleteTodo : String -> Cmd Msg
 deleteTodo ulid =
   -- TODO: Also delete tags and notes
   Mutation.delete_tasks
-    { filter = { ulid = Present <|
-          buildStringComparison
-            (\c -> { c | eq = Present ulid })
-      , body = Absent
-      , closed_utc = Absent --
-      , awake_utc = Absent
-      , due_utc = Absent
-      , group_ulid = Absent
-      , metadata = Absent
-      , modified_utc = Absent
-      , priority_adjustment = Absent
-      , ready_utc = Absent
-      , recurrence_duration = Absent
-      , repetition_duration = Absent
-      , review_utc = Absent
-      , rowid = Absent
-      , state = Absent
-      , user = Absent
-      , waiting_utc = Absent
-      }
-    }
+    (\args -> { args | where_ = Present <| ulidFilter ulid })
     Api.Object.Tasks_mutation_response.affected_rows
     |> Graphql.Http.mutationRequest graphqlApiUrl
     |> Graphql.Http.send
         (RemoteData.fromResult >> DeleteAffectedRowsResponse)
+
+
+{-| Filter for the task with the given ULID.
+Must always be set for mutations as they otherwise affect all tasks.
+-}
+ulidFilter : String -> Api.InputObject.Tasks_filter
+ulidFilter ulid =
+  buildTasks_filter
+    (\f -> { f
+        | ulid = Present <|
+            buildStringComparison (\c -> { c | eq_ = Present ulid })
+      }
+    )
 
 
 type Route

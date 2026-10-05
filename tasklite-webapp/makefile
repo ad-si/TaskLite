@@ -27,7 +27,8 @@ build: node_modules
 
 .PHONY: generate-api
 generate-api: node_modules
-	npx elm-graphql --skip-elm-format http://localhost:7458/graphql
+	npx elm-graphql --skip-elm-format --exclude-deprecated \
+		http://localhost:7458/graphql
 	$(MAKE) format
 
 

@@ -28,11 +28,7 @@ decoder =
         (\string -> case string of
             "ASC" ->
               Decode.succeed Asc
-            "asc" ->
-              Decode.succeed Asc
             "DESC" ->
-              Decode.succeed Desc
-            "desc" ->
               Decode.succeed Desc
             _ ->
               Decode.fail ("Invalid OrderingTerm type, " ++ string ++ " try re-running the @dillonkearns/elm-graphql CLI ")
@@ -66,11 +62,7 @@ fromString enumString____ =
   case enumString____ of
     "ASC" ->
       Just Asc
-    "asc" ->
-      Just Asc
     "DESC" ->
-      Just Desc
-    "desc" ->
       Just Desc
     _ ->
       Nothing
