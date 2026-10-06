@@ -15,6 +15,13 @@ messenger.runtime.onInstalled.addListener(async () => {
       contexts: ["message_list", "page", "selection", "link", "image"],
     })
   }
+  // Shown by the editor window if a URL is under the cursor
+  messenger.menus.create({
+    id: "open-link",
+    title: "Open Link",
+    contexts: ["editable"],
+    visible: false,
+  })
 })
 
 // The body contexts also apply to web pages, so only show the item

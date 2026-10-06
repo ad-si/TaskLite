@@ -120,6 +120,63 @@ cancelButton.addEventListener("click", cancel)
 // Escape inside the editor is handled by its keymap.
 // Handled events are skipped, as e.g. closing the search panel
 // removes the event's target from the editor.
+// Brackets, quotes, and angle brackets delimit URLs in Markdown
+const urlRegex = /https?:\/\/[^\s<>[\]"'`]+/g
+
+// Strips trailing punctuation and unbalanced closing parentheses,
+// e.g. from the end of a sentence or a Markdown link `[text](url)`
+function trimUrl(url) {
+  const last = url.at(-1)
+  const count = char => url.split(char).length - 1
+  if (".,;:!?*_~".includes(last) || (last === ")" && count(")") > count("("))) {
+    return trimUrl(url.slice(0, -1))
+  }
+  return url
+}
+
+function urlAt(pos) {
+  const line = view.state.doc.lineAt(pos)
+  for (const match of line.text.matchAll(urlRegex)) {
+    const url = trimUrl(match[0])
+    const from = line.from + match.index
+    if (from <= pos && pos <= from + url.length && URL.canParse(url)) {
+      return url
+    }
+  }
+  return null
+}
+
+const openLinkMenuId = "open-link"
+let contextMenuUrl = null
+
+// Fires before `menus.onShown`
+view.dom.addEventListener("contextmenu", (event) => {
+  const pos = view.posAtCoords({ x: event.clientX, y: event.clientY })
+  contextMenuUrl = pos === null ? null : urlAt(pos)
+})
+
+// The listeners are called for menus in all windows,
+// so only handle the ones of this window's tab
+const currentTabId = messenger.tabs.getCurrent().then(tab => tab?.id)
+const isCurrentTab = async tab => tab !== undefined && tab.id === await currentTabId
+
+// `info.menuIds` only contains visible items, so it can't be used to check
+// whether the hidden item belongs to the shown menu
+messenger.menus.onShown.addListener(async (info, tab) => {
+  if (!info.contexts.includes("editable") || !await isCurrentTab(tab)) return
+  await messenger.menus.update(openLinkMenuId, { visible: contextMenuUrl !== null })
+  await messenger.menus.refresh()
+})
+
+messenger.menus.onHidden.addListener(async () => {
+  await messenger.menus.update(openLinkMenuId, { visible: false })
+})
+
+messenger.menus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId !== openLinkMenuId || !await isCurrentTab(tab)) return
+  if (contextMenuUrl) await messenger.windows.openDefaultBrowser(contextMenuUrl)
+})
+
 document.addEventListener("keydown", (event) => {
   if (
     event.key === "Escape"
