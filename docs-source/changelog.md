@@ -35,6 +35,8 @@ This document lists all notable changes to the functionality of TaskLite.
 - Add a [Thunderbird add-on](./automation.md#thunderbird-add-on)
     to import emails via their context menu
     and optionally edit the new task right away.
+    The time of adding is stored in the metadata field `addedUtc`
+    ([#130](https://github.com/ad-si/TaskLite/discussions/130)).
 - Add `tl nativehost install` and `tl nativehost run` commands
     to use TaskLite as a native messaging host for add-ons.
 

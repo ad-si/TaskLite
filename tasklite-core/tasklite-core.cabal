@@ -147,6 +147,7 @@ test-suite tasklite-test
       ImportExportSpec
       LibSpec
       MigrationsSpec
+      NativeMessagingSpec
       SpecHook
       TaskwarriorSpec
       TestUtils

@@ -7,6 +7,8 @@ as a 32-bit unsigned integer in native byte order.
 https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging
 -}
 module NativeMessaging (
+  Request (..),
+  handleRequest,
   installNativeHost,
   runNativeHost,
 )
@@ -70,7 +72,9 @@ import ImportExport (
   parseEditedMarkdown,
  )
 import ImportTask (ImportTask (task), setMissingFields)
-import Task (Task (body, ulid), taskToEditableMarkdown)
+import Task (Task (body, ulid), setMetadataField, taskToEditableMarkdown)
+import Time.System (timeCurrentP)
+import Utils (formatElapsedP)
 
 
 hostName :: Text
@@ -129,7 +133,14 @@ handleRequest conf connection = \case
         existingMb <- findTask connection theTask.ulid
         status <- case existingMb of
           Nothing -> do
-            _ <- insertImportTask conf connection importTask
+            -- The ULID is derived from the email's date,
+            -- so the time of adding (e.g. of reading the email) is stored too
+            addedUtc <- formatElapsedP conf timeCurrentP
+            _ <-
+              insertImportTask conf connection $
+                importTask
+                  { task = setMetadataField "addedUtc" (Aeson.String addedUtc) theTask
+                  }
             pure "added"
           Just _ -> pure "exists"
         pure $ response status theTask.body ["ulid" .= theTask.ulid]

@@ -54,6 +54,9 @@ of the message list and of the displayed message.
 It imports each selected email like [`tasklite importeml`](
   cli/usage.md#emails).
 Importing the same email twice is detected and skipped.
+As the task's ULID is derived from the email's date,
+the time of adding the email (e.g. when you read it)
+is stored in the metadata field `addedUtc`.
 
 "Add to TaskLite and Edit" additionally opens the task in an editor window
 with syntax highlighting,
