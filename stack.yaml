@@ -9,7 +9,7 @@ packages:
 extra-deps:
   - aeson-2.2.1.0
   - double-x-encoding-1.2.1
-  - fuzzily-0.2.1.0
+  - fuzzily-0.2.2.0
   - graphql-spice-1.0.5.0
   - time-hourglass-0.3.0
 
