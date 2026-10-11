@@ -131,16 +131,23 @@ screenshots: tasklite/screenshots/help.svg tasklite/screenshots/help-short.svg
 .PHONY: release
 release:
 	@echo '1. Bump the version in `tasklite-core/package.yaml` and `tasklite/package.yaml`'
-	@echo '2. Run `make test` to upgrade the cabal files'
-	@echo '3. `git cliff` to generate changelog entries for the new version'
-	@echo '4. Merge `_todo_changelog.md` into `docs-source/changelog.md`'
-	@echo '5. `git add --interactive && git commit -m "Bump version"`'
-	@echo '6. `git tag v?????`'
-	@echo '7. `git push`'
-	@echo '8. `make push-to-hackage`'
-	@echo '9. Create a new GitHub release at https://github.com/ad-si/TaskLite/releases/new'
-	@echo '10. Add artifacts from GitHub Action run'
-	@echo '11. Announce the release on relevant channels'
+	@echo '2. If `git diff --stat $$(git describe --tags --abbrev=0) -- tasklite-thunderbird`'
+	@echo '     shows changes, bump the version in `tasklite-thunderbird/extension/manifest.json`'
+	@echo '3. Run `make test` to upgrade the cabal files'
+	@echo '4. `git cliff` to generate changelog entries for the new version'
+	@echo '5. Merge `_todo_changelog.md` into `docs-source/changelog.md`'
+	@echo '6. `git add --interactive && git commit -m "Bump version"`'
+	@echo '7. `git tag v?????`'
+	@echo '8. `git push`'
+	@echo '9. `make push-to-hackage`'
+	@echo '10. If the add-on version was bumped:'
+	@echo '     `make thunderbird-addon thunderbird-addon-source`, then upload'
+	@echo '     `tasklite-thunderbird/tasklite.xpi` as a new version at'
+	@echo '     https://addons.thunderbird.net/developers/addons'
+	@echo '     and `tasklite-source.zip` as its source code'
+	@echo '11. Create a new GitHub release at https://github.com/ad-si/TaskLite/releases/new'
+	@echo '12. Add artifacts from GitHub Action run'
+	@echo '13. Announce the release on relevant channels'
 
 
 .PHONY: push-to-hackage
