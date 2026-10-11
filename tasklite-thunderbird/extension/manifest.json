@@ -8,7 +8,10 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "thunderbird@tasklite.org",
-      "strict_min_version": "140.0"
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   },
   "icons": {

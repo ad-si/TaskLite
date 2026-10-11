@@ -16,5 +16,19 @@ The add-on sends the raw emails to `tasklite nativehost run`,
 which imports them like `tasklite importeml`
 and also provides the editable task and applies the edits.
 
+
+## Build
+
+Requires [Node.js](https://nodejs.org) 22 or later.
+
+```sh
+npm ci
+npm run build
+```
+
+This generates `extension/edit.bundle.js`.
+The other files in `extension/` are used as is.
+
+
 Check out the [documentation](https://tasklite.org/automation.html#thunderbird-add-on)
 for setup instructions.

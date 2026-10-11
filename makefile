@@ -174,3 +174,10 @@ thunderbird-addon: tasklite-thunderbird/node_modules
 	&& zip -r ../tasklite.xpi \
 		manifest.json background.js edit.html edit.bundle.js edit.css icons
 
+
+# Required by addons.thunderbird.net, as `edit.bundle.js` is minified
+.PHONY: thunderbird-addon-source  # Package the source code of the add-on
+thunderbird-addon-source:
+	git archive --format=zip --output=tasklite-thunderbird/tasklite-source.zip \
+		HEAD:tasklite-thunderbird
+
