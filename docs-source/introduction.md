@@ -71,10 +71,3 @@ is expected to follow our [Code of Conduct](./code_of_conduct.md).
 
 TaskLite is free and open source software,
 licensed under the [AGPL-3.0](https://github.com/ad-si/TaskLite/blob/main/license).
-
-
-## Hosting
-
-[![Deploys by Netlify](https://www.netlify.com/assets/badges/netlify-badge-color-accent.svg)](https://www.netlify.com)
-
-This site is powered by [Netlify](https://www.netlify.com).
