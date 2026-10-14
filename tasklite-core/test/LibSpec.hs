@@ -121,7 +121,7 @@ import TaskToTask (TaskToTask)
 import TaskToTask qualified
 import TestUtils (withMemoryDb)
 import Time.System (dateCurrent)
-import Utils (parseUtc, zeroTime, zeroUlidTxt)
+import Utils (parseUtc, ulidText2utc, zeroTime, zeroUlidTxt)
 
 
 exampleTask :: Task
@@ -565,6 +565,50 @@ spec = do
                 updatedTask.state `shouldBe` Just Done
                 updatedTask.closed_utc `shouldBe` Just "2020-01-15 08:30:00"
               _ -> P.die "Found more than one task"
+
+    it "dates the closing note with the explicit closed UTC via --utc" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        case parseUtc "2020-01-15 08:30:00" of
+          Nothing -> P.die "Invalid UTC string"
+          Just utcStamp -> do
+            _ <-
+              doTasks
+                conf
+                memConn
+                (Just utcStamp)
+                (Just ["Closing", "note"])
+                [exampleTask.ulid]
+            taskToNotes :: [TaskToNote] <-
+              query_ memConn "SELECT * FROM task_to_note"
+            case taskToNotes of
+              [taskToNote] -> do
+                taskToNote.note `shouldBe` "Closing note"
+                ulidText2utc taskToNote.ulid
+                  `shouldBe` Just "2020-01-15 08:30:00.000"
+              _ -> P.die "Expected exactly one note"
+
+    it "dates the closing note of an obsolete task with the explicit UTC" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        case parseUtc "2020-01-15 08:30:00" of
+          Nothing -> P.die "Invalid UTC string"
+          Just utcStamp -> do
+            _ <-
+              endTasks
+                conf
+                memConn
+                (Just utcStamp)
+                (Just ["Not", "needed"])
+                [exampleTask.ulid]
+            taskToNotes :: [TaskToNote] <-
+              query_ memConn "SELECT * FROM task_to_note"
+            case taskToNotes of
+              [taskToNote] -> do
+                taskToNote.note `shouldBe` "Not needed"
+                ulidText2utc taskToNote.ulid
+                  `shouldBe` Just "2020-01-15 08:30:00.000"
+              _ -> P.die "Expected exactly one note"
 
     it "refuses to complete a task with open blockers" $ do
       withMemoryDb conf $ \memConn -> do

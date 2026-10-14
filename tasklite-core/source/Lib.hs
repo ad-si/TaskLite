@@ -1356,7 +1356,12 @@ doTasks conf connection closedUtcMaybe noteWordsMaybe ids = do
               noteMessageMaybe <- case noteWordsMaybe of
                 Nothing -> pure Nothing
                 Just noteWords ->
-                  addNoteForTask conf connection (unwords noteWords) task
+                  addNoteForTask
+                    conf
+                    connection
+                    closedUtcMaybe
+                    (unwords noteWords)
+                    task
                     <&> Just
 
               setClosedWithState connection task $ Just Done
@@ -1412,7 +1417,12 @@ endTasks conf connection closedUtcMaybe noteWordsMaybe ids = do
               noteMessageMaybe <- case noteWordsMaybe of
                 Nothing -> pure Nothing
                 Just noteWords ->
-                  addNoteForTask conf connection (unwords noteWords) task
+                  addNoteForTask
+                    conf
+                    connection
+                    closedUtcMaybe
+                    (unwords noteWords)
+                    task
                     <&> Just
 
               setClosedWithState connection task $ Just Obsolete
@@ -2384,11 +2394,19 @@ unblockTasks ::
 unblockTasks conf connection = deleteRelation conf connection "blocks"
 
 
--- | Insert a note for a task without firing modify hooks.
-addNoteForTask :: Config -> Connection -> Text -> Task -> IO (Doc AnsiStyle)
-addNoteForTask conf connection noteBody task = do
+{-| Insert a note for a task without firing modify hooks.
+An optional creation UTC is encoded in the note's ULID (instead of now).
+-}
+addNoteForTask ::
+  Config -> Connection -> Maybe DateTime -> Text -> Task -> IO (Doc AnsiStyle)
+addNoteForTask conf connection createdUtcMaybe noteBody task = do
   now <- timeCurrentP <&> (timePrint conf.utcFormat >>> T.pack)
-  ulid <- formatUlid getULID
+  ulid <-
+    formatUlid $
+      getULID <&> \newUlid ->
+        createdUtcMaybe
+          <&> setDateTime newUlid
+          & fromMaybe newUlid
 
   insertRecord
     "task_to_note"
@@ -2427,7 +2445,7 @@ addNote conf connection noteBody ids = do
   docs <- forM ids $ \idSubstr ->
     execWithTask conf connection idSubstr $ \task ->
       withModifyHooks conf connection task.ulid $
-        addNoteForTask conf connection noteBody task
+        addNoteForTask conf connection Nothing noteBody task
 
   pure $ vsep docs
 
