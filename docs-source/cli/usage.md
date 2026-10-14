@@ -213,6 +213,20 @@ sqlite3 \
 ```
 
 
+### Tag Descriptions
+
+Tags can have a description to document their intended usage:
+
+```sh
+tl describetag work Tasks related to my day job
+```
+
+Running it again replaces the existing description.
+The descriptions are shown by `tl tags` and `tl projects`
+and are stored in the `tags` table.
+To remove a description, use `tl deletetagdescription work`.
+
+
 ## List and Filter
 
 There are several commands to list and filter tasks.

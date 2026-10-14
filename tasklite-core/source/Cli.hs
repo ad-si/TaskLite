@@ -187,6 +187,8 @@ import Lib (
   deletableTasks,
   deleteNote,
   deleteTag,
+  deleteTagDescription,
+  describeTag,
   deleteTasks,
   doTasks,
   doneTasks,
@@ -302,6 +304,8 @@ data Command
     Prioritize Float [IdText]
   | AddTag TagText [IdText]
   | DeleteTag TagText [IdText]
+  | DescribeTag TagText [Text]
+  | DeleteTagDescription TagText
   | BlockTasks IdText IdText
   | UnblockTasks IdText IdText
   | AddNote Text [IdText]
@@ -699,6 +703,16 @@ commandParser conf =
       <$> strArgument (metavar "TAG" <> help "The tag")
       <*> some (strArgument idsVar))
       "Delete a tag from specified tasks")
+
+    <> command "describetag" (toParserInfo (DescribeTag
+      <$> strArgument (metavar "TAG" <> help "The tag")
+      <*> some (strArgument
+            (metavar "DESCRIPTION" <> help "The description of the tag")))
+      "Set the description of a tag")
+
+    <> command "deletetagdescription" (toParserInfo (DeleteTagDescription
+      <$> strArgument (metavar "TAG" <> help "The tag"))
+      "Delete the description of a tag")
 
     <> command "blocks" (toParserInfo (BlockTasks
       <$> strArgument
@@ -1465,6 +1479,10 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         FindTask aPattern -> findTask conf connection aPattern
         AddTag tagText ids -> addTag conf connection tagText ids
         DeleteTag tagText ids -> deleteTag conf connection tagText ids
+        DescribeTag tagText descWords ->
+          describeTag conf connection tagText (T.unwords descWords)
+        DeleteTagDescription tagText ->
+          deleteTagDescription conf connection tagText
         BlockTasks blockerId blockedId ->
           blockTasks conf connection blockerId blockedId
         UnblockTasks blockerId blockedId ->

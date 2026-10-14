@@ -501,32 +501,7 @@ _4_ =
         base
           { Migrations.querySet =
               [ tasksViewQuery_v4
-              , [sql|
-                  CREATE VIEW tags AS
-                  SELECT
-                    task_to_tag_1.tag,
-                    (count(task_to_tag_1.tag) - ifnull(closed_count, 0))
-                      AS "open",
-                    ifnull(closed_count, 0) AS closed,
-                    round(
-                      cast(ifnull(closed_count, 0) AS REAL) /
-                        count(task_to_tag_1.tag),
-                      6
-                    ) AS progress
-                  FROM
-                    task_to_tag AS task_to_tag_1
-                    LEFT JOIN (
-                      SELECT tag, count(tasks.ulid) AS closed_count
-                      FROM tasks
-                      LEFT JOIN task_to_tag
-                      ON tasks.ulid IS task_to_tag.task_ulid
-                      WHERE closed_utc IS NOT NULL
-                      GROUP BY tag
-                    ) AS task_to_tag_2
-                    ON task_to_tag_1.tag IS task_to_tag_2.tag
-                  GROUP BY task_to_tag_1.tag
-                  ORDER BY task_to_tag_1.tag ASC
-                |]
+              , tagsViewQuery_v4
               ]
           }
       MigrateDown ->
@@ -1310,6 +1285,113 @@ _8_ =
           }
 
 
+-- | View definition for tags in migration 4 (no descriptions yet)
+tagsViewQuery_v4 :: Query
+tagsViewQuery_v4 =
+  [sql|
+    CREATE VIEW tags AS
+    SELECT
+      task_to_tag_1.tag,
+      (count(task_to_tag_1.tag) - ifnull(closed_count, 0))
+        AS "open",
+      ifnull(closed_count, 0) AS closed,
+      round(
+        cast(ifnull(closed_count, 0) AS REAL) /
+          count(task_to_tag_1.tag),
+        6
+      ) AS progress
+    FROM
+      task_to_tag AS task_to_tag_1
+      LEFT JOIN (
+        SELECT tag, count(tasks.ulid) AS closed_count
+        FROM tasks
+        LEFT JOIN task_to_tag
+        ON tasks.ulid IS task_to_tag.task_ulid
+        WHERE closed_utc IS NOT NULL
+        GROUP BY tag
+      ) AS task_to_tag_2
+      ON task_to_tag_1.tag IS task_to_tag_2.tag
+    GROUP BY task_to_tag_1.tag
+    ORDER BY task_to_tag_1.tag ASC
+  |]
+
+
+-- | View of all used tags with their progress (migration 9)
+tagsViewQuery_v9 :: Query
+tagsViewQuery_v9 =
+  [sql|
+    CREATE VIEW tags_view AS
+    SELECT
+      task_to_tag_1.tag,
+      (count(task_to_tag_1.tag) - ifnull(closed_count, 0))
+        AS "open",
+      ifnull(closed_count, 0) AS closed,
+      round(
+        cast(ifnull(closed_count, 0) AS REAL) /
+          count(task_to_tag_1.tag),
+        6
+      ) AS progress,
+      tags.description AS description
+    FROM
+      task_to_tag AS task_to_tag_1
+      LEFT JOIN (
+        SELECT tag, count(tasks.ulid) AS closed_count
+        FROM tasks
+        LEFT JOIN task_to_tag
+        ON tasks.ulid IS task_to_tag.task_ulid
+        WHERE closed_utc IS NOT NULL
+        GROUP BY tag
+      ) AS task_to_tag_2
+      ON task_to_tag_1.tag IS task_to_tag_2.tag
+      LEFT JOIN tags
+      ON task_to_tag_1.tag IS tags.tag
+    GROUP BY task_to_tag_1.tag
+    ORDER BY task_to_tag_1.tag ASC
+  |]
+
+
+{-| Migration 9: Add a `tags` table to store additional data for tags
+(e.g. a description). The former `tags` view is renamed to `tags_view`.
+Tags are not normalized (i.e. `task_to_tag` keeps referencing them by name),
+as they are short and a name is therefore a sufficient natural key.
+-}
+_9_ :: MigrateDirection -> Migration
+_9_ =
+  let
+    base =
+      Migration
+        { id = UserVersion 9
+        , querySet = []
+        }
+  in
+    \case
+      MigrateUp ->
+        base
+          { Migrations.querySet =
+              [ "DROP VIEW IF EXISTS tags"
+              , [sql|
+                  CREATE TABLE tags (
+                    tag          TEXT NOT NULL PRIMARY KEY,
+                    description  TEXT,
+                    modified_utc TEXT NOT NULL,
+                    CONSTRAINT non_empty_tag CHECK (length(tag) > 0),
+                    CONSTRAINT non_empty_description
+                      CHECK (description IS NULL OR length(description) > 0)
+                  )
+                |]
+              , tagsViewQuery_v9
+              ]
+          }
+      MigrateDown ->
+        base
+          { Migrations.querySet =
+              [ "DROP VIEW IF EXISTS tags_view"
+              , "DROP TABLE IF EXISTS tags"
+              , tagsViewQuery_v4
+              ]
+          }
+
+
 hasDuplicates :: (Eq a) => [a] -> Bool
 hasDuplicates [] = False
 hasDuplicates (x : xs) =
@@ -1373,7 +1455,7 @@ runMigrations _ connection = do
       IO [UserVersion]
 
   let
-    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_]
+    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_]
 
     migrationsUp = fmap ($ MigrateUp) migrations
     (UserVersion userVersionMax) =

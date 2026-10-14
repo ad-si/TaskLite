@@ -11,6 +11,13 @@ This document lists all notable changes to the functionality of TaskLite.
 
 #### 💻 General
 
+- Support descriptions for tags via `tl describetag <tag> <description>`
+    and `tl deletetagdescription <tag>`.
+    They are stored in the new `tags` table
+    and shown by `tl tags` and `tl projects`.
+- **Breaking:** Rename the `tags` view to `tags_view`
+    (the name `tags` is now used by the new table)
+    and add a `description` column to it.
 - Add a `--utc` flag to `tl do`, `tl doonly`, `tl doall`, `tl end`, and
     `tl endall` to set an explicit closing timestamp instead of the
     current time (e.g. `tl do <id> --utc "2020-01-15 08:30:00"`).

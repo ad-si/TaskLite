@@ -2223,6 +2223,84 @@ deleteTag conf connection tag ids = do
   pure $ vsep docs
 
 
+-- | Set (or replace) the description of a tag
+describeTag :: Config -> Connection -> Text -> Text -> IO (Doc AnsiStyle)
+describeTag conf connection tag description = do
+  let
+    tagNorm = T.dropWhile (== '+') tag
+    descNorm = T.strip description
+
+  if
+    | T.null tagNorm ->
+        pure $ annotate (colr conf Red) "ERROR: Tag must not be empty"
+    | T.null descNorm ->
+        pure $ annotate (colr conf Red) "ERROR: Description must not be empty"
+    | otherwise -> do
+        now <- fmap (T.pack . timePrint conf.utcFormat) timeCurrentP
+
+        executeNamed
+          connection
+          [sql|
+            INSERT INTO tags (tag, description, modified_utc)
+            VALUES (:tag, :description, :now)
+            ON CONFLICT (tag) DO UPDATE SET
+              description = excluded.description,
+              modified_utc = excluded.modified_utc
+          |]
+          [ ":tag" := tagNorm
+          , ":description" := descNorm
+          , ":now" := now
+          ]
+
+        usages :: [Only Integer] <-
+          query
+            connection
+            "SELECT count(*) FROM task_to_tag WHERE tag == ?"
+            (Only tagNorm)
+
+        let
+          successMsg =
+            "📝 Set description of tag" <+> dquotes (pretty tagNorm)
+          unusedWarning =
+            annotate (colr conf Yellow) $
+              "⚠️  Tag"
+                <+> dquotes (pretty tagNorm)
+                <+> "is not assigned to any task yet"
+
+        pure $ case usages of
+          [Only 0] -> successMsg <> hardline <> unusedWarning
+          _ -> successMsg
+
+
+-- | Delete the description of a tag
+deleteTagDescription :: Config -> Connection -> Text -> IO (Doc AnsiStyle)
+deleteTagDescription conf connection tag = do
+  let tagNorm = T.dropWhile (== '+') tag
+
+  now <- fmap (T.pack . timePrint conf.utcFormat) timeCurrentP
+
+  executeNamed
+    connection
+    [sql|
+      UPDATE tags
+      SET description = NULL, modified_utc = :now
+      WHERE tag == :tag AND description IS NOT NULL
+    |]
+    [ ":tag" := tagNorm
+    , ":now" := now
+    ]
+
+  numOfChanges <- changes connection
+
+  pure $
+    if numOfChanges == 0
+      then
+        annotate (colr conf Yellow) $
+          "⚠️  Tag" <+> dquotes (pretty tagNorm) <+> "has no description"
+      else
+        "💥 Deleted description of tag" <+> dquotes (pretty tagNorm)
+
+
 {-| Insert a single `task_to_task` row, resolving raw source/target ULIDs
 (no prefix expansion — caller is expected to have already resolved them).
 Catches the table's CHECK / UNIQUE constraint errors and turns them into
@@ -3862,9 +3940,12 @@ getProgressBar conf maxWidthInChars progress =
       annotate (bgColrDull conf Black) (fill remainingWidth "")
 
 
-formatTagLine ::
-  Config -> Int -> (Text, Integer, Integer, Double) -> Doc AnsiStyle
-formatTagLine conf maxTagLength (tag, open_count, closed_count, progress) =
+-- | Row of the `tags_view` view
+type TagRow = (Text, Integer, Integer, Double, Maybe Text)
+
+
+formatTagLine :: Config -> Int -> Bool -> TagRow -> Doc AnsiStyle
+formatTagLine conf maxTagLength showDesc (tag, open_count, closed_count, progress, descMb) =
   let
     barWidth = toInteger $ progressBarWidth conf
     progressPercentage =
@@ -3883,36 +3964,54 @@ formatTagLine conf maxTagLength (tag, open_count, closed_count, progress) =
       <++> pretty (T.justifyRight (T.length "closed") ' ' $ show closed_count)
       <++> progressPercentage
       <+> getProgressBar conf barWidth progress
+        <> ( if showDesc
+               then case descMb of
+                 Just desc -> "  " <> pretty desc
+                 Nothing -> mempty
+               else mempty
+           )
 
 
-formatTags :: Config -> [(Text, Integer, Integer, Double)] -> Doc AnsiStyle
-formatTags conf tagTuples = do
+formatTags :: Config -> [TagRow] -> Doc AnsiStyle
+formatTags conf tagRows = do
   let
     percWidth = 6 -- Width of e.g. 100 %
     progressWith = conf.progressBarWidth + percWidth
-    firstOf4 (a, _, _, _) = a
+    showDesc = P.any (\(_, _, _, _, descMb) -> P.isJust descMb) tagRows
     maxTagLength =
-      tagTuples
-        <&> (T.length . firstOf4)
+      tagRows
+        <&> (\(tag, _, _, _, _) -> T.length tag)
         & P.maximum
+    headerStyle = maybeBold conf <> maybeUnderlined conf
 
-  if P.null tagTuples
+  if P.null tagRows
     then
       annotate
         (colr conf Yellow)
         "⚠️ No tags available"
     else
-      annotate (maybeBold conf <> maybeUnderlined conf) (fill maxTagLength "Tag")
-        <++> annotate (maybeBold conf <> maybeUnderlined conf) "Open"
-        <++> annotate (maybeBold conf <> maybeUnderlined conf) "Closed"
-        <++> annotate (maybeBold conf <> maybeUnderlined conf) (fill progressWith "Progress")
+      annotate headerStyle (fill maxTagLength "Tag")
+        <++> annotate headerStyle "Open"
+        <++> annotate headerStyle "Closed"
+        <++> ( if showDesc
+                 then
+                   annotate headerStyle (fill progressWith "Progress")
+                     <++> annotate headerStyle "Description"
+                 else annotate headerStyle (fill progressWith "Progress")
+             )
         <> line
-        <> vsep (fmap (formatTagLine conf maxTagLength) tagTuples)
+        <> vsep (fmap (formatTagLine conf maxTagLength showDesc) tagRows)
 
 
 listTags :: Config -> Connection -> IO (Doc AnsiStyle)
 listTags conf connection = do
-  tags <- query_ connection $ Query "SELECT * FROM tags"
+  tags <-
+    query_
+      connection
+      [sql|
+        SELECT tag, "open", closed, progress, description
+        FROM tags_view
+      |]
 
   pure $ formatTags conf tags
 
@@ -3923,8 +4022,8 @@ listProjects conf connection = do
     query_
       connection
       [sql|
-        SELECT *
-        FROM tags
+        SELECT tag, "open", closed, progress, description
+        FROM tags_view
         WHERE
           "open" > 0 AND
           closed > 0

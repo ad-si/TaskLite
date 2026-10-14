@@ -70,7 +70,9 @@ import Lib (
   countTasks,
   deleteNote,
   deleteTag,
+  deleteTagDescription,
   deleteTasks,
+  describeTag,
   doTasks,
   duplicateTasks,
   endTasks,
@@ -79,6 +81,7 @@ import Lib (
   insertRecord,
   insertTags,
   listNotes,
+  listTags,
   logTask,
   newTasks,
   nextTask,
@@ -326,6 +329,52 @@ spec = do
         insertRecord "tasks" memConn exampleTask
         delResult <- deleteTag conf memConn "test" [exampleTask.ulid]
         unpack (show delResult) `shouldContain` "not set"
+
+    it "describes a tag" $ do
+      withMemoryDb conf $ \memConn -> do
+        insertRecord "tasks" memConn exampleTask
+        _ <- addTag conf memConn "test" [exampleTask.ulid]
+        descResult <- describeTag conf memConn "+test" "  A test tag "
+        unpack (show descResult)
+          `shouldBe` "📝 Set description of tag \"test\""
+        descs :: [(P.Text, P.Text)] <-
+          query_ memConn "SELECT tag, description FROM tags"
+        descs `shouldBe` [("test", "A test tag")]
+        tagsResult <- listTags conf memConn
+        unpack (show tagsResult) `shouldContain` "Description"
+        unpack (show tagsResult) `shouldContain` "A test tag"
+
+    it "replaces the description of a tag" $ do
+      withMemoryDb conf $ \memConn -> do
+        _ <- describeTag conf memConn "test" "Old"
+        _ <- describeTag conf memConn "test" "New"
+        descs :: [[P.Text]] <-
+          query_ memConn "SELECT description FROM tags"
+        descs `shouldBe` [["New"]]
+
+    it "warns when describing an unused tag" $ do
+      withMemoryDb conf $ \memConn -> do
+        descResult <- describeTag conf memConn "unused" "Some description"
+        unpack (show descResult) `shouldContain` "not assigned to any task"
+
+    it "rejects an empty tag description" $ do
+      withMemoryDb conf $ \memConn -> do
+        descResult <- describeTag conf memConn "test" "  "
+        unpack (show descResult) `shouldContain` "must not be empty"
+        descs :: [[P.Text]] <- query_ memConn "SELECT tag FROM tags"
+        descs `shouldBe` []
+
+    it "deletes the description of a tag" $ do
+      withMemoryDb conf $ \memConn -> do
+        _ <- describeTag conf memConn "test" "A test tag"
+        delResult <- deleteTagDescription conf memConn "test"
+        unpack (show delResult)
+          `shouldBe` "💥 Deleted description of tag \"test\""
+        descs :: [[Maybe P.Text]] <-
+          query_ memConn "SELECT description FROM tags"
+        descs `shouldBe` [[Nothing]]
+        delAgainResult <- deleteTagDescription conf memConn "test"
+        unpack (show delAgainResult) `shouldContain` "has no description"
 
     it "blocks one task by another" $ do
       withMemoryDb conf $ \memConn -> do
