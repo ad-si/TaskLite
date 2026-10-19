@@ -3275,6 +3275,39 @@ countTasks conf connection filterExpression = do
       pure $ errorsDoc & fromMaybe (pretty $ P.length (tasks :: [FullTask]))
 
 
+-- | List only the ULIDs (one per line) of tasks matching the filter expressions
+listUlids :: Config -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
+listUlids conf connection filterExpressionMb = do
+  let
+    dieWithError :: Doc AnsiStyle -> IO a
+    dieWithError err = do
+      hPutDoc stderr $ annotate (colr conf Red) (err <> hardline)
+      exitFailure
+
+  filterExps <- case filterExpressionMb of
+    Nothing -> pure []
+    Just exps ->
+      case readP_to_S filterExpsParser $ T.unpack $ unwords exps of
+        [(filterExps, _)] -> pure filterExps
+        _ ->
+          dieWithError
+            "Filter expressions must be a list of key[:value] entries."
+
+  let
+    ppInvalidFilter = \case
+      (InvalidFilter error) -> dquotes (pretty error) <+> "is an invalid filter"
+      (HasStatus Nothing) -> "Filter contains an invalid state value"
+      _ -> "The functions should not be called with a valid function"
+    errors = P.filter (not . isValidFilter) filterExps
+
+  P.when (P.length errors > 0) $
+    dieWithError $
+      vsep (fmap ppInvalidFilter errors)
+
+  tasks <- query_ connection (getFilterQuery filterExps Nothing Nothing)
+  pure $ vsep $ fmap (\task -> pretty task.ulid) (tasks :: [FullTask])
+
+
 -- | Query a view with an optional limit and format the results
 listFromView ::
   Config ->

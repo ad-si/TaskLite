@@ -207,6 +207,7 @@ import Lib (
   listRecurring,
   listRepeating,
   listTags,
+  listUlids,
   listWaiting,
   listWithTag,
   logTask,
@@ -358,6 +359,7 @@ data Command
   | ListNoTag
   | ListWithTag [Text]
   | CountFiltered (Maybe [Text])
+  | ListUlids (Maybe [Text])
   | QueryTasks Text
   | RunSql Text
   | RunFilter [Text] --
@@ -958,7 +960,6 @@ commandParser conf =
     -- <> command "calendar" -- "Calendar view of all open tasks"
     -- <> command "history" -- "History of tasks"
     -- <> command "stats" -- "Statistics of all tasks"
-    -- <> command "ulids" -- "List all ULIDs"
 
     <> command "tags" (toParserInfo (pure Tags)
         "List all used tags and their progress")
@@ -1041,6 +1042,12 @@ commandParser conf =
           (CountFiltered <$> optional ( some
             (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions")))
         "Output total number of tasks filtered by the specified expressions")
+
+    <> command "ulids"
+        (toParserInfo
+          (ListUlids <$> optional ( some
+            (strArgument $ metavar "FILTER_EXP" <> help "Filter expressions")))
+        "Output ULIDs of all tasks filtered by the specified expressions")
 
     <> command "config" (toParserInfo (pure PrintConfig)
         "Print current configuration of TaskLite")
@@ -1492,6 +1499,7 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         SetDueUtc datetime ids -> setDueUtc conf connection datetime ids
         Duplicate ids -> duplicateTasks conf connection ids
         CountFiltered taskFilter -> countTasks conf connection taskFilter
+        ListUlids taskFilter -> listUlids conf connection taskFilter
         {- Unset -}
         UnCloseTasks ids -> uncloseTasks conf connection ids
         UnDueTasks ids -> undueTasks conf connection ids

@@ -123,7 +123,7 @@ summary         | projects| Filtered project summary
 tags            | tags    | Filtered list of tags
 timesheet       | -       | Weekly timesheet report
 udas            | -       | Details of all defined UDAs
-uuids           | -       | Filtered list of UUIDs
+uuids           | ulids   | Filtered list of UUIDs
 \_aliases       | -       | List of active aliases
 \_columns       | -       | List of supported columns
 \_commands      | -       | List of supported commands

@@ -11,6 +11,8 @@ This document lists all notable changes to the functionality of TaskLite.
 
 #### 💻 General
 
+- Add `tl ulids [FILTER_EXP…]` to print only the ULIDs of matching tasks
+    (one per line, e.g. for piping into other commands).
 - Support descriptions for tags via `tl describetag <tag> <description>`
     and `tl deletetagdescription <tag>`.
     They are stored in the new `tags` table

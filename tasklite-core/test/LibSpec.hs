@@ -42,6 +42,7 @@ import Test.Hspec (
   shouldBe,
   shouldContain,
   shouldEndWith,
+  shouldMatchList,
   shouldNotBe,
   shouldNotContain,
   shouldNotSatisfy,
@@ -82,6 +83,7 @@ import Lib (
   insertTags,
   listNotes,
   listTags,
+  listUlids,
   logTask,
   newTasks,
   nextTask,
@@ -874,6 +876,23 @@ spec = do
       show countWithTag `shouldBe` ("1" :: Text)
 
       pure ()
+
+  it "lists ULIDs of tasks" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord "tasks" memConn task1
+      insertRecord "tasks" memConn task2
+      warnings <- insertTags conf memConn Nothing task2 ["test"]
+      P.show warnings `shouldBe` T.empty
+
+      allUlids <- listUlids defaultConfig memConn P.mempty
+      T.lines (show allUlids)
+        `shouldMatchList` [task1.ulid, task2.ulid]
+
+      ulidsWithTag <- listUlids defaultConfig memConn (Just ["+test"])
+      show ulidsWithTag `shouldBe` task2.ulid
+
+      listUlids defaultConfig memConn (Just ["invalid"])
+        `shouldThrow` (== ExitFailure 1)
 
   it "gets new tasks" $ do
     withMemoryDb defaultConfig $ \memConn -> do
