@@ -97,8 +97,12 @@ If both are specified, they are combined.
 And even to set certain fields:
 
 ```shell
-tl add Buy milk +groceries due:2020-09-01 created:2020-08-27
+tl add Buy milk +groceries \
+  awake:2020-08-29 ready:2020-08-31 due:2020-09-01 created:2020-08-27
 ```
+
+`awake:` hides the task until the given datetime,
+`ready:` is the earliest datetime it can be started.
 
 A new task can also be linked to existing tasks at add time using
 `blocks:<id>` (this task blocks the referenced task) or

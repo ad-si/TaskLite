@@ -643,16 +643,29 @@ formatUlid =
   fmap (T.toLower . show)
 
 
+-- | Body of a task and the meta data extracted from it
+data ParsedBody = ParsedBody
+  { parsedBody :: Text
+  , parsedTags :: [Text]
+  , parsedDueUtc :: Maybe Text
+  , parsedAwakeUtc :: Maybe Text
+  , parsedReadyUtc :: Maybe Text
+  , parsedCreatedUtc :: Maybe DateTime
+  , parsedBlocks :: [Text]
+  , parsedBlockedBy :: [Text]
+  }
+
+
 {-| Parses the body of the tasks and extracts all meta data
- | Returns a tuple (body, tags, dueUtcMb, createdUtcMb)
  TODO: Replace with parsec implementation
 -}
-parseTaskBody ::
-  [Text] -> (Text, [Text], Maybe Text, Maybe DateTime, [Text], [Text])
+parseTaskBody :: [Text] -> ParsedBody
 parseTaskBody bodyWords =
   let
     isTag = ("+" `T.isPrefixOf`)
     isDueUtc = ("due:" `T.isPrefixOf`)
+    isAwakeUtc = ("awake:" `T.isPrefixOf`)
+    isReadyUtc = ("ready:" `T.isPrefixOf`)
     isCreatedUtc = ("created:" `T.isPrefixOf`)
     isBlocks = ("blocks:" `T.isPrefixOf`)
     isBlockedBy w =
@@ -660,44 +673,50 @@ parseTaskBody bodyWords =
     isMeta word =
       isTag word
         || isDueUtc word
+        || isAwakeUtc word
+        || isReadyUtc word
         || isCreatedUtc word
         || isBlocks word
         || isBlockedBy word
     -- Handle case when word is actually a text
     bodyWordsReversed = bodyWords & T.unwords & T.words & P.reverse
-    body =
-      bodyWordsReversed
-        & P.dropWhile isMeta
-        & P.reverse
-        & unwords
     metadata =
       bodyWordsReversed
         & P.takeWhile isMeta
         & P.reverse
-    tags = fmap (T.replace "+" "") (P.filter isTag metadata)
-    dueUtcMb =
+    getUtc isField prefix =
       metadata
-        & P.filter isDueUtc
-          <&> T.replace "due:" ""
+        & P.filter isField
+          <&> T.replace prefix ""
         & P.lastMay
           >>= parseUtc
-          <&> (timePrint utcFormatReadable >>> T.pack)
-    createdUtcMb =
-      metadata
-        & P.filter isCreatedUtc
-          <&> T.replace "created:" ""
-        & P.lastMay
-          >>= parseUtc
-    blocks =
-      metadata
-        & P.filter isBlocks
-          <&> T.replace "blocks:" ""
-    blockedBy =
-      metadata
-        & P.filter isBlockedBy
-          <&> (T.replace "blocked-by:" "" >>> T.replace "blockedby:" "")
   in
-    (body, tags, dueUtcMb, createdUtcMb, blocks, blockedBy)
+    ParsedBody
+      { parsedBody =
+          bodyWordsReversed
+            & P.dropWhile isMeta
+            & P.reverse
+            & unwords
+      , parsedTags = fmap (T.replace "+" "") (P.filter isTag metadata)
+      , parsedDueUtc =
+          getUtc isDueUtc "due:"
+            <&> (timePrint utcFormatReadable >>> T.pack)
+      , parsedAwakeUtc =
+          getUtc isAwakeUtc "awake:"
+            <&> (timePrint utcFormatReadable >>> T.pack)
+      , parsedReadyUtc =
+          getUtc isReadyUtc "ready:"
+            <&> (timePrint utcFormatReadable >>> T.pack)
+      , parsedCreatedUtc = getUtc isCreatedUtc "created:"
+      , parsedBlocks =
+          metadata
+            & P.filter isBlocks
+              <&> T.replace "blocks:" ""
+      , parsedBlockedBy =
+          metadata
+            & P.filter isBlockedBy
+              <&> (T.replace "blocked-by:" "" >>> T.replace "blockedby:" "")
+      }
 
 
 -- | Get (ulid, modified_utc, effectiveUserName) from the environment
@@ -734,21 +753,22 @@ addTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 addTask conf connection bodyWords = do
   (ulid, modified_utc, effectiveUserName) <- getTriple conf
   let
-    (body, tags, dueUtcMb, createdUtcMb, blocks, blockedBy) =
-      parseTaskBody bodyWords
+    parsed = parseTaskBody bodyWords
     importTaskDraft =
       ImportTask
         { task =
             emptyTask
-              { Task.ulid = T.toLower $ show $ case createdUtcMb of
+              { Task.ulid = T.toLower $ show $ case parsed.parsedCreatedUtc of
                   Nothing -> ulid
                   Just createdUtc -> setDateTime ulid createdUtc
-              , Task.body = body
-              , Task.due_utc = dueUtcMb
+              , Task.body = parsed.parsedBody
+              , Task.due_utc = parsed.parsedDueUtc
+              , Task.awake_utc = parsed.parsedAwakeUtc
+              , Task.ready_utc = parsed.parsedReadyUtc
               , Task.modified_utc = modified_utc
               , Task.user = T.pack effectiveUserName
               }
-        , tags = tags
+        , tags = parsed.parsedTags
         , notes = [] -- TODO: Add notes to task
         , closedUtcWasExplicit = False
         }
@@ -790,7 +810,13 @@ addTask conf connection bodyWords = do
   tagWarnings <-
     insertTags conf connection Nothing importTask.task importTask.tags
   relWarnings <-
-    addRelations conf connection importTask.task "blocks" blocks blockedBy
+    addRelations
+      conf
+      connection
+      importTask.task
+      "blocks"
+      parsed.parsedBlocks
+      parsed.parsedBlockedBy
   let warnings = vsepCollapse [tagWarnings, relWarnings]
 
   -- TODO: Use RETURNING clause in `insertRecord` instead
@@ -845,17 +871,18 @@ logTask :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 logTask conf connection bodyWords = do
   (ulid, modified_utc, effectiveUserName) <- getTriple conf
   let
-    (body, extractedTags, dueUtcMb, createdUtcMb, _blocks, _blockedBy) =
-      parseTaskBody bodyWords
-    tags = extractedTags <> ["log"]
+    parsed = parseTaskBody bodyWords
+    tags = parsed.parsedTags <> ["log"]
     task =
       emptyTask
-        { Task.ulid = T.toLower $ show $ case createdUtcMb of
+        { Task.ulid = T.toLower $ show $ case parsed.parsedCreatedUtc of
             Nothing -> ulid
             Just createdUtc -> setDateTime ulid createdUtc
-        , Task.body = body
+        , Task.body = parsed.parsedBody
         , Task.state = Just Done
-        , Task.due_utc = dueUtcMb
+        , Task.due_utc = parsed.parsedDueUtc
+        , Task.awake_utc = parsed.parsedAwakeUtc
+        , Task.ready_utc = parsed.parsedReadyUtc
         , Task.closed_utc = Just modified_utc
         , Task.user = T.pack effectiveUserName
         , Task.modified_utc = modified_utc

@@ -101,6 +101,7 @@ import Lib (
 import Note (Note)
 import Task (
   Task (
+    awake_utc,
     body,
     closed_utc,
     due_utc,
@@ -765,6 +766,24 @@ spec = do
               , FullTask.priority = Just 2.0
               , FullTask.tags = Just ["tag", "what"]
               }
+        _ -> P.die "Found more than one task"
+
+  it "adds a task with awake, ready, and due date" $ do
+    withMemoryDb conf $ \memConn -> do
+      _ <-
+        addTask
+          conf
+          memConn
+          [ "Mow the lawn awake:2082-09-26 +garden \
+            \ready:2082-09-30 due:2082-10-03"
+          ]
+      (tasks :: [Task]) <- query_ memConn "SELECT * FROM tasks"
+      case tasks of
+        [task] -> do
+          task.body `shouldBe` "Mow the lawn"
+          task.awake_utc `shouldBe` Just "2082-09-26 00:00:00"
+          task.ready_utc `shouldBe` Just "2082-09-30 00:00:00"
+          task.due_utc `shouldBe` Just "2082-10-03 00:00:00"
         _ -> P.die "Found more than one task"
 
   it "deduplicates tags when adding a task" $ do
