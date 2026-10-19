@@ -105,14 +105,14 @@ colors       | -          | Demonstrates all supported colors
 [columns]    | -          | List of report columns and supported formats
 commands     | help       | List of commands, with their behaviors
 diagnostics  | -          | Show diagnostics, for troubleshooting
-ghistory.annual | -       | History graph, by year
-ghistory.monthly| -       | History graph, by month
-ghistory.weekly | -       | History graph, by week
-ghistory.daily  | -       | History graph, by day
-history.annual  | -       | History report, by year
-history.monthly | -       | History report, by month
-history.weekly  | -       | History report, by week
-history.daily   | -       | History report, by day
+ghistory.annual | history --by year | History graph, by year
+ghistory.monthly| history --by month| History graph, by month
+ghistory.weekly | history | History graph, by week
+ghistory.daily  | history --by day  | History graph, by day
+history.annual  | history --by year | History report, by year
+history.monthly | history --by month | History report, by month
+history.weekly  | history | History report, by week
+history.daily   | history --by day  | History report, by day
 ids             | -       | Filtered list of task IDs
 [information]   | info    | All attributes shown
 projects        | projects| List of projects (project in TL = active tag)

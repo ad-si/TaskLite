@@ -104,6 +104,7 @@ import Options.Applicative (
   renderFailure,
   strArgument,
   switch,
+  value,
  )
 import Options.Applicative.Help.Chunk (Chunk (Chunk), (<<+>>))
 import Options.Applicative.Help.Core (parserHelp)
@@ -158,6 +159,7 @@ import Config (
  )
 import Data.Map.Strict qualified as Map
 import Control.Arrow ((>>>))
+import History (HistoryPeriod (..))
 import Hooks (executeHooks, formatHookResult)
 import ImportExport (
   backupDatabase,
@@ -199,6 +201,7 @@ import Lib (
   headTasks,
   infoTask,
   listAll,
+  listHistory,
   listNoTag,
   listNotes,
   listOldTasks,
@@ -368,6 +371,7 @@ data Command
   | Projects -- List all active tags
   | Notes -- List all notes
   | Stats -- List statistics about tasks
+  | History HistoryPeriod (Maybe [Text])
   {- Unset -}
   | -- \| Active -- Started tasks
     -- \| Blocked -- Tasks that are blocked by other tasks (newest first)
@@ -514,6 +518,24 @@ closedUtcOption =
           <> metavar "CLOSE_UTC"
           <> help "Timestamp when the task was closed (instead of now)"
       )
+
+
+-- | Optional `--by` flag to set the period for grouping the history
+historyPeriodOption :: Parser HistoryPeriod
+historyPeriodOption =
+  option
+    ( maybeReader $ \case
+        "day" -> Just Daily
+        "week" -> Just Weekly
+        "month" -> Just Monthly
+        "year" -> Just Annual
+        _ -> Nothing
+    )
+    ( long "by"
+        <> metavar "day|week|month|year"
+        <> value Weekly
+        <> help "Period by which the tasks are grouped (default: week)"
+    )
 
 
 -- | Help Sections
@@ -958,7 +980,6 @@ commandParser conf =
     -- <> command "kanban" -- "List tasks columnized by state"
     -- <> command "burndown" -- "Burndown chart by week"
     -- <> command "calendar" -- "Calendar view of all open tasks"
-    -- <> command "history" -- "History of tasks"
     -- <> command "stats" -- "Statistics of all tasks"
 
     <> command "tags" (toParserInfo (pure Tags)
@@ -972,6 +993,12 @@ commandParser conf =
 
     <> command "stats" (toParserInfo (pure Stats)
         "Show statistics about tasks")
+
+    <> command "history" (toParserInfo (History
+          <$> historyPeriodOption
+          <*> optional (some (strArgument
+                (metavar "FILTER_EXP" <> help "Filter expressions"))))
+        "Show number of added and closed tasks per period")
 
     )
 
@@ -1423,6 +1450,8 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         Projects -> listProjects conf connection
         Notes -> listNotes conf connection
         Stats -> getStats conf connection
+        History period taskFilter ->
+          listHistory conf now connection period taskFilter availableLinesMb
         ImportFile filePath -> importFile conf connection filePath
         ImportDir filePath -> importDir conf connection filePath
         ImportJson -> importJson conf connection

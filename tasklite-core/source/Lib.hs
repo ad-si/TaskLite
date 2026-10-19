@@ -232,6 +232,7 @@ import FullTask (
   cpTimesAndState,
   selectQuery,
  )
+import History (HistoryPeriod, getHistory)
 import Hooks (HookResult (message, task), executeHooks, formatHookResult)
 import ImportTask (
   ImportTask (ImportTask, closedUtcWasExplicit, notes, tags, task),
@@ -3275,9 +3276,12 @@ countTasks conf connection filterExpression = do
       pure $ errorsDoc & fromMaybe (pretty $ P.length (tasks :: [FullTask]))
 
 
--- | List only the ULIDs (one per line) of tasks matching the filter expressions
-listUlids :: Config -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
-listUlids conf connection filterExpressionMb = do
+{-| Query all tasks matching the filter expressions
+| or exit with an error if the expressions are invalid
+-}
+queryFilteredTasksOrDie ::
+  Config -> Connection -> Maybe [Text] -> IO [FullTask]
+queryFilteredTasksOrDie conf connection filterExpressionMb = do
   let
     dieWithError :: Doc AnsiStyle -> IO a
     dieWithError err = do
@@ -3304,8 +3308,30 @@ listUlids conf connection filterExpressionMb = do
     dieWithError $
       vsep (fmap ppInvalidFilter errors)
 
-  tasks <- query_ connection (getFilterQuery filterExps Nothing Nothing)
-  pure $ vsep $ fmap (\task -> pretty task.ulid) (tasks :: [FullTask])
+  query_ connection (getFilterQuery filterExps Nothing Nothing)
+
+
+-- | List only the ULIDs (one per line) of tasks matching the filter expressions
+listUlids :: Config -> Connection -> Maybe [Text] -> IO (Doc AnsiStyle)
+listUlids conf connection filterExpressionMb = do
+  tasks <- queryFilteredTasksOrDie conf connection filterExpressionMb
+  pure $ vsep $ fmap (\task -> pretty task.ulid) tasks
+
+
+{-| Number of added and closed tasks per period
+| of the tasks matching the filter expressions
+-}
+listHistory ::
+  Config ->
+  DateTime ->
+  Connection ->
+  HistoryPeriod ->
+  Maybe [Text] ->
+  Maybe Int ->
+  IO (Doc AnsiStyle)
+listHistory conf now connection historyPeriod filterExpressionMb availableLinesMb = do
+  tasks <- queryFilteredTasksOrDie conf connection filterExpressionMb
+  pure $ getHistory conf historyPeriod now availableLinesMb tasks
 
 
 -- | Query a view with an optional limit and format the results

@@ -43,6 +43,7 @@ library
       Config
       Email
       FullTask
+      History
       Hooks
       ImportExport
       ImportTask
@@ -144,6 +145,7 @@ test-suite tasklite-test
   main-is: Spec.hs
   other-modules:
       EmailSpec
+      HistorySpec
       ImportExportSpec
       LibSpec
       MigrationsSpec

@@ -11,6 +11,10 @@ This document lists all notable changes to the functionality of TaskLite.
 
 #### 💻 General
 
+- Add `tl history [--by day|week|month|year] [FILTER_EXP…]`
+    to show the number of added and closed tasks per period (default: week)
+    as a table with a bar graph
+    (similar to Taskwarrior's `history` and `ghistory` reports).
 - Add `tl ulids [FILTER_EXP…]` to print only the ULIDs of matching tasks
     (one per line, e.g. for piping into other commands).
 - Support descriptions for tags via `tl describetag <tag> <description>`
