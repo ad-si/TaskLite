@@ -73,7 +73,14 @@ import Html.Styled.Attributes
     , type_
     , value
     )
-import Html.Styled.Events exposing (onCheck, onClick, onInput, onSubmit)
+import Html.Styled.Events
+  exposing
+    ( onCheck
+    , onClick
+    , onInput
+    , onSubmit
+    , stopPropagationOn
+    )
 import Iso8601
 import Json.Decode
 import List
@@ -82,6 +89,7 @@ import Markdown.Html
 import Markdown.Parser
 import Markdown.Renderer exposing (Renderer)
 import Random
+import Regex exposing (Regex)
 import Set
 import RemoteData exposing (RemoteData(..))
 import Tailwind.Theme exposing (..)
@@ -280,6 +288,147 @@ splitBody body =
       ( body, "" )
 
 
+{-| A part of a text which is either plain text or a URL
+-}
+type TextPart
+  = PlainText String
+  | UrlText String
+
+
+{-| Bare http(s) URLs.
+Trailing punctuation is excluded as it most likely belongs to the sentence.
+-}
+urlRegex : Regex
+urlRegex =
+  Regex.fromString "https?://[^\\s<>]*[^\\s<>.,;:!?'\")\\]]"
+    |> Maybe.withDefault Regex.never
+
+
+{-| Split a text into plain text and URL parts
+-}
+splitUrls : String -> List TextPart
+splitUrls str =
+  let
+    prependPlain plainText parts =
+      if String.isEmpty plainText
+        then parts
+        else PlainText plainText :: parts
+
+    ( reversedParts, endOfLastUrl ) =
+      Regex.find urlRegex str
+        |> List.foldl
+            (\match ( parts, offset ) -> ( UrlText match.match
+                  :: prependPlain (String.slice offset match.index str) parts
+              , match.index + String.length match.match
+              )
+            )
+            ( [], 0 )
+  in
+  reversedParts
+    |> prependPlain (String.dropLeft endOfLastUrl str)
+    |> List.reverse
+
+
+{-| Convert bare URLs in text inlines to links
+-}
+autolinkInlines : List Block.Inline -> List Block.Inline
+autolinkInlines inlines =
+  inlines
+    |> List.concatMap
+        (\inline -> case inline of
+            Block.Text str ->
+              splitUrls str
+                |> List.map
+                    (\part -> case part of
+                        PlainText plainText ->
+                          Block.Text plainText
+                        UrlText url ->
+                          Block.Link url Nothing [ Block.Text url ]
+                    )
+            Block.Emphasis children ->
+              [ Block.Emphasis (autolinkInlines children) ]
+            Block.Strong children ->
+              [ Block.Strong (autolinkInlines children) ]
+            Block.Strikethrough children ->
+              [ Block.Strikethrough (autolinkInlines children) ]
+            _ ->
+              [ inline ]
+        )
+
+
+{-| Convert bare URLs in all inlines of a block to links
+-}
+autolinkBlock : Block.Block -> Block.Block
+autolinkBlock block =
+  case block of
+    Block.HtmlBlock (Block.HtmlElement tag attributes children) ->
+      Block.HtmlBlock
+        (Block.HtmlElement tag attributes (List.map autolinkBlock children))
+    Block.HtmlBlock _ ->
+      block
+    Block.UnorderedList spacing items ->
+      Block.UnorderedList
+        spacing
+        (items
+          |> List.map
+              (\(Block.ListItem task children) -> Block.ListItem task (List.map autolinkBlock children)
+              )
+        )
+    Block.OrderedList spacing startIndex items ->
+      Block.OrderedList
+        spacing
+        startIndex
+        (List.map (List.map autolinkBlock) items)
+    Block.BlockQuote children ->
+      Block.BlockQuote (List.map autolinkBlock children)
+    Block.Heading level inlines ->
+      Block.Heading level (autolinkInlines inlines)
+    Block.Paragraph inlines ->
+      Block.Paragraph (autolinkInlines inlines)
+    Block.Table header rows ->
+      Block.Table
+        (header
+          |> List.map (\cell -> { cell | label = autolinkInlines cell.label })
+        )
+        (List.map (List.map autolinkInlines) rows)
+    Block.CodeBlock _ ->
+      block
+    Block.ThematicBreak ->
+      block
+
+
+{-| Link which doesn't trigger click handlers of its ancestors
+(e.g. expanding the task when clicking a link in its first line)
+-}
+viewLink :
+  String
+  -> Maybe String
+  -> List (Html.Styled.Html Msg)
+  -> Html.Styled.Html Msg
+viewLink destination maybeTitle children =
+  a
+    [ href destination
+    , css [ text_color inherit, underline, break_words ]
+    , viewMaybeAttribute maybeTitle title
+    , stopPropagationOn "click" (Json.Decode.succeed ( NoOp, True ))
+    ]
+    children
+
+
+{-| Render text with clickable URLs
+-}
+viewLinkifiedText : String -> List (Html.Styled.Html Msg)
+viewLinkifiedText str =
+  splitUrls str
+    |> List.map
+        (\part -> case part of
+            PlainText plainText ->
+              text plainText
+            UrlText url ->
+              viewLink url Nothing [ text url ]
+        )
+
+
 {-| Spacing between consecutive markdown blocks
 -}
 markdownBlockStyle : Css.Style
@@ -362,12 +511,7 @@ markdownRenderer =
   , emphasis = em [ css [ italic ] ]
   , strikethrough = del [ css [ line_through ] ]
   , hardLineBreak = br [] []
-  , link = \link children -> a
-      [ href link.destination
-      , css [ text_color blue_400 ]
-      , viewMaybeAttribute link.title title
-      ]
-      children
+  , link = \link children -> viewLink link.destination link.title children
   , image = \image -> img
       [ src image.src
       , alt image.alt
@@ -449,6 +593,7 @@ viewMarkdown markdown =
   case markdown
     |> Markdown.Parser.parse
     |> Result.mapError (always "Invalid markdown")
+    |> Result.map (List.map autolinkBlock)
     |> Result.andThen (Markdown.Renderer.render markdownRenderer) of
     Ok rendered ->
       div [] rendered
@@ -603,13 +748,14 @@ viewTodo now expandedTasks todo =
                   Nothing ->
                     css []
                 ]
-                [ text firstLine
-                , case expandableUlid of
-                  Just _ ->
-                    viewExpandIndicator isExpanded
-                  Nothing ->
-                    text ""
-                ]
+                (viewLinkifiedText firstLine
+                  ++ [ case expandableUlid of
+                    Just _ ->
+                      viewExpandIndicator isExpanded
+                    Nothing ->
+                      text ""
+                  ]
+                )
             , viewMaybe
                 todo.due_utc
                 (\due_utc -> span
