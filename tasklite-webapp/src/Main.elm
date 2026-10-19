@@ -514,115 +514,121 @@ viewTodo now expandedTasks todo =
         ]
     ]
     [ div
-        [ css [ flex_1, items_center ] ]
-        [ input
-            [ type_ "checkbox"
-            , css
-                [ mr_2
-                , relative
-                , Css.top (Css.px 1.5)
-                , ifDisabledElse
-                    (Css.batch [ opacity_50, cursor_not_allowed ])
-                    (\_ -> Css.batch [ opacity_60, cursor_pointer ])
-                ]
-            , ifDisabledElse
-                (title
-                  <|
-                    "Currently not supported.\n"
-                    ++ "Please use the CLI to complete this task."
-                )
-                (\_ -> css [])
-            , checked
-                (case todo.closed_utc of
-                    Just _ ->
-                      True
-                    _ ->
-                      False
-                )
-            , ifDisabledElse
-                (disabled True)
-                (\ulid -> onCheck
-                    (\bool ->
-                        if bool
-                          then SetDone ulid
-                          else
-                            -- TODO: Implement
-                            NoOp
-                    )
-                )
-            ]
-            []
-        , viewMaybe
-            todo.review_utc
-            (\review_utc ->
-                if review_utc < Iso8601.fromTime now
-                  then span
-                    [ css [ text_color green_500, text_sm, mr_4 ]
-                    , title "Must be reviewed"
+        [ css [ flex_1, flex, items_start ] ]
+        [ -- Zero-width space gives the wrapper the height of one text line,
+        -- so the checkbox is vertically centered on the first line
+        div
+            [ css [ flex, items_center, flex_none, mr_2 ] ]
+            [ input
+                [ type_ "checkbox"
+                , css
+                    [ m_0
+                    , ifDisabledElse
+                        (Css.batch [ opacity_50, cursor_not_allowed ])
+                        (\_ -> Css.batch [ opacity_60, cursor_pointer ])
                     ]
-                    [ text "🔎" ]
-                  else text ""
-            )
-        , span
-            [ css
-                [ inline_block
-                , mr_4
-                , case todo.due_utc of
-                  Just due_utc ->
-                    if due_utc < Iso8601.fromTime now
-                      then Css.batch
-                        [ text_color red_600
-                        , dark [ text_color red_400 ]
+                , ifDisabledElse
+                    (title
+                      <|
+                        "Currently not supported.\n"
+                        ++ "Please use the CLI to complete this task."
+                    )
+                    (\_ -> css [])
+                , checked
+                    (case todo.closed_utc of
+                        Just _ ->
+                          True
+                        _ ->
+                          False
+                    )
+                , ifDisabledElse
+                    (disabled True)
+                    (\ulid -> onCheck
+                        (\bool ->
+                            if bool
+                              then SetDone ulid
+                              else
+                                -- TODO: Implement
+                                NoOp
+                        )
+                    )
+                ]
+                []
+            , text "\u{200B}"
+            ]
+        , div
+            [ css [ flex_1 ] ]
+            [ viewMaybe
+                todo.review_utc
+                (\review_utc ->
+                    if review_utc < Iso8601.fromTime now
+                      then span
+                        [ css [ text_color green_500, text_sm, mr_4 ]
+                        , title "Must be reviewed"
                         ]
-                      else text_color inherit
+                        [ text "🔎" ]
+                      else text ""
+                )
+            , span
+                [ css
+                    [ mr_4
+                    , case todo.due_utc of
+                      Just due_utc ->
+                        if due_utc < Iso8601.fromTime now
+                          then Css.batch
+                            [ text_color red_600
+                            , dark [ text_color red_400 ]
+                            ]
+                          else text_color inherit
+                      Nothing ->
+                        text_color inherit
+                    , case expandableUlid of
+                      Just _ ->
+                        cursor_pointer
+                      Nothing ->
+                        Css.batch []
+                    ]
+                , case expandableUlid of
+                  Just ulid ->
+                    onClick (ToggleExpanded ulid)
                   Nothing ->
-                    text_color inherit
+                    css []
                 , case expandableUlid of
                   Just _ ->
-                    cursor_pointer
+                    title
+                      (if isExpanded
+                          then "Collapse"
+                          else "Expand"
+                      )
                   Nothing ->
-                    Css.batch []
+                    css []
                 ]
-            , case expandableUlid of
-              Just ulid ->
-                onClick (ToggleExpanded ulid)
-              Nothing ->
-                css []
-            , case expandableUlid of
-              Just _ ->
-                title
-                  (if isExpanded
-                      then "Collapse"
-                      else "Expand"
-                  )
-              Nothing ->
-                css []
-            ]
-            [ text firstLine
-            , case expandableUlid of
-              Just _ ->
-                viewExpandIndicator isExpanded
-              Nothing ->
-                text ""
-            ]
-        , viewMaybe
-            todo.due_utc
-            (\due_utc -> span
-                [ css
-                    [ text_color yellow_500
-                    , text_sm
-                    , mr_4
-                    , dark [ text_color yellow_200 ]
+                [ text firstLine
+                , case expandableUlid of
+                  Just _ ->
+                    viewExpandIndicator isExpanded
+                  Nothing ->
+                    text ""
+                ]
+            , viewMaybe
+                todo.due_utc
+                (\due_utc -> span
+                    [ css
+                        [ text_color yellow_500
+                        , text_sm
+                        , mr_4
+                        , dark [ text_color yellow_200 ]
+                        ]
                     ]
-                ]
-                [ text due_utc ]
-            )
-        , viewMaybe todo.tags viewTagStr
-        , if isExpanded && not (String.isEmpty remainingLines)
-          then div
-            [ css [ mt_2, ml_5 ] ]
-            [ viewMarkdown remainingLines ]
-          else text ""
+                    [ text due_utc ]
+                )
+            , viewMaybe todo.tags viewTagStr
+            , if isExpanded && not (String.isEmpty remainingLines)
+              then div
+                [ css [ mt_2 ] ]
+                [ viewMarkdown remainingLines ]
+              else text ""
+            ]
         ]
     , div
         [ css
