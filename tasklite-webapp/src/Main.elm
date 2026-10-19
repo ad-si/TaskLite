@@ -8,16 +8,15 @@ import Api.InputObject
     , buildTasks_filter
     , buildTasks_insert_input
     , buildTasks_set_input
-    , buildTasks_view_filter
-    , buildTasks_view_order_by
+    , buildTasks_ready_filter
+    , buildTasks_ready_order_by
     , StringComparison
     )
 import Api.Mutation as Mutation
-import Api.Object exposing (Tasks_ready_row, Tasks_view_row)
+import Api.Object exposing (Tasks_ready_row)
 import Api.Object.Task_to_tag_row as Task_to_tag_row
 import Api.Object.Tasks_mutation_response
 import Api.Object.Tasks_ready_row as Tasks_ready_row exposing (body)
-import Api.Object.Tasks_view_row as Tasks_view_row exposing (body)
 import Api.Query as Query
 import Api.Scalar exposing (Id(..))
 import Browser
@@ -577,20 +576,6 @@ tasksHeadSelection =
     |> with Tasks_ready_row.recurrence_duration
 
 
-tasksViewSelection : SelectionSet TodoItem Tasks_view_row
-tasksViewSelection =
-  SelectionSet.succeed TodoItem
-    |> with Tasks_view_row.ulid
-    |> with Tasks_view_row.body
-    |> with Tasks_view_row.state
-    |> with Tasks_view_row.closed_utc
-    |> with Tasks_view_row.due_utc
-    |> with Tasks_view_row.review_utc
-    |> with Tasks_view_row.tags
-    |> with Tasks_view_row.repetition_duration
-    |> with Tasks_view_row.recurrence_duration
-
-
 getTodos : Int -> (RemoteData (Graphql.Http.Error (List TodoItem)) (List TodoItem) -> Msg) -> Cmd Msg
 getTodos offset toMsg =
   Query.tasks_ready
@@ -625,7 +610,7 @@ getTodosForFilter tagFilter offset toMsg =
     else getTodosWithTags tagFilter offset toMsg
 
 
-{-| Get the open tasks which have all included tags and none of the excluded.
+{-| Get the ready tasks which have all included tags and none of the excluded.
 First fetches the ULIDs of all tasks with any of the tags
 and then the tasks filtered by those ULIDs.
 -}
@@ -660,7 +645,7 @@ getTodosWithTags tagFilter offset toMsg =
     |> Task.andThen
         (\tagRows -> case tagFilterUlids tagFilter tagRows of
             Just ulidComparison ->
-              getOpenTodosTask ulidComparison offset
+              getReadyTodosTask ulidComparison offset
             Nothing ->
               Task.succeed []
         )
@@ -703,29 +688,23 @@ tagFilterUlids tagFilter tagRows =
             (\c -> { c | in_ = Present <| List.map Just <| Set.toList includedUlids })
 
 
-getOpenTodosTask : StringComparison -> Int -> Task.Task (Graphql.Http.Error (List TodoItem)) (List TodoItem)
-getOpenTodosTask ulidComparison offset =
-  let
-    setFilter filter =
-      { filter
-        | ulid = Present ulidComparison
-        , closed_utc = Present <|
-            buildStringComparison (\c -> { c | eq_ = Null })
-      }
-  in
-  Query.tasks_view
+getReadyTodosTask : StringComparison -> Int -> Task.Task (Graphql.Http.Error (List TodoItem)) (List TodoItem)
+getReadyTodosTask ulidComparison offset =
+  Query.tasks_ready
     (\opts -> { opts
-        | where_ = Present <| buildTasks_view_filter setFilter
+        | where_ = Present <|
+            buildTasks_ready_filter
+              (\f -> { f | ulid = Present ulidComparison })
         , order_by = Present
             [ Just <|
-                buildTasks_view_order_by
+                buildTasks_ready_order_by
                   (\o -> { o | priority = Present Desc })
             ]
         , limit = Present pageSize
         , offset = Present offset
       }
     )
-    tasksViewSelection
+    tasksHeadSelection
     |> Graphql.Http.queryRequest graphqlApiUrl
     |> Graphql.Http.toTask
 
