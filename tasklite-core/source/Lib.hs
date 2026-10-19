@@ -101,7 +101,7 @@ import Data.List (nub)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TL
-import Data.Time.Clock (UTCTime)
+import Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime)
 import Data.Time.ISO8601.Duration qualified as Iso
 import Data.ULID (ULID, getULID)
 import Data.Yaml qualified as Yaml
@@ -1195,31 +1195,35 @@ createNextRepetition conf connection task = do
             "ULID can't be converted to UTC time"
             (nowMb <&> dateTimeToUtcTime)
         )
+        & P.rightToMaybe
+
+    -- Keep the offset of a timestamp relative to the due UTC
+    shiftRelativeToDue :: Maybe Text -> Maybe UTCTime
+    shiftRelativeToDue utcTextMb = do
+      nextDue <- nextDueMb
+      oldDue <- task.due_utc >>= parseUtc <&> dateTimeToUtcTime
+      oldUtc <- utcTextMb >>= parseUtc <&> dateTimeToUtcTime
+      pure $ addUTCTime (diffUTCTime oldUtc oldDue) nextDue
+
+    nextReadyMb = shiftRelativeToDue task.ready_utc
+
+    showUtc = utcTimeToDateTime >>> showDateTime conf
 
     newTask =
       task
         { Task.ulid = newUlidText
-        , Task.due_utc = nextDueMb & showEither conf
+        , Task.due_utc = nextDueMb <&> showUtc
         , Task.closed_utc = Nothing
         , Task.state = Nothing
-        , Task.awake_utc =
-            liftA2
-              Iso.addDuration
-              isoDurEither
-              ( maybeToEither
-                  "Task has no awake UTC"
-                  (task.awake_utc >>= parseUtc <&> dateTimeToUtcTime)
-              )
-              & showEither conf
-        , Task.ready_utc =
-            liftA2
-              Iso.addDuration
-              isoDurEither
-              ( maybeToEither
-                  "Task has no ready UTC"
-                  (task.ready_utc >>= parseUtc <&> dateTimeToUtcTime)
-              )
-              & showEither conf
+        , -- Keep offset of awake UTC to due UTC,
+          -- otherwise sleep until it's ready or due
+          Task.awake_utc =
+            ( shiftRelativeToDue task.awake_utc
+                <|> liftA2 P.min nextReadyMb nextDueMb
+                <|> nextDueMb
+            )
+              <&> showUtc
+        , Task.ready_utc = nextReadyMb <&> showUtc
         , Task.modified_utc =
             nowMb
               <&> (timePrint conf.utcFormat >>> T.pack)

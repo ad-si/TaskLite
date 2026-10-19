@@ -58,7 +58,7 @@ import Config (
   defaultConfig,
  )
 import Config qualified
-import Data.Hourglass (TimeFormat (..), timePrint)
+import Data.Hourglass (Seconds (Seconds), TimeFormat (..), timeDiff, timePrint)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
 import ImportExport (EditMode (ApplyPreEdit), editTaskByTask)
@@ -882,6 +882,59 @@ spec = do
 
       repeatRes2 <- repeatTasks defaultConfig memConn oneWeek [task1.ulid]
       P.show repeatRes2 `shouldContain` "is already in a recurrence series"
+
+  it "lets the next task of a repetition series sleep until it's due" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord "tasks" memConn $
+        task1{Task.repetition_duration = Just "P2W"}
+      _ <- doTasks defaultConfig memConn Nothing Nothing [task1.ulid]
+      openTasks :: [Task] <-
+        query_ memConn "SELECT * FROM tasks WHERE closed_utc IS NULL"
+      case openTasks of
+        [nextTask] -> do
+          nextTask.due_utc `shouldSatisfy` isJust
+          nextTask.awake_utc `shouldBe` nextTask.due_utc
+          nextTask.ready_utc `shouldBe` Nothing
+        _ -> P.die "Expected exactly one open task"
+
+  it "wakes up the next repetition when it's ready" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord "tasks" memConn $
+        task1
+          { Task.repetition_duration = Just "P2W"
+          , Task.due_utc = Just "2020-01-10 12:00:00"
+          , Task.ready_utc = Just "2020-01-09 12:00:00"
+          }
+      _ <- doTasks defaultConfig memConn Nothing Nothing [task1.ulid]
+      openTasks :: [Task] <-
+        query_ memConn "SELECT * FROM tasks WHERE closed_utc IS NULL"
+      case openTasks of
+        [nextTask] -> do
+          nextTask.ready_utc `shouldSatisfy` isJust
+          nextTask.awake_utc `shouldBe` nextTask.ready_utc
+        _ -> P.die "Expected exactly one open task"
+
+  it "keeps offsets of awake and ready UTC to due UTC for repetitions" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord "tasks" memConn $
+        task1
+          { Task.repetition_duration = Just "P2W"
+          , Task.due_utc = Just "2020-01-10 12:00:00"
+          , Task.awake_utc = Just "2020-01-08 12:00:00"
+          , Task.ready_utc = Just "2020-01-09 12:00:00"
+          }
+      _ <- doTasks defaultConfig memConn Nothing Nothing [task1.ulid]
+      openTasks :: [Task] <-
+        query_ memConn "SELECT * FROM tasks WHERE closed_utc IS NULL"
+      case openTasks of
+        [nextTask] -> do
+          let
+            parse field = nextTask & field P.>>= parseUtc
+            diffToDue field =
+              P.liftA2 timeDiff (parse Task.due_utc) (parse field)
+          diffToDue Task.awake_utc `shouldBe` Just (Seconds (2 P.* 86400))
+          diffToDue Task.ready_utc `shouldBe` Just (Seconds 86400)
+        _ -> P.die "Expected exactly one open task"
 
   context "Editing a task" $ do
     it "keeps existing tags without warnings when adding new ones" $ do

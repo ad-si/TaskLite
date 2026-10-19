@@ -7,6 +7,9 @@ For repetition, it's the closing datetime.
 E.g. if a task gets completed,
 a duplicate will be created with the specified time offset added to
 the closing datetime.
+If the closed task had an awake or ready datetime,
+their offsets to the due datetime are preserved.
+Without an awake datetime, the new task sleeps until it's ready or due.
 Check out the "Mow the law" example below for more details.
 
 Recurring tasks are tasks which need to be done every day, week, etc. and
@@ -23,7 +26,7 @@ once the current task is closed.
 ## Example for Repetition
 
 ```txt
-$ tl add Mow the lawn due:2020-10-01
+$ tl add Mow the lawn awake:2020-09-24 due:2020-10-01
 🆕 Added task "Mow the lawn" with id "01eme2w9pqbmgme5zcwr9hpfbc"
 
 $ tl repeat P1M 01eme2w9pqbmgme5zcwr9hpfbc
@@ -37,6 +40,8 @@ Mow the lawn
 Priority: 12.0
     ULID: 01eme2w9pqbmgme5zcwr9hpfbc
 
+☀️   Awake    2020-09-24 00:00:00
+       ⬇
 📅    Due     2020-10-01 00:00:00
        ⬇
 🆕  Created   2020-10-12 09:39:48
@@ -63,6 +68,8 @@ Priority: 3.0
 ✏️   Modified  2020-10-12 09:39:58
        ⬇
 🆕  Created   2020-10-12 09:40:25
+       ⬇
+☀️   Awake    2020-11-05 09:39:58
        ⬇
 📅    Due     2020-11-12 09:39:58
 
