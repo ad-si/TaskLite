@@ -29,25 +29,46 @@ import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html.Styled
   exposing
     ( a
+    , blockquote
+    , br
     , button
+    , code
+    , del
     , div
+    , em
     , form
     , h1
+    , hr
+    , img
     , input
+    , li
     , main_
     , nav
+    , node
+    , ol
     , p
+    , pre
     , span
+    , strong
+    , tbody
+    , td
     , text
+    , th
+    , thead
     , toUnstyled
+    , tr
+    , ul
     )
 import Html.Styled.Attributes
   exposing
-    ( checked
+    ( alt
+    , checked
     , css
     , disabled
     , href
     , placeholder
+    , src
+    , start
     , title
     , type_
     , value
@@ -56,6 +77,10 @@ import Html.Styled.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Iso8601
 import Json.Decode
 import List
+import Markdown.Block as Block
+import Markdown.Html
+import Markdown.Parser
+import Markdown.Renderer exposing (Renderer)
 import Random
 import Set
 import RemoteData exposing (RemoteData(..))
@@ -123,6 +148,7 @@ type Msg
   | CompleteAffectedRowsResponse (RemoteData (Graphql.Http.Error Int) Int)
   | DeleteTask String
   | DeleteAffectedRowsResponse (RemoteData (Graphql.Http.Error Int) Int)
+  | ToggleExpanded String
   | LoadMoreTasks
   | GotMoreTasksResponse (RemoteData (Graphql.Http.Error (List TodoItem)) (List TodoItem))
   | UrlChanged Url
@@ -140,6 +166,7 @@ type alias Model =
   , offset : Int
   , hasMore : Bool
   , loadingMore : Bool
+  , expandedTasks : Set.Set String
   }
 
 
@@ -229,9 +256,237 @@ viewTagStr tagsStr =
     )
 
 
-viewTodo : Posix -> TodoItem -> Html.Styled.Html Msg
-viewTodo now todo =
+{-| Split a body into its first line and the remaining lines
+(without leading empty lines and trailing whitespace).
+-}
+splitBody : String -> ( String, String )
+splitBody body =
   let
+    dropEmptyLines lines =
+      case lines of
+        line :: rest ->
+          if String.isEmpty (String.trim line)
+            then dropEmptyLines rest
+            else lines
+        [] ->
+          []
+  in
+  case String.lines body of
+    firstLine :: rest ->
+      ( firstLine
+      , rest |> dropEmptyLines |> String.join "\n" |> String.trimRight
+      )
+    [] ->
+      ( body, "" )
+
+
+{-| Spacing between consecutive markdown blocks
+-}
+markdownBlockStyle : Css.Style
+markdownBlockStyle =
+  Css.batch [ mb_2, Css.lastChild [ mb_0 ] ]
+
+
+{-| Render markdown with Tailwind styles,
+as the global CSS reset removes all default styling.
+-}
+markdownRenderer : Renderer (Html.Styled.Html Msg)
+markdownRenderer =
+  let
+    alignmentStyle alignment =
+      case alignment of
+        Just Block.AlignLeft ->
+          text_left
+        Just Block.AlignRight ->
+          text_right
+        Just Block.AlignCenter ->
+          text_center
+        Nothing ->
+          text_left
+
+    cellStyle =
+      Css.batch
+        [ px_2
+        , py_1
+        , border
+        , border_solid
+        , border_color gray_300
+        , dark [ border_color neutral_600 ]
+        ]
+
+    codeStyle =
+      Css.batch
+        [ font_mono
+        , text_sm
+        , bg_color gray_100
+        , rounded
+        , dark [ bg_color neutral_700 ]
+        ]
+  in
+  { heading = \{ level, children } ->
+      let
+        ( tagName, sizeStyle ) =
+          case level of
+            Block.H1 ->
+              ( "h1", text_xl )
+            Block.H2 ->
+              ( "h2", text_lg )
+            Block.H3 ->
+              ( "h3", text_base )
+            Block.H4 ->
+              ( "h4", text_base )
+            Block.H5 ->
+              ( "h5", text_base )
+            Block.H6 ->
+              ( "h6", text_base )
+      in
+      node
+        tagName
+        [ css [ font_semibold, sizeStyle, markdownBlockStyle ] ]
+        children
+  , paragraph = p [ css [ markdownBlockStyle ] ]
+  , blockQuote = blockquote
+      [ css
+          [ pl_3
+          , border_l_4
+          , border_solid
+          , border_color gray_300
+          , markdownBlockStyle
+          , dark [ border_color neutral_600 ]
+          ]
+      ]
+  , html = Markdown.Html.oneOf []
+  , text = text
+  , codeSpan = \content -> code [ css [ codeStyle, px_1 ] ] [ text content ]
+  , strong = strong [ css [ font_bold ] ]
+  , emphasis = em [ css [ italic ] ]
+  , strikethrough = del [ css [ line_through ] ]
+  , hardLineBreak = br [] []
+  , link = \link children -> a
+      [ href link.destination
+      , css [ text_color blue_400 ]
+      , viewMaybeAttribute link.title title
+      ]
+      children
+  , image = \image -> img
+      [ src image.src
+      , alt image.alt
+      , css [ max_w_full ]
+      , viewMaybeAttribute image.title title
+      ]
+      []
+  , unorderedList = \items -> ul
+      [ css [ list_disc, pl_6, markdownBlockStyle ] ]
+      (items
+        |> List.map
+            (\(Block.ListItem task children) ->
+                let
+                  checkbox isChecked =
+                    input
+                      [ type_ "checkbox"
+                      , checked isChecked
+                      , disabled True
+                      , css [ mr_2 ]
+                      ]
+                      []
+                in
+                li
+                  []
+                  (case task of
+                      Block.NoTask ->
+                        children
+                      Block.IncompleteTask ->
+                        checkbox False :: children
+                      Block.CompletedTask ->
+                        checkbox True :: children
+                  )
+            )
+      )
+  , orderedList = \startingIndex items -> ol
+      [ start startingIndex
+      , css [ list_decimal, pl_6, markdownBlockStyle ]
+      ]
+      (items |> List.map (li []))
+  , codeBlock = \{ body } -> pre
+      [ css [ codeStyle, p_2, overflow_x_auto, markdownBlockStyle ] ]
+      [ code [] [ text body ] ]
+  , thematicBreak = hr
+      [ css
+          [ border_0
+          , border_t
+          , border_solid
+          , border_color gray_300
+          , markdownBlockStyle
+          , dark [ border_color neutral_600 ]
+          ]
+      ]
+      []
+  , table = Html.Styled.table [ css [ border_collapse, markdownBlockStyle ] ]
+  , tableHeader = thead []
+  , tableBody = tbody []
+  , tableRow = tr []
+  , tableCell = \alignment -> td [ css [ cellStyle, alignmentStyle alignment ] ]
+  , tableHeaderCell = \alignment -> th [ css [ cellStyle, font_semibold, alignmentStyle alignment ] ]
+  }
+
+
+viewMaybeAttribute :
+  Maybe val
+  -> (val -> Html.Styled.Attribute Msg)
+  -> Html.Styled.Attribute Msg
+viewMaybeAttribute maybeValue toAttribute =
+  case maybeValue of
+    Nothing ->
+      css []
+    Just value ->
+      toAttribute value
+
+
+{-| Render markdown or fall back to plain text if it can't be rendered
+-}
+viewMarkdown : String -> Html.Styled.Html Msg
+viewMarkdown markdown =
+  case markdown
+    |> Markdown.Parser.parse
+    |> Result.mapError (always "Invalid markdown")
+    |> Result.andThen (Markdown.Renderer.render markdownRenderer) of
+    Ok rendered ->
+      div [] rendered
+    Err _ ->
+      div [ css [ whitespace_pre_wrap ] ] [ text markdown ]
+
+
+{-| Indicator whether the remaining lines of a multi-line body are expanded
+-}
+viewExpandIndicator : Bool -> Html.Styled.Html Msg
+viewExpandIndicator isExpanded =
+  span
+    [ css [ ml_1, select_none, opacity_60 ] ]
+    [ text
+        (if isExpanded
+            then "▲"
+            else "▼"
+        )
+    ]
+
+
+viewTodo : Posix -> Set.Set String -> TodoItem -> Html.Styled.Html Msg
+viewTodo now expandedTasks todo =
+  let
+    ( firstLine, remainingLines ) =
+      splitBody (todo.body |> Maybe.withDefault "")
+
+    -- ULID of the task if its body can be expanded
+    expandableUlid =
+      if String.isEmpty remainingLines
+        then Nothing
+        else todo.ulid
+
+    isExpanded =
+      todo.ulid
+        |> Maybe.map (\ulid -> Set.member ulid expandedTasks)
+        |> Maybe.withDefault False
+
     ifDisabledElse disabledValue elseValue =
       case todo.ulid of
         Nothing ->
@@ -322,9 +577,34 @@ viewTodo now todo =
                       else text_color inherit
                   Nothing ->
                     text_color inherit
+                , case expandableUlid of
+                  Just _ ->
+                    cursor_pointer
+                  Nothing ->
+                    Css.batch []
                 ]
+            , case expandableUlid of
+              Just ulid ->
+                onClick (ToggleExpanded ulid)
+              Nothing ->
+                css []
+            , case expandableUlid of
+              Just _ ->
+                title
+                  (if isExpanded
+                      then "Collapse"
+                      else "Expand"
+                  )
+              Nothing ->
+                css []
             ]
-            [ text (todo.body |> Maybe.withDefault "") ]
+            [ text firstLine
+            , case expandableUlid of
+              Just _ ->
+                viewExpandIndicator isExpanded
+              Nothing ->
+                text ""
+            ]
         , viewMaybe
             todo.due_utc
             (\due_utc -> span
@@ -338,6 +618,11 @@ viewTodo now todo =
                 [ text due_utc ]
             )
         , viewMaybe todo.tags viewTagStr
+        , if isExpanded && not (String.isEmpty remainingLines)
+          then div
+            [ css [ mt_2, ml_5 ] ]
+            [ viewMarkdown remainingLines ]
+          else text ""
         ]
     , div
         [ css
@@ -509,7 +794,7 @@ viewBody model =
           Success todos ->
             div
               []
-              [ div [] (todos |> List.map (viewTodo model.now))
+              [ div [] (todos |> List.map (viewTodo model.now model.expandedTasks))
               , if model.hasMore
                 then div
                   [ css [ mt_4, text_center ] ]
@@ -871,6 +1156,7 @@ init _ url key =
     , offset = 0
     , hasMore = True
     , loadingMore = False
+    , expandedTasks = Set.empty
     }
   , handleRoute route
   )
@@ -962,6 +1248,15 @@ update msg model =
     DeleteAffectedRowsResponse response ->
       ( { model | submissionStatus = response }
       , refreshTodos model
+      )
+    ToggleExpanded ulid ->
+      ( { model
+          | expandedTasks =
+              if Set.member ulid model.expandedTasks
+                then Set.remove ulid model.expandedTasks
+                else Set.insert ulid model.expandedTasks
+        }
+      , Cmd.none
       )
     LoadMoreTasks ->
       ( { model | loadingMore = True }
