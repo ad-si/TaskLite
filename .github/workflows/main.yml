@@ -27,6 +27,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # The runner's Command Line Tools can be newer than the default Xcode.
+      # GHC links against the Command Line Tools' SDK,
+      # whose `.tbd` files the older Xcode linker fails to parse,
+      # so the Command Line Tools' own linker must be used.
+      - name: Use linker matching the Command Line Tools' SDK
+        if: matrix.os == 'macos'
+        run: |
+          sudo xcode-select --switch /Library/Developer/CommandLineTools
+          xcrun --show-sdk-path
+          ld -v
+
       - name: Install Lua
         uses: leafo/gh-actions-lua@v13
 
