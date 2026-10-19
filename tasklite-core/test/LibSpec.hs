@@ -100,6 +100,7 @@ import Lib (
  )
 import Note (Note)
 import Task (
+  DerivedState (IsAsleep, IsAwake, IsOpen, IsReady),
   Task (
     awake_utc,
     body,
@@ -116,6 +117,7 @@ import Task (
   ),
   TaskState (Done),
   emptyTask,
+  getStateHierarchy,
  )
 import TaskToNote (TaskToNote (TaskToNote, ulid))
 import TaskToNote qualified
@@ -217,6 +219,41 @@ spec = do
       result <- addTask conf memConn ["Just a test"]
       unpack (show result)
         `shouldStartWith` "🆕 Added task \"Just a test\" with id"
+
+  context "Awake and ready UTC (like Taskwarrior's wait and scheduled)" $ do
+    let
+      mkTask ulid awakeUtc readyUtc =
+        emptyTask
+          { Task.ulid = ulid
+          , Task.body = "Task " <> ulid
+          , Task.awake_utc = awakeUtc
+          , Task.ready_utc = readyUtc
+          }
+      asleepTask =
+        mkTask "01hs68z7mdg4ktpxbv0yfafzr3" (Just "2999-01-01") (Just "2000-01-01")
+      awakeTask =
+        mkTask "01hs68z7mdg4ktpxbv0yfafzr4" (Just "2000-01-01") (Just "2999-01-01")
+      readyTask =
+        mkTask "01hs68z7mdg4ktpxbv0yfafzr5" (Just "2000-01-01") (Just "2000-01-02")
+      plainTask =
+        mkTask "01hs68z7mdg4ktpxbv0yfafzr6" Nothing Nothing
+
+    it "derives the states" $ do
+      let stateOf = getStateHierarchy now >>> P.snd
+      stateOf asleepTask `shouldBe` IsAsleep
+      stateOf awakeTask `shouldBe` IsAwake
+      stateOf readyTask `shouldBe` IsReady
+      stateOf plainTask `shouldBe` IsOpen
+      stateOf (mkTask "" Nothing (Just "2999-01-01")) `shouldBe` IsAwake
+      stateOf (mkTask "" (Just "2000-01-01") Nothing) `shouldBe` IsReady
+
+    it "lists only awake tasks whose ready UTC passed as ready" $ do
+      withMemoryDb conf $ \memConn -> do
+        P.forM_ [asleepTask, awakeTask, readyTask, plainTask] $
+          insertRecord "tasks" memConn
+        (ulids :: [Only Text]) <-
+          query_ memConn "SELECT ulid FROM tasks_ready ORDER BY ulid"
+        ulids `shouldBe` [Only readyTask.ulid, Only plainTask.ulid]
 
   context "When tasks have the same priority" $ do
     let

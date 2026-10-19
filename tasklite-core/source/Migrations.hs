@@ -833,10 +833,11 @@ dropDerivedViews =
 {-| CREATE statements for the views defined in `_6_` (depend on `tasks_view`).
 SQLite resolves `SELECT *` at view-creation time, so these must be recreated
 whenever `tasks_view` changes shape.
+`readyCondition` is the WHERE clause of `tasks_ready` and
 `priorityOrder` is the ORDER BY clause of the priority-sorted views.
 -}
-createDerivedViewsWith :: Query -> [Query]
-createDerivedViewsWith priorityOrder =
+createDerivedViewsWith :: Query -> Query -> [Query]
+createDerivedViewsWith readyCondition priorityOrder =
   [ [sql|
       CREATE VIEW tasks_open AS
       SELECT *
@@ -897,19 +898,9 @@ createDerivedViewsWith priorityOrder =
       SELECT *
       FROM tasks_view
       WHERE
-        closed_utc IS NULL
-        AND (
-          review_utc <= datetime('now')
-          OR ready_utc <= datetime('now')
-          OR (
-            ready_utc IS NULL
-            AND (awake_utc IS NULL OR awake_utc <= datetime('now'))
-            AND (waiting_utc IS NULL OR waiting_utc > datetime('now'))
-            AND (review_utc IS NULL OR review_utc > datetime('now'))
-          )
-        )
-      ORDER BY
     |]
+      <> readyCondition
+      <> " ORDER BY "
       <> priorityOrder
   , [sql|
       CREATE VIEW tasks_repeating AS
@@ -963,17 +954,71 @@ createDerivedViewsWith priorityOrder =
   ]
 
 
--- | Derived views of migration 6 (tasks without due date sorted first)
+-- | Condition of `tasks_ready` in migration 6 (ready tasks could be asleep)
+readyCondition_v6 :: Query
+readyCondition_v6 =
+  [sql|
+    closed_utc IS NULL
+    AND (
+      review_utc <= datetime('now')
+      OR ready_utc <= datetime('now')
+      OR (
+        ready_utc IS NULL
+        AND (awake_utc IS NULL OR awake_utc <= datetime('now'))
+        AND (waiting_utc IS NULL OR waiting_utc > datetime('now'))
+        AND (review_utc IS NULL OR review_utc > datetime('now'))
+      )
+    )
+  |]
+
+
+{-| Condition of `tasks_ready` in migration 10.
+Like Taskwarrior's `READY` virtual tag, a task is ready if it's awake
+(i.e. not hidden) and its ready UTC (Taskwarrior's `scheduled`) has passed
+or isn't set.
+-}
+readyCondition_v10 :: Query
+readyCondition_v10 =
+  [sql|
+    closed_utc IS NULL
+    AND (
+      review_utc <= datetime('now')
+      OR (
+        (ready_utc IS NULL OR ready_utc <= datetime('now'))
+        AND (awake_utc IS NULL OR awake_utc <= datetime('now'))
+        AND (waiting_utc IS NULL OR waiting_utc > datetime('now'))
+        AND (review_utc IS NULL OR review_utc > datetime('now'))
+      )
+    )
+  |]
+
+
+-- | ORDER BY clause of migration 6 (tasks without due date sorted first)
+priorityOrder_v6 :: Query
+priorityOrder_v6 = "priority DESC, due_utc ASC, ulid DESC"
+
+
+-- | ORDER BY clause of migration 8 (tasks without due date sorted last)
+priorityOrder_v8 :: Query
+priorityOrder_v8 = "priority DESC, due_utc IS NULL, due_utc ASC, ulid DESC"
+
+
+-- | Derived views of migration 6
 createDerivedViews_v6 :: [Query]
 createDerivedViews_v6 =
-  createDerivedViewsWith "priority DESC, due_utc ASC, ulid DESC"
+  createDerivedViewsWith readyCondition_v6 priorityOrder_v6
 
 
--- | Derived views of migration 8 (tasks without due date sorted last)
+-- | Derived views of migration 8
 createDerivedViews_v8 :: [Query]
 createDerivedViews_v8 =
-  createDerivedViewsWith
-    "priority DESC, due_utc IS NULL, due_utc ASC, ulid DESC"
+  createDerivedViewsWith readyCondition_v6 priorityOrder_v8
+
+
+-- | Derived views of migration 10
+createDerivedViews_v10 :: [Query]
+createDerivedViews_v10 =
+  createDerivedViewsWith readyCondition_v10 priorityOrder_v8
 
 
 -- | View definition for tasks_view in migration 5 (no blockers/blocked yet)
@@ -1392,6 +1437,29 @@ _9_ =
           }
 
 
+-- | Migration 10: Tasks which are still asleep can't be ready
+_10_ :: MigrateDirection -> Migration
+_10_ =
+  let
+    base =
+      Migration
+        { id = UserVersion 10
+        , querySet = []
+        }
+  in
+    \case
+      MigrateUp ->
+        base
+          { Migrations.querySet =
+              dropDerivedViews <> createDerivedViews_v10
+          }
+      MigrateDown ->
+        base
+          { Migrations.querySet =
+              dropDerivedViews <> createDerivedViews_v8
+          }
+
+
 hasDuplicates :: (Eq a) => [a] -> Bool
 hasDuplicates [] = False
 hasDuplicates (x : xs) =
@@ -1455,7 +1523,7 @@ runMigrations _ connection = do
       IO [UserVersion]
 
   let
-    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_]
+    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_]
 
     migrationsUp = fmap ($ MigrateUp) migrations
     (UserVersion userVersionMax) =

@@ -224,19 +224,17 @@ derivedStateToQuery = \case
     "closed_utc IS NOT NULL"
   IsAsleep ->
     "closed_utc IS NULL \
-    \AND awake_utc > datetime('now') \
-    \AND (ready_utc IS NULL OR ready_utc > datetime('now'))"
+    \AND awake_utc > datetime('now')"
   IsAwake ->
     "closed_utc IS NULL \
-    \AND awake_utc < datetime('now') \
-    \AND (ready_utc IS NULL OR ready_utc > datetime('now'))"
+    \AND (awake_utc IS NULL OR awake_utc <= datetime('now')) \
+    \AND ready_utc > datetime('now')"
   IsReady ->
     "closed_utc IS NULL \
     \AND ( \
     \  review_utc <= datetime('now') \
-    \  OR ready_utc <= datetime('now') \
     \  OR ( \
-    \    ready_utc IS NULL \
+    \    (ready_utc IS NULL OR ready_utc <= datetime('now')) \
     \    AND (awake_utc IS NULL OR awake_utc <= datetime('now')) \
     \    AND (waiting_utc IS NULL OR waiting_utc > datetime('now')) \
     \    AND (review_utc IS NULL OR review_utc > datetime('now')) \
@@ -277,18 +275,13 @@ getStateHierarchy now task = do
             else (IsOpen, IsReview)
         Nothing -> case waiting_utc task of
           Just _ -> (IsOpen, IsWaiting)
-          Nothing -> case (ready_utc task, awake_utc task) of
-            (Just readyUtc, Just awakeUtc) ->
-              if readyUtc < nowTxt && awakeUtc < nowTxt
-                then (IsOpen, IsReady)
-                else
-                  if readyUtc > nowTxt && awakeUtc < nowTxt
-                    then (IsOpen, IsAwake)
-                    else (IsOpen, IsAsleep)
-            (Just readyUtc, Nothing) | readyUtc < nowTxt -> (IsOpen, IsReady)
-            (Nothing, Just awakeUtc) | awakeUtc < nowTxt -> (IsOpen, IsAwake)
-            (Nothing, Just awakeUtc) | awakeUtc > nowTxt -> (IsOpen, IsAsleep)
-            _ -> (IsOpen, IsOpen)
+          -- Hidden until awake, then visible, but only ready once ready UTC
+          -- has passed (like Taskwarrior's `wait` and `scheduled`)
+          Nothing -> case (awake_utc task, ready_utc task) of
+            (Just awakeUtc, _) | awakeUtc > nowTxt -> (IsOpen, IsAsleep)
+            (_, Just readyUtc) | readyUtc > nowTxt -> (IsOpen, IsAwake)
+            (Nothing, Nothing) -> (IsOpen, IsOpen)
+            _ -> (IsOpen, IsReady)
 
 
 newtype Ulid = Ulid Text
