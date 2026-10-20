@@ -65,6 +65,11 @@ createHook conf name content = do
 
 spec :: P.FilePath -> Spec
 spec tmpDirPath = do
+  let
+    -- Store the database in the temporary directory
+    -- instead of the default data directory of the user
+    testDefaultConfig = defaultConfig{Config.dataDir = tmpDirPath}
+
   describe "CLI" $ do
     it "includes header, body, and footer in help output" $ do
       let
@@ -81,7 +86,7 @@ spec tmpDirPath = do
       helpText `shouldContain` "developed by"
 
     it "prints current version" $ do
-      _ <- printOutput "test-app" (Just ["version"]) defaultConfig
+      _ <- printOutput "test-app" (Just ["version"]) testDefaultConfig
       () `shouldBe` ()
 
     it "calls task lifecycle hooks (add, modify) stored in config" $ do
@@ -137,7 +142,7 @@ spec tmpDirPath = do
               -- print("{}")
             |]
         testConf =
-          defaultConfig
+          testDefaultConfig
             { Config.hooks =
                 defaultConfig.hooks
                   { Config.add =
@@ -160,7 +165,7 @@ spec tmpDirPath = do
     it "calls launch hooks stored in files" $ do
       let
         testConf =
-          defaultConfig
+          testDefaultConfig
             { Config.hooks =
                 defaultConfig.hooks{Config.directory = tmpDirPath}
             }
@@ -283,7 +288,7 @@ spec tmpDirPath = do
             , Config.tags = ["cook"]
             }
         testConf =
-          defaultConfig
+          testDefaultConfig
             { Config.shortcuts = Map.fromList [("cook", testShortcut)]
             }
 
@@ -299,7 +304,7 @@ spec tmpDirPath = do
             , Config.tags = ["fix"]
             }
         testConf =
-          defaultConfig
+          testDefaultConfig
             { Config.shortcuts = Map.fromList [("fix", testShortcut)]
             }
 
