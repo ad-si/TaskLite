@@ -47,7 +47,10 @@ install:
 .PHONY: restart-server  # Restart the OS service running `tasklite server`
 restart-server:
 	if test "$$(uname)" = Darwin; \
-	then launchctl kickstart -k gui/$$(id -u)/com.tasklite.server; \
+	then \
+		launchctl bootout gui/$$(id -u)/com.tasklite.server 2>/dev/null; \
+		launchctl bootstrap gui/$$(id -u) \
+			~/Library/LaunchAgents/com.tasklite.server.plist; \
 	else systemctl --user restart tasklite-server; \
 	fi
 
