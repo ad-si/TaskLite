@@ -52,35 +52,6 @@ insert_task_to_tag fillInOptionals____ requiredArgs____ object____ =
   Object.selectionForCompositeField "insert_task_to_tag" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTask_to_tag_insert_input |> Encode.list) ]) (object____) (Basics.identity)
 
 
-type alias InsertTaskToNoteOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Task_to_note_upsert_on_conflict) }
-
-
-type alias InsertTaskToNoteRequiredArguments = { objects : (List Api.InputObject.Task_to_note_insert_input) }
-
-
-{-| Insert new rows in table "task_to_note"
-
-  - objects - Rows to be inserted
-  - on_conflict - Specifies how to handle broken UNIQUE constraints
-
--}
-insert_task_to_note :
-  (InsertTaskToNoteOptionalArguments -> InsertTaskToNoteOptionalArguments)
-  -> InsertTaskToNoteRequiredArguments
-  -> SelectionSet decodesTo Api.Object.Task_to_note_mutation_response
-  -> SelectionSet decodesTo RootMutation
-insert_task_to_note fillInOptionals____ requiredArgs____ object____ =
-  let
-    filledInOptionals____ =
-      fillInOptionals____ { on_conflict = Absent }
-
-    optionalArgs____ =
-      [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTask_to_note_upsert_on_conflict |> Encode.list) ]
-        |> List.filterMap Basics.identity
-  in
-  Object.selectionForCompositeField "insert_task_to_note" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTask_to_note_insert_input |> Encode.list) ]) (object____) (Basics.identity)
-
-
 type alias InsertTasksOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tasks_upsert_on_conflict) }
 
 
@@ -168,6 +139,64 @@ insert_task_to_task fillInOptionals____ requiredArgs____ object____ =
   Object.selectionForCompositeField "insert_task_to_task" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTask_to_task_insert_input |> Encode.list) ]) (object____) (Basics.identity)
 
 
+type alias InsertTagsOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Tags_upsert_on_conflict) }
+
+
+type alias InsertTagsRequiredArguments = { objects : (List Api.InputObject.Tags_insert_input) }
+
+
+{-| Insert new rows in table "tags"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_tags :
+  (InsertTagsOptionalArguments -> InsertTagsOptionalArguments)
+  -> InsertTagsRequiredArguments
+  -> SelectionSet decodesTo Api.Object.Tags_mutation_response
+  -> SelectionSet decodesTo RootMutation
+insert_tags fillInOptionals____ requiredArgs____ object____ =
+  let
+    filledInOptionals____ =
+      fillInOptionals____ { on_conflict = Absent }
+
+    optionalArgs____ =
+      [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTags_upsert_on_conflict |> Encode.list) ]
+        |> List.filterMap Basics.identity
+  in
+  Object.selectionForCompositeField "insert_tags" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTags_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
+type alias InsertTaskToCommentOptionalArguments = { on_conflict : OptionalArgument (List Api.InputObject.Task_to_comment_upsert_on_conflict) }
+
+
+type alias InsertTaskToCommentRequiredArguments = { objects : (List Api.InputObject.Task_to_comment_insert_input) }
+
+
+{-| Insert new rows in table "task_to_comment"
+
+  - objects - Rows to be inserted
+  - on_conflict - Specifies how to handle broken UNIQUE constraints
+
+-}
+insert_task_to_comment :
+  (InsertTaskToCommentOptionalArguments -> InsertTaskToCommentOptionalArguments)
+  -> InsertTaskToCommentRequiredArguments
+  -> SelectionSet decodesTo Api.Object.Task_to_comment_mutation_response
+  -> SelectionSet decodesTo RootMutation
+insert_task_to_comment fillInOptionals____ requiredArgs____ object____ =
+  let
+    filledInOptionals____ =
+      fillInOptionals____ { on_conflict = Absent }
+
+    optionalArgs____ =
+      [ Argument.optional "on_conflict" filledInOptionals____.on_conflict (Api.InputObject.encodeTask_to_comment_upsert_on_conflict |> Encode.list) ]
+        |> List.filterMap Basics.identity
+  in
+  Object.selectionForCompositeField "insert_task_to_comment" (optionalArgs____ ++ [ Argument.required "objects" requiredArgs____.objects (Api.InputObject.encodeTask_to_comment_insert_input |> Encode.list) ]) (object____) (Basics.identity)
+
+
 type alias UpdateTaskToTagOptionalArguments =
   { set_ : OptionalArgument Api.InputObject.Task_to_tag_set_input
   , where_ : OptionalArgument Api.InputObject.Task_to_tag_filter
@@ -194,34 +223,6 @@ update_task_to_tag fillInOptionals____ object____ =
         |> List.filterMap Basics.identity
   in
   Object.selectionForCompositeField "update_task_to_tag" optionalArgs____ (object____) (Basics.identity)
-
-
-type alias UpdateTaskToNoteOptionalArguments =
-  { set_ : OptionalArgument Api.InputObject.Task_to_note_set_input
-  , where_ : OptionalArgument Api.InputObject.Task_to_note_filter
-  }
-
-
-{-| Update rows in table "task_to_note"
-
-  - set_ - Fields to be updated
-  - where_ - Filter to select rows to be updated
-
--}
-update_task_to_note :
-  (UpdateTaskToNoteOptionalArguments -> UpdateTaskToNoteOptionalArguments)
-  -> SelectionSet decodesTo Api.Object.Task_to_note_mutation_response
-  -> SelectionSet decodesTo RootMutation
-update_task_to_note fillInOptionals____ object____ =
-  let
-    filledInOptionals____ =
-      fillInOptionals____ { set_ = Absent, where_ = Absent }
-
-    optionalArgs____ =
-      [ Argument.optional "_set" filledInOptionals____.set_ (Api.InputObject.encodeTask_to_note_set_input), Argument.optional "where" filledInOptionals____.where_ (Api.InputObject.encodeTask_to_note_filter) ]
-        |> List.filterMap Basics.identity
-  in
-  Object.selectionForCompositeField "update_task_to_note" optionalArgs____ (object____) (Basics.identity)
 
 
 type alias UpdateTasksOptionalArguments =
@@ -308,6 +309,62 @@ update_task_to_task fillInOptionals____ object____ =
   Object.selectionForCompositeField "update_task_to_task" optionalArgs____ (object____) (Basics.identity)
 
 
+type alias UpdateTagsOptionalArguments =
+  { set_ : OptionalArgument Api.InputObject.Tags_set_input
+  , where_ : OptionalArgument Api.InputObject.Tags_filter
+  }
+
+
+{-| Update rows in table "tags"
+
+  - set_ - Fields to be updated
+  - where_ - Filter to select rows to be updated
+
+-}
+update_tags :
+  (UpdateTagsOptionalArguments -> UpdateTagsOptionalArguments)
+  -> SelectionSet decodesTo Api.Object.Tags_mutation_response
+  -> SelectionSet decodesTo RootMutation
+update_tags fillInOptionals____ object____ =
+  let
+    filledInOptionals____ =
+      fillInOptionals____ { set_ = Absent, where_ = Absent }
+
+    optionalArgs____ =
+      [ Argument.optional "_set" filledInOptionals____.set_ (Api.InputObject.encodeTags_set_input), Argument.optional "where" filledInOptionals____.where_ (Api.InputObject.encodeTags_filter) ]
+        |> List.filterMap Basics.identity
+  in
+  Object.selectionForCompositeField "update_tags" optionalArgs____ (object____) (Basics.identity)
+
+
+type alias UpdateTaskToCommentOptionalArguments =
+  { set_ : OptionalArgument Api.InputObject.Task_to_comment_set_input
+  , where_ : OptionalArgument Api.InputObject.Task_to_comment_filter
+  }
+
+
+{-| Update rows in table "task_to_comment"
+
+  - set_ - Fields to be updated
+  - where_ - Filter to select rows to be updated
+
+-}
+update_task_to_comment :
+  (UpdateTaskToCommentOptionalArguments -> UpdateTaskToCommentOptionalArguments)
+  -> SelectionSet decodesTo Api.Object.Task_to_comment_mutation_response
+  -> SelectionSet decodesTo RootMutation
+update_task_to_comment fillInOptionals____ object____ =
+  let
+    filledInOptionals____ =
+      fillInOptionals____ { set_ = Absent, where_ = Absent }
+
+    optionalArgs____ =
+      [ Argument.optional "_set" filledInOptionals____.set_ (Api.InputObject.encodeTask_to_comment_set_input), Argument.optional "where" filledInOptionals____.where_ (Api.InputObject.encodeTask_to_comment_filter) ]
+        |> List.filterMap Basics.identity
+  in
+  Object.selectionForCompositeField "update_task_to_comment" optionalArgs____ (object____) (Basics.identity)
+
+
 type alias DeleteTaskToTagOptionalArguments = { where_ : OptionalArgument Api.InputObject.Task_to_tag_filter }
 
 
@@ -330,30 +387,6 @@ delete_task_to_tag fillInOptionals____ object____ =
         |> List.filterMap Basics.identity
   in
   Object.selectionForCompositeField "delete_task_to_tag" optionalArgs____ (object____) (Basics.identity)
-
-
-type alias DeleteTaskToNoteOptionalArguments = { where_ : OptionalArgument Api.InputObject.Task_to_note_filter }
-
-
-{-| Delete rows in table "task_to_note"
-
-  - where_ - Filter to select rows to be deleted
-
--}
-delete_task_to_note :
-  (DeleteTaskToNoteOptionalArguments -> DeleteTaskToNoteOptionalArguments)
-  -> SelectionSet decodesTo Api.Object.Task_to_note_mutation_response
-  -> SelectionSet decodesTo RootMutation
-delete_task_to_note fillInOptionals____ object____ =
-  let
-    filledInOptionals____ =
-      fillInOptionals____ { where_ = Absent }
-
-    optionalArgs____ =
-      [ Argument.optional "where" filledInOptionals____.where_ (Api.InputObject.encodeTask_to_note_filter) ]
-        |> List.filterMap Basics.identity
-  in
-  Object.selectionForCompositeField "delete_task_to_note" optionalArgs____ (object____) (Basics.identity)
 
 
 type alias DeleteTasksOptionalArguments = { where_ : OptionalArgument Api.InputObject.Tasks_filter }
@@ -428,6 +461,54 @@ delete_task_to_task fillInOptionals____ object____ =
   Object.selectionForCompositeField "delete_task_to_task" optionalArgs____ (object____) (Basics.identity)
 
 
+type alias DeleteTagsOptionalArguments = { where_ : OptionalArgument Api.InputObject.Tags_filter }
+
+
+{-| Delete rows in table "tags"
+
+  - where_ - Filter to select rows to be deleted
+
+-}
+delete_tags :
+  (DeleteTagsOptionalArguments -> DeleteTagsOptionalArguments)
+  -> SelectionSet decodesTo Api.Object.Tags_mutation_response
+  -> SelectionSet decodesTo RootMutation
+delete_tags fillInOptionals____ object____ =
+  let
+    filledInOptionals____ =
+      fillInOptionals____ { where_ = Absent }
+
+    optionalArgs____ =
+      [ Argument.optional "where" filledInOptionals____.where_ (Api.InputObject.encodeTags_filter) ]
+        |> List.filterMap Basics.identity
+  in
+  Object.selectionForCompositeField "delete_tags" optionalArgs____ (object____) (Basics.identity)
+
+
+type alias DeleteTaskToCommentOptionalArguments = { where_ : OptionalArgument Api.InputObject.Task_to_comment_filter }
+
+
+{-| Delete rows in table "task_to_comment"
+
+  - where_ - Filter to select rows to be deleted
+
+-}
+delete_task_to_comment :
+  (DeleteTaskToCommentOptionalArguments -> DeleteTaskToCommentOptionalArguments)
+  -> SelectionSet decodesTo Api.Object.Task_to_comment_mutation_response
+  -> SelectionSet decodesTo RootMutation
+delete_task_to_comment fillInOptionals____ object____ =
+  let
+    filledInOptionals____ =
+      fillInOptionals____ { where_ = Absent }
+
+    optionalArgs____ =
+      [ Argument.optional "where" filledInOptionals____.where_ (Api.InputObject.encodeTask_to_comment_filter) ]
+        |> List.filterMap Basics.identity
+  in
+  Object.selectionForCompositeField "delete_task_to_comment" optionalArgs____ (object____) (Basics.identity)
+
+
 type alias UpdateTaskToTagByPkOptionalArguments = { set_ : OptionalArgument Api.InputObject.Task_to_tag_set_input }
 
 
@@ -454,34 +535,6 @@ update_task_to_tag_by_pk fillInOptionals____ requiredArgs____ object____ =
         |> List.filterMap Basics.identity
   in
   Object.selectionForCompositeField "update_task_to_tag_by_pk" (optionalArgs____ ++ [ Argument.required "ulid" requiredArgs____.ulid (Encode.string) ]) (object____) (Basics.identity)
-
-
-type alias UpdateTaskToNoteByPkOptionalArguments = { set_ : OptionalArgument Api.InputObject.Task_to_note_set_input }
-
-
-type alias UpdateTaskToNoteByPkRequiredArguments = { ulid : String }
-
-
-{-| Update row in table "task_to_note" by PK
-
-  - set_ - Fields to be updated
-
--}
-update_task_to_note_by_pk :
-  (UpdateTaskToNoteByPkOptionalArguments -> UpdateTaskToNoteByPkOptionalArguments)
-  -> UpdateTaskToNoteByPkRequiredArguments
-  -> SelectionSet decodesTo Api.Object.Task_to_note_mutation_by_pk_response
-  -> SelectionSet decodesTo RootMutation
-update_task_to_note_by_pk fillInOptionals____ requiredArgs____ object____ =
-  let
-    filledInOptionals____ =
-      fillInOptionals____ { set_ = Absent }
-
-    optionalArgs____ =
-      [ Argument.optional "_set" filledInOptionals____.set_ (Api.InputObject.encodeTask_to_note_set_input) ]
-        |> List.filterMap Basics.identity
-  in
-  Object.selectionForCompositeField "update_task_to_note_by_pk" (optionalArgs____ ++ [ Argument.required "ulid" requiredArgs____.ulid (Encode.string) ]) (object____) (Basics.identity)
 
 
 type alias UpdateTasksByPkOptionalArguments = { set_ : OptionalArgument Api.InputObject.Tasks_set_input }
@@ -568,6 +621,62 @@ update_task_to_task_by_pk fillInOptionals____ requiredArgs____ object____ =
   Object.selectionForCompositeField "update_task_to_task_by_pk" (optionalArgs____ ++ [ Argument.required "ulid" requiredArgs____.ulid (Encode.string) ]) (object____) (Basics.identity)
 
 
+type alias UpdateTagsByPkOptionalArguments = { set_ : OptionalArgument Api.InputObject.Tags_set_input }
+
+
+type alias UpdateTagsByPkRequiredArguments = { tag : String }
+
+
+{-| Update row in table "tags" by PK
+
+  - set_ - Fields to be updated
+
+-}
+update_tags_by_pk :
+  (UpdateTagsByPkOptionalArguments -> UpdateTagsByPkOptionalArguments)
+  -> UpdateTagsByPkRequiredArguments
+  -> SelectionSet decodesTo Api.Object.Tags_mutation_by_pk_response
+  -> SelectionSet decodesTo RootMutation
+update_tags_by_pk fillInOptionals____ requiredArgs____ object____ =
+  let
+    filledInOptionals____ =
+      fillInOptionals____ { set_ = Absent }
+
+    optionalArgs____ =
+      [ Argument.optional "_set" filledInOptionals____.set_ (Api.InputObject.encodeTags_set_input) ]
+        |> List.filterMap Basics.identity
+  in
+  Object.selectionForCompositeField "update_tags_by_pk" (optionalArgs____ ++ [ Argument.required "tag" requiredArgs____.tag (Encode.string) ]) (object____) (Basics.identity)
+
+
+type alias UpdateTaskToCommentByPkOptionalArguments = { set_ : OptionalArgument Api.InputObject.Task_to_comment_set_input }
+
+
+type alias UpdateTaskToCommentByPkRequiredArguments = { ulid : String }
+
+
+{-| Update row in table "task_to_comment" by PK
+
+  - set_ - Fields to be updated
+
+-}
+update_task_to_comment_by_pk :
+  (UpdateTaskToCommentByPkOptionalArguments -> UpdateTaskToCommentByPkOptionalArguments)
+  -> UpdateTaskToCommentByPkRequiredArguments
+  -> SelectionSet decodesTo Api.Object.Task_to_comment_mutation_by_pk_response
+  -> SelectionSet decodesTo RootMutation
+update_task_to_comment_by_pk fillInOptionals____ requiredArgs____ object____ =
+  let
+    filledInOptionals____ =
+      fillInOptionals____ { set_ = Absent }
+
+    optionalArgs____ =
+      [ Argument.optional "_set" filledInOptionals____.set_ (Api.InputObject.encodeTask_to_comment_set_input) ]
+        |> List.filterMap Basics.identity
+  in
+  Object.selectionForCompositeField "update_task_to_comment_by_pk" (optionalArgs____ ++ [ Argument.required "ulid" requiredArgs____.ulid (Encode.string) ]) (object____) (Basics.identity)
+
+
 type alias DeleteTaskToTagByPkRequiredArguments = { ulid : String }
 
 
@@ -579,19 +688,6 @@ delete_task_to_tag_by_pk :
   -> SelectionSet decodesTo RootMutation
 delete_task_to_tag_by_pk requiredArgs____ object____ =
   Object.selectionForCompositeField "delete_task_to_tag_by_pk" [ Argument.required "ulid" requiredArgs____.ulid (Encode.string) ] (object____) (Basics.identity)
-
-
-type alias DeleteTaskToNoteByPkRequiredArguments = { ulid : String }
-
-
-{-| Delete row in table "task_to_note" by PK
--}
-delete_task_to_note_by_pk :
-  DeleteTaskToNoteByPkRequiredArguments
-  -> SelectionSet decodesTo Api.Object.Task_to_note_mutation_by_pk_response
-  -> SelectionSet decodesTo RootMutation
-delete_task_to_note_by_pk requiredArgs____ object____ =
-  Object.selectionForCompositeField "delete_task_to_note_by_pk" [ Argument.required "ulid" requiredArgs____.ulid (Encode.string) ] (object____) (Basics.identity)
 
 
 type alias DeleteTasksByPkRequiredArguments = { ulid : String }
@@ -631,3 +727,29 @@ delete_task_to_task_by_pk :
   -> SelectionSet decodesTo RootMutation
 delete_task_to_task_by_pk requiredArgs____ object____ =
   Object.selectionForCompositeField "delete_task_to_task_by_pk" [ Argument.required "ulid" requiredArgs____.ulid (Encode.string) ] (object____) (Basics.identity)
+
+
+type alias DeleteTagsByPkRequiredArguments = { tag : String }
+
+
+{-| Delete row in table "tags" by PK
+-}
+delete_tags_by_pk :
+  DeleteTagsByPkRequiredArguments
+  -> SelectionSet decodesTo Api.Object.Tags_mutation_by_pk_response
+  -> SelectionSet decodesTo RootMutation
+delete_tags_by_pk requiredArgs____ object____ =
+  Object.selectionForCompositeField "delete_tags_by_pk" [ Argument.required "tag" requiredArgs____.tag (Encode.string) ] (object____) (Basics.identity)
+
+
+type alias DeleteTaskToCommentByPkRequiredArguments = { ulid : String }
+
+
+{-| Delete row in table "task_to_comment" by PK
+-}
+delete_task_to_comment_by_pk :
+  DeleteTaskToCommentByPkRequiredArguments
+  -> SelectionSet decodesTo Api.Object.Task_to_comment_mutation_by_pk_response
+  -> SelectionSet decodesTo RootMutation
+delete_task_to_comment_by_pk requiredArgs____ object____ =
+  Object.selectionForCompositeField "delete_task_to_comment_by_pk" [ Argument.required "ulid" requiredArgs____.ulid (Encode.string) ] (object____) (Basics.identity)

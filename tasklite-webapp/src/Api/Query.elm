@@ -55,38 +55,6 @@ task_to_tag fillInOptionals____ object____ =
   Object.selectionForCompositeField "task_to_tag" optionalArgs____ (object____) (Basics.identity >> Decode.list)
 
 
-type alias TaskToNoteOptionalArguments =
-  { where_ : OptionalArgument Api.InputObject.Task_to_note_filter
-  , order_by : OptionalArgument (List (Maybe Api.InputObject.Task_to_note_order_by))
-  , limit : OptionalArgument Int
-  , offset : OptionalArgument Int
-  }
-
-
-{-| Rows from the table "task_to_note"
-
-  - where_ - Filter to select specific rows
-  - order_by - Columns used to sort the data
-  - limit - Limit the number of returned rows
-  - offset - The index to start returning rows from
-
--}
-task_to_note :
-  (TaskToNoteOptionalArguments -> TaskToNoteOptionalArguments)
-  -> SelectionSet decodesTo Api.Object.Task_to_note_row
-  -> SelectionSet (List decodesTo) RootQuery
-task_to_note fillInOptionals____ object____ =
-  let
-    filledInOptionals____ =
-      fillInOptionals____ { where_ = Absent, order_by = Absent, limit = Absent, offset = Absent }
-
-    optionalArgs____ =
-      [ Argument.optional "where" filledInOptionals____.where_ (Api.InputObject.encodeTask_to_note_filter), Argument.optional "order_by" filledInOptionals____.order_by (Api.InputObject.encodeTask_to_note_order_by |> Encode.maybe |> Encode.list), Argument.optional "limit" filledInOptionals____.limit (Encode.int), Argument.optional "offset" filledInOptionals____.offset (Encode.int) ]
-        |> List.filterMap Basics.identity
-  in
-  Object.selectionForCompositeField "task_to_note" optionalArgs____ (object____) (Basics.identity >> Decode.list)
-
-
 type alias TasksOptionalArguments =
   { where_ : OptionalArgument Api.InputObject.Tasks_filter
   , order_by : OptionalArgument (List (Maybe Api.InputObject.Tasks_order_by))
@@ -117,38 +85,6 @@ tasks fillInOptionals____ object____ =
         |> List.filterMap Basics.identity
   in
   Object.selectionForCompositeField "tasks" optionalArgs____ (object____) (Basics.identity >> Decode.list)
-
-
-type alias TagsOptionalArguments =
-  { where_ : OptionalArgument Api.InputObject.Tags_filter
-  , order_by : OptionalArgument (List (Maybe Api.InputObject.Tags_order_by))
-  , limit : OptionalArgument Int
-  , offset : OptionalArgument Int
-  }
-
-
-{-| Rows from the table "tags"
-
-  - where_ - Filter to select specific rows
-  - order_by - Columns used to sort the data
-  - limit - Limit the number of returned rows
-  - offset - The index to start returning rows from
-
--}
-tags :
-  (TagsOptionalArguments -> TagsOptionalArguments)
-  -> SelectionSet decodesTo Api.Object.Tags_row
-  -> SelectionSet (List decodesTo) RootQuery
-tags fillInOptionals____ object____ =
-  let
-    filledInOptionals____ =
-      fillInOptionals____ { where_ = Absent, order_by = Absent, limit = Absent, offset = Absent }
-
-    optionalArgs____ =
-      [ Argument.optional "where" filledInOptionals____.where_ (Api.InputObject.encodeTags_filter), Argument.optional "order_by" filledInOptionals____.order_by (Api.InputObject.encodeTags_order_by |> Encode.maybe |> Encode.list), Argument.optional "limit" filledInOptionals____.limit (Encode.int), Argument.optional "offset" filledInOptionals____.offset (Encode.int) ]
-        |> List.filterMap Basics.identity
-  in
-  Object.selectionForCompositeField "tags" optionalArgs____ (object____) (Basics.identity >> Decode.list)
 
 
 type alias ClosedTasksHistogramOptionalArguments =
@@ -245,6 +181,102 @@ task_to_task fillInOptionals____ object____ =
         |> List.filterMap Basics.identity
   in
   Object.selectionForCompositeField "task_to_task" optionalArgs____ (object____) (Basics.identity >> Decode.list)
+
+
+type alias TagsOptionalArguments =
+  { where_ : OptionalArgument Api.InputObject.Tags_filter
+  , order_by : OptionalArgument (List (Maybe Api.InputObject.Tags_order_by))
+  , limit : OptionalArgument Int
+  , offset : OptionalArgument Int
+  }
+
+
+{-| Rows from the table "tags"
+
+  - where_ - Filter to select specific rows
+  - order_by - Columns used to sort the data
+  - limit - Limit the number of returned rows
+  - offset - The index to start returning rows from
+
+-}
+tags :
+  (TagsOptionalArguments -> TagsOptionalArguments)
+  -> SelectionSet decodesTo Api.Object.Tags_row
+  -> SelectionSet (List decodesTo) RootQuery
+tags fillInOptionals____ object____ =
+  let
+    filledInOptionals____ =
+      fillInOptionals____ { where_ = Absent, order_by = Absent, limit = Absent, offset = Absent }
+
+    optionalArgs____ =
+      [ Argument.optional "where" filledInOptionals____.where_ (Api.InputObject.encodeTags_filter), Argument.optional "order_by" filledInOptionals____.order_by (Api.InputObject.encodeTags_order_by |> Encode.maybe |> Encode.list), Argument.optional "limit" filledInOptionals____.limit (Encode.int), Argument.optional "offset" filledInOptionals____.offset (Encode.int) ]
+        |> List.filterMap Basics.identity
+  in
+  Object.selectionForCompositeField "tags" optionalArgs____ (object____) (Basics.identity >> Decode.list)
+
+
+type alias TagsViewOptionalArguments =
+  { where_ : OptionalArgument Api.InputObject.Tags_view_filter
+  , order_by : OptionalArgument (List (Maybe Api.InputObject.Tags_view_order_by))
+  , limit : OptionalArgument Int
+  , offset : OptionalArgument Int
+  }
+
+
+{-| Rows from the table "tags_view"
+
+  - where_ - Filter to select specific rows
+  - order_by - Columns used to sort the data
+  - limit - Limit the number of returned rows
+  - offset - The index to start returning rows from
+
+-}
+tags_view :
+  (TagsViewOptionalArguments -> TagsViewOptionalArguments)
+  -> SelectionSet decodesTo Api.Object.Tags_view_row
+  -> SelectionSet (List decodesTo) RootQuery
+tags_view fillInOptionals____ object____ =
+  let
+    filledInOptionals____ =
+      fillInOptionals____ { where_ = Absent, order_by = Absent, limit = Absent, offset = Absent }
+
+    optionalArgs____ =
+      [ Argument.optional "where" filledInOptionals____.where_ (Api.InputObject.encodeTags_view_filter), Argument.optional "order_by" filledInOptionals____.order_by (Api.InputObject.encodeTags_view_order_by |> Encode.maybe |> Encode.list), Argument.optional "limit" filledInOptionals____.limit (Encode.int), Argument.optional "offset" filledInOptionals____.offset (Encode.int) ]
+        |> List.filterMap Basics.identity
+  in
+  Object.selectionForCompositeField "tags_view" optionalArgs____ (object____) (Basics.identity >> Decode.list)
+
+
+type alias TaskToCommentOptionalArguments =
+  { where_ : OptionalArgument Api.InputObject.Task_to_comment_filter
+  , order_by : OptionalArgument (List (Maybe Api.InputObject.Task_to_comment_order_by))
+  , limit : OptionalArgument Int
+  , offset : OptionalArgument Int
+  }
+
+
+{-| Rows from the table "task_to_comment"
+
+  - where_ - Filter to select specific rows
+  - order_by - Columns used to sort the data
+  - limit - Limit the number of returned rows
+  - offset - The index to start returning rows from
+
+-}
+task_to_comment :
+  (TaskToCommentOptionalArguments -> TaskToCommentOptionalArguments)
+  -> SelectionSet decodesTo Api.Object.Task_to_comment_row
+  -> SelectionSet (List decodesTo) RootQuery
+task_to_comment fillInOptionals____ object____ =
+  let
+    filledInOptionals____ =
+      fillInOptionals____ { where_ = Absent, order_by = Absent, limit = Absent, offset = Absent }
+
+    optionalArgs____ =
+      [ Argument.optional "where" filledInOptionals____.where_ (Api.InputObject.encodeTask_to_comment_filter), Argument.optional "order_by" filledInOptionals____.order_by (Api.InputObject.encodeTask_to_comment_order_by |> Encode.maybe |> Encode.list), Argument.optional "limit" filledInOptionals____.limit (Encode.int), Argument.optional "offset" filledInOptionals____.offset (Encode.int) ]
+        |> List.filterMap Basics.identity
+  in
+  Object.selectionForCompositeField "task_to_comment" optionalArgs____ (object____) (Basics.identity >> Decode.list)
 
 
 type alias TasksViewOptionalArguments =
@@ -740,19 +772,6 @@ task_to_tag_by_pk requiredArgs____ object____ =
   Object.selectionForCompositeField "task_to_tag_by_pk" [ Argument.required "ulid" requiredArgs____.ulid (Encode.string) ] (object____) (Basics.identity >> Decode.nullable)
 
 
-type alias TaskToNoteByPkRequiredArguments = { ulid : String }
-
-
-{-| Rows from the table "task_to_note", accessible by their primary key
--}
-task_to_note_by_pk :
-  TaskToNoteByPkRequiredArguments
-  -> SelectionSet decodesTo Api.Object.Task_to_note_row
-  -> SelectionSet (Maybe decodesTo) RootQuery
-task_to_note_by_pk requiredArgs____ object____ =
-  Object.selectionForCompositeField "task_to_note_by_pk" [ Argument.required "ulid" requiredArgs____.ulid (Encode.string) ] (object____) (Basics.identity >> Decode.nullable)
-
-
 type alias TasksByPkRequiredArguments = { ulid : String }
 
 
@@ -790,3 +809,29 @@ task_to_task_by_pk :
   -> SelectionSet (Maybe decodesTo) RootQuery
 task_to_task_by_pk requiredArgs____ object____ =
   Object.selectionForCompositeField "task_to_task_by_pk" [ Argument.required "ulid" requiredArgs____.ulid (Encode.string) ] (object____) (Basics.identity >> Decode.nullable)
+
+
+type alias TagsByPkRequiredArguments = { tag : String }
+
+
+{-| Rows from the table "tags", accessible by their primary key
+-}
+tags_by_pk :
+  TagsByPkRequiredArguments
+  -> SelectionSet decodesTo Api.Object.Tags_row
+  -> SelectionSet (Maybe decodesTo) RootQuery
+tags_by_pk requiredArgs____ object____ =
+  Object.selectionForCompositeField "tags_by_pk" [ Argument.required "tag" requiredArgs____.tag (Encode.string) ] (object____) (Basics.identity >> Decode.nullable)
+
+
+type alias TaskToCommentByPkRequiredArguments = { ulid : String }
+
+
+{-| Rows from the table "task_to_comment", accessible by their primary key
+-}
+task_to_comment_by_pk :
+  TaskToCommentByPkRequiredArguments
+  -> SelectionSet decodesTo Api.Object.Task_to_comment_row
+  -> SelectionSet (Maybe decodesTo) RootQuery
+task_to_comment_by_pk requiredArgs____ object____ =
+  Object.selectionForCompositeField "task_to_comment_by_pk" [ Argument.required "ulid" requiredArgs____.ulid (Encode.string) ] (object____) (Basics.identity >> Decode.nullable)

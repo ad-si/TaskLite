@@ -33,12 +33,13 @@ import Protolude (
  )
 import Protolude qualified as P
 
+import Comment (Comment (..), parseUser)
 import Control.Arrow ((>>>))
 import Data.Aeson (Value)
 import Data.Aeson as Aeson (
   FromJSON (parseJSON),
   ToJSON,
-  Value (Object, String),
+  Value (Array, Object, String),
   withObject,
   (.!=),
   (.:),
@@ -57,7 +58,6 @@ import Data.Text qualified as T
 import Data.Time.ISO8601.Duration qualified as Iso
 import Data.ULID (ULID, ulidFromInteger)
 import FullTask qualified
-import Note (Note (..))
 import Task (
   Task (
     Task,
@@ -115,28 +115,30 @@ instance FromJSON Annotation where
     pure Annotation{..}
 
 
-annotationToNote :: Annotation -> Note
-annotationToNote annot@Annotation{entry, description} = do
+annotationToComment :: Annotation -> Comment
+annotationToComment annot@Annotation{entry, description} = do
   let
     utc = entry & parseUtc & fromMaybe (timeFromElapsedP 0 :: DateTime)
     ulidGeneratedRes = annot & (hash >>> toInteger >>> abs >>> ulidFromInteger)
     ulidCombined = (ulidGeneratedRes & P.fromRight emptyUlid) `setDateTime` utc
 
-  Note
+  Comment
     { ulid = (T.toLower . show) ulidCombined
     , body = description
+    , user = ""
     }
 
 
-textToNote :: DateTime -> Text -> Note
-textToNote utc body =
+textToComment :: DateTime -> Text -> Comment
+textToComment utc body =
   let
     ulidGeneratedRes = body & (hash >>> toInteger >>> abs >>> ulidFromInteger)
     ulidCombined = (ulidGeneratedRes & P.fromRight emptyUlid) `setDateTime` utc
   in
-    Note
+    Comment
       { ulid = (T.toLower . show) ulidCombined
       , body = body
+      , user = ""
       }
 
 
@@ -147,7 +149,7 @@ importUtcFormat =
 
 data ImportTask = ImportTask
   { task :: Task
-  , notes :: [Note]
+  , comments :: [Comment]
   , tags :: [Text]
   , closedUtcWasExplicit :: P.Bool
   -- ^ True if closed_utc was explicitly provided, False if implicitly derived
@@ -159,7 +161,7 @@ emptyImportTask :: ImportTask
 emptyImportTask =
   ImportTask
     { task = emptyTask
-    , notes = []
+    , comments = []
     , tags = []
     , closedUtcWasExplicit = P.False
     }
@@ -362,47 +364,42 @@ instance FromJSON ImportTask where
       recurrence_duration = parseIsoDurationMb maybeRecurrence
 
     let
-      -- Notes can be objects with a body (and a ulid) or plain text
-      parseNote :: Value -> Parser Note
-      parseNote = \case
-        String noteText -> pure $ textToNote createdUtc noteText
-        noteValue -> parseJSON noteValue
-    o_notes <-
-      (o .:? "notes" :: Parser (Maybe [Value]))
-        >>= P.traverse (P.traverse parseNote)
+      -- Comments can be objects with a body (and a ulid) or plain text
+      parseComment :: Value -> Parser Comment
+      parseComment = \case
+        String commentText -> pure $ textToComment createdUtc commentText
+        commentValue -> parseJSON commentValue
+      -- Non-array values (e.g. the number of comments of a GitHub issue)
+      -- aren't comments and are therefore kept in the metadata
+      getArray :: Maybe Value -> Maybe [Value]
+      getArray = \case
+        Just (Array values) -> Just $ P.toList values
+        _ -> Nothing
+    o_comments_values <- o .:? "comments" <&> getArray
+    o_comments <- P.traverse (P.traverse parseComment) o_comments_values
     annotations <- o .:? "annotations" :: Parser (Maybe [Annotation])
 
     let
-      notes = case (o_notes, annotations) of
+      comments = case (o_comments, annotations) of
         (Nothing, Nothing) -> []
-        (Nothing, Just values) -> values <&> annotationToNote
-        (Just theNotes, _) -> case parsedCreatedUtc of
+        (Nothing, Just values) -> values <&> annotationToComment
+        (Just theComments, _) -> case parsedCreatedUtc of
           Just crUtc ->
-            theNotes
-              <&> ( \theNote ->
-                      theNote
-                        { Note.ulid =
-                            theNote.ulid
+            theComments
+              <&> ( \theComment ->
+                      theComment
+                        { Comment.ulid =
+                            theComment.ulid
                               & parseUlidText
                                 <&> P.flip setDateTime crUtc
                                 <&> show @ULID
-                              & fromMaybe theNote.ulid
+                              & fromMaybe theComment.ulid
                               & T.toLower
                         }
                   )
-          Nothing -> theNotes
+          Nothing -> theComments
 
-    (o_userMb :: Maybe Value) <- o .:? "user"
-    o_author <- o .:? "author"
-    let
-      o_userNormMb =
-        o_userMb >>= \case
-          String txt -> Just txt
-          Object obj ->
-            P.flip parseMaybe obj (\o_ -> o_ .:? "login" .!= "")
-          _ -> Nothing
-      userMaybe = o_userNormMb <|> o_author
-      user = fromMaybe "" userMaybe
+    user <- parseUser o <&> fromMaybe ""
 
     o_metadata <- o .:? "metadata"
     let
@@ -420,7 +417,7 @@ instance FromJSON ImportTask where
                     & KeyMap.delete "utc"
                     & KeyMap.delete "priority_adjustment"
                     & KeyMap.delete "tags"
-                    & (if notes /= [] then KeyMap.delete "notes" else P.identity)
+                    & (if comments /= [] then KeyMap.delete "comments" else P.identity)
                 )
                   & ( \val ->
                         if val == KeyMap.empty
@@ -451,7 +448,7 @@ instance FromJSON ImportTask where
 
     let finalTask = tempTask{Task.ulid = ulid}
 
-    pure $ ImportTask finalTask notes tags closedUtcWasExplicit
+    pure $ ImportTask finalTask comments tags closedUtcWasExplicit
 
 
 setMissingFields :: ImportTask -> P.IO ImportTask
@@ -483,7 +480,7 @@ setMissingFields importTaskRec = do
 
 
 importTaskToFullTask :: ImportTask -> FullTask.FullTask
-importTaskToFullTask ImportTask{task, notes, tags} =
+importTaskToFullTask ImportTask{task, comments, tags} =
   FullTask.FullTask
     { FullTask.ulid = task.ulid
     , FullTask.body = task.body
@@ -500,7 +497,7 @@ importTaskToFullTask ImportTask{task, notes, tags} =
     , FullTask.repetition_duration = task.repetition_duration
     , FullTask.recurrence_duration = task.recurrence_duration
     , FullTask.tags = Just tags
-    , FullTask.notes = Just notes
+    , FullTask.comments = Just comments
     , FullTask.blockers = Nothing
     , FullTask.blocked = Nothing
     , FullTask.priority = task.priority_adjustment

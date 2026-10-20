@@ -11,6 +11,22 @@ This document lists all notable changes to the functionality of TaskLite.
 
 #### 💻 General
 
+- **Breaking:** Rename notes to comments and store an author (`user`)
+    for every comment.
+    It's determined the same way as the `user` of a task.
+    Existing comments get the user of their task as author.
+    - The table `task_to_note` is replaced by `task_to_comment`
+        (with the columns `ulid`, `task_ulid`, `comment`, and `user`).
+    - The `notes` column of `tasks_view` (and derived views)
+        is renamed to `comments`.
+    - The commands `note`, `deletenote`, `notes`, and `unnote`
+        are renamed to `comment`, `deletecomment`, `comments`,
+        and `uncomment`.
+        The old names are not kept as aliases.
+    - Imports and exports use a `comments` field instead of `notes`.
+        A `notes` field is no longer imported as comments
+        (it's kept in the metadata like any other unknown field).
+    - `tl comments` and `tl info` show the author of each comment.
 - Add `tl history [--by day|week|month|year] [FILTER_EXP…]`
     to show the number of added and closed tasks per period (default: week)
     as a table with a bar graph

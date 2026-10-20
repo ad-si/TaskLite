@@ -180,14 +180,14 @@ import ImportExport (
   ingestFile,
  )
 import Lib (
-  addNote,
+  addComment,
   addTag,
   addTask,
   adjustPriority,
   blockTasks,
   countTasks,
   deletableTasks,
-  deleteNote,
+  deleteComment,
   deleteTag,
   deleteTagDescription,
   describeTag,
@@ -203,7 +203,7 @@ import Lib (
   listAll,
   listHistory,
   listNoTag,
-  listNotes,
+  listComments,
   listOldTasks,
   listProjects,
   listReady,
@@ -237,7 +237,7 @@ import Lib (
   uncloseTasks,
   undueTasks,
   unmetaTasks,
-  unnoteTasks,
+  uncommentTasks,
   unprioTasks,
   unreadyTasks,
   unrecurTasks,
@@ -312,8 +312,8 @@ data Command
   | DeleteTagDescription TagText
   | BlockTasks IdText IdText
   | UnblockTasks IdText IdText
-  | AddNote Text [IdText]
-  | DeleteNote IdText
+  | AddComment Text [IdText]
+  | DeleteComment IdText
   | SetDueUtc DateTime [IdText]
   | Start [IdText]
   | Stop [IdText]
@@ -369,7 +369,7 @@ data Command
   -- \| Views -- List all available views
   | Tags -- List all used tags
   | Projects -- List all active tags
-  | Notes -- List all notes
+  | Comments -- List all comments
   | Stats -- List statistics about tasks
   | History HistoryPeriod (Maybe [Text])
   {- Unset -}
@@ -386,7 +386,7 @@ data Command
   | UnRepeatTasks [IdText]
   | UnRecurTasks [IdText]
   | UnTagTasks [IdText]
-  | UnNoteTasks [IdText]
+  | UnCommentTasks [IdText]
   | UnPrioTasks [IdText]
   | UnMetaTasks [IdText] --
   {- Misc -}
@@ -419,7 +419,7 @@ data CliOptions = CliOptions
 
 nameToAliasList :: [(Text, Text)]
 nameToAliasList =
-  [ ("annotate", "note")
+  [ ("annotate", "comment")
   , ("clone", "duplicate")
   , ("close", "end")
   , ("decrease", "hush")
@@ -634,9 +634,9 @@ commandParser conf =
     <> command "do" (toParserInfo (DoOneTask
         <$> strArgument idsVar
         <*> closedUtcOption
-        <*> optional (some (strArgument (metavar "CLOSING_NOTE"
-              <> help "Final note to explain why and how it was done"))))
-        "Mark a task as done and add optional closing note")
+        <*> optional (some (strArgument (metavar "CLOSING_COMMENT"
+              <> help "Final comment to explain why and how it was done"))))
+        "Mark a task as done and add optional closing comment")
 
     <> command "doonly" (toParserInfo
         (DoOneTask <$> strArgument idsVar <*> closedUtcOption <*> pure Nothing)
@@ -649,9 +649,9 @@ commandParser conf =
     <> command "end" (toParserInfo (EndOneTask
         <$> strArgument idsVar
         <*> closedUtcOption
-        <*> optional (some (strArgument (metavar "CLOSING_NOTE"
-              <> help "Final note to explain why and how it was closed"))))
-        "Mark a task as obsolete and add optional closing note")
+        <*> optional (some (strArgument (metavar "CLOSING_COMMENT"
+              <> help "Final comment to explain why and how it was closed"))))
+        "Mark a task as obsolete and add optional closing comment")
 
     <> command "endall" (toParserInfo
         (EndTasks <$> closedUtcOption <*> some (strArgument idsVar))
@@ -752,14 +752,14 @@ commandParser conf =
             (metavar "BLOCKED_ID" <> help "The blocked task"))
       "Remove a blocks relation between two tasks")
 
-    <> command "note" (toParserInfo (AddNote
-      <$> strArgument (metavar "NOTE" <> help "The note")
+    <> command "comment" (toParserInfo (AddComment
+      <$> strArgument (metavar "COMMENT" <> help "The comment")
       <*> some (strArgument idsVar))
-      "Add a note to specified tasks")
+      "Add a comment to specified tasks")
 
-    <> command "deletenote" (toParserInfo (DeleteNote
-      <$> strArgument (metavar "ULID" <> help "The ULID of the note"))
-      "Delete the specified note")
+    <> command "deletecomment" (toParserInfo (DeleteComment
+      <$> strArgument (metavar "ULID" <> help "The ULID of the comment"))
+      "Delete the specified comment")
 
     <> command "due" (toParserInfo (SetDueUtc
       <$> argument (maybeReader (parseUtc . T.pack))
@@ -769,11 +769,11 @@ commandParser conf =
 
     <> command "start" (toParserInfo
         (Start <$> some (strArgument idsVar))
-        "Add a note that work on task was started")
+        "Add a comment that work on task was started")
 
     <> command "stop" (toParserInfo
         (Stop <$> some (strArgument idsVar))
-        "Add a note that work on task was stopped")
+        "Add a comment that work on task was stopped")
 
     -- <> command "active" (toParserInfo
     --     (Active <$> some (strArgument idsVar))
@@ -988,8 +988,8 @@ commandParser conf =
     <> command "projects" (toParserInfo (pure Projects)
         "List all active tags (a.k.a projects) and their progress")
 
-    <> command "notes" (toParserInfo (pure Notes)
-        "List all notes descending by creation UTC")
+    <> command "comments" (toParserInfo (pure Comments)
+        "List all comments descending by creation UTC")
 
     <> command "stats" (toParserInfo (pure Stats)
         "Show statistics about tasks")
@@ -1147,9 +1147,9 @@ commandParser conf =
         <$> some (strArgument idsVar))
         "Erase all tags")
 
-    <> command "unnote" (toParserInfo (UnNoteTasks
+    <> command "uncomment" (toParserInfo (UnCommentTasks
         <$> some (strArgument idsVar))
-        "Erase all notes")
+        "Erase all comments")
 
     <> command "unprio" (toParserInfo (UnPrioTasks
         <$> some (strArgument idsVar))
@@ -1448,7 +1448,7 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         RunFilter expressions -> runFilter conf now connection expressions availableLinesMb
         Tags -> listTags conf connection
         Projects -> listProjects conf connection
-        Notes -> listNotes conf connection
+        Comments -> listComments conf connection
         Stats -> getStats conf connection
         History period taskFilter ->
           listHistory conf now connection period taskFilter availableLinesMb
@@ -1494,11 +1494,11 @@ executeCLiCommand config now connection progName args availableLinesMb = do
           in  reviewTasksIn conf connection days3 ids
         ReviewTasksIn days ids -> reviewTasksIn conf connection days ids
         DoTasks utcMb ids -> doTasks conf connection utcMb Nothing ids
-        DoOneTask id utcMb noteWords ->
-          doTasks conf connection utcMb noteWords [id]
+        DoOneTask id utcMb commentWords ->
+          doTasks conf connection utcMb commentWords [id]
         EndTasks utcMb ids -> endTasks conf connection utcMb Nothing ids
-        EndOneTask id utcMb noteWords ->
-          endTasks conf connection utcMb noteWords [id]
+        EndOneTask id utcMb commentWords ->
+          endTasks conf connection utcMb commentWords [id]
         EditTask id -> editTask conf connection id
         TrashTasks ids -> trashTasks conf connection ids
         DeleteTasks ids -> deleteTasks conf connection ids
@@ -1523,8 +1523,8 @@ executeCLiCommand config now connection progName args availableLinesMb = do
           blockTasks conf connection blockerId blockedId
         UnblockTasks blockerId blockedId ->
           unblockTasks conf connection blockerId blockedId
-        AddNote noteText ids -> addNote conf connection noteText ids
-        DeleteNote id -> deleteNote conf connection id
+        AddComment commentText ids -> addComment conf connection commentText ids
+        DeleteComment id -> deleteComment conf connection id
         SetDueUtc datetime ids -> setDueUtc conf connection datetime ids
         Duplicate ids -> duplicateTasks conf connection ids
         CountFiltered taskFilter -> countTasks conf connection taskFilter
@@ -1539,7 +1539,7 @@ executeCLiCommand config now connection progName args availableLinesMb = do
         UnRepeatTasks ids -> unrepeatTasks conf connection ids
         UnRecurTasks ids -> unrecurTasks conf connection ids
         UnTagTasks ids -> untagTasks conf connection ids
-        UnNoteTasks ids -> unnoteTasks conf connection ids
+        UnCommentTasks ids -> uncommentTasks conf connection ids
         UnPrioTasks ids -> unprioTasks conf connection ids
         UnMetaTasks ids -> unmetaTasks conf connection ids
         Version -> pure $ pretty versionSlug <> hardline

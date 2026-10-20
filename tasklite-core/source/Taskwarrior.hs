@@ -39,8 +39,8 @@ import Data.Text qualified as T
 import Data.ULID (ulidToInteger)
 import Numeric (showHex)
 
+import Comment (Comment (..))
 import FullTask (FullTask (..))
-import Note (Note (..))
 import Task (TaskState (..))
 import Utils (parseUlidText, parseUtc, ulidTextToDateTime)
 
@@ -183,17 +183,17 @@ fullTaskToTwJson task =
     scheduledDate :: Maybe Text
     scheduledDate = convertDate task.ready_utc
 
-    -- Convert notes to Taskwarrior annotations
+    -- Convert comments to Taskwarrior annotations
     annotations :: Maybe [TWAnnotation]
     annotations =
-      task.notes <&> \noteList ->
-        noteList <&> \note ->
+      task.comments <&> \commentList ->
+        commentList <&> \comment ->
           TWAnnotation
             { entry =
                 fromMaybe
                   ""
-                  (ulidTextToDateTime note.ulid <&> (timePrint twDateFormat >>> T.pack))
-            , description = note.body
+                  (ulidTextToDateTime comment.ulid <&> (timePrint twDateFormat >>> T.pack))
+            , description = comment.body
             }
 
     -- Build the JSON object with only present fields

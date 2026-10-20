@@ -40,6 +40,7 @@ library
   exposed-modules:
       Base32
       Cli
+      Comment
       Config
       Email
       FullTask
@@ -52,10 +53,9 @@ library
       McpServer
       Migrations
       NativeMessaging
-      Note
       SqlUtils
       Task
-      TaskToNote
+      TaskToComment
       TaskToTag
       TaskToTask
       Taskwarrior
@@ -187,6 +187,7 @@ test-suite tasklite-test
     , text
     , time-hourglass
     , ulid
+    , unix
     , vector
     , yaml
   default-language: GHC2021

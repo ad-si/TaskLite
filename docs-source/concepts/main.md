@@ -61,9 +61,13 @@ you can use the `tl boost [ulid]` command to increase the priority by 1,
 or the `tl hush [ulid]` command to decrease it by 1.
 
 
-## Notes
+## Comments
 
-A task can have several notes. Each note is identified by an [ULID].
+A task can have several comments.
+Each comment is identified by an [ULID] and has an author (`user`),
+which is determined the same way as the `user` of a task
+(i.e. the name of the current user).
+
 
 [ULID]: https://github.com/ulid/spec
 
@@ -71,8 +75,8 @@ A task can have several notes. Each note is identified by an [ULID].
 $ tl add Buy milk
 🆕 Added task "Buy milk" with id "01dpgj8e9ws2dwgvsk5nmrvvg9"
 
-$ tl note 'The vegan one from Super Buy' 01dpgj8e9ws2dwgvsk5nmrvvg9
-🗒  Added a note to task "Buy milk" with id "01dpgj8e9ws2dwgvsk5nmrvvg9"
+$ tl comment 'The vegan one from Super Buy' 01dpgj8e9ws2dwgvsk5nmrvvg9
+🗒  Added a comment to task "Buy milk" with id "01dpgj8e9ws2dwgvsk5nmrvvg9"
 
 $ tl info 01dpgj8e9ws2dwgvsk5nmrvvg9
 awake_utc: null
@@ -94,9 +98,10 @@ due_utc: null
 priority: 1.0
 tags:
 
-notes:
-  - note: The vegan one from Super Buy
+comments:
+  - body: The vegan one from Super Buy
     ulid: 01dpgjf35pq74gchsgtcd6fgsa
+    user: adrian
 ```
 
 

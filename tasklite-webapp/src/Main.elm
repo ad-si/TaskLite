@@ -1197,7 +1197,7 @@ setTodoCompleted ulid =
 
 deleteTodo : String -> Cmd Msg
 deleteTodo ulid =
-  -- TODO: Also delete tags and notes
+  -- TODO: Also delete tags and comments
   Mutation.delete_tasks
     (\args -> { args | where_ = Present <| ulidFilter ulid })
     Api.Object.Tasks_mutation_response.affected_rows

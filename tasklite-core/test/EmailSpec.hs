@@ -74,7 +74,7 @@ spec = do
       withImportTask simpleEmail $ \importTask -> do
         importTask.task.body
           `shouldBe` "Review the contract\n\nHi,\n\nplease review the contract."
-        P.length importTask.notes `shouldBe` 0
+        P.length importTask.comments `shouldBe` 0
         importTask.tags `shouldBe` ["work", "legal"]
 
     it "stores sender, recipients, and message ID as metadata" $ do
@@ -142,10 +142,10 @@ spec = do
             , ""
             , "See attachment."
             , "--XX"
-            , "Content-Type: text/plain; name=\"notes.txt\""
-            , "Content-Disposition: attachment; filename=\"notes.txt\""
+            , "Content-Type: text/plain; name=\"comments.txt\""
+            , "Content-Disposition: attachment; filename=\"comments.txt\""
             , ""
-            , "Attached notes"
+            , "Attached comments"
             , "--XX--"
             , ""
             ]

@@ -53,6 +53,7 @@ import Test.Hspec (
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (NonNegative (..))
 
+import Comment (Comment)
 import Config (
   Hook (Hook),
   HookSet (HookSet),
@@ -64,12 +65,12 @@ import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
 import ImportExport (EditMode (ApplyPreEdit), editTaskByTask)
 import Lib (
-  addNote,
+  addComment,
   addTag,
   addTask,
   blockTasks,
   countTasks,
-  deleteNote,
+  deleteComment,
   deleteTag,
   deleteTagDescription,
   deleteTasks,
@@ -81,7 +82,7 @@ import Lib (
   infoTask,
   insertRecord,
   insertTags,
-  listNotes,
+  listComments,
   listTags,
   listUlids,
   logTask,
@@ -100,7 +101,6 @@ import Lib (
   updateTask,
   wasListTruncated,
  )
-import Note (Note)
 import Task (
   DerivedState (IsAsleep, IsAwake, IsOpen, IsReady),
   Task (
@@ -121,8 +121,8 @@ import Task (
   emptyTask,
   getStateHierarchy,
  )
-import TaskToNote (TaskToNote (TaskToNote, ulid))
-import TaskToNote qualified
+import TaskToComment (TaskToComment (TaskToComment, ulid))
+import TaskToComment qualified
 import TaskToTag (TaskToTag)
 import TaskToTag qualified
 import TaskToTask (TaskToTask)
@@ -528,12 +528,12 @@ spec = do
             row.target_task_ulid `shouldNotBe` task1.ulid
           _ -> P.die "Expected exactly one task_to_task row"
 
-    it "adds a note" $ do
+    it "adds a comment" $ do
       withMemoryDb conf $ \memConn -> do
         insertRecord "tasks" memConn exampleTask
-        noteResult <- addNote conf memConn "A test note" [exampleTask.ulid]
-        unpack (show noteResult)
-          `shouldStartWith` "🗒  Added a note to task"
+        commentResult <- addComment conf memConn "A test comment" [exampleTask.ulid]
+        unpack (show commentResult)
+          `shouldStartWith` "🗒  Added a comment to task"
 
     let postModifyLuaHook =
           Hook
@@ -581,7 +581,7 @@ spec = do
           addTag confWithPostModify memConn "test" [exampleTask.ulid]
         unpack (show result) `shouldContain` "post-modify ran"
 
-    -- it "correctly wraps multiline notes" $ do
+    -- it "correctly wraps multiline comments" $ do
     --   See error:
     --   tl info x795vqf
 
@@ -655,7 +655,7 @@ spec = do
                 updatedTask.closed_utc `shouldBe` Just "2020-01-15 08:30:00"
               _ -> P.die "Found more than one task"
 
-    it "dates the closing note with the explicit closed UTC via --utc" $ do
+    it "dates the closing comment with the explicit closed UTC via --utc" $ do
       withMemoryDb conf $ \memConn -> do
         insertRecord "tasks" memConn exampleTask
         case parseUtc "2020-01-15 08:30:00" of
@@ -666,18 +666,18 @@ spec = do
                 conf
                 memConn
                 (Just utcStamp)
-                (Just ["Closing", "note"])
+                (Just ["Closing", "comment"])
                 [exampleTask.ulid]
-            taskToNotes :: [TaskToNote] <-
-              query_ memConn "SELECT * FROM task_to_note"
-            case taskToNotes of
-              [taskToNote] -> do
-                taskToNote.note `shouldBe` "Closing note"
-                ulidText2utc taskToNote.ulid
+            taskToComments :: [TaskToComment] <-
+              query_ memConn "SELECT * FROM task_to_comment"
+            case taskToComments of
+              [taskToComment] -> do
+                taskToComment.comment `shouldBe` "Closing comment"
+                ulidText2utc taskToComment.ulid
                   `shouldBe` Just "2020-01-15 08:30:00.000"
-              _ -> P.die "Expected exactly one note"
+              _ -> P.die "Expected exactly one comment"
 
-    it "dates the closing note of an obsolete task with the explicit UTC" $ do
+    it "dates the closing comment of an obsolete task with the explicit UTC" $ do
       withMemoryDb conf $ \memConn -> do
         insertRecord "tasks" memConn exampleTask
         case parseUtc "2020-01-15 08:30:00" of
@@ -690,14 +690,14 @@ spec = do
                 (Just utcStamp)
                 (Just ["Not", "needed"])
                 [exampleTask.ulid]
-            taskToNotes :: [TaskToNote] <-
-              query_ memConn "SELECT * FROM task_to_note"
-            case taskToNotes of
-              [taskToNote] -> do
-                taskToNote.note `shouldBe` "Not needed"
-                ulidText2utc taskToNote.ulid
+            taskToComments :: [TaskToComment] <-
+              query_ memConn "SELECT * FROM task_to_comment"
+            case taskToComments of
+              [taskToComment] -> do
+                taskToComment.comment `shouldBe` "Not needed"
+                ulidText2utc taskToComment.ulid
                   `shouldBe` Just "2020-01-15 08:30:00.000"
-              _ -> P.die "Expected exactly one note"
+              _ -> P.die "Expected exactly one comment"
 
     it "refuses to complete a task with open blockers" $ do
       withMemoryDb conf $ \memConn -> do
@@ -748,8 +748,8 @@ spec = do
         tasks `shouldBe` []
         tags :: [TaskToTag] <- query_ memConn "SELECT * FROM task_to_tag"
         tags `shouldBe` []
-        notes :: [Note] <- query_ memConn "SELECT * FROM task_to_note"
-        notes `shouldBe` []
+        comments :: [Comment] <- query_ memConn "SELECT * FROM task_to_comment"
+        comments `shouldBe` []
 
     it "duplicates a task" $ do
       withMemoryDb conf $ \memConn -> do
@@ -1024,60 +1024,65 @@ spec = do
         (tags :: [[P.Text]]) <- query_ memConn "SELECT tag FROM task_to_tag"
         tags `shouldBe` [["tag-b"]]
 
-    it "updates edited notes in place" $ do
+    it "updates edited comments in place" $ do
       withMemoryDb defaultConfig $ \memConn -> do
         insertRecord "tasks" memConn task1
-        let noteUlid = "01hxsjgzmdx48yzk39v852razr"
+        let commentUlid = "01hxsjgzmdx48yzk39v852razr"
         insertRecord
-          "task_to_note"
+          "task_to_comment"
           memConn
-          TaskToNote
-            { TaskToNote.ulid = noteUlid
-            , TaskToNote.task_ulid = task1.ulid
-            , TaskToNote.note = "Old note"
+          TaskToComment
+            { TaskToComment.ulid = commentUlid
+            , TaskToComment.task_ulid = task1.ulid
+            , TaskToComment.comment = "Old comment"
+            , TaskToComment.user = "john"
             }
         _ <-
           editTaskByTask
             conf
-            (ApplyPreEdit $ replaceBs "body: Old note" "body: New note")
+            (ApplyPreEdit $ replaceBs "body: Old comment" "body: New comment")
             memConn
             task1
-        taskToNotes :: [TaskToNote] <-
-          query_ memConn "SELECT * FROM task_to_note"
-        taskToNotes
-          `shouldBe` [ TaskToNote
-                         { TaskToNote.ulid = noteUlid
-                         , TaskToNote.task_ulid = task1.ulid
-                         , TaskToNote.note = "New note"
+        taskToComments :: [TaskToComment] <-
+          query_ memConn "SELECT * FROM task_to_comment"
+        taskToComments
+          `shouldBe` [ TaskToComment
+                         { TaskToComment.ulid = commentUlid
+                         , TaskToComment.task_ulid = task1.ulid
+                         , TaskToComment.comment = "New comment"
+                         , TaskToComment.user = "john"
                          }
                      ]
 
-    it "removes notes which were deleted" $ do
+    it "removes comments which were deleted" $ do
       withMemoryDb defaultConfig $ \memConn -> do
         insertRecord "tasks" memConn task1
         P.forM_
-          [ ("01hxsjgzmdx48yzk39v852raza", "Note A")
-          , ("01hxsjgzmdx48yzk39v852razb", "Note B")
+          [ ("01hxsjgzmdx48yzk39v852raza", "Comment A")
+          , ("01hxsjgzmdx48yzk39v852razb", "Comment B")
           ]
-          $ \(noteUlid, note) ->
+          $ \(commentUlid, comment) ->
             insertRecord
-              "task_to_note"
+              "task_to_comment"
               memConn
-              TaskToNote
-                { TaskToNote.ulid = noteUlid
-                , TaskToNote.task_ulid = task1.ulid
-                , TaskToNote.note = note
+              TaskToComment
+                { TaskToComment.ulid = commentUlid
+                , TaskToComment.task_ulid = task1.ulid
+                , TaskToComment.comment = comment
+                , TaskToComment.user = "john"
                 }
         _ <-
           editTaskByTask
             conf
             ( ApplyPreEdit $
-                replaceBs "- body: Note A\n  ulid: 01hxsjgzmdx48yzk39v852raza\n" ""
+                replaceBs
+                  "- body: Comment A\n  ulid: 01hxsjgzmdx48yzk39v852raza\n  user: john\n"
+                  ""
             )
             memConn
             task1
-        (notes :: [[P.Text]]) <- query_ memConn "SELECT note FROM task_to_note"
-        notes `shouldBe` [["Note B"]]
+        (comments :: [[P.Text]]) <- query_ memConn "SELECT comment FROM task_to_comment"
+        comments `shouldBe` [["Comment B"]]
 
     it "deletes the task if state is set to x" $ do
       withMemoryDb defaultConfig $ \memConn -> do
@@ -1141,7 +1146,7 @@ spec = do
                   replaceBs
                     "state: null"
                     "state: Done"
-                    -- Note: NOT changing closed_utc - it should be set by the SQL trigger
+                    -- Comment: NOT changing closed_utc - it should be set by the SQL trigger
               )
               memConn
               task1
@@ -1184,7 +1189,7 @@ spec = do
             task.closed_utc `shouldBe` Just "2023-06-15 12:30:00.000"
           _ -> P.die "Found more than one task"
 
-    it "lets you add notes" $ do
+    it "lets you add comments" $ do
       withMemoryDb defaultConfig $ \memConn -> do
         insertRecord "tasks" memConn task1
         cliOutput <-
@@ -1193,57 +1198,58 @@ spec = do
             ( ApplyPreEdit $
                 replaceBs
                   "\n...\n"
-                  ("\nnotes: " <> P.show ["A short note" :: Text] <> "\n...\n")
+                  ("\ncomments: " <> P.show ["A short comment" :: Text] <> "\n...\n")
             )
             memConn
             task1
         show cliOutput `shouldStartWith` "✏️  Edited task \"New task 1\""
 
-        taskToNotes :: [TaskToNote] <-
-          query_ memConn "SELECT * FROM task_to_note"
-        case taskToNotes of
-          [taskToNote] -> do
-            taskToNote.ulid
+        taskToComments :: [TaskToComment] <-
+          query_ memConn "SELECT * FROM task_to_comment"
+        case taskToComments of
+          [taskToComment] -> do
+            taskToComment.ulid
               `shouldNotSatisfy` (\ulid -> zeroUlidTxt `T.isPrefixOf` ulid)
-            taskToNote.note `shouldBe` "A short note"
+            taskToComment.comment `shouldBe` "A short comment"
           _ -> P.die "Found more than one task_to_tag row"
 
-    it "de-duplicates notes" $ do
+    it "de-duplicates comments" $ do
       withMemoryDb defaultConfig $ \memConn -> do
         insertRecord "tasks" memConn task1
-        let note = "A short note"
+        let comment = "A short comment"
         insertRecord
-          "task_to_note"
+          "task_to_comment"
           memConn
-          TaskToNote
-            { TaskToNote.ulid = "01hxsjgzmdx48yzk39v852razr"
-            , TaskToNote.task_ulid = task1.ulid
-            , TaskToNote.note = note
+          TaskToComment
+            { TaskToComment.ulid = "01hxsjgzmdx48yzk39v852razr"
+            , TaskToComment.task_ulid = task1.ulid
+            , TaskToComment.comment = comment
+            , TaskToComment.user = "john"
             }
         taskInfo <- infoTask defaultConfig memConn task1.ulid
-        show taskInfo `shouldContain` T.unpack note
+        show taskInfo `shouldContain` T.unpack comment
         cliOutput <-
           editTaskByTask
             conf
-            -- Append plain text notes to the existing ones
+            -- Append plain text comments to the existing ones
             ( ApplyPreEdit $
                 replaceBs "\n...\n" $
-                  "\n- " <> P.encodeUtf8 note <> "\n- " <> P.encodeUtf8 note <> "\n...\n"
+                  "\n- " <> P.encodeUtf8 comment <> "\n- " <> P.encodeUtf8 comment <> "\n...\n"
             )
             memConn
             task1
         show cliOutput `shouldStartWith` "✏️  Edited task \"New task 1\""
 
-        taskToNotes :: [TaskToNote] <-
-          query_ memConn "SELECT * FROM task_to_note"
-        case taskToNotes of
-          [taskToNoteA, taskToNoteB] -> do
-            taskToNoteA.ulid
+        taskToComments :: [TaskToComment] <-
+          query_ memConn "SELECT * FROM task_to_comment"
+        case taskToComments of
+          [taskToCommentA, taskToCommentB] -> do
+            taskToCommentA.ulid
               `shouldNotSatisfy` (\ulid -> zeroUlidTxt `T.isPrefixOf` ulid)
-            taskToNoteB.ulid
+            taskToCommentB.ulid
               `shouldNotSatisfy` (\ulid -> zeroUlidTxt `T.isPrefixOf` ulid)
-            taskToNoteA.note `shouldBe` "A short note"
-            taskToNoteB.note `shouldBe` "A short note"
+            taskToCommentA.comment `shouldBe` "A short comment"
+            taskToCommentB.comment `shouldBe` "A short comment"
           _ -> P.die "Found more than one task_to_tag row"
 
     it "lets you set metadata to null" $ do
@@ -1280,57 +1286,60 @@ spec = do
                         \with several lines\n\
                         \and line breaks"
 
-  it "lists all notes descending by creation UTC" $ do
+  it "lists all comments descending by creation UTC" $ do
     withMemoryDb defaultConfig $ \memConn -> do
       insertRecord "tasks" memConn task1
       let
-        taskToNote1 =
-          TaskToNote
-            { TaskToNote.ulid = "01hx4eyxxvs5b75ynxrztcz87f"
-            , TaskToNote.task_ulid = task1.ulid
-            , TaskToNote.note = "The first note"
+        taskToComment1 =
+          TaskToComment
+            { TaskToComment.ulid = "01hx4eyxxvs5b75ynxrztcz87f"
+            , TaskToComment.task_ulid = task1.ulid
+            , TaskToComment.comment = "The first comment"
+            , TaskToComment.user = "john"
             }
-        note1Id = taskToNote1.ulid & T.takeEnd 2 & T.unpack
-        taskToNote2 =
-          TaskToNote
-            { TaskToNote.ulid = "01hx4f3f764sma7n8bahvwjeed"
-            , TaskToNote.task_ulid = task1.ulid
-            , TaskToNote.note = "The second note"
+        comment1Id = taskToComment1.ulid & T.takeEnd 2 & T.unpack
+        taskToComment2 =
+          TaskToComment
+            { TaskToComment.ulid = "01hx4f3f764sma7n8bahvwjeed"
+            , TaskToComment.task_ulid = task1.ulid
+            , TaskToComment.comment = "The second comment"
+            , TaskToComment.user = "john"
             }
-        note2Id = taskToNote2.ulid & T.takeEnd 2 & T.unpack
+        comment2Id = taskToComment2.ulid & T.takeEnd 2 & T.unpack
 
-      insertRecord "task_to_note" memConn taskToNote1
-      insertRecord "task_to_note" memConn taskToNote2
+      insertRecord "task_to_comment" memConn taskToComment1
+      insertRecord "task_to_comment" memConn taskToComment2
 
-      cliOutput <- listNotes defaultConfig memConn
+      cliOutput <- listComments defaultConfig memConn
 
-      show cliOutput `shouldContain` note1Id
-      show cliOutput `shouldContain` note2Id
+      show cliOutput `shouldContain` comment1Id
+      show cliOutput `shouldContain` comment2Id
 
       let
-        posUlid1 = subIndex note1Id (show cliOutput)
-        posUlid2 = subIndex note2Id (show cliOutput)
+        posUlid1 = subIndex comment1Id (show cliOutput)
+        posUlid2 = subIndex comment2Id (show cliOutput)
 
-      --  Newer notes should be listed first
+      --  Newer comments should be listed first
       (posUlid2 < posUlid1) `shouldBe` True
 
-  it "lets you delete a note" $ do
+  it "lets you delete a comment" $ do
     withMemoryDb defaultConfig $ \memConn -> do
       insertRecord "tasks" memConn task1
-      let noteId = "01hwcqk9nnwjypzw9kr646nqce"
+      let commentId = "01hwcqk9nnwjypzw9kr646nqce"
       insertRecord
-        "task_to_note"
+        "task_to_comment"
         memConn
-        TaskToNote
-          { TaskToNote.ulid = noteId
-          , TaskToNote.task_ulid = task1.ulid
-          , TaskToNote.note = "The note content"
+        TaskToComment
+          { TaskToComment.ulid = commentId
+          , TaskToComment.task_ulid = task1.ulid
+          , TaskToComment.comment = "The comment content"
+          , TaskToComment.user = "john"
           }
 
-      cliOutput <- deleteNote defaultConfig memConn noteId
+      cliOutput <- deleteComment defaultConfig memConn commentId
 
       (show cliOutput :: Text)
-        `shouldBe` "\128165 Deleted note \"01hwcqk9nnwjypzw9kr646nqce\" \
+        `shouldBe` "\128165 Deleted comment \"01hwcqk9nnwjypzw9kr646nqce\" \
                    \of task \"01hs68z7mdg4ktpxbv0yfafznq\""
 
   context "wasListTruncated" $ do

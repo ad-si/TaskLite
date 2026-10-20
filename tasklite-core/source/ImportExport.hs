@@ -37,6 +37,7 @@ import Protolude (
  )
 import Protolude qualified as P
 
+import Comment (Comment (..))
 import Config (
   Config (dataDir, dbName, hooks),
   HookSet (post, pre),
@@ -85,14 +86,13 @@ import Lib (
   deleteTasks,
   execWithConn,
   execWithTask,
-  insertNotes,
+  insertComments,
   insertRecord,
   insertTags,
-  syncNotes,
+  syncComments,
   syncTags,
   updateTask,
  )
-import Note (Note (..))
 import Prettyprinter (
   Doc,
   Pretty (pretty),
@@ -148,16 +148,16 @@ insertImportTask conf connection importTask = do
       (ulidTextToDateTime taskNorm.ulid)
       taskNorm
       importTask.tags
-  noteWarnings <-
-    insertNotes
+  commentWarnings <-
+    insertComments
       conf
       connection
       (ulidTextToDateTime taskNorm.ulid)
       taskNorm
-      importTask.notes
+      importTask.comments
   pure $
     tagWarnings
-      <$$> noteWarnings
+      <$$> commentWarnings
       <$$> "📥 Imported task"
       <+> dquotes (pretty taskNorm.body)
       <+> "with ulid"
@@ -672,14 +672,14 @@ insertTaskFromEdit conf conn importTaskRec newContent modified_utc origClosedUtc
         , -- Set to previous value to force SQL trigger to update it
           Task.modified_utc = modified_utc
         }
-    notesCorrectUtc =
-      importTaskRec.notes
-        <&> ( \note ->
-                note
-                  { Note.ulid =
-                      if zeroUlidTxt `T.isPrefixOf` note.ulid
-                        then note.ulid & T.replace zeroUlidTxt now
-                        else note.ulid
+    commentsCorrectUtc =
+      importTaskRec.comments
+        <&> ( \comment ->
+                comment
+                  { Comment.ulid =
+                      if zeroUlidTxt `T.isPrefixOf` comment.ulid
+                        then comment.ulid & T.replace zeroUlidTxt now
+                        else comment.ulid
                   }
             )
 
@@ -713,7 +713,7 @@ insertTaskFromEdit conf conn importTaskRec newContent modified_utc origClosedUtc
     updateTask conn taskFixedUtc
 
   tagWarnings <- syncTags conf conn taskFixedUtc importTaskRec.tags
-  noteWarnings <- syncNotes conf conn taskFixedUtc notesCorrectUtc
+  commentWarnings <- syncComments conf conn taskFixedUtc commentsCorrectUtc
 
   args <- P.getArgs
   postModifyResults <-
@@ -724,7 +724,7 @@ insertTaskFromEdit conf conn importTaskRec newContent modified_utc origClosedUtc
               object
                 [ "arguments" .= args
                 , "taskModified" .= taskFixedUtc
-                -- TODO: Add tags and notes to task
+                -- TODO: Add tags and comments to task
                 ]
       )
       conf.hooks.modify.post
@@ -740,7 +740,7 @@ insertTaskFromEdit conf conn importTaskRec newContent modified_utc origClosedUtc
 
   pure $
     tagWarnings
-      <$$> noteWarnings
+      <$$> commentWarnings
       <$$> "✏️  Edited task"
       <+> dquotes (pretty taskFixed.body)
       <+> "with ulid"
@@ -783,7 +783,7 @@ editTask conf conn idSubstr = do
           emptyImportTask
             { ImportTask.task = taskToEdit
             , ImportTask.tags = []
-            , ImportTask.notes = []
+            , ImportTask.comments = []
             }
     args <- P.getArgs
     preModifyResults <-

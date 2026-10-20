@@ -109,7 +109,7 @@ find . -iname '*.json' \
           }
         | if $lbls then . + {tags: ($lbls | map(.name))} else . end
         | if $title and $title != "" and $txt and $txt != ""
-          then . + {notes: [{body: $txt}]}
+          then . + {comments: [{body: $txt}]}
           else .
           end
         | if $state then . + {state: $state} else . end
@@ -120,7 +120,7 @@ find . -iname '*.json' \
 ```
 
 The title of the Google Keep note becomes the body of the task
-and the note itself becomes a TaskLite note attached to the task.
+and the note itself becomes a TaskLite comment attached to the task.
 A list of sub-tasks will be converted to a GitHub Flavored Markdown [task list].
 
 [task list]:
@@ -202,7 +202,7 @@ Seen at [discussions.apple.com/thread/8570915](
     > A better approach would be to create a new list and move all
     > reminders you want to export to that list.
 1. Copy and paste the output into a `tasks.json` file
-1. Format it as proper JSON and manually add notes, and tags fields
+1. Format it as proper JSON and manually add comments, and tags fields
 1. Import JSON file:
     ```bash
     cat tasks.json | tasklite importjson

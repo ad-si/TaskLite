@@ -7,31 +7,33 @@ import Protolude qualified as P
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
+import Comment (Comment (Comment, body, ulid, user))
 import Config (Shortcut (..), defaultConfig)
 import Data.Text qualified as T
 import Data.Yaml qualified
-import FullTask (FullTask (body, notes, tags, ulid), emptyFullTask)
-import Lib (insertNotes, insertRecord, insertTags)
+import FullTask (FullTask (body, comments, tags, ulid), emptyFullTask)
+import Lib (insertComments, insertRecord, insertTags)
 import NeatInterpolation (trimming)
-import Note (Note (Note, body, ulid))
 import Task (Task (body, ulid), emptyTask, taskToEditableMarkdown)
 import TestUtils (withMemoryDb)
 
 
-sampleNotes :: [Note]
-sampleNotes =
-  [ Note
-      { Note.ulid = "01hw5n9m99papg470w8j9k9vd3"
-      , Note.body =
-          "Sample note 1 is quite long \
+sampleComments :: [Comment]
+sampleComments =
+  [ Comment
+      { Comment.ulid = "01hw5n9m99papg470w8j9k9vd3"
+      , Comment.body =
+          "Sample comment 1 is quite long \
           \so we can observer how automatic wrapping \
           \can produce unexpected results."
+      , Comment.user = "john"
       }
-  , Note
-      { Note.ulid = "01hw5n9y3q27zys83b139s7e2r"
-      , Note.body =
-          "\nSample note 2 is short\n\
+  , Comment
+      { Comment.ulid = "01hw5n9y3q27zys83b139s7e2r"
+      , Comment.body =
+          "\nSample comment 2 is short\n\
           \but has  \nsurprising  \nline breaks."
+      , Comment.user = "jane"
       }
   ]
 
@@ -81,9 +83,9 @@ spec = do
         tagWarnings <- Lib.insertTags defaultConfig memConn Nothing sampleTask tags
         P.show tagWarnings `shouldBe` T.empty
 
-        noteWarnings <-
-          Lib.insertNotes defaultConfig memConn Nothing sampleTask sampleNotes
-        P.show noteWarnings `shouldBe` T.empty
+        commentWarnings <-
+          Lib.insertComments defaultConfig memConn Nothing sampleTask sampleComments
+        P.show commentWarnings `shouldBe` T.empty
 
         taskYaml <- taskToEditableMarkdown memConn sampleTask
         let
@@ -119,13 +121,15 @@ spec = do
                 - tag-8
                 - tag-9
 
-                # | New notes can be added as plain text
-                notes:
-                - body: Sample note 1 is quite long so we can observer how automatic wrapping can
+                # | New comments can be added as plain text
+                comments:
+                - body: Sample comment 1 is quite long so we can observer how automatic wrapping can
                     produce unexpected results.
                   ulid: 01hw5n9m99papg470w8j9k9vd3
-                - body: "\nSample note 2 is short\nbut has  \nsurprising  \nline breaks."
+                  user: john
+                - body: "\nSample comment 2 is short\nbut has  \nsurprising  \nline breaks."
                   ulid: 01hw5n9y3q27zys83b139s7e2r
+                  user: jane
                 ...
 
                 Sample task
@@ -141,7 +145,7 @@ spec = do
           { FullTask.ulid = "01hs68z7mdg4ktpxbv0yfafznq"
           , FullTask.body = "Sample task"
           , FullTask.tags = Just ["tag1", "tag2"]
-          , FullTask.notes = Just sampleNotes
+          , FullTask.comments = Just sampleComments
           }
 
     it "can be converted to YAML" $ do
@@ -156,17 +160,19 @@ spec = do
               blockers: null
               body: Sample task
               closed_utc: null
+              comments:
+              - body: Sample comment 1 is quite long so we can observer how automatic wrapping can
+                  produce unexpected results.
+                ulid: 01hw5n9m99papg470w8j9k9vd3
+                user: john
+              - body: "\nSample comment 2 is short\nbut has  \nsurprising  \nline breaks."
+                ulid: 01hw5n9y3q27zys83b139s7e2r
+                user: jane
               created_utc: null
               due_utc: null
               group_ulid: null
               metadata: null
               modified_utc: ''
-              notes:
-              - body: Sample note 1 is quite long so we can observer how automatic wrapping can
-                  produce unexpected results.
-                ulid: 01hw5n9m99papg470w8j9k9vd3
-              - body: "\nSample note 2 is short\nbut has  \nsurprising  \nline breaks."
-                ulid: 01hw5n9y3q27zys83b139s7e2r
               priority: null
               ready_utc: null
               recurrence_duration: null

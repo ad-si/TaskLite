@@ -26,6 +26,7 @@ import Data.Text.Encoding qualified as T
 import Data.ULID (ULID)
 import Data.Yaml qualified as Yaml
 import Database.SQLite.Simple (query_)
+import System.Posix.User (getEffectiveUserName)
 import Test.Hspec (
   Spec,
   describe,
@@ -36,6 +37,7 @@ import Test.Hspec (
   shouldStartWith,
  )
 
+import Comment (Comment (Comment, body, ulid, user))
 import Config (defaultConfig)
 import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
@@ -46,13 +48,12 @@ import ImportExport (
   parseEditedMarkdown,
  )
 import ImportTask (
-  ImportTask (ImportTask, closedUtcWasExplicit, notes, tags, task),
+  ImportTask (ImportTask, closedUtcWasExplicit, comments, tags, task),
   setMissingFields,
  )
-import Note (Note (Note, body, ulid))
 import Task (Task (body, modified_utc, ulid, user), emptyTask)
-import TaskToNote (TaskToNote (TaskToNote))
-import TaskToNote qualified
+import TaskToComment (TaskToComment (TaskToComment))
+import TaskToComment qualified
 import TestUtils (withMemoryDb)
 import Utils (emptyUlid, parseUtc, setDateTime, ulidText2utc, zeroTime)
 
@@ -100,6 +101,7 @@ spec = do
       (utcTxt & parseUtc <&> timePrint printFmt) `shouldBe` Just expected
 
     it "imports a JSON task and puts unused fields into metadata" $ do
+      effectiveUserName <- getEffectiveUserName
       withMemoryDb conf $ \memConn -> do
         let
           jsonTask =
@@ -107,7 +109,7 @@ spec = do
             \ { 'body': 'Just a test' \
             \ , 'utc': '2024-03-15T10:32:51.853Z' \
             \ , 'tags': ['one', 'two'] \
-            \ , 'notes': ['first note', 'second note'] \
+            \ , 'comments': ['first comment', 'second comment'] \
             \ , 'xxx': 'yyy' \
             \ } \
             \"
@@ -127,23 +129,26 @@ spec = do
                   `shouldBe` Just (Object $ KeyMap.fromList [("xxx", "yyy")])
               _ -> P.die "More than one task found"
 
-            taskToNotes :: [TaskToNote] <-
-              query_ memConn "SELECT * FROM task_to_note"
-            taskToNotes
-              `shouldBe` [ TaskToNote
-                             { ulid = "01hs0tqwwd0006vtdjjey5vdae"
+            taskToComments :: [TaskToComment] <-
+              query_ memConn "SELECT * FROM task_to_comment"
+            taskToComments
+              `shouldBe` [ TaskToComment
+                             { ulid = "01hs0tqwwd0004m1ja8bdrpnh1"
                              , task_ulid = "01hs0tqwwd0004yy9et9d4wksy"
-                             , note = "first note"
+                             , comment = "first comment"
+                             , user = T.pack effectiveUserName
                              }
-                         , TaskToNote
-                             { ulid = "01hs0tqwwd0003pynthn2xpd5s"
+                         , TaskToComment
+                             { ulid = "01hs0tqwwd0005q6eyxasg3xgm"
                              , task_ulid = "01hs0tqwwd0004yy9et9d4wksy"
-                             , note = "second note"
+                             , comment = "second comment"
+                             , user = T.pack effectiveUserName
                              }
                          ]
-    it "imports a JSON task with notes" $ do
+    it "imports a JSON task with comments" $ do
+      effectiveUserName <- getEffectiveUserName
       withMemoryDb conf $ \memConn -> do
-        let jsonTask = "{\"body\":\"Just a test\", \"notes\":[\"A note\"]}"
+        let jsonTask = "{\"body\":\"Just a test\", \"comments\":[\"A comment\"]}"
 
         case eitherDecode jsonTask of
           Left error ->
@@ -154,14 +159,15 @@ spec = do
             unpack (show result)
               `shouldStartWith` "📥 Imported task \"Just a test\" with ulid "
 
-            taskToNotes :: [TaskToNote] <-
-              query_ memConn "SELECT * FROM task_to_note"
-            case taskToNotes of
-              [taskToNote] -> do
-                taskToNote.ulid `shouldNotBe` ""
-                taskToNote.task_ulid `shouldNotBe` ""
-                taskToNote.note `shouldBe` "A note"
-              _ -> P.die "More than one task_to_note row found"
+            taskToComments :: [TaskToComment] <-
+              query_ memConn "SELECT * FROM task_to_comment"
+            case taskToComments of
+              [taskToComment] -> do
+                taskToComment.ulid `shouldNotBe` ""
+                taskToComment.task_ulid `shouldNotBe` ""
+                taskToComment.comment `shouldBe` "A comment"
+                taskToComment.user `shouldBe` T.pack effectiveUserName
+              _ -> P.die "More than one task_to_comment row found"
 
             tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
 
@@ -170,8 +176,8 @@ spec = do
                 updatedTask.ulid `shouldNotBe` ""
                 updatedTask.modified_utc `shouldNotBe` ""
                 updatedTask.user `shouldNotBe` ""
-                let updatedTaskNoteUlid = case updatedTask.notes of
-                      Just [note] -> note.ulid
+                let updatedTaskCommentUlid = case updatedTask.comments of
+                      Just [comment] -> comment.ulid
                       _ -> ""
                 updatedTask
                   { FullTask.ulid = ""
@@ -181,14 +187,20 @@ spec = do
                   }
                   `shouldBe` emptyFullTask
                     { FullTask.body = "Just a test"
-                    , FullTask.notes =
-                        Just [Note{ulid = updatedTaskNoteUlid, body = "A note"}]
+                    , FullTask.comments =
+                        Just
+                          [ Comment
+                              { ulid = updatedTaskCommentUlid
+                              , body = "A comment"
+                              , user = T.pack effectiveUserName
+                              }
+                          ]
                     , FullTask.priority = Just 1.0
                     , FullTask.metadata = case decode jsonTask of
                         Just (Object keyMap) ->
                           keyMap
                             & KeyMap.delete "body"
-                            & KeyMap.delete "notes"
+                            & KeyMap.delete "comments"
                             & \kMap ->
                               if KeyMap.null kMap
                                 then Nothing
@@ -196,6 +208,35 @@ spec = do
                         _ -> Nothing
                     }
               _ -> P.die "More than one task found"
+
+    it "imports comments with an author and keeps notes in metadata" $ do
+      withMemoryDb conf $ \memConn -> do
+        let jsonTask =
+              "{\"body\":\"Just a test\",\
+              \\"comments\":[{\"body\":\"A comment\",\"user\":\"jane\"}],\
+              \\"notes\":[\"A note\"]}"
+
+        case eitherDecode jsonTask of
+          Left error ->
+            P.die $ "Error decoding JSON: " <> show error
+          Right importTaskRecord -> do
+            _ <- insertImportTask conf memConn importTaskRecord
+
+            taskToComments :: [TaskToComment] <-
+              query_ memConn "SELECT * FROM task_to_comment"
+            case taskToComments of
+              [taskToComment] -> do
+                taskToComment.comment `shouldBe` "A comment"
+                taskToComment.user `shouldBe` "jane"
+              _ -> P.die "Expected exactly one task_to_comment row"
+
+            tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+            case tasks of
+              [insertedTask] ->
+                insertedTask.metadata
+                  `shouldBe` Just
+                    (Object $ KeyMap.fromList [("notes", Yaml.array ["A note"])])
+              _ -> P.die "Expected exactly one task"
 
     it "imports a JSON task with an ISO8601 created_at field" $ do
       withMemoryDb conf $ \memConn -> do
@@ -218,25 +259,26 @@ spec = do
                 ulidText2utc insertedTask.ulid `shouldBe` Just utcFromUlid
               _ -> P.die "More than one task found"
 
-    it "imports JSON task with notes and sets the created_utc for notes" $ do
+    it "imports JSON task with comments and sets the created_utc for comments" $ do
       withMemoryDb conf $ \memConn -> do
         let
           utc = "2024-03-15 10:32:51"
           jsonTask =
             "{\"body\":\"Just a test\",\
             \\"created_at\":\"{{utc}}\",\
-            \\"notes\": [\"Just a note\"]}"
+            \\"comments\": [\"Just a comment\"]}"
               & T.replace "{{utc}}" utc
 
-          expectedTaskToNote =
-            TaskToNote
+          expectedTaskToComment =
+            TaskToComment
               { ulid =
                   emptyUlid
                     & P.flip setDateTime (utc & parseUtc & fromMaybe zeroTime)
                     & show @ULID
                     & T.toLower
               , task_ulid = "01hs0tqw1r0007h0mj78s1jntz"
-              , note = "Just a note"
+              , comment = "Just a comment"
+              , user = ""
               }
 
         case eitherDecodeStrictText jsonTask of
@@ -244,14 +286,14 @@ spec = do
             P.die $ "Error decoding JSON: " <> show error
           Right importTaskRecord -> do
             _ <- insertImportTask conf memConn importTaskRecord
-            taskToNoteList :: [TaskToNote] <-
-              query_ memConn "SELECT * FROM task_to_note"
-            case taskToNoteList of
-              [taskToNote] -> do
-                taskToNote.ulid `shouldNotBe` expectedTaskToNote.ulid
-                (taskToNote.ulid & T.take 10)
-                  `shouldBe` (expectedTaskToNote.ulid & T.take 10)
-              _ -> P.die "Found more than one note"
+            taskToCommentList :: [TaskToComment] <-
+              query_ memConn "SELECT * FROM task_to_comment"
+            case taskToCommentList of
+              [taskToComment] -> do
+                taskToComment.ulid `shouldNotBe` expectedTaskToComment.ulid
+                (taskToComment.ulid & T.take 10)
+                  `shouldBe` (expectedTaskToComment.ulid & T.take 10)
+              _ -> P.die "Found more than one comment"
 
     it "imports a JSON task with an updated_at field" $ do
       withMemoryDb conf $ \memConn -> do
@@ -291,7 +333,7 @@ spec = do
                     , Task.user = "ad-si"
                     , Task.modified_utc = "2024-03-14 18:14:14.000"
                     }
-              , notes = []
+              , comments = []
               , tags = []
               , closedUtcWasExplicit = P.False
               }
@@ -307,7 +349,7 @@ spec = do
                 task.body `shouldBe` expectedImpTask.task.body
                 task.user `shouldBe` expectedImpTask.task.user
                 task.modified_utc `shouldBe` expectedImpTask.task.modified_utc
-              _ -> P.die "Found more than one note"
+              _ -> P.die "Found more than one comment"
 
     it "imports a single JSON task from array format" $ do
       withMemoryDb conf $ \memConn -> do
@@ -371,12 +413,12 @@ spec = do
                 task.tags `shouldBe` Just ["solo"]
               _ -> P.die "Expected exactly 1 task"
 
-    it "imports array with tasks containing notes and tags" $ do
+    it "imports array with tasks containing comments and tags" $ do
       withMemoryDb conf $ \memConn -> do
         let
           jsonTasks =
-            "[{\"body\":\"Task with notes\",\
-            \\"notes\":[\"Note 1\",\"Note 2\"],\
+            "[{\"body\":\"Task with comments\",\
+            \\"comments\":[\"Comment 1\",\"Comment 2\"],\
             \\"tags\":[\"important\"]},\
             \{\"body\":\"Another task\",\
             \\"tags\":[\"work\",\"urgent\"]}]"
@@ -392,13 +434,13 @@ spec = do
               [task1, task2] -> do
                 task1.body `shouldBe` "Another task"
                 task1.tags `shouldBe` Just ["urgent", "work"]
-                task2.body `shouldBe` "Task with notes"
+                task2.body `shouldBe` "Task with comments"
                 task2.tags `shouldBe` Just ["important"]
               _ -> P.die "Expected exactly 2 tasks"
 
-            taskToNotes :: [TaskToNote] <-
-              query_ memConn "SELECT * FROM task_to_note"
-            P.length taskToNotes `shouldBe` 2
+            taskToComments :: [TaskToComment] <-
+              query_ memConn "SELECT * FROM task_to_comment"
+            P.length taskToComments `shouldBe` 2
 
     it "imports a single YAML object (not in array)" $ do
       withMemoryDb conf $ \memConn -> do
@@ -450,14 +492,14 @@ spec = do
                 task3.tags `shouldBe` Just ["three"]
               _ -> P.die "Expected exactly 3 tasks"
 
-    it "imports YAML array with tasks containing notes and tags" $ do
+    it "imports YAML array with tasks containing comments and tags" $ do
       withMemoryDb conf $ \memConn -> do
         let
           yamlTasks =
-            "- body: YAML task with notes\n\
-            \  notes:\n\
-            \    - First note\n\
-            \    - Second note\n\
+            "- body: YAML task with comments\n\
+            \  comments:\n\
+            \    - First comment\n\
+            \    - Second comment\n\
             \  tags: [important, yaml]\n\
             \- body: Another YAML task\n\
             \  tags: [work]"
@@ -473,13 +515,13 @@ spec = do
               [task1, task2] -> do
                 task1.body `shouldBe` "Another YAML task"
                 task1.tags `shouldBe` Just ["work"]
-                task2.body `shouldBe` "YAML task with notes"
+                task2.body `shouldBe` "YAML task with comments"
                 task2.tags `shouldBe` Just ["important", "yaml"]
               _ -> P.die "Expected exactly 2 tasks"
 
-            taskToNotes :: [TaskToNote] <-
-              query_ memConn "SELECT * FROM task_to_note"
-            P.length taskToNotes `shouldBe` 2
+            taskToComments :: [TaskToComment] <-
+              query_ memConn "SELECT * FROM task_to_comment"
+            P.length taskToComments `shouldBe` 2
 
     it "imports YAML with mixed single and multiple tags format" $ do
       withMemoryDb conf $ \memConn -> do
@@ -507,12 +549,12 @@ spec = do
                 task2.tags `shouldBe` Just ["tag1", "tag2"]
               _ -> P.die "Expected exactly 2 tasks"
 
-    it "correctly parses multiple notes as JSON array with ulid and body" $ do
+    it "correctly parses multiple comments as JSON array with ulid and body" $ do
       withMemoryDb conf $ \memConn -> do
         let
           jsonTask =
-            "{\"body\":\"Task with multiple notes\", \
-            \\"notes\":[\"First note\", \"Second note\", \"Third note\"]}"
+            "{\"body\":\"Task with multiple comments\", \
+            \\"comments\":[\"First comment\", \"Second comment\", \"Third comment\"]}"
 
         case eitherDecodeStrictText jsonTask of
           Left error ->
@@ -523,26 +565,28 @@ spec = do
 
             case tasks of
               [insertedTask] -> do
-                insertedTask.body `shouldBe` "Task with multiple notes"
-                -- Verify notes is a Just with 3 notes
-                case insertedTask.notes of
-                  Just notesList -> do
-                    P.length notesList `shouldBe` 3
-                    -- Each note should have a ulid and body
-                    P.forM_ (P.zip notesList ["First note", "Second note", "Third note"]) $
-                      \(note, expectedBody) -> do
-                        note.ulid `shouldNotBe` ""
-                        note.body `shouldBe` expectedBody
-                  Nothing -> P.die "Expected notes to be Just"
+                insertedTask.body `shouldBe` "Task with multiple comments"
+                -- Verify comments is a Just with 3 comments
+                case insertedTask.comments of
+                  Just commentsList -> do
+                    P.length commentsList `shouldBe` 3
+                    -- Each comment should have a ulid and body
+                    let expectedBodies =
+                          ["First comment", "Second comment", "Third comment"]
+                    P.forM_ (P.zip commentsList expectedBodies) $
+                      \(comment, expectedBody) -> do
+                        comment.ulid `shouldNotBe` ""
+                        comment.body `shouldBe` expectedBody
+                  Nothing -> P.die "Expected comments to be Just"
               _ -> P.die "Expected exactly one task"
 
-    it "correctly parses notes containing special characters" $ do
+    it "correctly parses comments containing special characters" $ do
       withMemoryDb conf $ \memConn -> do
         let
-          -- Notes with commas, quotes, and other special characters
+          -- Comments with commas, quotes, and other special characters
           jsonTask =
-            "{\"body\":\"Task with special notes\", \
-            \\"notes\":[\"Note with, comma\", \"Note with \\\"quotes\\\"\", \"Note: with colon\"]}"
+            "{\"body\":\"Task with special comments\", \
+            \\"comments\":[\"Comment with, comma\", \"Comment with \\\"quotes\\\"\", \"Comment: with colon\"]}"
 
         case eitherDecodeStrictText jsonTask of
           Left error ->
@@ -553,13 +597,13 @@ spec = do
 
             case tasks of
               [insertedTask] -> do
-                case insertedTask.notes of
-                  Just [note1, note2, note3] -> do
-                    note1.body `shouldBe` "Note with, comma"
-                    note2.body `shouldBe` "Note with \"quotes\""
-                    note3.body `shouldBe` "Note: with colon"
-                  Just _ -> P.die "Expected exactly 3 notes"
-                  Nothing -> P.die "Expected notes to be Just"
+                case insertedTask.comments of
+                  Just [comment1, comment2, comment3] -> do
+                    comment1.body `shouldBe` "Comment with, comma"
+                    comment2.body `shouldBe` "Comment with \"quotes\""
+                    comment3.body `shouldBe` "Comment: with colon"
+                  Just _ -> P.die "Expected exactly 3 comments"
+                  Nothing -> P.die "Expected comments to be Just"
               _ -> P.die "Expected exactly one task"
 
     it "correctly parses multiple tags as JSON array" $ do
@@ -588,13 +632,13 @@ spec = do
                   Nothing -> P.die "Expected tags to be Just"
               _ -> P.die "Expected exactly one task"
 
-    it "handles task with both notes and tags as JSON arrays" $ do
+    it "handles task with both comments and tags as JSON arrays" $ do
       withMemoryDb conf $ \memConn -> do
         let
           jsonTask =
             "{\"body\":\"Full task\", \
             \\"tags\":[\"important\", \"review\"], \
-            \\"notes\":[\"Remember to check\", \"Follow up needed\"]}"
+            \\"comments\":[\"Remember to check\", \"Follow up needed\"]}"
 
         case eitherDecodeStrictText jsonTask of
           Left error ->
@@ -612,16 +656,16 @@ spec = do
                     P.length tagsList `shouldBe` 2
                     P.sort tagsList `shouldBe` ["important", "review"]
                   Nothing -> P.die "Expected tags to be Just"
-                -- Verify notes
-                case insertedTask.notes of
-                  Just [note1, note2] -> do
-                    note1.body `shouldBe` "Remember to check"
-                    note2.body `shouldBe` "Follow up needed"
-                  Just _ -> P.die "Expected exactly 2 notes"
-                  Nothing -> P.die "Expected notes to be Just"
+                -- Verify comments
+                case insertedTask.comments of
+                  Just [comment1, comment2] -> do
+                    comment1.body `shouldBe` "Remember to check"
+                    comment2.body `shouldBe` "Follow up needed"
+                  Just _ -> P.die "Expected exactly 2 comments"
+                  Nothing -> P.die "Expected comments to be Just"
               _ -> P.die "Expected exactly one task"
 
-    it "returns Nothing for tasks with no notes or tags" $ do
+    it "returns Nothing for tasks with no comments or tags" $ do
       withMemoryDb conf $ \memConn -> do
         let jsonTask = "{\"body\":\"Simple task\"}"
 
@@ -636,7 +680,7 @@ spec = do
               [insertedTask] -> do
                 insertedTask.body `shouldBe` "Simple task"
                 insertedTask.tags `shouldBe` Nothing
-                insertedTask.notes `shouldBe` Nothing
+                insertedTask.comments `shouldBe` Nothing
               _ -> P.die "Expected exactly one task"
 
   describe "parseEditedMarkdown" $ do
@@ -650,22 +694,25 @@ spec = do
         Right DeleteRequested -> P.die "Unexpected delete request"
         Left error -> P.die error
 
-    it "parses existing notes and new plain text notes" $ do
+    it "parses existing comments and new plain text comments" $ do
       let markdown =
-            "---\nnotes:\n\
-            \- body: Existing note\n  ulid: 01hxsjgzmdx48yzk39v852razr\n\
-            \- New note\n...\n\nBody\n"
+            "---\ncomments:\n\
+            \- body: Existing comment\n  ulid: 01hxsjgzmdx48yzk39v852razr\n\
+            \  user: john\n\
+            \- New comment\n...\n\nBody\n"
       case parse markdown of
         Right (Edited importTask _) ->
-          case importTask.notes of
-            [existingNote, newNote] -> do
-              existingNote
-                `shouldBe` Note
+          case importTask.comments of
+            [existingComment, newComment] -> do
+              existingComment
+                `shouldBe` Comment
                   { ulid = "01hxsjgzmdx48yzk39v852razr"
-                  , body = "Existing note"
+                  , body = "Existing comment"
+                  , user = "john"
                   }
-              newNote.body `shouldBe` "New note"
-            _ -> P.die "Expected exactly two notes"
+              newComment.body `shouldBe` "New comment"
+              newComment.user `shouldBe` ""
+            _ -> P.die "Expected exactly two comments"
         Right DeleteRequested -> P.die "Unexpected delete request"
         Left error -> P.die error
 
@@ -680,7 +727,7 @@ spec = do
         Right _ -> P.die "Expected a parse error"
 
   describe "Export" $ do
-    it "exports several tasks as NDJSON including notes" $ do
+    it "exports several tasks as NDJSON including comments" $ do
       let
         task =
           emptyTask
@@ -693,7 +740,8 @@ spec = do
         importTask =
           ImportTask
             { task = task
-            , notes = [Note "01jczszra25ec48pagzcw5qw6j" "Test note"]
+            , comments =
+                [Comment "01jczszra25ec48pagzcw5qw6j" "Test comment" "ad-si"]
             , tags = []
             , closedUtcWasExplicit = P.False
             }
@@ -705,15 +753,16 @@ spec = do
           \\"blockers\":null,\
           \\"body\":\"Buy milk\",\
           \\"closed_utc\":null,\
+          \\"comments\":[{\
+          \\"body\":\"Test comment\",\
+          \\"ulid\":\"01jczsz9c35ec48pagzcw5qw6j\",\
+          \\"user\":\"ad-si\"\
+          \}],\
           \\"created_utc\":\"2024-11-18 14:14:07.491\",\
           \\"due_utc\":null,\
           \\"group_ulid\":null,\
           \\"metadata\":null,\
           \\"modified_utc\":\"2024-09-24 22:31:09.123\",\
-          \\"notes\":[{\
-          \\"body\":\"Test note\",\
-          \\"ulid\":\"01jczsz9c35ec48pagzcw5qw6j\"\
-          \}],\
           \\"priority\":1,\
           \\"ready_utc\":null,\
           \\"recurrence_duration\":null,\

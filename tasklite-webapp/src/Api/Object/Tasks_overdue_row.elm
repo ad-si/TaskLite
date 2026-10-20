@@ -87,9 +87,9 @@ tags =
   Object.selectionForField "(Maybe String)" "tags" [] (Decode.string |> Decode.nullable)
 
 
-notes : SelectionSet (Maybe String) Api.Object.Tasks_overdue_row
-notes =
-  Object.selectionForField "(Maybe String)" "notes" [] (Decode.string |> Decode.nullable)
+comments : SelectionSet (Maybe String) Api.Object.Tasks_overdue_row
+comments =
+  Object.selectionForField "(Maybe String)" "comments" [] (Decode.string |> Decode.nullable)
 
 
 blockers : SelectionSet (Maybe String) Api.Object.Tasks_overdue_row

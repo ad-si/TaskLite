@@ -17,21 +17,21 @@ import Json.Decode as Decode
 import Graphql.Internal.Encode as Encode exposing (Value)
 
 
-tag : SelectionSet (Maybe String) Api.Object.Tags_row
+rowid : SelectionSet Int Api.Object.Tags_row
+rowid =
+  Object.selectionForField "Int" "rowid" [] (Decode.int)
+
+
+tag : SelectionSet String Api.Object.Tags_row
 tag =
-  Object.selectionForField "(Maybe String)" "tag" [] (Decode.string |> Decode.nullable)
+  Object.selectionForField "String" "tag" [] (Decode.string)
 
 
-open : SelectionSet (Maybe String) Api.Object.Tags_row
-open =
-  Object.selectionForField "(Maybe String)" "open" [] (Decode.string |> Decode.nullable)
+description : SelectionSet (Maybe String) Api.Object.Tags_row
+description =
+  Object.selectionForField "(Maybe String)" "description" [] (Decode.string |> Decode.nullable)
 
 
-closed : SelectionSet (Maybe String) Api.Object.Tags_row
-closed =
-  Object.selectionForField "(Maybe String)" "closed" [] (Decode.string |> Decode.nullable)
-
-
-progress : SelectionSet (Maybe String) Api.Object.Tags_row
-progress =
-  Object.selectionForField "(Maybe String)" "progress" [] (Decode.string |> Decode.nullable)
+modified_utc : SelectionSet String Api.Object.Tags_row
+modified_utc =
+  Object.selectionForField "String" "modified_utc" [] (Decode.string)

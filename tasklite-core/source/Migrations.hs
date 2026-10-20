@@ -1460,6 +1460,193 @@ _10_ =
           }
 
 
+{-| tasks_view in migration 11 — the `notes` column is renamed to `comments`
+and every comment includes its author (`user`).
+-}
+tasksViewQuery_v11 :: Query
+tasksViewQuery_v11 =
+  [sql|
+    CREATE VIEW tasks_view AS
+    SELECT
+      tasks.ulid AS ulid,
+      tasks.body AS body,
+      tasks.modified_utc AS modified_utc,
+      tasks.awake_utc AS awake_utc,
+      tasks.ready_utc AS ready_utc,
+      tasks.waiting_utc AS waiting_utc,
+      tasks.review_utc AS review_utc,
+      tasks.due_utc AS due_utc,
+      tasks.closed_utc AS closed_utc,
+      tasks.state AS state,
+      tasks.group_ulid AS group_ulid,
+      tasks.repetition_duration AS repetition_duration,
+      tasks.recurrence_duration AS recurrence_duration,
+      nullif(
+        (
+          SELECT json_group_array(task_to_tag.tag)
+          FROM task_to_tag
+          WHERE task_to_tag.task_ulid == tasks.ulid
+        ),
+        '[]'
+      ) AS tags,
+      nullif(
+        (
+          SELECT json_group_array(
+            json_object(
+              'ulid', task_to_comment.ulid,
+              'body', task_to_comment.comment,
+              'user', task_to_comment.user
+            )
+          )
+          FROM task_to_comment
+          WHERE task_to_comment.task_ulid == tasks.ulid
+        ),
+        '[]'
+      ) AS comments,
+      nullif(
+        (
+          SELECT json_group_array(task_to_task.source_task_ulid)
+          FROM task_to_task
+          WHERE task_to_task.target_task_ulid == tasks.ulid
+            AND task_to_task.relation == 'blocks'
+        ),
+        '[]'
+      ) AS blockers,
+      nullif(
+        (
+          SELECT json_group_array(task_to_task.target_task_ulid)
+          FROM task_to_task
+          WHERE task_to_task.source_task_ulid == tasks.ulid
+            AND task_to_task.relation == 'blocks'
+        ),
+        '[]'
+      ) AS blocked,
+      ifnull(tasks.priority_adjustment, 0.0)
+        + CASE
+            WHEN awake_utc IS NULL THEN 0.0
+            WHEN awake_utc >= datetime('now') THEN -5.0
+            WHEN awake_utc >= datetime('now', '-1 days') THEN 1.0
+            WHEN awake_utc >= datetime('now', '-2 days') THEN 2.0
+            WHEN awake_utc >= datetime('now', '-5 days') THEN 5.0
+            WHEN awake_utc < datetime('now', '-5 days') THEN 9.0
+          END
+        + CASE
+            WHEN waiting_utc IS NULL THEN 0.0
+            WHEN waiting_utc >= datetime('now') THEN 0.0
+            WHEN waiting_utc < datetime('now') THEN -10.0
+          END
+        + CASE
+            WHEN review_utc IS NULL THEN 0.0
+            WHEN review_utc >= datetime('now') THEN 0.0
+            WHEN review_utc < datetime('now') THEN 20.0
+          END
+        + CASE
+            WHEN due_utc IS NULL THEN 0.0
+            WHEN due_utc >= datetime('now', '+24 days') THEN 0.0
+            WHEN due_utc >= datetime('now', '+6 days') THEN 3.0
+            WHEN due_utc >= datetime('now') THEN 6.0
+            WHEN due_utc >= datetime('now', '-6 days') THEN 9.0
+            WHEN due_utc >= datetime('now', '-24 days') THEN 12.0
+            WHEN due_utc < datetime('now', '-24 days') THEN 15.0
+          END
+        + CASE
+            WHEN state IS NULL THEN 0.0
+            WHEN state == 'Done' THEN 0.0
+            WHEN state == 'Obsolete' THEN -1.0
+            WHEN state == 'Deletable' THEN -10.0
+          END
+        + CASE
+            WHEN (
+              SELECT count(task_to_comment.comment)
+              FROM task_to_comment
+              WHERE task_to_comment.task_ulid == tasks.ulid
+            ) == 0 THEN 0.0
+            ELSE 1.0
+          END
+        + CASE
+            WHEN (
+              SELECT count(task_to_tag.tag)
+              FROM task_to_tag
+              WHERE task_to_tag.task_ulid == tasks.ulid
+            ) == 0 THEN 0.0
+            ELSE 2.0
+          END
+        AS priority,
+      tasks.user AS user,
+      tasks.metadata AS metadata
+    FROM
+      tasks
+  |]
+
+
+{-| Migration 11: Rename notes to comments and add an author (`user`)
+to every comment.
+Existing comments get the user of their task as author.
+-}
+_11_ :: MigrateDirection -> Migration
+_11_ =
+  let
+    base =
+      Migration
+        { id = UserVersion 11
+        , querySet = []
+        }
+  in
+    \case
+      MigrateUp ->
+        base
+          { Migrations.querySet =
+              dropDerivedViews
+                <> [ "DROP VIEW IF EXISTS tasks_view"
+                   , [sql|
+                      CREATE TABLE task_to_comment (
+                        ulid TEXT NOT NULL PRIMARY KEY,
+                        task_ulid TEXT NOT NULL,
+                        comment TEXT NOT NULL,
+                        user TEXT NOT NULL,
+                        FOREIGN KEY(task_ulid) REFERENCES tasks(ulid)
+                      )
+                    |]
+                   , [sql|
+                      INSERT INTO task_to_comment
+                      SELECT
+                        task_to_note.ulid,
+                        task_to_note.task_ulid,
+                        task_to_note.note,
+                        ifnull(tasks.user, '')
+                      FROM task_to_note
+                      LEFT JOIN tasks ON tasks.ulid == task_to_note.task_ulid
+                    |]
+                   , "DROP TABLE task_to_note"
+                   , tasksViewQuery_v11
+                   ]
+                <> createDerivedViews_v10
+          }
+      MigrateDown ->
+        base
+          { Migrations.querySet =
+              dropDerivedViews
+                <> [ "DROP VIEW IF EXISTS tasks_view"
+                   , [sql|
+                      CREATE TABLE task_to_note (
+                        ulid TEXT NOT NULL PRIMARY KEY,
+                        task_ulid TEXT NOT NULL,
+                        note TEXT NOT NULL,
+                        FOREIGN KEY(task_ulid) REFERENCES tasks(ulid)
+                      )
+                    |]
+                   , [sql|
+                      INSERT INTO task_to_note
+                      SELECT ulid, task_ulid, comment
+                      FROM task_to_comment
+                    |]
+                   , "DROP TABLE task_to_comment"
+                   , tasksViewQuery_v7
+                   ]
+                <> createDerivedViews_v10
+          }
+
+
 hasDuplicates :: (Eq a) => [a] -> Bool
 hasDuplicates [] = False
 hasDuplicates (x : xs) =
@@ -1523,7 +1710,7 @@ runMigrations _ connection = do
       IO [UserVersion]
 
   let
-    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_]
+    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_, _11_]
 
     migrationsUp = fmap ($ MigrateUp) migrations
     (UserVersion userVersionMax) =

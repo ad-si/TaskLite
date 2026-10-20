@@ -83,7 +83,7 @@ import Database.SQLite.Simple (
  )
 import Database.SQLite.Simple.QQ (sql)
 
-import Note (Note)
+import Comment (Comment)
 
 
 data TaskState
@@ -419,7 +419,7 @@ setMetadataField fieldNameText value task =
 
 {-| Convert a task to a Markdown string with YAML frontmatter that can be edited
 | and then converted back to a task.
-| Tags and notes are commented out, so they are not accidentally added again.
+| Tags and comments are commented out, so they are not accidentally added again.
 -}
 taskToEditableMarkdown :: Connection -> Task -> P.IO P.ByteString
 taskToEditableMarkdown conn task = do
@@ -437,15 +437,15 @@ taskToEditableMarkdown conn task = do
           |]
           (Only task.ulid)
 
-  (notes :: [Note]) <-
+  (comments :: [Comment]) <-
     if T.null task.ulid
       then pure []
       else
         query
           conn
           [sql|
-            SELECT ulid, note
-            FROM task_to_note
+            SELECT ulid, comment, user
+            FROM task_to_comment
             WHERE task_ulid == ?
             ORDER BY ulid
           |]
@@ -461,8 +461,8 @@ taskToEditableMarkdown conn task = do
       )
         <> "\n"
         <> P.decodeUtf8 (Yaml.encode $ object ["tags" .= (tags <&> fromOnly)])
-        <> "\n# | New notes can be added as plain text\n"
-        <> P.decodeUtf8 (Yaml.encode $ object ["notes" .= notes])
+        <> "\n# | New comments can be added as plain text\n"
+        <> P.decodeUtf8 (Yaml.encode $ object ["comments" .= comments])
 
   pure $
     ("---\n" <> frontmatterYaml <> "...\n\n" <> body task)

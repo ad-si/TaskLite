@@ -53,7 +53,7 @@ import Database.SQLite.Simple.QQ (sql)
 import GHC.Exception (errorCallException)
 import Prettyprinter (Pretty (pretty))
 
-import Note (Note (..))
+import Comment (Comment (..))
 import Task (
   Task (
     awake_utc,
@@ -89,7 +89,7 @@ data FullTask = FullTask
   , repetition_duration :: Maybe Text
   , recurrence_duration :: Maybe Text
   , tags :: Maybe [Text]
-  , notes :: Maybe [Note]
+  , comments :: Maybe [Comment]
   , blockers :: Maybe [Text]
   , blocked :: Maybe [Text]
   , priority :: Maybe Float
@@ -137,7 +137,7 @@ instance FromRow FullTask where
       <*> field -- repetition_duration
       <*> field -- recurrence_duration
       <*> fieldWith (parseJsonArrayField "tags")
-      <*> fieldWith (parseJsonArrayField "notes")
+      <*> fieldWith (parseJsonArrayField "comments")
       <*> fieldWith (parseJsonArrayField "blockers")
       <*> fieldWith (parseJsonArrayField "blocked")
       <*> field -- priority
@@ -194,7 +194,7 @@ emptyFullTask =
     , repetition_duration = Nothing
     , recurrence_duration = Nothing
     , tags = Nothing
-    , notes = Nothing
+    , comments = Nothing
     , blockers = Nothing
     , blocked = Nothing
     , priority = Nothing
@@ -221,7 +221,7 @@ selectQuery =
       repetition_duration,
       recurrence_duration,
       tags,
-      notes,
+      comments,
       blockers,
       blocked,
       priority,

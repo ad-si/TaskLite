@@ -135,6 +135,7 @@ tests:
       - text
       - vector
       - ulid
+      - unix
       - yaml
 
 benchmarks:

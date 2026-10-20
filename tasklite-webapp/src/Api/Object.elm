@@ -18,20 +18,32 @@ type Sqlite_stat1_row
   = Sqlite_stat1_row
 
 
+type Tags_mutation_by_pk_response
+  = Tags_mutation_by_pk_response
+
+
+type Tags_mutation_response
+  = Tags_mutation_response
+
+
 type Tags_row
   = Tags_row
 
 
-type Task_to_note_mutation_by_pk_response
-  = Task_to_note_mutation_by_pk_response
+type Tags_view_row
+  = Tags_view_row
 
 
-type Task_to_note_mutation_response
-  = Task_to_note_mutation_response
+type Task_to_comment_mutation_by_pk_response
+  = Task_to_comment_mutation_by_pk_response
 
 
-type Task_to_note_row
-  = Task_to_note_row
+type Task_to_comment_mutation_response
+  = Task_to_comment_mutation_response
+
+
+type Task_to_comment_row
+  = Task_to_comment_row
 
 
 type Task_to_tag_mutation_by_pk_response

@@ -22,9 +22,9 @@ import Test.Hspec (
   shouldSatisfy,
  )
 
+import Comment (Comment (..))
 import FullTask (emptyFullTask)
 import FullTask qualified
-import Note (Note (..))
 import Task (TaskState (..))
 import Taskwarrior (
   convertDateFormat,
@@ -148,24 +148,24 @@ spec = do
         jsonText `shouldSatisfy` T.isInfixOf "work"
         jsonText `shouldSatisfy` T.isInfixOf "urgent"
 
-      it "converts notes to annotations" $ do
+      it "converts comments to annotations" $ do
         let task =
               emptyFullTask
                 { FullTask.ulid = "01JCZSZ9C328FM7XYDCWXBMV6N"
-                , FullTask.body = "Task with notes"
+                , FullTask.body = "Task with comments"
                 , FullTask.modified_utc = "2024-09-24 22:31:09.123"
-                , FullTask.notes =
+                , FullTask.comments =
                     Just
-                      [ Note "01JCZSZRA25EC48PAGZCW5QW6J" "First note"
-                      , Note "01JD000000000000000000000" "Second note"
+                      [ Comment "01JCZSZRA25EC48PAGZCW5QW6J" "First comment" ""
+                      , Comment "01JD000000000000000000000" "Second comment" ""
                       ]
                 }
             twJson = fullTaskToTwJson task
             jsonText = twJson & encode & TL.decodeUtf8 & TL.toStrict
 
         jsonText `shouldSatisfy` T.isInfixOf "\"annotations\":"
-        jsonText `shouldSatisfy` T.isInfixOf "First note"
-        jsonText `shouldSatisfy` T.isInfixOf "Second note"
+        jsonText `shouldSatisfy` T.isInfixOf "First comment"
+        jsonText `shouldSatisfy` T.isInfixOf "Second comment"
 
       it "sets status to completed for Done tasks" $ do
         let task =

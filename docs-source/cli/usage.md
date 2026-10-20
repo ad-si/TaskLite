@@ -182,17 +182,18 @@ This will open your default editor,
 as specified in the environment variables `$VISUAL` or `$EDITOR`.
 You can then easily edit existing fields and add new fields.
 
-Tags and notes can be added, changed, and removed as well.
-Existing notes are identified by their ULID,
-while new notes can simply be added as plain text:
+Tags and comments can be added, changed, and removed as well.
+Existing comments are identified by their ULID,
+while new comments can simply be added as plain text:
 
 ```yaml
 tags:
 - work
-notes:
-- body: An existing note
+comments:
+- body: An existing comment
   ulid: 01hwcw7k2d3n9xq8m6v4p1r5ts
-- A new note
+  user: adrian
+- A new comment
 ```
 
 To delete the task, set its state to `x` and save the file:
@@ -201,7 +202,7 @@ To delete the task, set its state to `x` and save the file:
 state: x
 ```
 
-This permanently deletes the task including its tags and notes
+This permanently deletes the task including its tags and comments
 (same as `tl delete`).
 To only move it to the trash, use `state: Deletable` instead.
 
@@ -326,7 +327,9 @@ its value is used instead.
 
 > [!WARNING]
 > An import object's `tags` field must be of type `[string]`,
-> while a `notes` field must be of type `{ulid?: string, body: string}`.
+> while a `comments` field must be of type
+> `[string | {ulid?: string, body: string, user?: string}]`.
+> Comments without a `user` get the current user as author.
 
 > [!WARNING]
 > TaskLite does not properly support importing tasks
@@ -388,7 +391,7 @@ TaskLite Field        | Taskwarrior Field | Notes
 `due_utc`             | `due`             |
 `awake_utc`           | `wait`            |
 `ready_utc`           | `scheduled`       |
-`notes`               | `annotations`     |
+`comments`            | `annotations`     |
 `tags`                | `tags`            |
 `priority`            | `priority`        | >2 → H, >0 → M, <0 → L
 `metadata.project`    | `project`         | Extracted from metadata
@@ -481,7 +484,7 @@ due_utc: null
 priority: 0.0
 tags:
 
-notes:
+comments:
 ```
 
 To access the metadata key programmatically you can do following:

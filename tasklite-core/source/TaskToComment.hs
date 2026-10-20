@@ -1,4 +1,4 @@
-module TaskToNote where
+module TaskToComment where
 
 import Protolude as P (
   Eq,
@@ -20,35 +20,38 @@ import Database.SQLite.Simple.ToRow (ToRow)
 import Prettyprinter (Pretty (pretty))
 
 
--- | Record for storing entries of the `task_to_note` table
-data TaskToNote = TaskToNote
+-- | Record for storing entries of the `task_to_comment` table
+data TaskToComment = TaskToComment
   { ulid :: Text -- Ulid
   , task_ulid :: Text
-  , note :: Text
+  , comment :: Text
+  , user :: Text -- Author of the comment
   }
   deriving (Show, Eq, Generic, Data)
 
 
-instance FromRow TaskToNote where
+instance FromRow TaskToComment where
   fromRow =
-    TaskToNote
+    TaskToComment
       <$> field
       <*> field
       <*> field
+      <*> field
 
 
-instance ToRow TaskToNote where
-  toRow TaskToNote{..} =
+instance ToRow TaskToComment where
+  toRow TaskToComment{..} =
     [ toField ulid
     , toField task_ulid
-    , toField note
+    , toField comment
+    , toField user
     ]
 
 
-instance ToJSON TaskToNote
+instance ToJSON TaskToComment
 
 
-instance Pretty TaskToNote where
+instance Pretty TaskToComment where
   pretty =
     pretty
       . T.dropEnd 1 -- Drop trailing newline to maybe add it later

@@ -4,7 +4,7 @@
 {-# HLINT ignore "Use maybe" #-}
 
 {-|
-Functions to create, update, and delete tasks / tags / notes
+Functions to create, update, and delete tasks / tags / comments
 -}
 module Lib where
 
@@ -178,6 +178,7 @@ import Text.ParserCombinators.ReadP (
 import Text.Printf (printf)
 import Time.System (dateCurrent, timeCurrentP)
 
+import Comment (Comment (body, ulid, user))
 import Config (
   Column (..),
   Config (
@@ -214,11 +215,11 @@ import FullTask (
     awake_utc,
     body,
     closed_utc,
+    comments,
     due_utc,
     group_ulid,
     metadata,
     modified_utc,
-    notes,
     priority,
     ready_utc,
     recurrence_duration,
@@ -235,11 +236,10 @@ import FullTask (
 import History (HistoryPeriod, getHistory)
 import Hooks (HookResult (message, task), executeHooks, formatHookResult)
 import ImportTask (
-  ImportTask (ImportTask, closedUtcWasExplicit, notes, tags, task),
+  ImportTask (ImportTask, closedUtcWasExplicit, comments, tags, task),
   importTaskToFullTask,
   setMissingFields,
  )
-import Note (Note (body, ulid))
 import Prettyprinter.Internal.Type (Doc (Empty))
 import SqlUtils (quoteKeyword, quoteText)
 import Task (
@@ -252,7 +252,7 @@ import Task (
   textToDerivedState,
  )
 import Task qualified
-import TaskToNote (TaskToNote (..))
+import TaskToComment (TaskToComment (..))
 import TaskToTag (TaskToTag (..))
 import TaskToTask (TaskToTask (..))
 import Utils (
@@ -498,21 +498,22 @@ insertTags conf connection mbCreatedUtc task tags = do
   pure $ vsepCollapse insertWarnings
 
 
-insertNotes ::
+insertComments ::
   Config ->
   Connection ->
   Maybe DateTime ->
   Task ->
-  [Note] ->
+  [Comment] ->
   IO (Doc AnsiStyle)
-insertNotes conf connection mbCreatedUtc task notes = do
-  let uniqueNotes = nub notes
-  taskToNotes <- forM uniqueNotes $ \theNote -> do
+insertComments conf connection mbCreatedUtc task comments = do
+  effectiveUserName <- getEffectiveUserName
+  let uniqueComments = nub comments
+  taskToComments <- forM uniqueComments $ \theComment -> do
     newUlid <- getULID
     pure $
-      TaskToNote
+      TaskToComment
         { ulid =
-            theNote.ulid
+            theComment.ulid
               & parseUlidText
               & fromMaybe newUlid
               & case mbCreatedUtc of
@@ -521,17 +522,21 @@ insertNotes conf connection mbCreatedUtc task notes = do
               & show @ULID
               & T.toLower
         , task_ulid = task.ulid
-        , note = theNote.body
+        , comment = theComment.body
+        , user =
+            if theComment.user == ""
+              then T.pack effectiveUserName
+              else theComment.user
         }
 
-  insertWarnings <- P.forM taskToNotes $ \taskToNote ->
+  insertWarnings <- P.forM taskToComments $ \taskToComment ->
     catchAll
-      (insertRecord "task_to_note" connection taskToNote P.>> pure "")
+      (insertRecord "task_to_comment" connection taskToComment P.>> pure "")
       ( \exception ->
           pure $
             annotate (colr conf Yellow) $
-              "⚠️ Note "
-                <> dquotes (pretty taskToNote.note)
+              "⚠️ Comment "
+                <> dquotes (pretty taskToComment.comment)
                 <> " could not be inserted"
                 <+> "ERROR:"
                 <+> pretty (show exception :: Text)
@@ -572,71 +577,76 @@ syncTags conf connection task tags = do
     tags & P.filter (`P.notElem` existingTagsText)
 
 
-{-| Set the notes of a task by removing missing, updating changed,
+{-| Set the comments of a task by removing missing, updating changed,
 and inserting new ones (matched by their ULIDs)
 -}
-syncNotes :: Config -> Connection -> Task -> [Note] -> IO (Doc AnsiStyle)
-syncNotes conf connection task notes = do
-  existingNotes :: [Note] <-
+syncComments :: Config -> Connection -> Task -> [Comment] -> IO (Doc AnsiStyle)
+syncComments conf connection task comments = do
+  existingComments :: [Comment] <-
     query
       connection
       [sql|
-        SELECT ulid, note
-        FROM task_to_note
+        SELECT ulid, comment, user
+        FROM task_to_comment
         WHERE task_ulid == ?
       |]
       (Only task.ulid)
 
   let
-    noteUlids = notes <&> (.ulid)
-    existingNoteUlids = existingNotes <&> (.ulid)
+    commentUlids = comments <&> (.ulid)
+    existingCommentUlids = existingComments <&> (.ulid)
 
-  forM_ (existingNotes & P.filter ((.ulid) >>> (`P.notElem` noteUlids))) $
-    \theNote ->
+  forM_ (existingComments & P.filter ((.ulid) >>> (`P.notElem` commentUlids))) $
+    \theComment ->
       executeNamed
         connection
         [sql|
-          DELETE FROM task_to_note
+          DELETE FROM task_to_comment
           WHERE ulid == :ulid
         |]
-        [":ulid" := theNote.ulid]
+        [":ulid" := theComment.ulid]
 
-  forM_ (notes & P.filter (`P.notElem` existingNotes)) $ \theNote ->
-    P.when (theNote.ulid `P.elem` existingNoteUlids) $
+  forM_ (comments & P.filter (`P.notElem` existingComments)) $ \theComment ->
+    P.when (theComment.ulid `P.elem` existingCommentUlids) $
       executeNamed
         connection
         [sql|
-          UPDATE task_to_note
-          SET note = :note
+          UPDATE task_to_comment
+          SET
+            comment = :comment,
+            user = ifnull(nullif(:user, ''), user)
           WHERE ulid == :ulid
         |]
-        [ ":note" := theNote.body
-        , ":ulid" := theNote.ulid
+        [ ":comment" := theComment.body
+        , ":user" := theComment.user
+        , ":ulid" := theComment.ulid
         ]
 
-  insertNotes conf connection Nothing task $
-    notes & P.filter ((.ulid) >>> (`P.notElem` existingNoteUlids))
+  insertComments conf connection Nothing task $
+    comments & P.filter ((.ulid) >>> (`P.notElem` existingCommentUlids))
 
 
--- | Tuple is (Maybe createdUtc, noteBody)
-insertNoteTuples :: Connection -> Task -> [(Maybe DateTime, Text)] -> IO ()
-insertNoteTuples connection task notes = do
-  taskToNotes <- forM notes $ \(mbCreatedUtc, noteBody) -> do
-    noteUlid <- getULID
+-- | Tuple is (Maybe createdUtc, commentBody, user)
+insertCommentTuples ::
+  Connection -> Task -> [(Maybe DateTime, Text, Text)] -> IO ()
+insertCommentTuples connection task comments = do
+  taskToComments <- forM comments $ \(mbCreatedUtc, commentBody, user) -> do
+    commentUlid <- getULID
     pure $
-      TaskToNote
+      TaskToComment
         { ulid =
             mbCreatedUtc
-              <&> setDateTime noteUlid
-              & fromMaybe noteUlid
+              <&> setDateTime commentUlid
+              & fromMaybe commentUlid
               & show
               & T.toLower
         , task_ulid = task.ulid
-        , note = noteBody
+        , comment = commentBody
+        , user
         }
 
-  forM_ taskToNotes $ \taskToNote ->
-    insertRecord "task_to_note" connection taskToNote
+  forM_ taskToComments $ \taskToComment ->
+    insertRecord "task_to_comment" connection taskToComment
 
 
 formatUlid :: IO ULID -> IO Text
@@ -770,7 +780,7 @@ addTask conf connection bodyWords = do
               , Task.user = T.pack effectiveUserName
               }
         , tags = parsed.parsedTags
-        , notes = [] -- TODO: Add notes to task
+        , comments = [] -- TODO: Add comments to task
         , closedUtcWasExplicit = False
         }
 
@@ -837,7 +847,7 @@ addTask conf connection bodyWords = do
                   object
                     [ "arguments" .= args
                     , "taskAdded" .= insertedTask
-                    -- TODO: Add tags and notes to task
+                    -- TODO: Add tags and comments to task
                     ]
           )
           conf.hooks.add.post
@@ -1357,7 +1367,7 @@ doTasks ::
   Maybe [Text] ->
   [Text] ->
   IO (Doc AnsiStyle)
-doTasks conf connection closedUtcMaybe noteWordsMaybe ids = do
+doTasks conf connection closedUtcMaybe commentWordsMaybe ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
       let
@@ -1385,14 +1395,14 @@ doTasks conf connection closedUtcMaybe noteWordsMaybe ids = do
                       then createNextRecurrence conf connection task
                       else pure Nothing
 
-              noteMessageMaybe <- case noteWordsMaybe of
+              commentMessageMaybe <- case commentWordsMaybe of
                 Nothing -> pure Nothing
-                Just noteWords ->
-                  addNoteForTask
+                Just commentWords ->
+                  addCommentForTask
                     conf
                     connection
                     closedUtcMaybe
-                    (unwords noteWords)
+                    (unwords commentWords)
                     task
                     <&> Just
 
@@ -1400,7 +1410,7 @@ doTasks conf connection closedUtcMaybe noteWordsMaybe ids = do
               overrideClosedUtc conf connection closedUtcMaybe task
 
               pure $
-                fromMaybe "" (noteMessageMaybe <&> (<> hardline))
+                fromMaybe "" (commentMessageMaybe <&> (<> hardline))
                   <> ( "✅ Finished task"
                          <+> dquotes (pretty task.body)
                          <+> "with id"
@@ -1418,7 +1428,7 @@ endTasks ::
   Maybe [Text] ->
   [Text] ->
   IO (Doc AnsiStyle)
-endTasks conf connection closedUtcMaybe noteWordsMaybe ids = do
+endTasks conf connection closedUtcMaybe commentWordsMaybe ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task -> do
       let
@@ -1446,14 +1456,14 @@ endTasks conf connection closedUtcMaybe noteWordsMaybe ids = do
                       then createNextRecurrence conf connection task
                       else pure Nothing
 
-              noteMessageMaybe <- case noteWordsMaybe of
+              commentMessageMaybe <- case commentWordsMaybe of
                 Nothing -> pure Nothing
-                Just noteWords ->
-                  addNoteForTask
+                Just commentWords ->
+                  addCommentForTask
                     conf
                     connection
                     closedUtcMaybe
-                    (unwords noteWords)
+                    (unwords commentWords)
                     task
                     <&> Just
 
@@ -1461,7 +1471,7 @@ endTasks conf connection closedUtcMaybe noteWordsMaybe ids = do
               overrideClosedUtc conf connection closedUtcMaybe task
 
               pure $
-                fromMaybe "" (noteMessageMaybe <&> (<> hardline))
+                fromMaybe "" (commentMessageMaybe <&> (<> hardline))
                   <> ( "⏹  Marked task"
                          <+> prettyBody
                          <+> "with id"
@@ -1529,7 +1539,7 @@ deleteTasks conf connection ids = do
       execute
         connection
         [sql|
-          DELETE FROM task_to_note
+          DELETE FROM task_to_comment
           WHERE task_ulid == ?
         |]
         (Only task.ulid)
@@ -1720,34 +1730,34 @@ adjustPriority conf adjustment ids = do
 
 startTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 startTasks conf connection ids = do
-  logMessage <- addNote conf connection "start" ids
+  logMessage <- addComment conf connection "start" ids
 
   pure $
     pretty $
       T.replace
-        "📝  Added a note to"
-        "⏳ Started"
+        "🗒  Added a comment to task"
+        "⏳ Started task"
         (show logMessage)
 
 
 stopTasks :: Config -> Connection -> [Text] -> IO (Doc AnsiStyle)
 stopTasks conf connection ids = do
-  logMessages <- addNote conf connection "stop" ids
+  logMessages <- addComment conf connection "stop" ids
 
   pure $
     pretty $
       T.replace
-        "📝  Added a note to"
-        "⌛️ Stopped"
+        "🗒  Added a comment to task"
+        "⌛️ Stopped task"
         (show logMessages)
 
 
 formatTaskForInfo ::
   Config ->
   DateTime ->
-  (FullTask, [TaskToTag], [TaskToNote]) ->
+  (FullTask, [TaskToTag], [TaskToComment]) ->
   Doc AnsiStyle
-formatTaskForInfo conf now (taskV, tags, notes) =
+formatTaskForInfo conf now (taskV, tags, comments) =
   let
     mkGreen = annotate (colr conf Green)
     grayOut = annotate (colrDull conf Black)
@@ -1766,16 +1776,17 @@ formatTaskForInfo conf now (taskV, tags, notes) =
                     (ulidTextToDateTime t.ulid)
                   <++> grayOut (pretty t.ulid)
             )
-    notesPretty =
-      notes
+    commentsPretty =
+      comments
         <&> ( \n ->
                 maybe
                   mempty
                   (grayOut . pretty . T.pack . timePrint conf.utcFormat)
                   (ulidTextToDateTime n.ulid)
                   <++> grayOut (pretty n.ulid)
+                  <++> mkGreen (pretty n.user)
                   <> hardline
-                  <> indent 2 (pretty n.note)
+                  <> indent 2 (pretty n.comment)
                   <> hardline
             )
 
@@ -1807,10 +1818,10 @@ formatTaskForInfo conf now (taskV, tags, notes) =
                  <> hardline
                  <> hardline
          )
-      <> ( if P.null notes
+      <> ( if P.null comments
              then mempty
              else
-               ( notes
+               ( comments
                    <&> ( \n ->
                            maybe
                              mempty
@@ -1821,7 +1832,7 @@ formatTaskForInfo conf now (taskV, tags, notes) =
                                    conf.utcFormatShort
                              )
                              (ulidTextToDateTime n.ulid)
-                             <++> align (pretty n.note)
+                             <++> align (pretty n.comment)
                        )
                    & vsep
                )
@@ -1906,13 +1917,13 @@ formatTaskForInfo conf now (taskV, tags, notes) =
                  <> hardline
                  <> hardline
          )
-      <> ( if P.null notes
+      <> ( if P.null comments
              then mempty
              else
-               annotate (maybeUnderlined conf) "Notes Detailed:"
+               annotate (maybeUnderlined conf) "Comments Detailed:"
                  <> hardline
                  <> hardline
-                 <> vsep notesPretty
+                 <> vsep commentsPretty
                  <> hardline
          )
 
@@ -1942,18 +1953,18 @@ infoTask conf connection idSubstr = do
         |]
         (Only task.ulid)
 
-    notes <-
+    comments <-
       query
         connection
         [sql|
           SELECT *
-          FROM task_to_note
+          FROM task_to_comment
           WHERE task_ulid == ?
         |]
         (Only task.ulid)
 
     pure $ case fullTasks of
-      [fullTask] -> formatTaskForInfo conf now (fullTask, tags, notes)
+      [fullTask] -> formatTaskForInfo conf now (fullTask, tags, comments)
       _ -> pretty noTasksWarning
 
 
@@ -1986,17 +1997,17 @@ nextTask conf connection = do
           |]
           (Only fullTask.ulid)
 
-      notes <-
+      comments <-
         query
           connection
           [sql|
             SELECT *
-            FROM task_to_note
+            FROM task_to_comment
             WHERE task_ulid == ?
           |]
           (Only fullTask.ulid)
 
-      pure $ formatTaskForInfo conf now (fullTask, tags, notes)
+      pure $ formatTaskForInfo conf now (fullTask, tags, comments)
     _ ->
       pure $ pretty noTasksWarning
 
@@ -2058,7 +2069,7 @@ randomTask conf connection filterExpression = do
           pure $ errorsDoc & fromMaybe taskFormatted
 
 
--- | Fuzzy search for tasks matching a pattern in body, ulid, notes, or metadata
+-- | Fuzzy search for tasks matching a pattern in body, ulid, comments, or metadata
 findTask :: Config -> Connection -> Text -> IO (Doc AnsiStyle)
 findTask conf connection aPattern = do
   let sqlFuzzyPattern = aPattern & T.chunksOf 1 & T.intercalate (T.pack "%")
@@ -2066,11 +2077,11 @@ findTask conf connection aPattern = do
     query
       connection
       [sql|
-        SELECT ulid, body, notes, metadata
+        SELECT ulid, body, comments, metadata
         FROM tasks_view
         WHERE body LIKE '%' || ? || '%'
            OR ulid LIKE '%' || ? || '%'
-           OR notes LIKE '%' || ? || '%'
+           OR comments LIKE '%' || ? || '%'
            OR metadata LIKE '%' || ? || '%'
       |]
       ( sqlFuzzyPattern
@@ -2103,7 +2114,7 @@ findTask conf connection aPattern = do
 
     -- Calculate fuzzy score for each part individually
     -- and pick the highest one
-    scoreFunc (ulid, theBody, mbNotes, mbMetadata) =
+    scoreFunc (ulid, theBody, mbComments, mbMetadata) =
       let
         scoreParts =
           [ ( matchFunc theBody
@@ -2120,7 +2131,7 @@ findTask conf connection aPattern = do
                         , score = 0
                         }
                   )
-          , matchFunc (fromMaybe "" mbNotes)
+          , matchFunc (fromMaybe "" mbComments)
           , -- TODO: Find good way to include tags
             -- , matchFunc (maybe "" unwords mbTags)
             matchFunc (metaNorm mbMetadata)
@@ -2504,12 +2515,12 @@ unblockTasks ::
 unblockTasks conf connection = deleteRelation conf connection "blocks"
 
 
-{-| Insert a note for a task without firing modify hooks.
-An optional creation UTC is encoded in the note's ULID (instead of now).
+{-| Insert a comment for a task without firing modify hooks.
+An optional creation UTC is encoded in the comment's ULID (instead of now).
 -}
-addNoteForTask ::
+addCommentForTask ::
   Config -> Connection -> Maybe DateTime -> Text -> Task -> IO (Doc AnsiStyle)
-addNoteForTask conf connection createdUtcMaybe noteBody task = do
+addCommentForTask conf connection createdUtcMaybe commentBody task = do
   now <- timeCurrentP <&> (timePrint conf.utcFormat >>> T.pack)
   ulid <-
     formatUlid $
@@ -2517,14 +2528,16 @@ addNoteForTask conf connection createdUtcMaybe noteBody task = do
         createdUtcMaybe
           <&> setDateTime newUlid
           & fromMaybe newUlid
+  effectiveUserName <- getEffectiveUserName
 
   insertRecord
-    "task_to_note"
+    "task_to_comment"
     connection
-    TaskToNote
+    TaskToComment
       { ulid
       , task_ulid = task.ulid
-      , TaskToNote.note = noteBody
+      , TaskToComment.comment = commentBody
+      , TaskToComment.user = T.pack effectiveUserName
       }
 
   -- TODO: Check if modified_utc could be set via SQL trigger
@@ -2544,49 +2557,49 @@ addNoteForTask conf connection createdUtcMaybe noteBody task = do
     prettyId = dquotes $ pretty task.ulid
 
   pure $
-    "🗒  Added a note to task"
+    "🗒  Added a comment to task"
       <+> prettyBody
       <+> "with id"
       <+> prettyId
 
 
-addNote :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
-addNote conf connection noteBody ids = do
+addComment :: Config -> Connection -> Text -> [IdText] -> IO (Doc AnsiStyle)
+addComment conf connection commentBody ids = do
   docs <- forM ids $ \idSubstr ->
     execWithTask conf connection idSubstr $ \task ->
       withModifyHooks conf connection task.ulid $
-        addNoteForTask conf connection Nothing noteBody task
+        addCommentForTask conf connection Nothing commentBody task
 
   pure $ vsep docs
 
 
-deleteNote :: Config -> Connection -> IdText -> IO (Doc AnsiStyle)
-deleteNote conf connection noteId = do
+deleteComment :: Config -> Connection -> IdText -> IO (Doc AnsiStyle)
+deleteComment conf connection commentId = do
   taskIds :: [Only Text] <-
     queryNamed
       connection
       [sql|
-        DELETE FROM task_to_note
-        WHERE ulid == :noteId
+        DELETE FROM task_to_comment
+        WHERE ulid == :commentId
         RETURNING task_ulid
       |]
-      [":noteId" := noteId]
+      [":commentId" := commentId]
 
   case taskIds of
     [Only taskId] ->
       pure $
-        "💥 Deleted note"
-          <+> dquotes (pretty noteId)
+        "💥 Deleted comment"
+          <+> dquotes (pretty commentId)
           <+> "of task"
           <+> dquotes (pretty taskId)
     [] ->
       pure $
         annotate (colr conf Yellow) $
-          "⚠️  Note" <+> dquotes (pretty noteId) <+> "does not exist"
+          "⚠️  Comment" <+> dquotes (pretty commentId) <+> "does not exist"
     _ ->
       pure $
         annotate (colr conf Yellow) $
-          ("⚠️  Note" <+> dquotes (pretty noteId) <+> "exists multiple times.")
+          ("⚠️  Comment" <+> dquotes (pretty commentId) <+> "exists multiple times.")
             <++> "This indicates a serious database inconsistency \
                  \and you should clean up the database manually \
                  \before continuing."
@@ -2862,15 +2875,15 @@ untagTasks conf connection ids = do
   pure $ vsep docs
 
 
-unnoteTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
-unnoteTasks conf connection ids = do
+uncommentTasks :: Config -> Connection -> [IdText] -> IO (Doc AnsiStyle)
+uncommentTasks conf connection ids = do
   docs <- forM ids $ \idSubstr -> do
     execWithTask conf connection idSubstr $ \task ->
       withModifyHooks conf connection task.ulid $ do
         executeNamed
           connection
           [sql|
-            DELETE FROM task_to_note
+            DELETE FROM task_to_comment
             WHERE task_ulid == :task_ulid
           |]
           [":task_ulid" := task.ulid]
@@ -2878,8 +2891,8 @@ unnoteTasks conf connection ids = do
         numOfChanges <- changes connection
         pure $
           if numOfChanges == 0
-            then getWarnMsg conf task "does not have any notes"
-            else getResultMsg task "💥 Deleted all notes"
+            then getWarnMsg conf task "does not have any comments"
+            else getResultMsg task "💥 Deleted all comments"
 
   pure $ vsep docs
 
@@ -2968,28 +2981,29 @@ duplicateTasks conf connection ids = do
       warnings <-
         liftIO $ insertTags conf connection Nothing dupeTask (tags & P.concat)
 
-      notes <-
+      comments <-
         query
           connection
           [sql|
             SELECT *
-            FROM task_to_note
+            FROM task_to_comment
             WHERE task_ulid == ?
           |]
           (Only task.ulid)
 
       let
-        noteTuples =
-          notes <&> \theNote ->
-            ( ulidTextToDateTime (TaskToNote.ulid theNote)
-            , TaskToNote.note theNote
+        commentTuples =
+          comments <&> \theComment ->
+            ( ulidTextToDateTime (TaskToComment.ulid theComment)
+            , TaskToComment.comment theComment
+            , TaskToComment.user theComment
             )
 
       liftIO $
-        insertNoteTuples
+        insertCommentTuples
           connection
           dupeTask
-          noteTuples
+          commentTuples
 
       numOfChanges <- changes connection
 
@@ -3118,9 +3132,9 @@ formatTaskTags conf task = do
     _ -> hsep (tags <&> (\t -> annotate conf.tagStyle ("+" <> pretty t)))
 
 
-formatTaskNotes :: FullTask -> Doc AnsiStyle
-formatTaskNotes task =
-  if not $ P.null task.notes then "📝" else ""
+formatTaskComments :: FullTask -> Doc AnsiStyle
+formatTaskComments task =
+  if not $ P.null task.comments then "📝" else ""
 
 
 formatTaskId :: Config -> Int -> FullTask -> Doc AnsiStyle
@@ -3221,7 +3235,7 @@ formatTaskLine conf now idColWidth task = do
                 , formatTaskClose conf task
                 ]
                   <> [formatTaskTags conf task | not hasTagsCol]
-                  <> [formatTaskNotes task]
+                  <> [formatTaskComments task]
               EmptyCol -> []
           )
   hang hangWidth $ hhsep $ P.filter isEmptyDoc fields
@@ -4128,51 +4142,58 @@ listProjects conf connection = do
       else formatTags conf tags
 
 
-listNotes :: Config -> Connection -> IO (Doc AnsiStyle)
-listNotes conf connection = do
-  (notes :: [TaskToNote]) <-
+listComments :: Config -> Connection -> IO (Doc AnsiStyle)
+listComments conf connection = do
+  (comments :: [TaskToComment]) <-
     query_
       connection
       [sql|
-        SELECT ulid, task_ulid, note
-        FROM task_to_note
+        SELECT ulid, task_ulid, comment, user
+        FROM task_to_comment
         ORDER BY ulid DESC
       |]
 
   let
     taskIdWidth = 7 -- TODO: Use dynamic width
-    noteWidth = getIdLength $ fromIntegral $ P.length notes
+    commentWidth = getIdLength $ fromIntegral $ P.length comments
+    userWidth =
+      P.maximum $ T.length "Author" : (comments <&> ((.user) >>> T.length))
     docHeader =
       annotate
         (conf.idStyle <> maybeBold conf <> maybeUnderlined conf)
         (fill taskIdWidth "Task ID")
         <++> annotate
           (conf.idStyle <> maybeBold conf <> maybeUnderlined conf)
-          (fill noteWidth "ID")
+          (fill commentWidth "ID")
         <++> annotate
           (conf.dateStyle <> maybeBold conf <> maybeUnderlined conf)
           "Created UTC"
-        <++> annotate (maybeBold conf <> maybeUnderlined conf) "Note"
+        <++> annotate
+          (maybeBold conf <> maybeUnderlined conf)
+          (fill userWidth "Author")
+        <++> annotate (maybeBold conf <> maybeUnderlined conf) "Comment"
         <++> line
 
-    showNote note =
+    showComment comment =
       annotate
         conf.idStyle
-        (fill 7 $ pretty $ T.takeEnd taskIdWidth note.task_ulid)
+        (fill 7 $ pretty $ T.takeEnd taskIdWidth comment.task_ulid)
         <++> annotate
           conf.idStyle
-          (fill noteWidth $ pretty $ T.takeEnd noteWidth note.ulid)
+          (fill commentWidth $ pretty $ T.takeEnd commentWidth comment.ulid)
         <++> annotate
           conf.dateStyle
-          ( note.ulid
+          ( comment.ulid
               & ulidTextToDateTime
                 <&> timePrint ISO8601_Date
               & pretty
+              & fill (T.length "Created UTC")
           )
-        <++> pretty note.note
+        <++> fill userWidth (pretty comment.user)
+        <++> pretty comment.comment
         <> line
 
-  pure $ docHeader <> vsep (notes <&> showNote)
+  pure $ docHeader <> vsep (comments <&> showComment)
 
 
 getStats :: Config -> Connection -> IO (Doc AnsiStyle)

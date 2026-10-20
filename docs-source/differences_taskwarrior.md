@@ -53,14 +53,14 @@
 Taskwarrior  | TaskLite   | Description & Differences
 -------------|------------|--------------------------
 [add]        | add        | Add a new task
-annotate     | note       | Add a note / comment / annotation to a task
+annotate     | comment    | Add a comment (annotation) to a task
 [append]     | - (edit)   | Append words to a task description
 [calc]       | -          | Expression calculator
 config       | config     | TL only displays it, TW allows modification
 context      | -          | Manage contexts. TL uses tags instead.
 [count]      | count      | Count the tasks matching a filter
 delete       | trash      | Mark a task as deletable
-denotate     | unnote     | Remove an annotation from a task
+denotate     | deletecomment | Remove a comment from a task
 [done]       | do         | Complete a task
 duplicate    | duplicate  | Clone an existing task
 edit         | edit       | Launch your text editor to modify a task
