@@ -136,8 +136,8 @@ import Database.SQLite.Simple.QQ (sql)
 import Numeric (showFFloat)
 import Prettyprinter as Pp (
   Doc,
+  PageWidth (AvailablePerLine, Unbounded),
   Pretty (pretty),
-  align,
   annotate,
   concatWith,
   dquotes,
@@ -147,6 +147,7 @@ import Prettyprinter as Pp (
   hsep,
   indent,
   line,
+  pageWidth,
   punctuate,
   surround,
   vcat,
@@ -201,8 +202,7 @@ import Config (
     tableName,
     tagStyle,
     tagsWidth,
-    utcFormat,
-    utcFormatShort
+    utcFormat
   ),
   Hook,
   HookSet (post, pre),
@@ -1806,38 +1806,56 @@ formatTaskForInfo conf now (taskV, tags, comments) =
               <+> annotate conf.dueStyle (pretty v)
                 <> hardline
         )
+    divider =
+      pageWidth
+        ( \pw ->
+            let width = case pw of
+                  AvailablePerLine lineWidth _ -> P.min 80 lineWidth
+                  Unbounded -> 80
+            in  pretty (T.replicate width "-")
+        )
+        <> hardline
+        <> hardline
+
+    detailsSection =
+      ( if P.null tags
+          then mempty
+          else
+            annotate (maybeUnderlined conf) "Tags:"
+              <> hardline
+              <> hardline
+              <> vsep tagsPretty
+              <> hardline
+              <> hardline
+      )
+        <> ( if P.null comments
+               then mempty
+               else
+                 annotate (maybeUnderlined conf) "Comments:"
+                   <> hardline
+                   <> hardline
+                   <> vsep commentsPretty
+                   <> hardline
+           )
+        <> maybe
+          mempty
+          ( \value ->
+              annotate (maybeUnderlined conf) "Metadata:"
+                <> hardline
+                <> hardline
+                <> indent 2 (pretty $ decodeUtf8 $ Yaml.encode value)
+                <> hardline
+          )
+          (FullTask.metadata taskV)
   in
     hardline
       <> annotate (maybeBold conf) (pretty taskV.body)
       <> hardline
       <> hardline
-      <> ( if P.null tags
+      <> divider
+      <> ( if P.null tags && P.null comments && isNothing taskV.metadata
              then mempty
-             else
-               (tags <&> (TaskToTag.tag >>> formatTag conf) & hsep)
-                 <> hardline
-                 <> hardline
-         )
-      <> ( if P.null comments
-             then mempty
-             else
-               ( comments
-                   <&> ( \n ->
-                           maybe
-                             mempty
-                             ( grayOut
-                                 . pretty
-                                 . T.pack
-                                 . timePrint
-                                   conf.utcFormatShort
-                             )
-                             (ulidTextToDateTime n.ulid)
-                             <++> align (pretty n.comment)
-                       )
-                   & vsep
-               )
-                 <> hardline
-                 <> hardline
+             else detailsSection <> divider
          )
       <> ( "   State:"
              <+> mkGreen (pretty stateHierarchy)
@@ -1853,22 +1871,10 @@ formatTaskForInfo conf now (taskV, tags, comments) =
              <+> grayOut (pretty $ FullTask.ulid taskV)
                <> hardline
          )
-      <> hardline
-      <> ( [ (printIf "🆕  Created  ", mbCreatedUtc)
-           , (printIf "☀️   Awake   ", mbAwakeUtc)
-           , (printIf "📅   Ready   ", mbReadyUtc)
-           , (printIf "⏳  Waiting  ", mbWaitingUtc)
-           , (printIf "🔎  Review   ", mbReviewUtc)
-           , (printIf "📅    Due    ", mbDueUtc)
-           , (printIf "✅   Done    ", mbClosedUtc)
-           , (printIf "✏️   Modified ", mbModifiedUtc)
-           ]
-             & sortBy (compare `on` snd)
-             & P.mapMaybe (\tup -> fst tup (snd tup))
-             & punctuate (pretty ("       ⬇" :: Text))
-             & vsep
+      <> ( "    User:"
+             <+> mkGreen (pretty $ FullTask.user taskV)
+               <> hardline
          )
-      <> hardline
       <> maybe
         mempty
         ( \value ->
@@ -1893,38 +1899,21 @@ formatTaskForInfo conf now (taskV, tags, comments) =
                 <> hardline
         )
         (FullTask.group_ulid taskV)
-      <> ( "User:"
-             <+> mkGreen (pretty $ FullTask.user taskV)
-               <> hardline
-         )
       <> hardline
-      <> maybe
-        mempty
-        ( \value ->
-            "Metadata:"
-              <> hardline
-              <> indent 2 (pretty $ decodeUtf8 $ Yaml.encode value)
-              <> hardline
-        )
-        (FullTask.metadata taskV)
-      <> ( if P.null tags
-             then mempty
-             else
-               annotate (maybeUnderlined conf) "Tags Detailed:"
-                 <> hardline
-                 <> hardline
-                 <> vsep tagsPretty
-                 <> hardline
-                 <> hardline
-         )
-      <> ( if P.null comments
-             then mempty
-             else
-               annotate (maybeUnderlined conf) "Comments Detailed:"
-                 <> hardline
-                 <> hardline
-                 <> vsep commentsPretty
-                 <> hardline
+      <> divider
+      <> ( [ (printIf "🆕  Created  ", mbCreatedUtc)
+           , (printIf "☀️   Awake   ", mbAwakeUtc)
+           , (printIf "📅   Ready   ", mbReadyUtc)
+           , (printIf "⏳  Waiting  ", mbWaitingUtc)
+           , (printIf "🔎  Review   ", mbReviewUtc)
+           , (printIf "📅    Due    ", mbDueUtc)
+           , (printIf "✅   Done    ", mbClosedUtc)
+           , (printIf "✏️   Modified ", mbModifiedUtc)
+           ]
+             & sortBy (compare `on` snd)
+             & P.mapMaybe (\tup -> fst tup (snd tup))
+             & punctuate (pretty ("       ⬇" :: Text))
+             & vsep
          )
 
 
