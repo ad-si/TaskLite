@@ -1,6 +1,7 @@
 module ImportExportSpec where
 
 import Protolude (
+  Bool (True),
   Either (Left, Right),
   Maybe (..),
   Text,
@@ -26,6 +27,14 @@ import Data.Text.Encoding qualified as T
 import Data.ULID (ULID)
 import Data.Yaml qualified as Yaml
 import Database.SQLite.Simple (query_)
+import System.Directory (
+  Permissions (executable, readable),
+  emptyPermissions,
+  setPermissions,
+ )
+import System.Environment (setEnv)
+import System.FilePath ((</>))
+import System.IO.Temp (withSystemTempDirectory)
 import System.Posix.User (getEffectiveUserName)
 import Test.Hspec (
   Spec,
@@ -43,6 +52,7 @@ import FullTask (FullTask, emptyFullTask)
 import FullTask qualified
 import ImportExport (
   EditResult (DeleteRequested, Edited),
+  editTask,
   getNdjsonLines,
   insertImportTask,
   parseEditedMarkdown,
@@ -51,6 +61,7 @@ import ImportTask (
   ImportTask (ImportTask, closedUtcWasExplicit, comments, tags, task),
   setMissingFields,
  )
+import Lib (insertRecord)
 import Task (Task (body, modified_utc, ulid, user), emptyTask)
 import TaskToComment (TaskToComment (TaskToComment))
 import TaskToComment qualified
@@ -725,6 +736,39 @@ spec = do
       case parse "---\nfoo: [\n...\n\nBody\n" of
         Left error -> T.unpack error `shouldContain` "line 2"
         Right _ -> P.die "Expected a parse error"
+
+  describe "editTask" $ do
+    it "bumps modified_utc when only the tags are changed" $ do
+      withMemoryDb conf $ \memConn -> do
+        let
+          oldModifiedUtc = "2024-10-16 18:44:11"
+          task =
+            emptyTask
+              { Task.ulid = "01e33h8t98k0bhd58pgr38watm"
+              , Task.body = "Edit me"
+              , Task.modified_utc = oldModifiedUtc
+              , Task.user = "john"
+              }
+        insertRecord "tasks" memConn task
+
+        withSystemTempDirectory "tasklite-edit" $ \tmpDir -> do
+          let editorPath = tmpDir </> "editor.sh"
+          P.writeFile editorPath $
+            "#!/bin/sh\n\
+            \perl -pi -e 's/^tags: \\[\\]/tags: [feat]/' \"$1\"\n"
+          setPermissions
+            editorPath
+            (emptyPermissions{executable = True, readable = True})
+          setEnv "EDITOR" editorPath
+
+          _ <- editTask conf memConn task.ulid
+          pure ()
+
+        tags :: [[Text]] <- query_ memConn "SELECT tag FROM task_to_tag"
+        tags `shouldBe` [["feat"]]
+
+        modifiedUtcs :: [[Text]] <- query_ memConn "SELECT modified_utc FROM tasks"
+        modifiedUtcs `shouldNotBe` [[oldModifiedUtc]]
 
   describe "Export" $ do
     it "exports several tasks as NDJSON including comments" $ do

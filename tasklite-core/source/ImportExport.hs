@@ -22,6 +22,7 @@ import Protolude (
   Text,
   Traversable (sequence),
   die,
+  fromMaybe,
   putErrLn,
   rightToMaybe,
   show,
@@ -70,7 +71,7 @@ import Data.Yaml (
   YamlMark (YamlMark),
  )
 import Data.Yaml qualified as Yaml
-import Database.SQLite.Simple (Connection)
+import Database.SQLite.Simple (Connection, Only (Only), query)
 import Email (emailToImportTask)
 import FullTask (FullTask (..))
 import Hooks (HookResult (message, task), executeHooks, formatHookResult)
@@ -799,14 +800,14 @@ editTask conf conn idSubstr = do
         conf.hooks.modify.pre
 
     -- Maybe the task was changed by the hook
-    (importTask, preModifyHookMsg) <- case preModifyResults of
-      [] -> pure (importTaskDraft, Empty)
+    (hookTaskMb, preModifyHookMsg) <- case preModifyResults of
+      [] -> pure (Nothing, Empty)
       [Left error] -> do
         _ <- P.exitFailure
-        pure (importTaskDraft, pretty error)
+        pure (Nothing, pretty error)
       [Right hookResult] -> do
         case hookResult.task of
-          Nothing -> pure (importTaskDraft, Empty)
+          Nothing -> pure (Nothing, Empty)
           Just importTask -> do
             fullImportTask <-
               setMissingFields
@@ -814,21 +815,34 @@ editTask conf conn idSubstr = do
                   { ImportTask.task =
                       importTask.task{Task.ulid = taskToEdit.ulid}
                   }
-            pure (fullImportTask, formatHookResult conf hookResult)
+            pure (Just fullImportTask, formatHookResult conf hookResult)
       _ -> do
         pure
-          ( importTaskDraft
+          ( Nothing
           , annotate (colr conf Red) $
               "ERROR: Multiple pre-add hooks are not supported yet. "
                 <> "None of the hooks were executed."
           )
 
-    updateTask conn importTask.task
-    warnings <- insertTags conf conn Nothing importTask.task importTask.tags
+    -- Only write to the database if the hook changed the task,
+    -- as every update bumps `modified_utc` via an SQL trigger.
+    -- Afterwards reload the task, because `insertTaskFromEdit` needs
+    -- the current `modified_utc` to let the trigger bump it again.
+    (taskForEditor, warnings) <- case hookTaskMb of
+      Nothing -> pure (taskToEdit, Empty)
+      Just hookTask -> do
+        updateTask conn hookTask.task
+        warnings <- insertTags conf conn Nothing hookTask.task hookTask.tags
+        reloadedTasks :: [Task] <-
+          query
+            conn
+            "SELECT * FROM tasks WHERE ulid == ?"
+            (Only taskToEdit.ulid)
+        pure (P.head reloadedTasks & fromMaybe hookTask.task, warnings)
 
     putDoc $
       preModifyHookMsg
         <!!> warnings
         <!!> hardline
 
-    editTaskByTask conf OpenEditorRequireEdit conn importTask.task
+    editTaskByTask conf OpenEditorRequireEdit conn taskForEditor

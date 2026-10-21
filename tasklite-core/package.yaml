@@ -123,6 +123,9 @@ tests:
     dependencies:
       - aeson
       - bytestring
+      - directory
+      - filepath
+      - temporary
       - time-hourglass
       - hspec >= 2.11 && < 3.0
       - iso8601-duration
