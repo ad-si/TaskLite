@@ -894,6 +894,32 @@ spec = do
       listUlids defaultConfig memConn (Just ["invalid"])
         `shouldThrow` (== ExitFailure 1)
 
+  it "filters tasks by creation date" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord "tasks" memConn exampleTask -- 2024-02-21 16:43:17.358
+      insertRecord "tasks" memConn task1 -- 2024-03-17 13:17:44.461
+      let getCreated utc = listUlids defaultConfig memConn (Just ["created:" <> utc])
+
+      onDay <- getCreated "2024-02-21"
+      show onDay `shouldBe` exampleTask.ulid
+
+      onMinute <- getCreated "2024-03-17T13:17"
+      show onMinute `shouldBe` task1.ulid
+
+      onSecond <- getCreated "2024-02-21T16:43:17"
+      show onSecond `shouldBe` exampleTask.ulid
+
+      onMilli <- getCreated "2024-02-21T16:43:17.358"
+      show onMilli `shouldBe` exampleTask.ulid
+
+      nextMilli <- getCreated "2024-02-21T16:43:17.359"
+      show nextMilli `shouldBe` ("" :: Text)
+
+      otherDay <- getCreated "2024-02-22"
+      show otherDay `shouldBe` ("" :: Text)
+
+      getCreated "not-a-date" `shouldThrow` (== ExitFailure 1)
+
   it "gets new tasks" $ do
     withMemoryDb defaultConfig $ \memConn -> do
       let

@@ -68,7 +68,13 @@ import Data.Hourglass (
 import Data.Text (Text, unpack)
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
-import Data.Time (UTCTime, ZonedTime, addUTCTime, zonedTimeToUTC)
+import Data.Time (
+  NominalDiffTime,
+  UTCTime,
+  ZonedTime,
+  addUTCTime,
+  zonedTimeToUTC,
+ )
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Data.ULID (ULID (ULID, random, timeStamp))
 import Data.ULID.Random (ULIDRandom, mkULIDRandom)
@@ -156,7 +162,18 @@ parseUtcNum number =
 
 
 parseUtc :: Text -> Maybe DateTime
-parseUtc utcText =
+parseUtc =
+  parseUtcWithPrecision >>> fmap P.fst
+
+
+{-| Like `parseUtc`, but also returns the precision of the given value,
+i.e. the length of the time span it describes.
+E.g. a date without a time describes a whole day.
+Sub-millisecond precision is rounded to milliseconds
+as this is the precision of ULIDs.
+-}
+parseUtcWithPrecision :: Text -> Maybe (DateTime, NominalDiffTime)
+parseUtcWithPrecision utcText =
   let
     utcString = unpack $ T.toLower utcText
 
@@ -166,27 +183,41 @@ parseUtc utcText =
     unixMicro = "EPOCH ms us" :: [Char]
     unixMilli = "EPOCH ms" :: [Char]
 
-    tParse :: [Char] -> Maybe DateTime
-    tParse formatString =
-      timeParse (toFormat formatString) utcString
+    milli = 0.001
+    second = 1
+    minute = 60
+    day = 86400
+
+    withPrecision ::
+      NominalDiffTime -> Maybe DateTime -> Maybe (DateTime, NominalDiffTime)
+    withPrecision precision = fmap (,precision)
+
+    tParse :: NominalDiffTime -> [Char] -> Maybe (DateTime, NominalDiffTime)
+    tParse precision formatString =
+      withPrecision precision $ timeParse (toFormat formatString) utcString
   in
     -- From long (specific) to short (unspecific)
-    timeParse ISO8601_DateAndTime utcString
+    withPrecision second (timeParse ISO8601_DateAndTime utcString)
       -- <|> tParse "YYYY-MM-DDtH:MI:S.ns"
-      <|> tParse "YYYY-MM-DDtH:MI:S.msusns"
-      <|> tParse "YYYY-MM-DDtH:MI:S.msus"
-      <|> tParse "YYYY-MM-DDtH:MI:S.ms"
-      <|> tParse "YYYY-MM-DDtH:MI:S"
-      <|> tParse "YYYY-MM-DDtH:MI"
-      <|> tParse "YYYYMMDDtHMIS"
-      <|> tParse "YYYY-MM-DD H:MI:S"
-      <|> tParse "YYYY-MM-DD H:MI"
-      <|> tParse "YYYY-MM-DD"
-      <|> timeParse
-        (toFormat unixMicro)
-        (unpack $ (addSpaceAfter10 . addSpaceAfter13) utcText)
-      <|> timeParse (toFormat unixMilli) (unpack $ addSpaceAfter10 utcText)
-      <|> tParse "EPOCH"
+      <|> tParse milli "YYYY-MM-DDtH:MI:S.msusns"
+      <|> tParse milli "YYYY-MM-DDtH:MI:S.msus"
+      <|> tParse milli "YYYY-MM-DDtH:MI:S.ms"
+      <|> tParse second "YYYY-MM-DDtH:MI:S"
+      <|> tParse minute "YYYY-MM-DDtH:MI"
+      <|> tParse second "YYYYMMDDtHMIS"
+      <|> tParse second "YYYY-MM-DD H:MI:S"
+      <|> tParse minute "YYYY-MM-DD H:MI"
+      <|> tParse day "YYYY-MM-DD"
+      <|> withPrecision
+        milli
+        ( timeParse
+            (toFormat unixMicro)
+            (unpack $ (addSpaceAfter10 . addSpaceAfter13) utcText)
+        )
+      <|> withPrecision
+        milli
+        (timeParse (toFormat unixMilli) (unpack $ addSpaceAfter10 utcText))
+      <|> tParse second "EPOCH"
 
 
 parseUlidUtcSection :: Text -> Maybe DateTime

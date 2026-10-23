@@ -264,12 +264,14 @@ import Utils (
   colrDull,
   countChar,
   dateTimeToUtcTime,
+  emptyUlid,
   formatElapsedP,
   maybeBold,
   maybeUnderlined,
   numDigits,
   parseUlidText,
   parseUtc,
+  parseUtcWithPrecision,
   setDateTime,
   ulidTextToDateTime,
   utcFormatReadable,
@@ -3772,6 +3774,7 @@ data FilterExp
   = HasTag Text
   | NotTag Text
   | HasDue Text
+  | HasCreated Text Text -- ULID timestamp prefixes of start and end
   | HasStatus (Maybe DerivedState) -- Should be `Either`
   | InvalidFilter Text
   deriving (Show)
@@ -3798,6 +3801,30 @@ dueParser = do
   pure $ HasDue $ T.pack utcStr
 
 
+{-| Matches tasks created within the time span described by the value.
+E.g. `created:2020-01-01` matches all tasks created on that day.
+Creation time is encoded in the ULID.
+Its first 10 characters are the timestamp and sort lexicographically.
+-}
+createdParser :: ReadP FilterExp
+createdParser = do
+  _ <- string "created:"
+  utcStr <- munch (not . isSpace)
+  let
+    utcTxt = T.pack utcStr
+    toUlidPrefix utc =
+      T.take 10 $ T.toLower $ show $ setDateTime emptyUlid utc
+  pure $ case parseUtcWithPrecision utcTxt of
+    Just (start, precision) ->
+      HasCreated
+        (toUlidPrefix start)
+        ( toUlidPrefix $
+            utcTimeToDateTime $
+              addUTCTime precision (dateTimeToUtcTime start)
+        )
+    Nothing -> InvalidFilter $ "created:" <> utcTxt
+
+
 stateParser :: ReadP FilterExp
 stateParser = do
   _ <- string "state:"
@@ -3811,6 +3838,7 @@ filterExpParser =
     tagParser
     <++ notTagParser
     <++ dueParser
+    <++ createdParser
     <++ stateParser
     <++ (InvalidFilter . T.pack <$> munch1 (not . isSpace))
 
@@ -3835,6 +3863,13 @@ filterToSql = \case
   HasTag tag -> ("INTERSECT", "tag LIKE " <> quoteText tag)
   NotTag tag -> ("EXCEPT", "tag LIKE " <> quoteText tag)
   HasDue utc -> ("INTERSECT", "due_utc < datetime(" <> quoteText utc <> ")")
+  HasCreated startPrefix endPrefix ->
+    ( "INTERSECT"
+    , "tasks.ulid >= "
+        <> quoteText startPrefix
+        <> " AND tasks.ulid < "
+        <> quoteText endPrefix
+    )
   HasStatus (Just taskState) -> ("INTERSECT", derivedStateToQuery taskState)
   -- Following cases should never be called, as they are filtered out
   HasStatus Nothing -> ("", "")

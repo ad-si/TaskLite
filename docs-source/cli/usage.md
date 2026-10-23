@@ -252,6 +252,9 @@ using an expressive filter language.
 - `tl get +chore` - Lists all tasks with the `chore` tag.
 - `tl get state:done` - Lists all already completed tasks.
 - `tl get due:2013-01-01` - Lists all tasks due before 2013-01-01.
+- `tl get created:2013-01-01` - Lists all tasks created on 2013-01-01.
+    The time span is determined by the precision of the value.
+    E.g. `created:2013-01-01T12:30` lists all tasks created in that minute.
 
 Those can also be combined:
 
