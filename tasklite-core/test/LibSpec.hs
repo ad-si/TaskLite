@@ -107,6 +107,7 @@ import Task (
     awake_utc,
     body,
     closed_utc,
+    created_utc,
     due_utc,
     group_ulid,
     metadata,
@@ -129,7 +130,7 @@ import TaskToTask (TaskToTask)
 import TaskToTask qualified
 import TestUtils (withMemoryDb)
 import Time.System (dateCurrent)
-import Utils (parseUtc, ulidText2utc, zeroTime, zeroUlidTxt)
+import Utils (parseUtc, ulidText2utc, ulidTextToDateTime, zeroTime, zeroUlidTxt)
 
 
 exampleTask :: Task
@@ -178,6 +179,7 @@ normTask :: Task -> Task
 normTask task =
   task
     { Task.ulid = ""
+    , Task.created_utc = Nothing
     , Task.modified_utc = ""
     , Task.due_utc = Nothing
     , Task.user = ""
@@ -214,7 +216,8 @@ spec = do
 
       insertRecord "tasks" memConn task
       tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
-      tasks `shouldBe` [task]
+      -- `created_utc` gets derived from the ULID by an SQL trigger
+      tasks `shouldBe` [task{Task.created_utc = Just "2024-03-13 09:12:53.025"}]
 
   it "adds a new task" $ do
     withMemoryDb conf $ \memConn -> do
@@ -316,7 +319,8 @@ spec = do
           [updatedTask] -> do
             -- Task should have a different `modified_utc` value
             updatedTask `shouldSatisfy` (\task -> task.modified_utc /= "")
-            updatedTask{modified_utc = ""} `shouldBe` newTask
+            updatedTask{modified_utc = ""}
+              `shouldBe` newTask{created_utc = Just "2024-03-13 09:13:38.991"}
           _ ->
             P.die "Found more than one task"
 
@@ -920,6 +924,41 @@ spec = do
 
       getCreated "not-a-date" `shouldThrow` (== ExitFailure 1)
 
+  it "filters tasks by explicitly set creation date" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      insertRecord
+        "tasks"
+        memConn
+        task1{Task.created_utc = Just "1960-05-01 12:00:00.000"}
+      let getCreated utc = listUlids defaultConfig memConn (Just ["created:" <> utc])
+
+      onDay <- getCreated "1960-05-01"
+      show onDay `shouldBe` task1.ulid
+
+      ulidDay <- getCreated "2024-03-17"
+      show ulidDay `shouldBe` ("" :: Text)
+
+  it "adds a task with a creation date before 1970" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      _ <- addTask conf memConn ["Moon landing", "created:1969-07-20T20:17"]
+      tasks :: [FullTask] <- query_ memConn "SELECT * FROM tasks_view"
+      case tasks of
+        [task] -> do
+          task.body `shouldBe` "Moon landing"
+          task.created_utc `shouldBe` Just "1969-07-20 20:17:00.000"
+        _ -> P.die "Expected exactly one task"
+
+  it "adds a task with a creation date and uses it for the ULID" $ do
+    withMemoryDb defaultConfig $ \memConn -> do
+      _ <- addTask conf memConn ["Old task", "created:2020-02-02"]
+      tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+      case tasks of
+        [task] -> do
+          task.created_utc `shouldBe` Just "2020-02-02 00:00:00.000"
+          ulidTextToDateTime task.ulid
+            `shouldBe` parseUtc "2020-02-02"
+        _ -> P.die "Expected exactly one task"
+
   it "gets new tasks" $ do
     withMemoryDb defaultConfig $ \memConn -> do
       let
@@ -1036,6 +1075,24 @@ spec = do
         (tags :: [[P.Text]]) <-
           query_ memConn "SELECT tag FROM task_to_tag ORDER BY tag"
         tags `shouldBe` [["existing-tag"], ["new-tag"]]
+
+    it "changes the creation date without changing the ULID" $ do
+      withMemoryDb defaultConfig $ \memConn -> do
+        insertRecord "tasks" memConn task1
+        [taskFromDb] :: [Task] <- query_ memConn "SELECT * FROM tasks"
+        _ <-
+          editTaskByTask
+            conf
+            ( ApplyPreEdit $
+                replaceBs
+                  "created_utc: 2024-03-17 13:17:44.461"
+                  "created_utc: 1960-05-01 12:00:00"
+            )
+            memConn
+            taskFromDb
+        tasks :: [Task] <- query_ memConn "SELECT * FROM tasks"
+        P.map (\t -> (t.ulid, t.created_utc)) tasks
+          `shouldBe` [(task1.ulid, Just "1960-05-01 12:00:00.000")]
 
     it "removes tags which were deleted" $ do
       withMemoryDb defaultConfig $ \memConn -> do

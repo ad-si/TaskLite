@@ -248,7 +248,13 @@ ulidText2utc :: Text -> Maybe Text
 ulidText2utc ulid =
   ulid
     & ulidTextToDateTime
-      <&> (timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])) >>> T.pack)
+      <&> formatUtcMs
+
+
+-- | Format used for `created_utc` (millisecond precision like ULIDs)
+formatUtcMs :: DateTime -> Text
+formatUtcMs =
+  timePrint (toFormat ("YYYY-MM-DD H:MI:S.ms" :: [Char])) >>> T.pack
 
 
 parseUlidText :: Text -> Maybe ULID

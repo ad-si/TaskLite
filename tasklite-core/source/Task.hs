@@ -303,6 +303,7 @@ data Task = Task
   , priority_adjustment :: Maybe Float
   , user :: Text
   , metadata :: Maybe Aeson.Value
+  , created_utc :: Maybe Text -- Gets derived from ULID if not set
   }
   deriving (Generic, Data, Show, Eq)
 
@@ -330,6 +331,7 @@ instance FromRow Task where
               Just (Object obj) -> Just $ Object obj
               _ -> Nothing
           )
+      <*> field
 
 
 instance ToRow Task where
@@ -352,6 +354,7 @@ instance ToRow Task where
     , case task.metadata of
         Nothing -> SQLNull
         Just val -> SQLText $ val & (Aeson.encode >>> BSL.toStrict >>> decodeUtf8)
+    , Sql.ToField.toField task.created_utc
     ]
 
 
@@ -401,6 +404,7 @@ emptyTask =
     , priority_adjustment = Nothing
     , user = ""
     , metadata = Nothing
+    , created_utc = Nothing
     }
 
 

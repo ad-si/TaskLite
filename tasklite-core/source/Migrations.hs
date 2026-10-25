@@ -1647,6 +1647,231 @@ _11_ =
           }
 
 
+{-| SQL expression to calculate the creation UTC of a task from its ULID.
+The first 10 characters of a ULID encode the milliseconds since the
+Unix epoch in Crockford's Base32.
+Results in the same format as `Utils.ulidText2utc`.
+-}
+ulidToUtcSql :: Text -> Text
+ulidToUtcSql ulidColumn =
+  let
+    digitAt :: Int -> Text
+    digitAt idx =
+      "(instr('0123456789abcdefghjkmnpqrstvwxyz', lower(substr("
+        <> ulidColumn
+        <> ", "
+        <> show idx
+        <> ", 1))) - 1)"
+    milliseconds =
+      [2 .. 10]
+        & P.foldl
+          (\acc idx -> "(" <> acc <> " * 32 + " <> digitAt idx <> ")")
+          (digitAt 1)
+  in
+    "strftime('%Y-%m-%d %H:%M:%f', " <> milliseconds <> " / 1000.0, 'unixepoch')"
+
+
+{-| Like `createSetModifiedUtcTrigger`, but doesn't fire
+when `set_created_utc_after_insert` initializes the `created_utc`.
+-}
+createSetModifiedUtcTrigger_v12 :: Query
+createSetModifiedUtcTrigger_v12 =
+  [sql|
+    CREATE TRIGGER set_modified_utc_after_update
+    AFTER UPDATE ON tasks
+    WHEN
+      new.modified_utc IS old.modified_utc  -- Must be `IS` to handle `NULL`
+      AND old.created_utc IS NOT NULL
+    BEGIN
+      UPDATE tasks
+      SET modified_utc = datetime('now')
+      WHERE ulid == new.ulid;
+    END
+  |]
+
+
+{-| Fallback for tasks which are inserted without a `created_utc`
+(e.g. via raw SQL). TaskLite itself always sets it explicitly.
+-}
+createSetCreatedUtcTrigger :: Query
+createSetCreatedUtcTrigger =
+  Query $
+    "\
+    \CREATE TRIGGER set_created_utc_after_insert\n\
+    \AFTER INSERT ON tasks\n\
+    \WHEN new.created_utc IS NULL\n\
+    \BEGIN\n\
+    \  UPDATE tasks\n\
+    \  SET created_utc = "
+      <> ulidToUtcSql "new.ulid"
+      <> "\n\
+         \  WHERE ulid == new.ulid;\n\
+         \END"
+
+
+tasksViewQuery_v12 :: Query
+tasksViewQuery_v12 =
+  [sql|
+    CREATE VIEW tasks_view AS
+    SELECT
+      tasks.ulid AS ulid,
+      tasks.body AS body,
+      tasks.created_utc AS created_utc,
+      tasks.modified_utc AS modified_utc,
+      tasks.awake_utc AS awake_utc,
+      tasks.ready_utc AS ready_utc,
+      tasks.waiting_utc AS waiting_utc,
+      tasks.review_utc AS review_utc,
+      tasks.due_utc AS due_utc,
+      tasks.closed_utc AS closed_utc,
+      tasks.state AS state,
+      tasks.group_ulid AS group_ulid,
+      tasks.repetition_duration AS repetition_duration,
+      tasks.recurrence_duration AS recurrence_duration,
+      nullif(
+        (
+          SELECT json_group_array(task_to_tag.tag)
+          FROM task_to_tag
+          WHERE task_to_tag.task_ulid == tasks.ulid
+        ),
+        '[]'
+      ) AS tags,
+      nullif(
+        (
+          SELECT json_group_array(
+            json_object(
+              'ulid', task_to_comment.ulid,
+              'body', task_to_comment.comment,
+              'user', task_to_comment.user
+            )
+          )
+          FROM task_to_comment
+          WHERE task_to_comment.task_ulid == tasks.ulid
+        ),
+        '[]'
+      ) AS comments,
+      nullif(
+        (
+          SELECT json_group_array(task_to_task.source_task_ulid)
+          FROM task_to_task
+          WHERE task_to_task.target_task_ulid == tasks.ulid
+            AND task_to_task.relation == 'blocks'
+        ),
+        '[]'
+      ) AS blockers,
+      nullif(
+        (
+          SELECT json_group_array(task_to_task.target_task_ulid)
+          FROM task_to_task
+          WHERE task_to_task.source_task_ulid == tasks.ulid
+            AND task_to_task.relation == 'blocks'
+        ),
+        '[]'
+      ) AS blocked,
+      ifnull(tasks.priority_adjustment, 0.0)
+        + CASE
+            WHEN awake_utc IS NULL THEN 0.0
+            WHEN awake_utc >= datetime('now') THEN -5.0
+            WHEN awake_utc >= datetime('now', '-1 days') THEN 1.0
+            WHEN awake_utc >= datetime('now', '-2 days') THEN 2.0
+            WHEN awake_utc >= datetime('now', '-5 days') THEN 5.0
+            WHEN awake_utc < datetime('now', '-5 days') THEN 9.0
+          END
+        + CASE
+            WHEN waiting_utc IS NULL THEN 0.0
+            WHEN waiting_utc >= datetime('now') THEN 0.0
+            WHEN waiting_utc < datetime('now') THEN -10.0
+          END
+        + CASE
+            WHEN review_utc IS NULL THEN 0.0
+            WHEN review_utc >= datetime('now') THEN 0.0
+            WHEN review_utc < datetime('now') THEN 20.0
+          END
+        + CASE
+            WHEN due_utc IS NULL THEN 0.0
+            WHEN due_utc >= datetime('now', '+24 days') THEN 0.0
+            WHEN due_utc >= datetime('now', '+6 days') THEN 3.0
+            WHEN due_utc >= datetime('now') THEN 6.0
+            WHEN due_utc >= datetime('now', '-6 days') THEN 9.0
+            WHEN due_utc >= datetime('now', '-24 days') THEN 12.0
+            WHEN due_utc < datetime('now', '-24 days') THEN 15.0
+          END
+        + CASE
+            WHEN state IS NULL THEN 0.0
+            WHEN state == 'Done' THEN 0.0
+            WHEN state == 'Obsolete' THEN -1.0
+            WHEN state == 'Deletable' THEN -10.0
+          END
+        + CASE
+            WHEN (
+              SELECT count(task_to_comment.comment)
+              FROM task_to_comment
+              WHERE task_to_comment.task_ulid == tasks.ulid
+            ) == 0 THEN 0.0
+            ELSE 1.0
+          END
+        + CASE
+            WHEN (
+              SELECT count(task_to_tag.tag)
+              FROM task_to_tag
+              WHERE task_to_tag.task_ulid == tasks.ulid
+            ) == 0 THEN 0.0
+            ELSE 2.0
+          END
+        AS priority,
+      tasks.user AS user,
+      tasks.metadata AS metadata
+    FROM
+      tasks
+  |]
+
+
+{-| Migration 12: Add a `created_utc` field to tasks.
+This makes the creation time accessible in SQL queries
+and allows changing it without changing the ULID.
+It gets initialized with the timestamp encoded in the ULID.
+-}
+_12_ :: MigrateDirection -> Migration
+_12_ =
+  let
+    base =
+      Migration
+        { id = UserVersion 12
+        , querySet = []
+        }
+  in
+    \case
+      MigrateUp ->
+        base
+          { Migrations.querySet =
+              dropDerivedViews
+                <> [ "DROP VIEW IF EXISTS tasks_view"
+                   , "ALTER TABLE tasks ADD COLUMN created_utc TEXT"
+                   , -- Otherwise the trigger would overwrite all `modified_utc`s
+                     "DROP TRIGGER IF EXISTS set_modified_utc_after_update"
+                   , Query $
+                       "UPDATE tasks SET created_utc = " <> ulidToUtcSql "ulid"
+                   , createSetModifiedUtcTrigger_v12
+                   , createSetCreatedUtcTrigger
+                   , tasksViewQuery_v12
+                   ]
+                <> createDerivedViews_v10
+          }
+      MigrateDown ->
+        base
+          { Migrations.querySet =
+              dropDerivedViews
+                <> [ "DROP VIEW IF EXISTS tasks_view"
+                   , "DROP TRIGGER IF EXISTS set_created_utc_after_insert"
+                   , "DROP TRIGGER IF EXISTS set_modified_utc_after_update"
+                   , "ALTER TABLE tasks DROP COLUMN created_utc"
+                   , createSetModifiedUtcTrigger
+                   , tasksViewQuery_v11
+                   ]
+                <> createDerivedViews_v10
+          }
+
+
 hasDuplicates :: (Eq a) => [a] -> Bool
 hasDuplicates [] = False
 hasDuplicates (x : xs) =
@@ -1710,7 +1935,7 @@ runMigrations _ connection = do
       IO [UserVersion]
 
   let
-    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_, _11_]
+    migrations = [_0_, _1_, _2_, _3_, _4_, _5_, _6_, _7_, _8_, _9_, _10_, _11_, _12_]
 
     migrationsUp = fmap ($ MigrateUp) migrations
     (UserVersion userVersionMax) =

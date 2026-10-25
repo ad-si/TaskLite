@@ -103,6 +103,8 @@ tl add Buy milk +groceries \
 
 `awake:` hides the task until the given datetime,
 `ready:` is the earliest datetime it can be started.
+`created:` sets the creation datetime (`created_utc` field)
+and the timestamp of the task's ULID.
 
 A new task can also be linked to existing tasks at add time using
 `blocks:<id>` (this task blocks the referenced task) or
@@ -334,10 +336,10 @@ its value is used instead.
 > `[string | {ulid?: string, body: string, user?: string}]`.
 > Comments without a `user` get the current user as author.
 
-> [!WARNING]
-> TaskLite does not properly support importing tasks
-> which were created before 1970.
-> While they can be imported, the creation date is set to 1970-01-01.
+> [!NOTE]
+> Tasks created before 1970 are supported,
+> but their ULID's timestamp is set to 1970-01-01.
+> The correct creation date is stored in the `created_utc` field.
 
 
 ### Emails
@@ -388,7 +390,7 @@ TaskLite Field        | Taskwarrior Field | Notes
 `ulid`                | `uuid`            | ULID is converted to UUID format
 `body`                | `description`     |
 `state`               | `status`          | Done → completed, Obsolete/Deletable → deleted
-`created_utc`         | `entry`           | Falls back to ULID timestamp if not set
+`created_utc`         | `entry`           |
 `modified_utc`        | `modified`        |
 `closed_utc`          | `end`             |
 `due_utc`             | `due`             |

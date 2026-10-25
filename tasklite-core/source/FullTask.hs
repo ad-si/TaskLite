@@ -6,7 +6,7 @@ Data type to represent tasks from the `tasks_view`
 module FullTask where
 
 import Protolude (
-  Applicative (pure, (<*>)),
+  Applicative ((<*>)),
   Either (Left, Right),
   Eq,
   Float,
@@ -58,6 +58,7 @@ import Task (
   Task (
     awake_utc,
     closed_utc,
+    created_utc,
     due_utc,
     modified_utc,
     ready_utc,
@@ -69,7 +70,6 @@ import Task (
   TaskState,
   emptyTask,
  )
-import Utils (ulidText2utc)
 
 
 -- | Final user-facing format of tasks
@@ -121,10 +121,10 @@ parseJsonArrayField fieldName value = case fieldData value of
 -- For conversion from SQLite with SQLite.Simple
 instance FromRow FullTask where
   fromRow = do
-    ulidValue <- field
-    FullTask ulidValue
-      <$> field -- body
-      <*> pure (ulidText2utc ulidValue) -- created_utc (derived from ULID)
+    FullTask
+      <$> field -- ulid
+      <*> field -- body
+      <*> field -- created_utc
       <*> field -- modified_utc
       <*> field -- awake_utc
       <*> field -- ready_utc
@@ -209,6 +209,7 @@ selectQuery =
     SELECT
       tasks_view.ulid AS ulid,
       body,
+      created_utc,
       modified_utc,
       awake_utc,
       ready_utc,
@@ -234,6 +235,7 @@ cpTimesAndState :: FullTask -> Task
 cpTimesAndState (FullTask{..}) =
   emptyTask
     { Task.ulid
+    , Task.created_utc
     , Task.modified_utc
     , Task.awake_utc
     , Task.ready_utc

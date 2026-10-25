@@ -88,8 +88,8 @@ import Lib (
   execWithConn,
   execWithTask,
   insertComments,
-  insertRecord,
   insertTags,
+  insertTask,
   syncComments,
   syncTags,
   updateTask,
@@ -141,7 +141,7 @@ insertImportTask conf connection importTask = do
                 then T.pack effectiveUserName
                 else importTask.task.user
           }
-  insertRecord "tasks" connection taskNorm
+  insertTask connection taskNorm
   tagWarnings <-
     insertTags
       conf

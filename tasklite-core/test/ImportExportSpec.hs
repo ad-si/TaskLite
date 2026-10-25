@@ -62,7 +62,7 @@ import ImportTask (
   setMissingFields,
  )
 import Lib (insertRecord)
-import Task (Task (body, modified_utc, ulid, user), emptyTask)
+import Task (Task (body, created_utc, modified_utc, ulid, user), emptyTask)
 import TaskToComment (TaskToComment (TaskToComment))
 import TaskToComment qualified
 import TestUtils (withMemoryDb)
@@ -145,13 +145,13 @@ spec = do
             taskToComments
               `shouldBe` [ TaskToComment
                              { ulid = "01hs0tqwwd0004m1ja8bdrpnh1"
-                             , task_ulid = "01hs0tqwwd0004yy9et9d4wksy"
+                             , task_ulid = "01hs0tqwwd0001psee07bavg2f"
                              , comment = "first comment"
                              , user = T.pack effectiveUserName
                              }
                          , TaskToComment
                              { ulid = "01hs0tqwwd0005q6eyxasg3xgm"
-                             , task_ulid = "01hs0tqwwd0004yy9et9d4wksy"
+                             , task_ulid = "01hs0tqwwd0001psee07bavg2f"
                              , comment = "second comment"
                              , user = T.pack effectiveUserName
                              }
@@ -339,7 +339,7 @@ spec = do
             ImportTask
               { task =
                   emptyTask
-                    { Task.ulid = "01hrz2qz7g0001qzskfchf4dek"
+                    { Task.ulid = "01hrz2qz7g0006m58t196n6821"
                     , Task.body = "Support getting the note body from stdin"
                     , Task.user = "ad-si"
                     , Task.modified_utc = "2024-03-14 18:14:14.000"
@@ -360,6 +360,7 @@ spec = do
                 task.body `shouldBe` expectedImpTask.task.body
                 task.user `shouldBe` expectedImpTask.task.user
                 task.modified_utc `shouldBe` expectedImpTask.task.modified_utc
+                task.created_utc `shouldBe` Just "2024-03-14 18:14:14.000"
               _ -> P.die "Found more than one comment"
 
     it "imports a single JSON task from array format" $ do

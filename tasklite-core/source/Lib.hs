@@ -216,6 +216,7 @@ import FullTask (
     body,
     closed_utc,
     comments,
+    created_utc,
     due_utc,
     group_ulid,
     metadata,
@@ -264,8 +265,8 @@ import Utils (
   colrDull,
   countChar,
   dateTimeToUtcTime,
-  emptyUlid,
   formatElapsedP,
+  formatUtcMs,
   maybeBold,
   maybeUnderlined,
   numDigits,
@@ -273,6 +274,7 @@ import Utils (
   parseUtc,
   parseUtcWithPrecision,
   setDateTime,
+  ulidText2utc,
   ulidTextToDateTime,
   utcFormatReadable,
   utcTimeToDateTime,
@@ -379,8 +381,20 @@ getUpdateAssignments task =
     & T.intercalate ", "
 
 
+-- | Derive `created_utc` from the ULID if it isn't set
+withCreatedUtc :: Task -> Task
+withCreatedUtc task =
+  task{Task.created_utc = task.created_utc <|> ulidText2utc task.ulid}
+
+
+insertTask :: Connection -> Task -> IO ()
+insertTask connection task =
+  insertRecord "tasks" connection (withCreatedUtc task)
+
+
 updateTask :: Connection -> Task -> IO ()
-updateTask connection task = do
+updateTask connection taskRaw = do
+  let task = withCreatedUtc taskRaw
   execute
     connection
     ( Query $
@@ -757,7 +771,7 @@ addEmptyTask conf conn = do
           , Task.modified_utc = modified_utc
           }
 
-  insertRecord "tasks" conn task
+  insertTask conn task
   pure task
 
 
@@ -774,6 +788,7 @@ addTask conf connection bodyWords = do
               { Task.ulid = T.toLower $ show $ case parsed.parsedCreatedUtc of
                   Nothing -> ulid
                   Just createdUtc -> setDateTime ulid createdUtc
+              , Task.created_utc = parsed.parsedCreatedUtc <&> formatUtcMs
               , Task.body = parsed.parsedBody
               , Task.due_utc = parsed.parsedDueUtc
               , Task.awake_utc = parsed.parsedAwakeUtc
@@ -819,7 +834,7 @@ addTask conf connection bodyWords = do
               <> "None of the hooks were executed."
         )
 
-  insertRecord "tasks" connection importTask.task
+  insertTask connection importTask.task
   tagWarnings <-
     insertTags conf connection Nothing importTask.task importTask.tags
   relWarnings <-
@@ -891,6 +906,7 @@ logTask conf connection bodyWords = do
         { Task.ulid = T.toLower $ show $ case parsed.parsedCreatedUtc of
             Nothing -> ulid
             Just createdUtc -> setDateTime ulid createdUtc
+        , Task.created_utc = parsed.parsedCreatedUtc <&> formatUtcMs
         , Task.body = parsed.parsedBody
         , Task.state = Just Done
         , Task.due_utc = parsed.parsedDueUtc
@@ -901,7 +917,7 @@ logTask conf connection bodyWords = do
         , Task.modified_utc = modified_utc
         }
 
-  insertRecord "tasks" connection task
+  insertTask connection task
   warnings <- insertTags conf connection Nothing task tags
   pure $
     warnings
@@ -1242,9 +1258,10 @@ createNextRepetition conf connection task = do
               <&> (timePrint conf.utcFormat >>> T.pack)
               & fromMaybe ""
         , Task.review_utc = Nothing
+        , Task.created_utc = Nothing
         }
 
-  insertRecord "tasks" connection newTask
+  insertTask connection newTask
 
   tags <-
     query
@@ -1333,9 +1350,10 @@ createNextRecurrence conf connection task = do
                 <&> (timePrint conf.utcFormat >>> T.pack)
               & fromMaybe ""
         , Task.review_utc = Nothing
+        , Task.created_utc = Nothing
         }
 
-  insertRecord "tasks" connection newTask
+  insertTask connection newTask
 
   tags <-
     query
@@ -1767,7 +1785,7 @@ formatTaskForInfo conf now (taskV, tags, comments) =
     mbCreatedUtc =
       fmap
         (T.pack . timePrint (utcFormat defaultConfig))
-        (ulidTextToDateTime taskV.ulid)
+        (taskV.created_utc >>= parseUtc)
     tagsPretty =
       tags
         <&> ( \t ->
@@ -2957,7 +2975,7 @@ duplicateTasks conf connection ids = do
               , Task.metadata = task.metadata
               }
 
-      insertRecord "tasks" connection dupeTask
+      insertTask connection dupeTask
 
       tags <-
         query
@@ -3164,7 +3182,7 @@ formatTaskBody conf now task = pretty reviewIcon <> dueSoon <> body
 formatTaskOpenedUTC :: Config -> DateTime -> FullTask -> Doc AnsiStyle
 formatTaskOpenedUTC conf _now task = do
   let
-    dateMaybe = ulidTextToDateTime task.ulid
+    dateMaybe = task.created_utc >>= parseUtc
     formatTaskDate = T.pack . timePrint ISO8601_Date
 
   annotate (dateStyle conf) (pretty $ maybe "bad Ulid" formatTaskDate dateMaybe)
@@ -3173,7 +3191,7 @@ formatTaskOpenedUTC conf _now task = do
 formatTaskAge :: Config -> DateTime -> FullTask -> Doc AnsiStyle
 formatTaskAge conf now task = do
   let
-    dateMaybe = ulidTextToDateTime task.ulid
+    dateMaybe = task.created_utc >>= parseUtc
     formatTaskDuration =
       timeDiff now
         >>> formatDuration
@@ -3774,7 +3792,7 @@ data FilterExp
   = HasTag Text
   | NotTag Text
   | HasDue Text
-  | HasCreated Text Text -- ULID timestamp prefixes of start and end
+  | HasCreated Text Text -- Start (inclusive) and end (exclusive) UTC
   | HasStatus (Maybe DerivedState) -- Should be `Either`
   | InvalidFilter Text
   deriving (Show)
@@ -3803,22 +3821,17 @@ dueParser = do
 
 {-| Matches tasks created within the time span described by the value.
 E.g. `created:2020-01-01` matches all tasks created on that day.
-Creation time is encoded in the ULID.
-Its first 10 characters are the timestamp and sort lexicographically.
 -}
 createdParser :: ReadP FilterExp
 createdParser = do
   _ <- string "created:"
   utcStr <- munch (not . isSpace)
-  let
-    utcTxt = T.pack utcStr
-    toUlidPrefix utc =
-      T.take 10 $ T.toLower $ show $ setDateTime emptyUlid utc
+  let utcTxt = T.pack utcStr
   pure $ case parseUtcWithPrecision utcTxt of
     Just (start, precision) ->
       HasCreated
-        (toUlidPrefix start)
-        ( toUlidPrefix $
+        (formatUtcMs start)
+        ( formatUtcMs $
             utcTimeToDateTime $
               addUTCTime precision (dateTimeToUtcTime start)
         )
@@ -3863,12 +3876,12 @@ filterToSql = \case
   HasTag tag -> ("INTERSECT", "tag LIKE " <> quoteText tag)
   NotTag tag -> ("EXCEPT", "tag LIKE " <> quoteText tag)
   HasDue utc -> ("INTERSECT", "due_utc < datetime(" <> quoteText utc <> ")")
-  HasCreated startPrefix endPrefix ->
+  HasCreated startUtc endUtc ->
     ( "INTERSECT"
-    , "tasks.ulid >= "
-        <> quoteText startPrefix
-        <> " AND tasks.ulid < "
-        <> quoteText endPrefix
+    , "tasks.created_utc >= "
+        <> quoteText startUtc
+        <> " AND tasks.created_utc < "
+        <> quoteText endUtc
     )
   HasStatus (Just taskState) -> ("INTERSECT", derivedStateToQuery taskState)
   -- Following cases should never be called, as they are filtered out
@@ -4245,16 +4258,16 @@ getStats conf connection = do
       Query "SELECT count(1) FROM tasks WHERE state IS 'Deletable'"
 
   -- Fetch all task ULIDs with their states to calculate average age per state
-  taskData :: [(Text, Maybe Text)] <-
+  taskData :: [(Maybe Text, Maybe Text)] <-
     query_ connection $
-      Query "SELECT ulid, state FROM tasks"
+      Query "SELECT created_utc, state FROM tasks"
 
   nowElapsed <- timeCurrentP
   let now = timeFromElapsedP nowElapsed :: DateTime
 
   -- Helper function to calculate average age for a subset of tasks
   let
-    calculateAvgAge :: [(Text, Maybe Text)] -> Text
+    calculateAvgAge :: [(Maybe Text, Maybe Text)] -> Text
     calculateAvgAge tasks =
       if P.null tasks
         then "-"
@@ -4263,8 +4276,8 @@ getStats conf connection = do
             ages =
               tasks
                 & P.mapMaybe
-                  ( \(ulid, _) -> do
-                      createdDateTime <- ulidTextToDateTime ulid
+                  ( \(createdUtc, _) -> do
+                      createdDateTime <- createdUtc >>= parseUtc
                       let diff = timeDiff now createdDateTime
                       pure diff
                   )

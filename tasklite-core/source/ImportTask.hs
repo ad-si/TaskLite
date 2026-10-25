@@ -64,6 +64,7 @@ import Task (
     awake_utc,
     body,
     closed_utc,
+    created_utc,
     due_utc,
     group_ulid,
     metadata,
@@ -84,6 +85,7 @@ import Task (
 import Time.System (dateCurrent)
 import Utils (
   emptyUlid,
+  formatUtcMs,
   parseUlidText,
   parseUtc,
   parseUtcNum,
@@ -178,7 +180,7 @@ instance FromJSON ImportTask where
     created <- o .:? "created"
     created_at <- o .:? "created_at"
     createdAt <- o .:? "createdAt"
-    created_utc <- o .:? "created_utc"
+    o_created_utc <- o .:? "created_utc"
     createdUtc_ <- o .:? "createdUtc"
 
     let
@@ -192,10 +194,11 @@ instance FromJSON ImportTask where
                   <|> created
                   <|> created_at
                   <|> createdAt
-                  <|> created_utc
+                  <|> o_created_utc
                   <|> createdUtc_
               )
       createdUtc = fromMaybe zeroTime parsedCreatedUtc
+      created_utc = parsedCreatedUtc <&> formatUtcMs
 
     o_title <- o .:? "title"
     o_body <- o .:? "body"
@@ -484,7 +487,7 @@ importTaskToFullTask ImportTask{task, comments, tags} =
   FullTask.FullTask
     { FullTask.ulid = task.ulid
     , FullTask.body = task.body
-    , FullTask.created_utc = ulidText2utc task.ulid
+    , FullTask.created_utc = task.created_utc <|> ulidText2utc task.ulid
     , FullTask.modified_utc = task.modified_utc
     , FullTask.awake_utc = task.awake_utc
     , FullTask.ready_utc = task.ready_utc

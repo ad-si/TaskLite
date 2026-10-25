@@ -108,6 +108,10 @@ comments:
 ## Time and Date
 
 - Everything in TaskLite is stored in UTC.
+- The creation time of a task is stored in its `created_utc` field.
+    It defaults to the timestamp encoded in the task's ULID,
+    but it can be changed (e.g. with `tl edit`) without changing the ULID
+    and it can also be before 1970.
 - A due date without a time is at midnight on this date.
     E.g. `2025-06-01` is the same as `2025-06-01T00:00:00Z`.
     So, maybe surprisingly, `due:2025-06-01`
