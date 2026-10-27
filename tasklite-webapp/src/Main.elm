@@ -126,6 +126,14 @@ type alias TodoItem =
   , tags : Maybe String
   , repetition_duration : Maybe String
   , recurrence_duration : Maybe String
+  , comments : List Comment
+  }
+
+
+type alias Comment =
+  { ulid : String
+  , body : String
+  , user : Maybe String
   }
 
 
@@ -140,6 +148,7 @@ emptyTodo =
   , tags = Nothing
   , repetition_duration = Nothing
   , recurrence_duration = Nothing
+  , comments = []
   }
 
 
@@ -615,15 +624,81 @@ viewExpandIndicator isExpanded =
     ]
 
 
+{-| Number of comments of a task (nothing if it has none)
+-}
+viewCommentCount : Int -> Html.Styled.Html Msg
+viewCommentCount count =
+  if count == 0
+    then text ""
+    else span
+      [ css [ ml_2, text_sm, select_none, opacity_60, whitespace_nowrap ]
+      , title
+          (String.fromInt count
+            ++ (if count == 1
+                then " comment"
+                else " comments"
+            )
+          )
+      ]
+      [ text <| "💬 " ++ String.fromInt count ]
+
+
+{-| Comment with its creation time (derived from its ULID) and author
+-}
+viewComment : Comment -> Html.Styled.Html Msg
+viewComment comment =
+  let
+    createdUtc =
+      comment.ulid
+        |> String.toUpper
+        |> Ulid.fromString
+        |> Maybe.map
+            (Ulid.toTimestamp
+              >> Iso8601.fromTime
+              >> String.left 16
+              >> String.replace "T" " "
+            )
+        |> Maybe.withDefault ""
+  in
+  div
+    [ css
+        [ mt_2
+        , pl_3
+        , border_0
+        , border_l_2
+        , border_solid
+        , border_color gray_300
+        , dark [ border_color neutral_600 ]
+        ]
+    ]
+    [ div
+        [ css
+            [ text_xs
+            , text_color gray_400
+            , mb_1
+            , dark [ text_color neutral_500 ]
+            ]
+        ]
+        [ text
+            ([ Just createdUtc, comment.user ]
+              |> List.filterMap identity
+              |> List.filter (not << String.isEmpty)
+              |> String.join " · "
+            )
+        ]
+    , viewMarkdown comment.body
+    ]
+
+
 viewTodo : Posix -> Set.Set String -> TodoItem -> Html.Styled.Html Msg
 viewTodo now expandedTasks todo =
   let
     ( firstLine, remainingLines ) =
       splitBody (todo.body |> Maybe.withDefault "")
 
-    -- ULID of the task if its body can be expanded
+    -- ULID of the task if its body or comments can be expanded
     expandableUlid =
-      if String.isEmpty remainingLines
+      if String.isEmpty remainingLines && List.isEmpty todo.comments
         then Nothing
         else todo.ulid
 
@@ -749,7 +824,8 @@ viewTodo now expandedTasks todo =
                     css []
                 ]
                 (viewLinkifiedText firstLine
-                  ++ [ case expandableUlid of
+                  ++ [ viewCommentCount (List.length todo.comments)
+                  , case expandableUlid of
                     Just _ ->
                       viewExpandIndicator isExpanded
                     Nothing ->
@@ -773,6 +849,11 @@ viewTodo now expandedTasks todo =
               then div
                 [ css [ mt_2 ] ]
                 [ viewMarkdown remainingLines ]
+              else text ""
+            , if isExpanded && not (List.isEmpty todo.comments)
+              then div
+                [ css [ mt_2 ] ]
+                (todo.comments |> List.map viewComment)
               else text ""
             ]
         ]
@@ -1011,6 +1092,27 @@ tasksHeadSelection =
     |> with Tasks_ready_row.tags
     |> with Tasks_ready_row.repetition_duration
     |> with Tasks_ready_row.recurrence_duration
+    |> with (Tasks_ready_row.comments |> SelectionSet.map parseComments)
+
+
+{-| Parse the JSON array of comments of a task
+-}
+parseComments : Maybe String -> List Comment
+parseComments maybeCommentsStr =
+  maybeCommentsStr
+    |> Maybe.andThen
+        (Json.Decode.decodeString
+            (Json.Decode.list
+                (Json.Decode.map3
+                    Comment
+                    (Json.Decode.field "ulid" Json.Decode.string)
+                    (Json.Decode.field "body" Json.Decode.string)
+                    (Json.Decode.maybe (Json.Decode.field "user" Json.Decode.string))
+                )
+            )
+          >> Result.toMaybe
+        )
+    |> Maybe.withDefault []
 
 
 getTodos : Int -> (RemoteData (Graphql.Http.Error (List TodoItem)) (List TodoItem) -> Msg) -> Cmd Msg
